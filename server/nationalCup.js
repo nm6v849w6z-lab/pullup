@@ -162,6 +162,8 @@ function liveKey(cup, round, m) { return `ncup:${cup.season}:${round.index}:${m.
 function guestForTeam(Engine, team, ref) {
   const data = Engine.serializeTeam(team);
   delete data.feed; delete data.transactions; delete data.managerLinkToken; delete data.messages;
+  // Historique hebdomadaire des joueurs (permaliens) : inutile ici, et privé.
+  (data.players || []).forEach(p => { delete p.weeklyHistory; });
   // Données privées du club invité (ordres préparés, marché, sponsors…).
   ["plannedTactics", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen",
     "sponsorOffers", "sponsorContracts", "sponsorHistory", "scoutingAdTickets", "scoutingUnlocks", "scoutingAdWatchLog",

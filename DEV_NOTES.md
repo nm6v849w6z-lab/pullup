@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Permaliens
+  joueur + historique de progression** (conception validée par l'utilisateur
+  le 2026-10-01). engine.js (+ miroir de la sérialisation dans
+  moteurbasket3.html) : `Player.weeklyHistory` = [saison, semaine, note,
+  ...28 caractéristiques dans l'ordre d'ATTRS], pris à chaque mise à jour du
+  lundi pour TOUS les joueurs de la ligue (`League.recordPlayerHistory`,
+  appelé par server/autoSim.js après `trainCpuTeams` dans les 3 rythmes),
+  3 saisons max (+ garde-fou 60 entrées), suit le joueur de club en club.
+  Retiré pour tout autre club (`HIDDEN_PLAYER_FIELDS`), de l'index du
+  marché mondial et des invités de Coupe. server/playerLinks.js (codes de
+  8 caractères base64url, stockage `store.loadPlayerLinks` →
+  `<multi>.playerlinks.json` / clé Redis `pullup:playerlinks`), routes
+  `POST /api/player/share-link` et `/revoke`, `playerShareLinks` dans
+  /api/save, page publique `GET /j/<code>` (server/playerPage.js, sans
+  connexion, noindex, og:, 10 langues via le dictionnaire du jeu) ; lien
+  mort (404 « Lien expiré ou introuvable ») dès que le joueur n'est plus
+  dans le club qui l'a créé (vérifié à la lecture, mapping supprimé).
+  Fiche joueur : bouton « Partager » (copie + feuille de partage du
+  téléphone), « Lien public actif · Couper le lien », courbe de
+  progression (note + sélecteur de caractéristique, toujours Premium en
+  jeu). Tests : server/player_permalink_test.js,
+  player_permalink_ui_test.js (nouveaux), world_country_test.js (liste des
+  champs cachés). Reste : push par l'utilisateur.
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Marché :
   pays au choix + barres âge/potentiel/prix** (retour utilisateur
   2026-10-01 : « il faut pouvoir choisir le pays de son choix (mets une

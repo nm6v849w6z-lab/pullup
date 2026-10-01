@@ -461,6 +461,33 @@ async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath()) 
   fs.renameSync(tmp, where.file);
 }
 
+// Permaliens des joueurs (server/playerLinks.js, 2026-10-01) : un seul bloc
+// JSON { codes: { code: { leagueId, teamIdx, playerId, name, createdAt } } },
+// clé "pullup:playerlinks" / fichier "<multi-league>.playerlinks.json".
+// Comme le chat, une lecture en échec LÈVE une exception (jamais un bloc
+// vide réécrit par-dessus les liens existants). `null` = aucun lien encore.
+function playerLinksStorage(savePath) {
+  return { redis: `${redisPrefix()}pullup:playerlinks`, file: savePath.replace(/\.json$/, "") + ".playerlinks.json" };
+}
+async function loadPlayerLinks(savePath = defaultMultiLeaguePath()) {
+  const where = playerLinksStorage(savePath);
+  if (upstashConfigured()) {
+    const raw = await redisGet(where.redis);
+    return raw == null ? null : JSON.parse(raw);
+  }
+  if (!fs.existsSync(where.file)) return null;
+  return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+}
+async function savePlayerLinks(data, savePath = defaultMultiLeaguePath()) {
+  const where = playerLinksStorage(savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+
 // Résout le manager qui a fait CETTE requête à partir de son jeton privé
 // (voir Team.managerLinkToken) : un simple parcours linéaire (N ≤ 10, jamais
 // besoin d'un index) des équipes de la ligue, à la recherche d'une équipe
@@ -605,6 +632,7 @@ module.exports = {
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
   loadReplays, appendReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
+  loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

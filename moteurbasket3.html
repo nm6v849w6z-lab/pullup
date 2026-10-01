@@ -1621,6 +1621,32 @@
   .pp-lbl{position:absolute; left:4px; font-size:11px; color:var(--ink-faint);}
   .pp-lbl-hi{top:2px;} .pp-lbl-lo{bottom:2px;}
   .pp-foot{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-faint);}
+  /* Courbe de progression (permaliens joueur, 2026-10-01) : même dessin que
+     la page publique /j/<code> (server/playerPage.js, ppChartHtml). */
+  .pp-plot{position:relative; height:170px; margin:8px 34px 0 0;}
+  .pp-plot svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .pp-grid{stroke:var(--line); stroke-width:1; stroke-dasharray:3 4; vector-effect:non-scaling-stroke;}
+  .pp-area{fill:rgba(240,162,60,.12);}
+  .pp-line{fill:none; stroke:var(--amber); stroke-width:2.5; stroke-linejoin:round; vector-effect:non-scaling-stroke;}
+  .pp-dot{position:absolute; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:var(--panel); border:2px solid var(--amber);}
+  .pp-dot-last{width:11px; height:11px; margin:-5.5px 0 0 -5.5px; background:var(--amber);}
+  .pp-y{position:absolute; right:-34px; transform:translateY(-50%); font-size:12px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .pp-x{display:flex; justify-content:space-between; align-items:center; gap:8px; margin:10px 34px 0 0; font-size:12px; color:var(--ink-faint);}
+  .pp-x b{font-size:13.5px;}
+  .pp-up{color:var(--ok);} .pp-down{color:var(--danger);}
+  .pp-empty{margin:8px 0 2px; color:var(--ink-dim); font-size:13.5px;}
+  .pdp2-head .pp-sel, .pp-sel{width:auto; max-width:100%; flex:0 1 auto; font:inherit; font-size:13px; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink);}
+  /* Bouton « Partager » de la fiche joueur (permaliens, 2026-10-01). */
+  .pdp2-share{width:100%; display:flex; flex-direction:column; align-items:stretch; gap:6px; margin-top:-8px;}
+  .pdp2-btn--share{gap:6px; display:flex; width:100%;}
+  .pdp2-btn--share svg{flex:0 0 auto;}
+  .pdp2-share-state{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px 6px; font-size:12px; color:var(--ink-dim); text-align:center;}
+  .pdp2-share-dot{width:7px; height:7px; border-radius:50%; background:var(--ok); display:inline-block;}
+  .pdp2-link{background:none; border:0; padding:0; font:inherit; font-size:12px; font-weight:700; color:var(--danger); cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+  .pdp2-share-msg{font-size:12px; color:var(--ink-dim); text-align:center; overflow-wrap:anywhere;}
+  .pdp2-share-msg:empty{display:none;}
+  .pdp2-share-msg.ok{color:var(--ok);} .pdp2-share-msg.err{color:var(--danger);}
+  .pdp2-share-url{width:100%; margin-top:4px; font:inherit; font-size:12px; padding:5px 7px; border-radius:7px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink);}
   .pp-up{color:#3ecf67;} .pp-down{color:var(--danger);}
   .st-adv-actions{margin-top:10px; display:flex; justify-content:flex-end;}
   .mbx-replay{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0 4px;}
@@ -22227,6 +22253,10 @@ function serializePlayerRecord(p) {
     awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
     careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
     progressLog: Array.isArray(p.progressLog) ? p.progressLog.map(x => ({ ...x })) : [],
+    // Historique hebdomadaire (permaliens joueur, 2026-10-01) : [saison,
+    // semaine, note, ...caractéristiques dans l'ordre d'ATTRS], voir
+    // pushPlayerHistory. Suit le joueur d'un club à l'autre.
+    weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -22779,6 +22809,7 @@ function playerFromSave(pdata) {
   p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
+  p.weeklyHistory = Array.isArray(pdata.weeklyHistory) ? pdata.weeklyHistory.filter(e => Array.isArray(e)).map(e => e.slice()) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -23285,6 +23316,8 @@ function serializeLeague(lg) {
     seasonEndTickDone: !!lg.seasonEndTickDone,
     calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
+    // Semaine courante de l'historique des joueurs (voir League.recordPlayerHistory).
+    playerHistoryWeek: lg.playerHistoryWeek ? { ...lg.playerHistoryWeek } : null,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
     friendlies: Array.isArray(lg.friendlies) ? lg.friendlies : [],
@@ -23401,6 +23434,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.freeAgents = Array.isArray(data.freeAgents) ? data.freeAgents.map(pd => { try { return playerFromSave(pd); } catch (e) { return null; } }).filter(Boolean) : [];
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
+  lg.playerHistoryWeek = data.playerHistoryWeek && typeof data.playerHistoryWeek.s === "number" ? { s: data.playerHistoryWeek.s, w: data.playerHistoryWeek.w || 0 } : null;
   lg.cup = data.cup || null;
   // Coupe nationale : adversaires d'un autre championnat (« clubs invités »).
   installGuestTeams(lg, data.guestTeams);
@@ -24938,6 +24972,9 @@ function persistManagerToken(token) {
 // toujours remplacer l'ancien), mais est ELLE-MÊME re-persistée pour qu'un
 // rechargement ultérieur SANS la query string continue de fonctionner.
 let managerToken = null;
+// Permaliens actifs des joueurs de son club { playerId: code } (renvoyés par
+// /api/save, voir server/playerLinks.js et pdpShareHtml).
+let playerShareLinks = {};
 {
   const fromUrl = readManagerTokenFromUrl();
   if (fromUrl) { managerToken = fromUrl; persistManagerToken(fromUrl); }
@@ -25869,6 +25906,7 @@ async function loadMyTeam() {
     // (data.team, voir ci-dessous), résolu par le serveur pour n'importe
     // quel autre index une fois plusieurs managers humains en jeu.
     myTeamIndex = typeof data.myTeamIndex === "number" ? data.myTeamIndex : 0;
+    playerShareLinks = data.playerShareLinks && typeof data.playerShareLinks === "object" ? { ...data.playerShareLinks } : {};
     let userTeam, loadedLeague;
     if (data.team) {
       // Solo historique : préserve l'IDENTITÉ de l'objet "mon équipe" (voir
@@ -30565,6 +30603,14 @@ async function discussTransferRequestAction(playerId) {
 // renderPlayerDetail.
 // Indice de l'offre de prolongation (écart avec le salaire demandé, jamais
 // la renommée du club), mis à jour à la saisie.
+// Courbe de progression : caractéristique choisie (voir playerProgressHtml).
+document.getElementById("playerDetailContent").addEventListener("change", (e) => {
+  if (!e.target || e.target.id !== "ppAttrSel" || !currentPlayerDetailRef) return;
+  const team = league.teams[currentPlayerDetailRef.teamIdx];
+  const player = team && team.players.find(p => p.id === currentPlayerDetailRef.playerId);
+  const box = document.getElementById("ppChartBox");
+  if (player && box) box.innerHTML = playerProgressChartHtml(player, e.target.value);
+});
 document.getElementById("playerDetailContent").addEventListener("input", (e) => {
   if (!e.target || (e.target.id !== "pdpExtSalary" && e.target.id !== "pdpRaiseSalary")) return;
   const hint = document.getElementById(e.target.id === "pdpExtSalary" ? "pdpExtHint" : "pdpRaiseHint");
@@ -30591,6 +30637,10 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
     }
     return;
   }
+  const shareBtn = e.target.closest("[data-pdp-share]");
+  if (shareBtn) { sharePlayerLinkAction(Number(shareBtn.dataset.pdpShare)); return; }
+  const revokeBtn = e.target.closest("[data-pdp-share-revoke]");
+  if (revokeBtn) { revokePlayerLinkAction(Number(revokeBtn.dataset.pdpShareRevoke)); return; }
   if (handlePlayerPersonalizationClick(e)) return;
   // Contrats (demande du 2026-10-01).
   const extendBtn = e.target.closest("[data-contract-extend]");
@@ -31338,7 +31388,10 @@ function renderPlayerDetail(teamIdx, playerId) {
       ? `<span class="pdp2-btn pdp2-btn--static">Aux enchères</span>`
       : `<button type="button" class="pdp2-btn pdp2-btn--accent" data-pdp-sell>Vendre</button>`;
   }
-  html += `</div></div>`; // actions, rating
+  html += `</div>`; // actions
+  // Permalien public (demande du 2026-10-01) : son propre joueur seulement.
+  if (isOwnTeam && !playerDetailForeign) html += pdpShareHtml(player);
+  html += `</div>`; // rating
   html += `</section>`; // hero
 
   // == Profil (radar) | Saison ==
@@ -51614,29 +51667,146 @@ function managerAchievementsHtml(team) {
   }).join("") + `</div><p class="sub" style="margin:8px 0 0">${got.size} / ${MANAGER_ACHIEVEMENTS_CLIENT.length} succès débloqués.</p>`;
 }
 
-// Courbe de progression (Premium) : note globale à la fin de chaque semaine
-// d'entraînement (Player.progressLog, voir Team.trainWeek côté moteur).
-function playerProgressHtml(player) {
+// Courbe de progression (Premium) : historique hebdomadaire du joueur
+// (Player.weeklyHistory, [saison, semaine, note, ...caractéristiques dans
+// l'ordre d'ATTRS], voir pushPlayerHistory côté moteur) — note globale par
+// défaut, ou la caractéristique choisie (demande du 2026-10-01, même courbe
+// que la page publique /j/<code>, server/playerPage.js). Ancien journal
+// (Player.progressLog, note seule) tant que l'historique n'a pas deux points.
+const PP_EMPTY_MSG = "La progression s'affichera au fil des semaines";
+// Copie de ppChartHtml (server/playerPage.js) : même dessin des deux côtés.
+function ppChartHtml(vals, weeks, emptyMsg) {
+  var n = vals.length;
+  if (n < 2) return '<p class="pp-empty">' + emptyMsg + "</p>";
+  var loV = Math.min.apply(null, vals), hiV = Math.max.apply(null, vals);
+  var lo = loV, hi = hiV;
+  if (hi - lo < 4) { var mid = (hi + lo) / 2; lo = mid - 2; hi = mid + 2; }
+  var pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  var x = function (i) { return (i / (n - 1)) * 100; };
+  var y = function (v) { return (1 - (v - lo) / (hi - lo)) * 100; };
+  var fmt = function (v) { return String(Math.round(v * 10) / 10); };
+  var safe = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); };
+  var pts = vals.map(function (v, i) { return x(i).toFixed(2) + "," + y(v).toFixed(2); });
+  var d = Math.round((vals[n - 1] - vals[0]) * 10) / 10;
+  var dots = vals.map(function (v, i) {
+    return '<span class="pp-dot' + (i === n - 1 ? " pp-dot-last" : "") + '" style="left:' + x(i).toFixed(2) + "%;top:" + y(v).toFixed(2) + '%" title="' + safe(weeks[i]) + " : " + fmt(v) + '"></span>';
+  }).join("");
+  return '<div class="pp-plot"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+    '<line x1="0" x2="100" y1="' + y(hiV).toFixed(2) + '" y2="' + y(hiV).toFixed(2) + '" class="pp-grid"></line>' +
+    '<line x1="0" x2="100" y1="' + y(loV).toFixed(2) + '" y2="' + y(loV).toFixed(2) + '" class="pp-grid"></line>' +
+    '<path d="M0,100 L' + pts.join(" L") + ' L100,100 Z" class="pp-area"></path>' +
+    '<polyline points="' + pts.join(" ") + '" class="pp-line"></polyline></svg>' + dots +
+    '<span class="pp-y" style="top:' + y(hiV).toFixed(2) + '%">' + fmt(hiV) + "</span>" +
+    (hiV !== loV ? '<span class="pp-y" style="top:' + y(loV).toFixed(2) + '%">' + fmt(loV) + "</span>" : "") +
+    "</div>" +
+    '<div class="pp-x"><span>' + safe(weeks[0]) + '</span><b class="' + (d > 0 ? "pp-up" : d < 0 ? "pp-down" : "pp-flat") + '">' + (d > 0 ? "+" : "") + fmt(d) + "</b><span>" + safe(weeks[n - 1]) + "</span></div>";
+}
+function playerWeeklyHistory(player) {
+  return (player.weeklyHistory || []).filter(e => Array.isArray(e) && typeof e[2] === "number");
+}
+// `key` : "overall" ou une clé d'ATTRS.
+function playerProgressChartHtml(player, key = "overall") {
+  const hist = playerWeeklyHistory(player);
+  if (hist.length >= 2) {
+    const col = key === "overall" ? 2 : 3 + ATTRS.indexOf(key);
+    const pts = hist.filter(e => col >= 2 && typeof e[col] === "number");
+    return ppChartHtml(pts.map(e => e[col]), pts.map(e => `S${e[0]} · sem. ${e[1]}`), escapeHtml(PP_EMPTY_MSG));
+  }
   const log = (player.progressLog || []).filter(x => typeof x.ovr === "number");
-  let body;
+  return ppChartHtml(log.map(x => x.ovr), log.map(x => `Semaine ${x.week}`), escapeHtml(PP_EMPTY_MSG));
+}
+function playerProgressHtml(player) {
+  let body, selector = "";
   if (!teamIsPremium(teamA)) {
     body = `<p class="pdp-locked-note">La courbe de progression de chaque joueur, semaine par semaine, est réservée au Premium. ${premiumLinkHtml("Passer Premium")}</p>`;
-  } else if (log.length < 2) {
-    body = `<p class="pdp-locked-note">La courbe apparaîtra après deux semaines d'entraînement.</p>`;
   } else {
-    const vals = log.map(x => x.ovr);
-    let lo = Math.min(...vals), hi = Math.max(...vals);
-    if (hi - lo < 2) { lo -= 1; hi += 1; }
-    const W = 100, Hh = 100, n = log.length;
-    const pts = log.map((x, i) => `${((i / (n - 1)) * W).toFixed(2)},${((1 - (x.ovr - lo) / (hi - lo)) * Hh).toFixed(2)}`);
-    const first = vals[0], last = vals[vals.length - 1];
-    const delta = Math.round((last - first) * 10) / 10;
-    body = `<div class="pp-chart" role="img" aria-label="Note globale de ${escapeHtml(player.name)} : de ${first} à ${last} sur ${n} semaines">` +
-      `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="#f0a23c" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline></svg>` +
-      `<span class="pp-lbl pp-lbl-hi">${hi.toFixed(1)}</span><span class="pp-lbl pp-lbl-lo">${lo.toFixed(1)}</span></div>` +
-      `<div class="pp-foot"><span>Semaine ${log[0].week} → ${log[n - 1].week}</span><b class="${delta >= 0 ? "pp-up" : "pp-down"}">${delta >= 0 ? "+" : ""}${delta} de note</b></div>`;
+    if (playerWeeklyHistory(player).length >= 2) {
+      const groups = [["Fondamentaux", PDP_ATTR_ORDER.Fondamentaux], ["Physique", PDP_ATTR_ORDER.Physique], ["Mental", PDP_ATTR_ORDER.Mental]];
+      selector = `<select class="pp-sel" id="ppAttrSel" aria-label="Courbe affichée"><option value="overall">Note globale</option>` +
+        groups.map(([title, keys]) => `<optgroup label="${escapeHtml(title)}">` +
+          keys.filter(k => ATTRS.includes(k)).map(k => `<option value="${k}">${escapeHtml(TRAINING_LABELS[k] || k)}</option>`).join("") + `</optgroup>`).join("") +
+        `</select>`;
+    }
+    body = `<div id="ppChartBox">${playerProgressChartHtml(player)}</div>`;
   }
-  return `<div class="pdp2-row pdp2-row--progress"><section class="pdp2-card"><div class="pdp2-head"><h3>Progression</h3><span class="pdp2-meta">note globale par semaine</span></div>${body}</section></div>`;
+  return `<div class="pdp2-row pdp2-row--progress"><section class="pdp2-card"><div class="pdp2-head"><h3>Progression</h3>${selector || `<span class="pdp2-meta">note globale par semaine</span>`}</div>${body}</section></div>`;
+}
+
+// ---------------------------------------------------------------------
+// Fiche joueur : bouton « Partager » (permaliens, demande du 2026-10-01,
+// voir server/playerLinks.js) — crée (ou reprend) le lien public
+// `${origin}/j/<code>`, le copie dans le presse-papiers et ouvre la feuille
+// de partage du téléphone quand elle existe ; « Couper le lien » le révoque.
+// ---------------------------------------------------------------------
+const PDP_SHARE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>`;
+function playerShareUrl(code) {
+  return `${window.location.origin}/j/${code}`;
+}
+function pdpShareHtml(player) {
+  const code = playerShareLinks[player.id];
+  return `<div class="pdp2-share" id="pdpShareBox">` +
+    `<button type="button" class="pdp2-btn pdp2-btn--share" data-pdp-share="${player.id}">${PDP_SHARE_ICON}<span>Partager</span></button>` +
+    (code ? `<div class="pdp2-share-state" data-share-active="1"><span class="pdp2-share-dot" aria-hidden="true"></span><span>Lien public actif</span><button type="button" class="pdp2-link" data-pdp-share-revoke="${player.id}">Couper le lien</button></div>` : "") +
+    `<div class="pdp2-share-msg" id="pdpShareMsg" role="status"></div></div>`;
+}
+function pdpShareRefresh(player, message, ok, url) {
+  const box = document.getElementById("pdpShareBox");
+  if (box) box.outerHTML = pdpShareHtml(player);
+  const msg = document.getElementById("pdpShareMsg");
+  if (!msg) return;
+  msg.className = `pdp2-share-msg${message ? (ok ? " ok" : " err") : ""}`;
+  msg.innerHTML = message ? escapeHtml(message) + (url ? `<input class="pdp2-share-url" type="text" readonly value="${escapeHtml(url)}" aria-label="Lien public">` : "") : "";
+}
+async function copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); return true; }
+  } catch (e) { /* repli ci-dessous */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    const done = document.execCommand && document.execCommand("copy");
+    ta.remove();
+    return !!done;
+  } catch (e) { return false; }
+}
+async function sharePlayerLinkAction(playerId) {
+  const player = teamA.players.find(p => p.id === playerId);
+  if (!player) return;
+  let code = playerShareLinks[playerId];
+  if (!code) {
+    try {
+      const res = await fetchApi("/api/player/share-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok || !data.code) throw new Error(data.error || "Impossible de créer le lien pour l'instant.");
+      code = data.code;
+      playerShareLinks[playerId] = code;
+    } catch (e) {
+      pdpShareRefresh(player, e.message || "Impossible de créer le lien pour l'instant.", false);
+      return;
+    }
+  }
+  const url = playerShareUrl(code);
+  const copied = await copyTextToClipboard(url);
+  pdpShareRefresh(player, copied ? "Lien copié dans le presse-papiers" : "Copiez le lien ci-dessous", true, url);
+  // Téléphone : feuille de partage du système (Messages, WhatsApp…).
+  const coarse = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+  if (coarse && typeof navigator.share === "function") {
+    try { await navigator.share({ title: player.name, text: `${player.name} · ${teamA.name}`, url }); } catch (e) { /* partage annulé */ }
+  }
+}
+async function revokePlayerLinkAction(playerId) {
+  const player = teamA.players.find(p => p.id === playerId);
+  if (!player) return;
+  try {
+    const res = await fetchApi("/api/player/share-link/revoke", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || "Impossible de couper le lien pour l'instant.");
+    delete playerShareLinks[playerId];
+    pdpShareRefresh(player, "Lien coupé : l'ancienne adresse ne fonctionne plus", true);
+  } catch (e) {
+    pdpShareRefresh(player, e.message || "Impossible de couper le lien pour l'instant.", false);
+  }
 }
 
 function playerCareerHtml(player) {

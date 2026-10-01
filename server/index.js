@@ -65,6 +65,8 @@ const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
+const PlayerLinks = require("./playerLinks.js");
+const PlayerPage = require("./playerPage.js");
 const Engine = require("../engine.js");
 
 // MODE ACCÉLÉRÉ (tests/démo) — voir le commentaire détaillé dans
@@ -1300,6 +1302,40 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;
 
+      // Page publique d'un joueur partagé (`/j/<code>`, server/playerLinks.js
+      // et server/playerPage.js) : sans connexion. Lien inconnu, coupé, ou
+      // joueur parti de son club : page « Lien expiré ou introuvable » (404).
+      if (req.method === "GET" && /^\/j\/[^/]*\/?$/.test(route.pathname)) {
+        let code = "";
+        try { code = decodeURIComponent(route.pathname.slice(3).replace(/\/$/, "")); } catch (e) { code = ""; }
+        const qLang = I18n.normLang(route.searchParams.get("lang"));
+        const lang = I18n.siteLang({ query: qLang, cookie: req.headers.cookie, acceptLanguage: req.headers["accept-language"] });
+        const origin = originFor(req);
+        let page = null;
+        try {
+          const world = await World.loadWorld(multiSavePath, now);
+          let entry = null;
+          const resolved = world ? await PlayerLinks.resolveLink(multiSavePath, code, async (id) => {
+            entry = world.leagues.find(e => e.id === id) || null;
+            return entry ? World.loadLeague(world, id, multiSavePath) : null;
+          }) : null;
+          if (resolved) {
+            page = PlayerPage.renderPlayerPage({
+              player: resolved.player, team: resolved.team, league: resolved.league,
+              divisionLabel: entry ? World.divisionLabel(entry.level, entry.group) : "", origin, code, lang,
+            });
+          }
+        } catch (e) {
+          console.warn("[permalien joueur]", e.message);
+        }
+        const body = Buffer.from(page || PlayerPage.renderNotFoundPage({ lang, origin }), "utf-8");
+        sendBody(res, page ? 200 : 404, {
+          "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-cache",
+          "Content-Language": lang, Vary: "Accept-Language, Cookie", "X-Robots-Tag": "noindex",
+        }, body, true);
+        return;
+      }
+
       // Plus de carrière solo (2026-09-29) : sans jeton manager, seules
       // restent ouvertes /api/health, les routes admin (secret
       // X-Admin-Token) et les comptes (ci-dessus).
@@ -1748,6 +1784,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex, now);
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
         payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex, now);
+        // Permaliens actifs de ses joueurs { playerId: code } (fiche joueur,
+        // bouton « Partager », voir server/playerLinks.js).
+        try {
+          payload.playerShareLinks = await PlayerLinks.linksForTeam(multiSavePath, ctx.leagueId, ctx.teamIndex, ctx.league);
+        } catch (e) { payload.playerShareLinks = {}; }
         sendJson(res, 200, payload);
         return;
       }
@@ -2149,6 +2190,25 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         if (!out) { sendJson(res, 404, { ok: false, error: "Route inconnue", path: route.pathname }); return; }
         sendJson(res, out.status, out.body);
+        return;
+      }
+
+      // Permalien d'un joueur de son club (server/playerLinks.js) :
+      // POST /api/player/share-link { playerId } crée (ou renvoie) le code,
+      // POST /api/player/share-link/revoke { playerId } le coupe. Réservé au
+      // manager du club (jeton) ; stockage à part, la ligue n'est pas réécrite.
+      if ((route.pathname === "/api/player/share-link" || route.pathname === "/api/player/share-link/revoke") && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const playerId = body && body.playerId;
+        const out = route.pathname.endsWith("/revoke")
+          ? await PlayerLinks.revokeLink(multiSavePath, ctx, playerId)
+          : await PlayerLinks.createLink(multiSavePath, ctx, playerId, now);
+        if (!out.ok) { sendJson(res, out.status || 400, out); return; }
+        if (out.code) out.url = `${originFor(req)}/j/${out.code}`;
+        sendJson(res, 200, out);
         return;
       }
 

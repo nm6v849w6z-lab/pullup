@@ -11852,6 +11852,19 @@ class League {
     return announced;
   }
 
+  // Historique hebdomadaire des joueurs (voir PLAYER_HISTORY_SEASONS) : un
+  // instantané de chaque joueur de la ligue, appelé par server/autoSim.js
+  // juste après l'entraînement de la semaine. La semaine est comptée par
+  // saison (`playerHistoryWeek`, sauvegardé avec la ligue).
+  recordPlayerHistory() {
+    const season = typeof this.seasonNumber === "number" ? this.seasonNumber : 1;
+    const cur = this.playerHistoryWeek;
+    const week = cur && cur.s === season ? (cur.w || 0) + 1 : 1;
+    this.playerHistoryWeek = { s: season, w: week };
+    this.teams.forEach(t => ((t && t.players) || []).forEach(p => pushPlayerHistory(p, season, week)));
+    return { season, week };
+  }
+
   trainCpuTeams() {
     const humanTeams = this.teams.filter(t => t.isHuman);
     const userAvg = humanTeams.length
@@ -14994,6 +15007,10 @@ function serializePlayerRecord(p) {
     awards: Array.isArray(p.awards) ? p.awards.map(a => ({ ...a })) : [],
     careerSeasons: Array.isArray(p.careerSeasons) ? p.careerSeasons.map(c => ({ ...c })) : [],
     progressLog: Array.isArray(p.progressLog) ? p.progressLog.map(x => ({ ...x })) : [],
+    // Historique hebdomadaire (permaliens joueur, 2026-10-01) : [saison,
+    // semaine, note, ...caractéristiques dans l'ordre d'ATTRS], voir
+    // pushPlayerHistory. Suit le joueur d'un club à l'autre.
+    weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -15025,6 +15042,41 @@ function serializePlayerRecord(p) {
 // (11 semaines) plus une marge pour les semaines de play-offs prolongées.
 const TRAINING_HISTORY_MAX = 13;
 const PLAYER_PROGRESS_MAX = 30;
+// ---------------------------------------------------------------------
+// HISTORIQUE HEBDOMADAIRE DES JOUEURS (permaliens joueur, demande validée
+// le 2026-10-01) : à chaque mise à jour hebdomadaire (lundi, voir
+// server/autoSim.js), un instantané compact de CHAQUE joueur de la ligue
+// (clubs humains et IA) : [saison, semaine, note globale (1 décimale),
+// ...caractéristiques entières dans l'ordre d'ATTRS]. Stocké sur le joueur
+// (Player.weeklyHistory), il le suit donc d'un club à l'autre. Trois
+// saisons au plus (les plus anciennes sont retirées). Jamais envoyé pour
+// un joueur d'un autre club (server/publicPlayers.js) : il révèlerait ses
+// caractéristiques cachées.
+// ---------------------------------------------------------------------
+const PLAYER_HISTORY_SEASONS = 3;
+// Garde-fou : ~13 mises à jour par saison au plus, quel que soit le rythme.
+const PLAYER_HISTORY_MAX_ENTRIES = 60;
+const PLAYER_HISTORY_ATTRS = ATTRS.slice();
+function playerHistorySnapshot(p, season, week) {
+  return [season, week, Math.round(p.overall() * 10) / 10, ...PLAYER_HISTORY_ATTRS.map(a => Math.round(Number(p.attrs && p.attrs[a]) || 0))];
+}
+function pushPlayerHistory(p, season, week) {
+  const h = Array.isArray(p.weeklyHistory) ? p.weeklyHistory : [];
+  const snap = playerHistorySnapshot(p, season, week);
+  const last = h[h.length - 1];
+  // Même semaine rejouée (rattrapage) : on remplace, jamais de doublon.
+  if (last && last[0] === season && last[1] === week) h[h.length - 1] = snap;
+  else h.push(snap);
+  p.weeklyHistory = h.filter(e => e[0] > season - PLAYER_HISTORY_SEASONS).slice(-PLAYER_HISTORY_MAX_ENTRIES);
+}
+// Historique lisible : [{ season, week, overall, attrs: { clé: valeur } }].
+function playerHistoryEntries(p) {
+  return (Array.isArray(p && p.weeklyHistory) ? p.weeklyHistory : []).map(e => {
+    const attrs = {};
+    PLAYER_HISTORY_ATTRS.forEach((a, i) => { if (typeof e[3 + i] === "number") attrs[a] = e[3 + i]; });
+    return { season: e[0], week: e[1], overall: e[2], attrs };
+  });
+}
 // ---------------------------------------------------------------------
 // MARCHÉ — LISTE DE SUIVI ET ALERTES (Premium, retour utilisateur,
 // 2026-09-27 : « Liste de suivi du marché des transferts et alertes »).
@@ -15572,6 +15624,7 @@ function playerFromSave(pdata) {
   p.awards = Array.isArray(pdata.awards) ? pdata.awards.map(a => ({ ...a })) : [];
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
+  p.weeklyHistory = Array.isArray(pdata.weeklyHistory) ? pdata.weeklyHistory.filter(e => Array.isArray(e)).map(e => e.slice()) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -16159,6 +16212,8 @@ function serializeLeague(lg) {
     calendarWeeklySwitch: lg.calendarWeeklySwitch ? { ...lg.calendarWeeklySwitch } : null,
     maintenanceDone: lg.maintenanceDone ? { ...lg.maintenanceDone } : {},
     lastAutoTrainedDay: typeof lg.lastAutoTrainedDay === "number" ? lg.lastAutoTrainedDay : -1,
+    // Semaine courante de l'historique des joueurs (voir League.recordPlayerHistory).
+    playerHistoryWeek: lg.playerHistoryWeek ? { ...lg.playerHistoryWeek } : null,
     cup: lg.cup || null,
     privateLeagues: Array.isArray(lg.privateLeagues) ? lg.privateLeagues : [],
     friendlies: Array.isArray(lg.friendlies) ? lg.friendlies : [],
@@ -16247,6 +16302,7 @@ function leagueFromSave(data, userTeam = null) {
   lg.calendarWeeklySwitch = data.calendarWeeklySwitch && typeof data.calendarWeeklySwitch.anchorAt === "number" ? { ...data.calendarWeeklySwitch } : null;
   lg.maintenanceDone = data.maintenanceDone && typeof data.maintenanceDone === "object" ? { ...data.maintenanceDone } : {};
   lg.lastAutoTrainedDay = typeof data.lastAutoTrainedDay === "number" ? data.lastAutoTrainedDay : -1;
+  lg.playerHistoryWeek = data.playerHistoryWeek && typeof data.playerHistoryWeek.s === "number" ? { s: data.playerHistoryWeek.s, w: data.playerHistoryWeek.w || 0 } : null;
   lg.cup = data.cup || null;
   // Ligues privées (voir League.privateLeagues) : absent = sauvegarde
   // d'avant cette fonctionnalité, aucune ligue.
@@ -18215,6 +18271,7 @@ return {
   NATIONS, NATION_BY_CODE, NAME_POOLS, nationName, nationalityFromName, generatePlayerIdentity, randomNationality,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,
+  PLAYER_HISTORY_SEASONS, PLAYER_HISTORY_MAX_ENTRIES, PLAYER_HISTORY_ATTRS, playerHistorySnapshot, pushPlayerHistory, playerHistoryEntries,
   QUARTER_SECONDS, OVERTIME_SECONDS,
   CPU_TEAM_NAMES, WORLD_COUNTRIES, COUNTRY_CPU_TEAM_NAMES, countryInfo, generateCountryLeague, worldLeagueId, generateRoundRobinSchedule, League, generateLeague, generateMultiManagerLeague,
   randomHexToken,

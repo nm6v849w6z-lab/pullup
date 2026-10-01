@@ -317,6 +317,8 @@ function catchUpClassic(league, now, events) {
           results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, now) });
         });
         league.trainCpuTeams();
+        // Historique hebdomadaire des joueurs (permaliens, voir League.recordPlayerHistory).
+        if (typeof league.recordPlayerHistory === "function") league.recordPlayerHistory();
         league.lastAutoTrainedWeek = weekIndex;
         events.push({ type: "training", week: weekIndex, results });
       }
@@ -371,6 +373,8 @@ function catchUpDailyAnchored(league, now, events) {
             results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, now) });
           });
           league.trainCpuTeams();
+          // Historique hebdomadaire des joueurs (permaliens, voir League.recordPlayerHistory).
+          if (typeof league.recordPlayerHistory === "function") league.recordPlayerHistory();
           league.lastAutoTrainedDay = dayIndex;
           events.push({ type: "training", day: dayIndex, results });
         }
@@ -432,6 +436,8 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
     results.push({ teamIdx, result: team.trainWeek(league.divisionLevel, ecoAt, { seasonEnd, seasonNo }) });
   });
   league.trainCpuTeams();
+  // Historique hebdomadaire des joueurs (permaliens, voir League.recordPlayerHistory).
+  if (typeof league.recordPlayerHistory === "function") league.recordPlayerHistory();
   // Fin de saison : l'IA vieillit aussi, puis les vétérans peuvent annoncer
   // leur dernière saison (âge atteint APRÈS ce vieillissement) ; primes de
   // fin de saison ; début de l'intersaison (forme 100, motivation « Neutre »
