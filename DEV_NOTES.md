@@ -29,7 +29,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   league.results, Coupe/play-offs via Team.ordersHistory), classement,
   joueurs RÉELLEMENT entraînés aux fondamentaux (tous, et eux seuls :
   `digestTrainedPlayers`, lit Team.lastTrainingReport.effectiveFocus,
-  programme + ses fondamentaux avant → après ; À ADAPTER aux plans
+  programme + ses fondamentaux montés d'au moins 1 point, avant → après ;
+  entraînés sans montée non listés, « Aucune progression visible… » si
+  aucun n'a monté ; À ADAPTER aux plans
   individuels / slots du nouvel entraînement), bilan de la semaine
   (Team.financeLedger) et budget, marché (gagnées/perdues/en cours,
   surenchéri, ventes), contrats (dernière saison sans retraite,

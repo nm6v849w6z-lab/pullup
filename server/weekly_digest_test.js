@@ -49,6 +49,12 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
   // -------------------------------------------------------------------
   const { league } = store.createMultiManagerCareer(["Lyon Digest", "Paris Digest"], CREATED);
   World.useLeagueTimeZone(league);
+  {
+    // Programme de fondamentaux aux postes de l'effectif : entraînement réel.
+    const T = league.teams.find(t => t.name === "Lyon Digest");
+    T.trainingSkill = "threePoint";
+    T.trainingPositions = [...new Set(T.players.map(p => p.position))];
+  }
   AutoSim.catchUpLeague(league, MONDAY);
   const idx = league.teams.findIndex(t => t.name === "Lyon Digest");
   const team = league.teams[idx];
@@ -63,6 +69,11 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
     const expected = Object.values(report).filter(e => e.effectiveFocus && e.secondsPlayed > 0 && e.attendanceFactor !== 0).length;
     assert.strictEqual(real.length, expected, "rapport réel : exactement les joueurs entraînés");
     assert.ok(real.every(x => x.skills.every(k => Engine.FUNDAMENTAL_ATTRS.includes(k.attr))), "rapport réel : fondamentaux seulement");
+    assert.ok(real.length >= 1, "au moins un joueur réellement entraîné");
+    assert.ok(real.every(x => x.skills.every(k => k.gain >= 1)), "rapport réel : montées d'au moins 1 point seulement");
+    const data0 = Digest.buildDigestData({ league, teamIdx: idx, now: MONDAY });
+    assert.strictEqual(data0.training.trained, real.length);
+    assert.deepStrictEqual(data0.training.players.map(x => x.name), real.filter(x => x.skills.length).map(x => x.name), "seuls les entraînés qui ont monté sont listés");
   }
   // Rapport maîtrisé (indépendant du moteur).
   const [pA, pB, pC, pD, pE] = team.players;
@@ -74,7 +85,7 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
     // Entraîné, gain au tir à 3 points + croissance physique naturelle (exclue).
     [pA.id]: { name: pA.name, effectiveFocus: "threePoint", secondsPlayed: 1200, attendanceFactor: 1,
       gains: [{ attr: "threePoint", before: 40, after: 42 }, { attr: "speed", before: 30, after: 31 }] },
-    // Entraîné sans point entier gagné : +0, valeur actuelle.
+    // Entraîné sans point entier gagné : pas listé.
     [pB.id]: { name: pB.name, effectiveFocus: "threePoint", secondsPlayed: 600, attendanceFactor: 0.5, gains: [] },
     // Pas entraîné (n'a pas joué au poste) : croissance naturelle seulement.
     [pC.id]: { name: pC.name, effectiveFocus: null, secondsPlayed: 0, attendanceFactor: 0,
@@ -105,7 +116,14 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
     mk({ playerId: other.players[3].id, sellerIdx: otherIdx, status: "open", result: null, currentBid: 12000, currentBidderIdx: idx, closesAt: MONDAY + D, bids: [{ bidderIdx: idx, amount: 12000 }] }),
     mk({ playerId: mine.id, sellerIdx: idx, result: "sold", finalPrice: 27500, currentBid: 27500, currentBidderIdx: otherIdx }),
     mk({ playerId: other.players[4].id, sellerIdx: otherIdx, result: "sold", finalPrice: 9000, currentBid: 9000, currentBidderIdx: idx, closesAt: w.prevStart - D }),
+    // Joueurs partis de la ligue (autre championnat) : nom par l'actualité
+    // des transferts, par l'historique des ventes, ou inconnu.
+    mk({ id: 88001, playerId: 990001, sellerIdx: idx, result: "sold", finalPrice: 15000, currentBid: 15000, currentBidderIdx: otherIdx }),
+    mk({ id: 88002, playerId: 990002, sellerIdx: idx, result: "sold", finalPrice: 16000, currentBid: 16000, currentBidderIdx: otherIdx }),
+    mk({ id: 88003, playerId: 990003, sellerIdx: idx, result: "sold", finalPrice: 17000, currentBid: 17000, currentBidderIdx: otherIdx }),
   );
+  league.transferNews = (league.transferNews || []).concat([{ id: 88001, playerId: 990001, playerName: "Parti Actu", at: MONDAY - 2 * D }]);
+  team.transactions = [{ week: team.week - 1, label: "Vente de Parti Compta (enchères)", amount: 16000 }].concat(team.transactions || []);
   // Contrats.
   const season = league.contractSeason();
   team.players.forEach(p => { p.contractUntilSeason = season + 2; p.raiseRequest = null; p.retiringAfterSeason = false; });
@@ -125,19 +143,20 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
   assert.ok(data.results.every((r, i, a) => !i || a[i - 1].at <= r.at), "résultats dans l'ordre");
   assert.ok(data.standing && data.standing.pos >= 1 && data.standing.n === 10 && data.standing.played === 2, "classement");
   const tr = data.training.players;
-  assert.deepStrictEqual(tr.map(x => x.name).sort(), [pA.name, pB.name, pE.name].sort(), "exactement les 3 joueurs entraînés (pas de top 3 : tous, et eux seuls)");
-  const tA = tr.find(x => x.name === pA.name), tB = tr.find(x => x.name === pB.name), tE = tr.find(x => x.name === pE.name);
-  assert.deepStrictEqual(tA, { name: pA.name, program: "threePoint", programLabel: "Tir à 3 points", skills: [{ attr: "threePoint", before: 40, after: 42, gain: 2 }], total: 2 }, "programme + fondamental entraîné seulement");
-  assert.deepStrictEqual(tB.skills, [{ attr: "threePoint", before: 33, after: 33, gain: 0 }], "entraîné sans point gagné : +0");
+  assert.strictEqual(data.training.trained, 3, "3 joueurs entraînés (pA, pB, pE), pas les autres");
+  assert.deepStrictEqual(tr.map(x => x.name).sort(), [pA.name, pE.name].sort(), "listés : les entraînés qui ont monté (pB sans montée absent)");
+  const tA = tr.find(x => x.name === pA.name), tE = tr.find(x => x.name === pE.name);
+  assert.deepStrictEqual(tA, { name: pA.name, program: "threePoint", programLabel: "Tir à 3 points", skills: [{ attr: "threePoint", before: 40, after: 42, gain: 2 }], total: 2 }, "programme + fondamental entraîné seulement (pas la vitesse)");
   assert.strictEqual(tE.program, multi);
-  assert.deepStrictEqual(tE.skills.map(k => [k.attr, k.gain]), [[m1, 1], [m2, 0]], "toutes les caractéristiques du programme, pas la synergie");
+  assert.deepStrictEqual(tE.skills.map(k => [k.attr, k.gain]), [[m1, 1]], "seulement les montées du programme (pas +0, pas la synergie)");
+  assert.ok(!tE.skills.some(k => k.attr === m2));
   assert.strictEqual(tr[0].name, pA.name, "plus gros gain en premier");
   assert.ok(data.finances.hasWeek && data.finances.budget === Math.round(team.budget), "finances de la semaine");
   assert.strictEqual(data.finances.net, data.finances.income + data.finances.expenses);
   assert.deepStrictEqual(data.market.won.map(x => x.price), [42000], "enchère gagnée (celle d'avant la semaine exclue)");
   assert.deepStrictEqual(data.market.lost.map(x => x.myBid), [55000], "enchère perdue");
   assert.deepStrictEqual(data.market.ongoing.map(x => x.leading).sort(), [false, true], "enchères en cours (surenchéri / en tête)");
-  assert.deepStrictEqual(data.market.sold.map(x => x.player), [mine.name], "vente");
+  assert.deepStrictEqual(data.market.sold.map(x => x.player), [mine.name, "Parti Actu", "Parti Compta", null], "ventes : nom retrouvé même parti (effectifs, actualité, historique), sinon inconnu");
   assert.deepStrictEqual(data.contracts.extensions.map(x => x.player), [team.players[1].name], "prolongation (pas le joueur qui prend sa retraite)");
   assert.deepStrictEqual(data.contracts.raises.map(x => x.asked), [9999], "augmentation demandée");
   assert.ok(data.next.length >= 2 && data.next.every(m => m.at > MONDAY && m.at < w.nextStart && m.opponent), "prochains matchs de la semaine");
@@ -145,12 +164,29 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
 
   const fr = Digest.renderDigest(data, "fr", { unsubscribeUrl: "https://x.test/api/email/unsubscribe-digest?token=abc", gameUrl: "https://x.test/" });
   assert.ok(/Lyon Digest/.test(fr.subject));
-  for (const s of ["Résultats de la semaine", "Classement", "Entraînement", "Tir à 3 points 40 → <b", "Programme : <span", "(+2)", "(+0)", "Finances", "Budget actuel", "Enchère remportée", "Enchère perdue", "Tu as été surenchéri", "Tu mènes", "Joueur vendu",
+  for (const s of ["Résultats de la semaine", "Classement", "Entraînement", "Tir à 3 points 40 → <b", "42</b>", "(+2)", "Programme : <span", "Finances", "Budget actuel", "Enchère remportée", "Enchère perdue", "Tu as été surenchéri", "Tu mènes", "Joueur vendu",
     "Dernière saison de contrat", "Demande une augmentation", "Prochains matchs", "heure de Paris", "Ouvrir Hoop Manager", "https://x.test/", "Ne plus recevoir ce résumé", "Nantes Coupe", "Coupe nationale", "Bonjour CoachTest"]) {
     assert.ok(fr.html.includes(s), `HTML : « ${s} »`);
   }
   assert.ok(/Programme : Tir à 3 points — Tir à 3 points 40 -> 42 \(\+2\)/.test(fr.text) && /Ne plus recevoir ce résumé : https:\/\/x\.test/.test(fr.text), "version texte");
   assert.ok(!/font:[^;"]*"Segoe/.test(fr.html) && /font:[^;"]*'Segoe UI'/.test(fr.html), "attributs style bien fermés (police entre guillemets simples)");
+  {
+    const market = fr.html.slice(fr.html.indexOf("Marché des transferts"), fr.html.indexOf("Contrats"));
+    assert.ok(!/>\?</.test(market) && !market.includes("<b>?</b>"), "jamais « ? » comme nom");
+    assert.ok(market.includes("<b>Joueur vendu</b>"), "nom inconnu : « Joueur vendu » seul");
+    assert.ok(market.includes("Parti Actu") && market.includes("Parti Compta"));
+    assert.ok(/- Joueur vendu \(17/.test(fr.text), "texte : « Joueur vendu » sans nom");
+  }
+  const trainingHtml = fr.html.slice(fr.html.indexOf(">Entraînement<"), fr.html.indexOf(">Finances<"));
+  assert.ok(!trainingHtml.includes(pB.name) && !/\(\+0\)/.test(fr.html) && !/,\d \(\+/.test(fr.text), "ni +0, ni décimales");
+  // Entraînés mais aucune montée : ligne dédiée (≠ personne d'entraîné).
+  {
+    const d2 = { ...data, training: { trained: 2, players: [] } };
+    const h = Digest.renderDigest(d2, "fr", {}).html;
+    assert.ok(h.includes("Aucune progression visible cette semaine pour les joueurs entraînés.") && !h.includes("Aucun joueur entraîné aux fondamentaux"), "entraînés sans montée");
+    const h0 = Digest.renderDigest({ ...data, training: { trained: 0, players: [] } }, "fr", {}).html;
+    assert.ok(h0.includes("Aucun joueur entraîné aux fondamentaux cette semaine.") && !h0.includes("Aucune progression visible"), "personne d'entraîné");
+  }
   ok("rendu français (HTML + texte) : chaque rubrique, bouton et lien de désinscription");
 
   // États vides.
@@ -182,6 +218,8 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
     assert.ok(!m.html.includes("Résultats de la semaine"), `${lang} : rien en français`);
     const e = Digest.renderDigest({ ...emptyData }, lang, {});
     assert.ok(e.html.includes(S.noTraining.replace(/'/g, "&#39;")) && S.noTraining !== Digest.STRINGS.fr.noTraining, `${lang} : aucun joueur entraîné (traduit)`);
+    const u = Digest.renderDigest({ ...emptyData, training: { trained: 1, players: [] } }, lang, {});
+    assert.ok(u.html.includes(S.noUps.replace(/'/g, "&#39;")) && S.noUps !== Digest.STRINGS.fr.noUps, `${lang} : aucune progression visible (traduit)`);
   }
   const en = Digest.renderDigest(data, "en", {});
   assert.ok(en.html.includes("3-point shot 40 → <b"), "caractéristiques traduites par le dictionnaire du jeu");
