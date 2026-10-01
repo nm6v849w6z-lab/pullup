@@ -584,15 +584,12 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
     }
   }
   // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels,
-  // intensité, parrainages — validés côté serveur.
+  // intensité par plan, parrainages — validés côté serveur.
   let slotsValue, mentorValue;
   if (body.trainingSlots !== undefined) {
     const v = Engine.sanitizeTrainingSlots(team, body.trainingSlots);
     if (!v.ok) return fail(v.error);
     slotsValue = v.value;
-  }
-  if (body.trainingIntensity !== undefined && !Engine.TRAINING_INTENSITIES[body.trainingIntensity]) {
-    return fail(`Intensité d'entraînement inconnue : ${body.trainingIntensity}.`);
   }
   if (body.mentorships !== undefined) {
     const v = Engine.sanitizeMentorships(team, body.mentorships);
@@ -674,7 +671,6 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
   if (body.trainingSkill !== undefined) team.trainingSkill = body.trainingSkill;
   if (body.trainingPositions !== undefined) team.trainingPositions = [...body.trainingPositions];
   if (slotsValue !== undefined) team.trainingSlots = slotsValue;
-  if (body.trainingIntensity !== undefined) team.trainingIntensity = body.trainingIntensity;
   if (mentorValue !== undefined) team.mentorships = mentorValue;
   if (body.collectiveTraining !== undefined) team.collectiveTraining = body.collectiveTraining || null;
   if (body.trainedTactics !== undefined) team.trainedTactics = trainedTacticsValue;
@@ -685,7 +681,6 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
     trainingSkill: team.trainingSkill,
     trainingPositions: team.trainingPositions,
     trainingSlots: team.trainingSlots,
-    trainingIntensity: team.trainingIntensity,
     mentorships: team.mentorships,
     collectiveTraining: team.collectiveTraining,
     trainedTactics: team.trainedTactics,

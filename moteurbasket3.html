@@ -5337,6 +5337,16 @@
   .tm-who small{color:var(--ink-dim); font-size:12px;}
   .tm-prog{min-width:0;}
   .tm-prog select{width:100%; min-height:36px; margin:0; font-size:13px;}
+  .tm-int{display:inline-flex; gap:2px; margin-top:8px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:2px;}
+  .tm-int button{font:inherit; font-size:11.5px; font-weight:600; border:0; border-radius:6px; padding:4px 9px; background:transparent; color:var(--ink-dim); cursor:pointer;}
+  .tm-int button.on.legere{background:rgba(127,182,255,.16); color:#7fb6ff;}
+  .tm-int button.on.normale{background:rgba(255,255,255,.08); color:var(--ink);}
+  .tm-int button.on.intense{background:rgba(240,98,80,.16); color:#ff8a78;}
+  .tm-int button:focus-visible{outline:2px solid var(--amber); outline-offset:1px;}
+  .tm-int-legend{display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; font-size:12px; color:var(--ink-dim);}
+  .tm-int-legend .tm-label{width:100%;}
+  .tm-int-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:0;}
+  .tm-int-dot.legere{background:#7fb6ff;} .tm-int-dot.normale{background:var(--ink-dim);} .tm-int-dot.intense{background:#ff8a78;}
   .tm-ceil{margin-top:8px; display:flex; flex-direction:column; gap:6px;}
   .tm-ceil-row{display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--ink-dim); margin-bottom:3px;}
   .tm-ceil-row b{color:var(--ink);}
@@ -10296,14 +10306,18 @@ function ceilingRoomLevel(room) {
   return room >= CEILING_ROOM_STRONG ? "forte" : room > 0 ? "faible" : "atteinte";
 }
 
-// Intensité de la semaine (retour utilisateur 2026-10-01).
+// Intensité des fondamentaux, choisie joueur par joueur sur son plan
+// individuel (retour utilisateur 2026-10-01).
 const TRAINING_INTENSITIES = {
   legere: { label: "Légère", mult: 0.75, recoveryBonus: 2, conditionLoss: 0, injuryChance: 0 },
   normale: { label: "Normale", mult: 1, recoveryBonus: 0, conditionLoss: 0, injuryChance: 0 },
   intense: { label: "Intense", mult: 1.25, recoveryBonus: 0, conditionLoss: 8, injuryChance: 0.02 },
 };
-function trainingIntensityOf(team) {
-  return team && TRAINING_INTENSITIES[team.trainingIntensity] ? team.trainingIntensity : "normale";
+function trainingIntensityOf(team, player) {
+  if (!team || !player) return "normale";
+  const slots = typeof team.activeTrainingSlots === "function" ? team.activeTrainingSlots() : (team.trainingSlots || []);
+  const slot = slots.find(s => s && String(s.playerId) === String(player.id));
+  return slot && TRAINING_INTENSITIES[slot.intensity] ? slot.intensity : "normale";
 }
 
 // Spécialités d'entraîneur (retour utilisateur 2026-10-01).
@@ -10383,8 +10397,9 @@ function sanitizeTrainingSlots(team, raw) {
     if (!player) return { ok: false, error: "Joueur introuvable dans votre effectif." };
     if (!TRAINING_PROGRAMS[s.program]) return { ok: false, error: `Programme d'entraînement inconnu : ${s.program}.` };
     if (seen.has(player.id)) return { ok: false, error: "Un joueur ne peut avoir qu'un seul plan individuel." };
+    if (s.intensity !== undefined && !TRAINING_INTENSITIES[s.intensity]) return { ok: false, error: `Intensité d'entraînement inconnue : ${s.intensity}.` };
     seen.add(player.id);
-    out.push({ playerId: player.id, program: s.program });
+    out.push({ playerId: player.id, program: s.program, intensity: s.intensity || "normale" });
   }
   return { ok: true, value: out };
 }
@@ -10426,7 +10441,7 @@ function trainingEfficiencyFor(team, player, programKey) {
   const attendance = attendanceFactorForSeconds(seconds);
   const heightMult = heightMultiplierForProgram(programKey, player.height);
   const coachMult = trainerRateMultiplier(trainer);
-  const intensity = trainingIntensityOf(team);
+  const intensity = trainingIntensityOf(team, player);
   const intensityMult = TRAINING_INTENSITIES[intensity].mult;
   const specialtyMult = coachSpecialtyMultFor(trainer, programKey, player);
   const total = ageMult * attendance * heightMult * coachMult * intensityMult * specialtyMult;
@@ -10570,13 +10585,12 @@ function migrateTrainingSlots(team) {
     return { p, score };
   }).filter(x => x.score > 0);
   scored.sort((a, b) => (b.score - a.score) || (b.p.overall() - a.p.overall()));
-  return scored.slice(0, max).map(x => ({ playerId: x.p.id, program }));
+  return scored.slice(0, max).map(x => ({ playerId: x.p.id, program, intensity: "normale" }));
 }
 // Sauvegarde / chargement de l'état d'entraînement v2 (miroir identique).
 function serializeTrainingV2State(team) {
   return {
-    trainingSlots: (team.trainingSlots || []).map(s => ({ playerId: s.playerId, program: s.program })),
-    trainingIntensity: trainingIntensityOf(team),
+    trainingSlots: (team.trainingSlots || []).map(s => ({ playerId: s.playerId, program: s.program, intensity: TRAINING_INTENSITIES[s.intensity] ? s.intensity : "normale" })),
     mentorships: (team.mentorships || []).map(m => ({ youngId: m.youngId, veteranId: m.veteranId })),
     collectiveDayPlan: JSON.parse(JSON.stringify(team.collectiveDayPlan || {})),
     collectiveWeek: team.collectiveWeek ? JSON.parse(JSON.stringify(team.collectiveWeek)) : null,
@@ -10592,13 +10606,14 @@ function restoreTrainingV2State(team, data) {
     team.trainingSlots = data.trainingSlots
       .map(s => {
         const p = s && (team.players || []).find(pl => String(pl.id) === String(s.playerId));
-        return p && TRAINING_PROGRAMS[s.program] ? { playerId: p.id, program: s.program } : null;
+        return p && TRAINING_PROGRAMS[s.program]
+          ? { playerId: p.id, program: s.program, intensity: TRAINING_INTENSITIES[s.intensity] ? s.intensity : "normale" }
+          : null;
       })
       .filter(Boolean);
   } else {
     team.trainingSlots = migrateTrainingSlots(team);
   }
-  team.trainingIntensity = TRAINING_INTENSITIES[data.trainingIntensity] ? data.trainingIntensity : "normale";
   team.mentorships = Array.isArray(data.mentorships)
     ? data.mentorships.filter(m => m && m.youngId != null && m.veteranId != null).map(m => ({ youngId: m.youngId, veteranId: m.veteranId }))
     : [];
@@ -15674,8 +15689,7 @@ class Team {
     // la semaine en cours et semaines sans progrès (conseils).
     // trainingSkill/trainingPositions ci-dessus ne servent plus qu'à la
     // migration des anciennes sauvegardes.
-    this.trainingSlots = [];          // [{ playerId, program }]
-    this.trainingIntensity = "normale"; // "legere" | "normale" | "intense"
+    this.trainingSlots = [];          // [{ playerId, program, intensity }]
     this.mentorships = [];            // [{ youngId, veteranId }]
     this.collectiveDayPlan = {};      // { [dayIndex]: { collectiveTraining, trainedTactics } }
     this.collectiveWeek = null;       // bilan collectif de la semaine en cours
@@ -16550,11 +16564,11 @@ class Team {
   // Taux de récupération de forme physique quotidien (voir engine.js, miroir
   // identique) : CONDITION_RECOVERY_PER_DAY_TRAINED si collectiveTraining
   // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
-  conditionRecoveryPerDay() {
+  conditionRecoveryPerDay(player) {
     // Le focus « Récupération » est crédité jour de repos par jour de repos
     // (voir Team.applyRestDayRecovery). Intensité Légère : +2/jour (retour
     // utilisateur 2026-10-01).
-    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this)].recoveryBonus;
+    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this, player)].recoveryBonus;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -18445,9 +18459,8 @@ class Team {
     // Connaissance tactique (voir engine.js, miroir identique).
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (voir engine.js, miroir identique).
-    const recoveryPerDay = this.conditionRecoveryPerDay();
     this.players.forEach(p => {
-      p.resetForMatch(now, recoveryPerDay);
+      p.resetForMatch(now, this.conditionRecoveryPerDay(p));
       p.matchChemistryFactor = chemistryFactor;
       p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
@@ -31034,8 +31047,8 @@ function renderPlayerCompareView() {
   // que pour votre propre effectif).
   {
     const nowMs = Date.now();
-    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay());
-    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay());
+    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay(playerA));
+    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay(playerB));
     html += compareProfileTileHtml("Forme", condA, condB, "small", "small");
   }
   html += `</div>`; // compare-profile-strip
@@ -31911,12 +31924,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   html += `</div></div></div>`; // chips, id-text, id
 
-  const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
+  const condValue = currentCondition(player, now, team.conditionRecoveryPerDay(player));
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
   html += `<div class="pdp2-cond">` +
     `<div class="pdp2-form pdp2-form--${condBox}">` +
     `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
-    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
+    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay(player))}</div>` +
     `</div>`;
   if (isOwnTeam) html += `<div class="pdp2-kv"><span>Motivation</span>${motivationBadgeHtml(player)}</div>`;
   html += `<p class="player-quote pdp2-quote">« ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
@@ -32717,7 +32730,7 @@ function teamDetailSortValue(p, key, team) {
     case "age": return p.age;
     case "height": return p.height;
     case "salary": return p.salary;
-    case "condition": return currentCondition(p, Date.now(), (team || teamA).conditionRecoveryPerDay());
+    case "condition": return currentCondition(p, Date.now(), (team || teamA).conditionRecoveryPerDay(p));
     case "evaluation": {
       const recent = (p.matchLog || []).slice(-5);
       return recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : 0;
@@ -32811,7 +32824,7 @@ function teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet) {
 const TDE_GENERAL_KEYS = ["name", "position", "age", "height", "salary", "condition", "evaluation", "gp", "pts", "reb", "ast"];
 function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
   const now = Date.now();
-  const recovery = team.conditionRecoveryPerDay();
+  const recovery = p => team.conditionRecoveryPerDay(p);
   const H = (k, l, o) => teamDetailHeaderCellHtml(k, l, isOwnTeam, revealedSet, o);
   const cols = [
     H("name", "Nom", { cls: "eff-th-name" }), H("position", "Poste"), H("age", "Âge", { cls: "eff-th-age" }),
@@ -32835,7 +32848,7 @@ function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}${effRoleMarkHtml(role)}${cross || ""}${retirementBadgeHtml(p)}</span></td>` +
         `<td>${effPosBadgeHtml(p.position)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${formatMoney(p.salary)}</td>` +
-        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
+        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery(p))}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-num tde-stat">${gp}</td><td class="eff-num tde-stat tde-stat-main">${stat("pts")}</td>` +
         `<td class="eff-num tde-stat">${stat("reb")}</td><td class="eff-num tde-stat">${stat("ast")}</td></tr>`;
@@ -38631,14 +38644,14 @@ function compoRoleRank(d) {
 }
 function compoRosterRowsData(team, model) {
   const now = Date.now();
-  const recovery = typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const recovery = p => (typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay(p) : CONDITION_RECOVERY_PER_DAY);
   const youth = new Set((teamA.youthPlayers || []).map(y => y.id));
   return team.players.map(p => {
     const on = model.convoked.has(p.id);
     const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
     const best = bestPosition(p);
     const ratedPos = roles.length ? roles[0].pos : best;
-    const cond = currentCondition(p, now, recovery);
+    const cond = currentCondition(p, now, recovery(p));
     const { gp, sum } = teamDetailSeasonLine(p);
     const recent = (p.matchLog || []).slice(-5);
     return {
@@ -41312,8 +41325,7 @@ function syncTrainingToServer(extra = null) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        trainingSlots: teamA.activeTrainingSlots().map(s => ({ playerId: s.playerId, program: s.program })),
-        trainingIntensity: trainingIntensityOf(teamA),
+        trainingSlots: teamA.activeTrainingSlots().map(s => ({ playerId: s.playerId, program: s.program, intensity: s.intensity || "normale" })),
         mentorships: teamA.activeMentorships().map(m => ({ youngId: m.youngId, veteranId: m.veteranId })),
         collectiveTraining: teamA.collectiveTraining,
         trainedTactics: teamA.trainedTactics,
@@ -41423,12 +41435,18 @@ function trainingProgramSelectHtml(slotIdx, current) {
     `<optgroup label="Spécialisé (1 caractéristique, plein rendement)">${pure.join("")}</optgroup>` +
     `<optgroup label="Polyvalent (2 caractéristiques, chacune à ${Math.round(WEIGHT_BY_PROGRAM_SIZE[2] * 100)} %)">${combo.join("")}</optgroup></select>`;
 }
+// Intensité du plan individuel d'un joueur (retour utilisateur 2026-10-01).
+function trainingIntensityPickerHtml(slotIdx, player) {
+  const current = trainingIntensityOf(teamA, player);
+  return `<div class="tm-int" role="group" aria-label="Intensité pour ${escapeHtml(player.name)}">` +
+    ["legere", "normale", "intense"].map(k => `<button type="button" class="${k}${k === current ? " on" : ""}" data-slot-intensity="${slotIdx}" data-int="${k}" aria-pressed="${k === current}">${TRAINING_INTENSITIES[k].label}</button>`).join("") +
+    `</div>`;
+}
 function renderTrainingPlans() {
   const holder = document.getElementById("trainingPlansCard");
   if (!holder) return;
   const max = teamA.trainingSlotsMax();
   const slots = teamA.activeTrainingSlots();
-  const intensity = trainingIntensityOf(teamA);
   let html = `<div class="tm-h"><div class="tm-h-main">` +
     `<span class="tp-icon tp-icon-fond" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg></span>` +
     `<div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · ${slots.length} joueurs suivis sur ${max}</span></div></div></div>`;
@@ -41439,14 +41457,10 @@ function renderTrainingPlans() {
     holder.innerHTML = html;
     return;
   }
-  const seg = [
-    { key: "legere", sub: "−25 % · récupération +" },
-    { key: "normale", sub: "rythme standard" },
-    { key: "intense", sub: "+25 % · forme −, risque" },
-  ];
-  html += `<div><div class="tm-label">Intensité de la semaine</div><div class="tm-seg" role="group" aria-label="Intensité de la semaine">` +
-    seg.map(o => `<button type="button" data-intensity="${o.key}" class="${o.key === intensity ? "on" : ""}" aria-pressed="${o.key === intensity}"><b>${TRAINING_INTENSITIES[o.key].label}</b><span>${o.sub}</span></button>`).join("") +
-    `</div></div>`;
+  html += `<div class="tm-int-legend"><span class="tm-label">Intensité, joueur par joueur</span>` +
+    `<span><i class="tm-int-dot legere"></i>Légère : −25 %, récupération +${TRAINING_INTENSITIES.legere.recoveryBonus}/jour</span>` +
+    `<span><i class="tm-int-dot normale"></i>Normale</span>` +
+    `<span><i class="tm-int-dot intense"></i>Intense : +25 %, forme −${TRAINING_INTENSITIES.intense.conditionLoss}, risque de blessure</span></div>`;
   html += `<div class="tm-slots">`;
   slots.forEach((slot, idx) => {
     const p = trainingPlayerById(slot.playerId);
@@ -41455,7 +41469,7 @@ function renderTrainingPlans() {
     html += `<div class="tm-slot" data-slot-player="${escapeHtml(String(p.id))}">` +
       trainingAvatarHtml(p, p.name) +
       `<div class="tm-who"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.position)} · ${p.age} ans</small></div>` +
-      `<div class="tm-prog">${trainingProgramSelectHtml(idx, slot.program)}${trainingCeilingGaugesHtml(p, slot.program)}</div>` +
+      `<div class="tm-prog">${trainingProgramSelectHtml(idx, slot.program)}${trainingCeilingGaugesHtml(p, slot.program)}${trainingIntensityPickerHtml(idx, p)}</div>` +
       `<div class="tm-eff"><button type="button" class="tm-eff-btn" data-eff-toggle aria-expanded="false" aria-label="Rendement de ${escapeHtml(p.name)}">${eff.pct} %</button>` +
       `<span class="tm-eff-cap">rendement</span><div class="tm-tip" role="tooltip">${trainingEfficiencyTipHtml(eff)}</div></div>` +
       `<button type="button" class="tm-x" data-slot-remove="${idx}" title="Retirer" aria-label="Retirer ${escapeHtml(p.name)}">✕</button></div>`;
@@ -41474,14 +41488,14 @@ function renderTrainingPlans() {
   holder.innerHTML = html;
 }
 function setTrainingSlots(next) {
-  teamA.trainingSlots = next.map(s => ({ playerId: s.playerId, program: s.program }));
+  teamA.trainingSlots = next.map(s => ({ playerId: s.playerId, program: s.program, intensity: TRAINING_INTENSITIES[s.intensity] ? s.intensity : "normale" }));
   trainingChanged();
 }
 function applyTrainingAdvice(playerId, program) {
   const slots = teamA.activeTrainingSlots().map(s => ({ ...s }));
   const slot = slots.find(s => String(s.playerId) === String(playerId));
   if (slot) slot.program = program;
-  else if (slots.length < teamA.trainingSlotsMax() && trainingPlayerById(playerId)) slots.push({ playerId: trainingPlayerById(playerId).id, program });
+  else if (slots.length < teamA.trainingSlotsMax() && trainingPlayerById(playerId)) slots.push({ playerId: trainingPlayerById(playerId).id, program, intensity: "normale" });
   else return;
   setTrainingSlots(slots);
 }
@@ -41627,8 +41641,7 @@ function setCollectiveDayOption(dayIndex, option, trainedTactics) {
 function teamAverageCondition(team, now = Date.now()) {
   const players = (team && team.players) || [];
   if (!players.length) return null;
-  const recovery = team.conditionRecoveryPerDay();
-  return Math.round(players.reduce((sum, p) => sum + currentCondition(p, now, recovery), 0) / players.length);
+  return Math.round(players.reduce((sum, p) => sum + currentCondition(p, now, team.conditionRecoveryPerDay(p)), 0) / players.length);
 }
 function renderRecoveryFormGauge() {
   const holder = document.getElementById("recoveryFormGauge");
@@ -41787,7 +41800,7 @@ function trainingReportRowsHtml(report) {
     const p = trainingPlayerById(s.playerId);
     const vals = (s.changes || []).map(c => `${escapeHtml(TRAINING_LABELS[c.attr] || c.attr)} <b>${c.before} → ${c.after}</b>`).join(" · ");
     const chip = s.delta > 0 ? `<span class="tm-chip up">+${s.delta}</span>` : s.delta < 0 ? `<span class="tm-chip down">${s.delta}</span>` : `<span class="tm-chip flat">=</span>`;
-    html += `<div class="tm-row">${trainingAvatarHtml(p, s.name)}<div class="tm-rwho"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(trainingProgramLabel(s.program, true))}</small></div>` +
+    html += `<div class="tm-row">${trainingAvatarHtml(p, s.name)}<div class="tm-rwho"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(trainingProgramLabel(s.program, true))}${s.intensity && s.intensity !== "normale" && TRAINING_INTENSITIES[s.intensity] ? ` · ${TRAINING_INTENSITIES[s.intensity].label}` : ""}</small></div>` +
       `<div class="tm-rval">${vals}${s.injured ? ` · <span class="tm-low">Blessé à l'entraînement</span>` : ""}</div>${chip}</div>`;
   });
   const c = report.collective;
@@ -41875,10 +41888,17 @@ document.addEventListener("click", (e) => {
     document.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open"));
     return;
   }
-  const t = e.target.closest("[data-intensity],[data-slot-remove],[data-eff-toggle],[data-apply-advice],[data-train-day],[data-day-option],[data-mentor-remove],[data-training-week]");
+  const t = e.target.closest("[data-slot-intensity],[data-slot-remove],[data-eff-toggle],[data-apply-advice],[data-train-day],[data-day-option],[data-mentor-remove],[data-training-week]");
   if (!t) { document.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open")); return; }
   const d = t.dataset;
-  if (d.intensity) { teamA.trainingIntensity = d.intensity; trainingChanged(); return; }
+  if (d.slotIntensity != null) {
+    const slots = teamA.activeTrainingSlots().map(s => ({ ...s }));
+    const slot = slots[Number(d.slotIntensity)];
+    if (!slot || !TRAINING_INTENSITIES[d.int]) return;
+    slot.intensity = d.int;
+    setTrainingSlots(slots);
+    return;
+  }
   if (d.slotRemove != null) {
     const slots = teamA.activeTrainingSlots().filter((_, i) => i !== Number(d.slotRemove));
     setTrainingSlots(slots);
@@ -41926,7 +41946,7 @@ document.addEventListener("change", (e) => {
     const p = trainingPlayerById(t.value);
     const slots = teamA.activeTrainingSlots().map(s => ({ ...s }));
     if (!p || slots.length >= teamA.trainingSlotsMax()) return;
-    slots.push({ playerId: p.id, program: defaultTrainingProgramFor(p) });
+    slots.push({ playerId: p.id, program: defaultTrainingProgramFor(p), intensity: "normale" });
     setTrainingSlots(slots);
     return;
   }
@@ -44681,7 +44701,7 @@ function rosterSortValue(p, key) {
     // Forme physique : trié sur la valeur courante rattrapée (voir
     // currentCondition), pas sur p.condition brut, pour rester cohérent
     // avec ce que la colonne affiche réellement (voir conditionBadgeHtml).
-    case "condition": return currentCondition(p, Date.now(), teamA.conditionRecoveryPerDay());
+    case "condition": return currentCondition(p, Date.now(), teamA.conditionRecoveryPerDay(p));
     // Motivation : Player.form n'a pas d'équivalent de currentCondition (voir
     // motivationBadgeHtml), donc lu directement.
     case "motivation": return p.form;
@@ -44975,7 +44995,7 @@ function renderEffectifSection() {
 
   // Sous-onglet "Général".
   const now = Date.now();
-  const recovery = teamA.conditionRecoveryPerDay();
+  const recovery = p => teamA.conditionRecoveryPerDay(p);
   const listedIds = new Set((league.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
   const columns = ROSTER_SORT_COLUMNS.filter(c => c.key !== "role");
   const colCount = columns.length + 1;
@@ -45020,7 +45040,7 @@ function renderEffectifSection() {
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
         `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
         `<td class="eff-td-contract">${contractCellHtml(p)}</td>` +
-        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery)}</td>` +
+        `<td class="eff-td-condition">${effConditionHtml(p, now, recovery(p))}</td>` +
         `<td>${effMotivationHtml(p)}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-td-actions">${effActionsMenuHtml(p, isListed)}</td></tr>`;
@@ -50568,7 +50588,7 @@ const MEDICAL_RISK_TIERS = [
 ];
 let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
 function medicalRiskFor(team, player, now = Date.now()) {
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay(player) : CONDITION_RECOVERY_PER_DAY;
   const condition = currentCondition(player, now, recovery);
   const condMult = conditionStateFor(condition).injuryMult;
   const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
@@ -50590,7 +50610,7 @@ function renderMedicalSection() {
   const holder = document.getElementById("medicalContent");
   if (!holder) return;
   const players = team.players || [];
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
+  const recovery = p => (team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay(p) : CONDITION_RECOVERY_PER_DAY);
   const injured = players.filter(p => isCurrentlyInjured(p, now)).sort((a, b) => a.injuryUntil - b.injuryUntil);
   const fit = players.filter(p => !isCurrentlyInjured(p, now))
     .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
@@ -50638,7 +50658,7 @@ function renderMedicalSection() {
     const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
     html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
       `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
-      `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery)}</td>` +
+      `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery(p))}</td>` +
       `<td class="med-c-end"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
       `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td></tr>`;
   });

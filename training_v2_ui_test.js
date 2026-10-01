@@ -57,8 +57,10 @@ const D = 24 * 60 * 60 * 1000;
   assert([...doc.querySelectorAll(".tm-room-label")].every(el => /^(Marge forte|Marge faible|Plafond atteint)$/.test(el.textContent)), "jauge : marge forte / faible / plafond atteint (jamais le potentiel chiffré)");
 
   // Intensité
-  doc.querySelector('#trainingPlansCard [data-intensity="intense"]').click();
-  assert(win.eval("teamA.trainingIntensity") === "intense" && doc.querySelector('[data-intensity="intense"]').classList.contains("on"), "intensité Intense choisie");
+  doc.querySelector('#trainingPlansCard [data-slot-intensity="0"][data-int="intense"]').click();
+  assert(win.eval("teamA.trainingSlots[0].intensity") === "intense" && win.eval("teamA.trainingSlots[1].intensity") === "normale"
+    && doc.querySelector('[data-slot-intensity="0"][data-int="intense"]').classList.contains("on"), "intensité Intense choisie pour le premier joueur seulement");
+  assert(/Intensité Intense/.test(doc.querySelectorAll("#trainingPlansCard .tm-tip")[0].textContent) && /Intensité Normale/.test(doc.querySelectorAll("#trainingPlansCard .tm-tip")[1].textContent), "rendement : intensité propre à chaque joueur");
 
   // 3) Conseil sous un plan qui ne progresse plus + « Appliquer »
   win.eval(`(() => { const p = teamA.players.find(x => x.id === ${ids[0]}); p.attrs.threePoint = 99; teamA.trainingSlots[0].program = "threePoint"; renderTrainingPage(); })()`);
@@ -69,7 +71,7 @@ const D = 24 * 60 * 60 * 1000;
   assert(win.eval("teamA.trainingSlots[0].program") === target && doc.querySelector('[data-slot-program="0"]').value === target, `« Appliquer » passe le joueur sur le programme conseillé (${target})`);
   await flush(dom);
   const saved = readRawSave(savePath).team;
-  assert(saved.trainingSlots.length === 3 && saved.trainingSlots[0].program === target && saved.trainingIntensity === "intense", "plans et intensité enregistrés côté serveur");
+  assert(saved.trainingSlots.length === 3 && saved.trainingSlots[0].program === target && saved.trainingSlots[0].intensity === "intense" && saved.trainingSlots[1].intensity === "normale", "plans et intensité par joueur enregistrés côté serveur");
 
   // 4) Bande de la semaine : jour d'amical → tactique grisée
   const days = [...doc.querySelectorAll("#collectiveTrainingConfig [data-train-day]")];

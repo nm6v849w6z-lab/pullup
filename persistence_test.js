@@ -75,11 +75,13 @@ const addPlayer = (id) => {
   sel.dispatchEvent(new win1.Event("change", { bubbles: true }));
 };
 pivotIds.slice(0, 2).forEach(addPlayer);
-doc1.querySelectorAll("[data-slot-program]").forEach(sel => {
+// Chaque changement réaffiche la carte : on relit le menu par son index.
+doc1.querySelectorAll("[data-slot-program]").forEach((_, i) => {
+  const sel = doc1.querySelector(`[data-slot-program="${i}"]`);
   sel.value = "inside";
   sel.dispatchEvent(new win1.Event("change", { bubbles: true }));
 });
-doc1.querySelector('#trainingPlansCard [data-intensity="legere"]').click();
+doc1.querySelectorAll('#trainingPlansCard [data-int="legere"]').forEach((_, i) => doc1.querySelector(`#trainingPlansCard [data-slot-intensity="${i}"][data-int="legere"]`).click());
 const slotRows = (doc) => [...doc.querySelectorAll("#trainingPlansCard .tm-slot")];
 console.log("Plans individuels :", slotRows(doc1).map(r => r.querySelector(".tm-who b").textContent));
 console.log("Rendement affiché :", slotRows(doc1).map(r => r.querySelector(".tm-eff-btn").textContent));
@@ -106,10 +108,10 @@ await flush(dom1);
 const saved = readRawSave(savePath);
 if (!saved.team || !saved.league) throw new Error("❌ Format de sauvegarde inattendu (attendu team + league) : " + JSON.stringify(Object.keys(saved)));
 const savedTeam = saved.team, savedLeague = saved.league;
-console.log("\nSemaine sauvegardée :", savedTeam.week, "| plans :", JSON.stringify(savedTeam.trainingSlots), "| intensité :", savedTeam.trainingIntensity);
+console.log("\nSemaine sauvegardée :", savedTeam.week, "| plans :", JSON.stringify(savedTeam.trainingSlots), "| intensités :", (savedTeam.trainingSlots || []).map(sl => sl.intensity).join(", "));
 console.log("Staff sauvegardé :", savedTeam.trainer, "| budget sauvegardé :", savedTeam.budget);
 if (!Array.isArray(savedTeam.trainingSlots) || savedTeam.trainingSlots.length !== 2 || savedTeam.trainingSlots.some(sl => sl.program !== "inside")) throw new Error("❌ Les plans individuels n'ont pas été sauvegardés correctement.");
-if (savedTeam.trainingIntensity !== "legere") throw new Error("❌ L'intensité n'a pas été sauvegardée correctement.");
+if (savedTeam.trainingSlots.some(sl => sl.intensity !== "legere")) throw new Error("❌ L'intensité n'a pas été sauvegardée correctement.");
 if (!savedTeam.trainer || savedTeam.trainer.level !== 4 || savedTeam.trainer.weeksEmployed !== WEEKS) throw new Error("❌ Le staff (entraîneur) n'a pas été sauvegardé correctement : " + JSON.stringify(savedTeam.trainer));
 // Avec plusieurs matchs (dont potentiellement des matchs à domicile,
 // recette de billetterie à 6 chiffres) mêlés aux semaines d'entraînement, le
@@ -157,7 +159,7 @@ console.log(`${journeeOk ? "✅" : "❌"} Calendrier persisté : la journée ${R
 win2.eval("TAB_HANDLERS.entrainement();");
 const reloadedSlots = slotRows(doc2);
 const skillOk = reloadedSlots.length === 2 && reloadedSlots.every(r => r.querySelector("[data-slot-program]").value === "inside");
-const posOk = !!doc2.querySelector('#trainingPlansCard [data-intensity="legere"].on');
+const posOk = doc2.querySelectorAll('#trainingPlansCard [data-int="legere"].on').length === 2;
 console.log(`${skillOk ? "✅" : "❌"} Plans individuels persistés : ${reloadedSlots.length} joueur(s) en « Jeu intérieur »`);
 console.log(`${posOk ? "✅" : "❌"} Intensité persistée (Légère)`);
 // Rendement recalculé au rechargement (minutes de la nouvelle semaine).

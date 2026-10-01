@@ -99,10 +99,9 @@ function withFixedRandom(fn) {
 {
   const run = (intensity) => withFixedRandom(() => {
     const t = makeTeam(3);
-    t.trainingIntensity = intensity;
     const p = t.players[0];
     setup(p, { age: 19, pot: 80, value: 40 });
-    t.trainingSlots = [{ playerId: p.id, program: "threePoint" }];
+    t.trainingSlots = [{ playerId: p.id, program: "threePoint", intensity }];
     p.condition = 80;
     const g = progressOf(t, p, "threePoint", 1);
     return { g, condition: p.condition, team: t };
@@ -112,12 +111,21 @@ function withFixedRandom(fn) {
   assert(Math.abs(l.g / n.g - 0.75) < 1e-6, "Légère : −25 % de progression");
   assert(Math.abs(i.g / n.g - 1.25) < 1e-6, "Intense : +25 % de progression");
   assert(i.condition === 72 && n.condition === 80, "Intense : −8 de forme au tick hebdomadaire pour un joueur en plan");
-  assert(l.team.conditionRecoveryPerDay() === n.team.conditionRecoveryPerDay() + 2, "Légère : +2 de récupération passive par jour");
+  const lp = l.team.players[0], other = l.team.players[1];
+  assert(l.team.conditionRecoveryPerDay(lp) === n.team.conditionRecoveryPerDay(n.team.players[0]) + 2, "Légère : +2 de récupération passive par jour pour ce joueur");
+  assert(l.team.conditionRecoveryPerDay(other) === n.team.conditionRecoveryPerDay(other) && l.team.conditionRecoveryPerDay() === n.team.conditionRecoveryPerDay(), "Légère : pas de bonus pour les autres joueurs");
+  // Intensité choisie joueur par joueur : deux plans, deux intensités.
+  {
+    const t = makeTeam(3);
+    const [a, b] = t.players;
+    t.trainingSlots = [{ playerId: a.id, program: "pass", intensity: "intense" }, { playerId: b.id, program: "pass", intensity: "legere" }];
+    assert(E.trainingIntensityOf(t, a) === "intense" && E.trainingIntensityOf(t, b) === "legere" && E.trainingIntensityOf(t, t.players[2]) === "normale", "intensité lue sur le plan de chaque joueur");
+    assert(E.trainingEfficiencyFor(t, a, "pass").intensityMult === 1.25 && E.trainingEfficiencyFor(t, b, "pass").intensityMult === 0.75, "rendement : intensité propre à chaque joueur");
+  }
   // Risque de blessure ~2 % par joueur en plan et par semaine.
   const t = makeTeam(3);
-  t.trainingIntensity = "intense";
   const p = t.players[0];
-  t.trainingSlots = [{ playerId: p.id, program: "pass" }];
+  t.trainingSlots = [{ playerId: p.id, program: "pass", intensity: "intense" }];
   const real = Math.random;
   Math.random = () => 0.001; // tirage sous 2 %
   try { t.trainWeek(1, NOW); } finally { Math.random = real; }
@@ -293,7 +301,7 @@ function withFixedRandom(fn) {
 {
   const t = makeTeam(3, "offense");
   const data = JSON.parse(JSON.stringify(E.serializeTeam(t)));
-  ["trainingSlots", "trainingIntensity", "mentorships", "collectiveDayPlan", "collectiveWeek", "trainingStalls", "friendlyPlayersByDay"].forEach(k => delete data[k]);
+  ["trainingSlots", "mentorships", "collectiveDayPlan", "collectiveWeek", "trainingStalls", "friendlyPlayersByDay"].forEach(k => delete data[k]);
   delete data.trainer.specialty;
   data.trainingSkill = "rebound";
   data.trainingPositions = ["Pivot"];
@@ -308,7 +316,7 @@ function withFixedRandom(fn) {
   assert(E.teamFromSave(data).trainer.specialty === m.trainer.specialty, "spécialité de migration déterministe");
   delete data.trainer;
   assert(E.teamFromSave(data).trainingSlots.length === 0, "migration sans entraîneur : aucune place");
-  assert(m.trainingIntensity === "normale" && Array.isArray(m.mentorships), "migration : intensité normale, aucun parrainage");
+  assert(m.trainingSlots.every(s => s.intensity === "normale") && Array.isArray(m.mentorships), "migration : intensité normale, aucun parrainage");
 }
 
 // --- 10) IA ---------------------------------------------------------------
@@ -329,9 +337,9 @@ function withFixedRandom(fn) {
   const t = lg.teams[0];
   t.isHuman = true;
   t.hireTrainer(2, 1600, "youth");
-  const ok = actions.setTraining(t, 0, null, { trainingSlots: [{ playerId: t.players[0].id, program: "pass" }], trainingIntensity: "legere", collectiveTraining: "physique" }, NOW);
-  assert(ok.ok && t.trainingSlots.length === 1 && t.trainingIntensity === "legere" && t.collectiveTraining === "physique", "serveur : plans, intensité et collectif « physique » acceptés");
-  assert(!actions.setTraining(t, 0, null, { trainingIntensity: "folle" }, NOW).ok, "serveur : intensité inconnue refusée");
+  const ok = actions.setTraining(t, 0, null, { trainingSlots: [{ playerId: t.players[0].id, program: "pass", intensity: "legere" }], collectiveTraining: "physique" }, NOW);
+  assert(ok.ok && t.trainingSlots.length === 1 && t.trainingSlots[0].intensity === "legere" && t.collectiveTraining === "physique", "serveur : plans, intensité par joueur et collectif « physique » acceptés");
+  assert(!actions.setTraining(t, 0, null, { trainingSlots: [{ playerId: t.players[0].id, program: "pass", intensity: "folle" }] }, NOW).ok, "serveur : intensité inconnue refusée");
   assert(!actions.setTraining(t, 0, null, { trainingSlots: t.players.slice(0, 4).map(p => ({ playerId: p.id, program: "pass" })) }, NOW).ok, "serveur : trop de plans pour le niveau de l'entraîneur refusé");
   const today = E.parisCalendarDayIndex(NOW);
   assert(actions.setTraining(t, 0, null, { day: { dayIndex: today + 2 * D, collectiveTraining: "recuperation" } }, NOW).ok && t.collectiveDayPlan[today + 2 * D].collectiveTraining === "recuperation", "serveur : plan d'un jour de la semaine accepté");

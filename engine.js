@@ -1463,14 +1463,18 @@ function ceilingRoomLevel(room) {
   return room >= CEILING_ROOM_STRONG ? "forte" : room > 0 ? "faible" : "atteinte";
 }
 
-// Intensité de la semaine (retour utilisateur 2026-10-01).
+// Intensité des fondamentaux, choisie joueur par joueur sur son plan
+// individuel (retour utilisateur 2026-10-01).
 const TRAINING_INTENSITIES = {
   legere: { label: "Légère", mult: 0.75, recoveryBonus: 2, conditionLoss: 0, injuryChance: 0 },
   normale: { label: "Normale", mult: 1, recoveryBonus: 0, conditionLoss: 0, injuryChance: 0 },
   intense: { label: "Intense", mult: 1.25, recoveryBonus: 0, conditionLoss: 8, injuryChance: 0.02 },
 };
-function trainingIntensityOf(team) {
-  return team && TRAINING_INTENSITIES[team.trainingIntensity] ? team.trainingIntensity : "normale";
+function trainingIntensityOf(team, player) {
+  if (!team || !player) return "normale";
+  const slots = typeof team.activeTrainingSlots === "function" ? team.activeTrainingSlots() : (team.trainingSlots || []);
+  const slot = slots.find(s => s && String(s.playerId) === String(player.id));
+  return slot && TRAINING_INTENSITIES[slot.intensity] ? slot.intensity : "normale";
 }
 
 // Spécialités d'entraîneur (retour utilisateur 2026-10-01).
@@ -1550,8 +1554,9 @@ function sanitizeTrainingSlots(team, raw) {
     if (!player) return { ok: false, error: "Joueur introuvable dans votre effectif." };
     if (!TRAINING_PROGRAMS[s.program]) return { ok: false, error: `Programme d'entraînement inconnu : ${s.program}.` };
     if (seen.has(player.id)) return { ok: false, error: "Un joueur ne peut avoir qu'un seul plan individuel." };
+    if (s.intensity !== undefined && !TRAINING_INTENSITIES[s.intensity]) return { ok: false, error: `Intensité d'entraînement inconnue : ${s.intensity}.` };
     seen.add(player.id);
-    out.push({ playerId: player.id, program: s.program });
+    out.push({ playerId: player.id, program: s.program, intensity: s.intensity || "normale" });
   }
   return { ok: true, value: out };
 }
@@ -1593,7 +1598,7 @@ function trainingEfficiencyFor(team, player, programKey) {
   const attendance = attendanceFactorForSeconds(seconds);
   const heightMult = heightMultiplierForProgram(programKey, player.height);
   const coachMult = trainerRateMultiplier(trainer);
-  const intensity = trainingIntensityOf(team);
+  const intensity = trainingIntensityOf(team, player);
   const intensityMult = TRAINING_INTENSITIES[intensity].mult;
   const specialtyMult = coachSpecialtyMultFor(trainer, programKey, player);
   const total = ageMult * attendance * heightMult * coachMult * intensityMult * specialtyMult;
@@ -1737,13 +1742,12 @@ function migrateTrainingSlots(team) {
     return { p, score };
   }).filter(x => x.score > 0);
   scored.sort((a, b) => (b.score - a.score) || (b.p.overall() - a.p.overall()));
-  return scored.slice(0, max).map(x => ({ playerId: x.p.id, program }));
+  return scored.slice(0, max).map(x => ({ playerId: x.p.id, program, intensity: "normale" }));
 }
 // Sauvegarde / chargement de l'état d'entraînement v2 (miroir identique).
 function serializeTrainingV2State(team) {
   return {
-    trainingSlots: (team.trainingSlots || []).map(s => ({ playerId: s.playerId, program: s.program })),
-    trainingIntensity: trainingIntensityOf(team),
+    trainingSlots: (team.trainingSlots || []).map(s => ({ playerId: s.playerId, program: s.program, intensity: TRAINING_INTENSITIES[s.intensity] ? s.intensity : "normale" })),
     mentorships: (team.mentorships || []).map(m => ({ youngId: m.youngId, veteranId: m.veteranId })),
     collectiveDayPlan: JSON.parse(JSON.stringify(team.collectiveDayPlan || {})),
     collectiveWeek: team.collectiveWeek ? JSON.parse(JSON.stringify(team.collectiveWeek)) : null,
@@ -1759,13 +1763,14 @@ function restoreTrainingV2State(team, data) {
     team.trainingSlots = data.trainingSlots
       .map(s => {
         const p = s && (team.players || []).find(pl => String(pl.id) === String(s.playerId));
-        return p && TRAINING_PROGRAMS[s.program] ? { playerId: p.id, program: s.program } : null;
+        return p && TRAINING_PROGRAMS[s.program]
+          ? { playerId: p.id, program: s.program, intensity: TRAINING_INTENSITIES[s.intensity] ? s.intensity : "normale" }
+          : null;
       })
       .filter(Boolean);
   } else {
     team.trainingSlots = migrateTrainingSlots(team);
   }
-  team.trainingIntensity = TRAINING_INTENSITIES[data.trainingIntensity] ? data.trainingIntensity : "normale";
   team.mentorships = Array.isArray(data.mentorships)
     ? data.mentorships.filter(m => m && m.youngId != null && m.veteranId != null).map(m => ({ youngId: m.youngId, veteranId: m.veteranId }))
     : [];
@@ -5794,8 +5799,7 @@ class Team {
     // la semaine en cours et semaines sans progrès (conseils).
     // trainingSkill/trainingPositions ci-dessus ne servent plus qu'à la
     // migration des anciennes sauvegardes.
-    this.trainingSlots = [];          // [{ playerId, program }]
-    this.trainingIntensity = "normale"; // "legere" | "normale" | "intense"
+    this.trainingSlots = [];          // [{ playerId, program, intensity }]
     this.mentorships = [];            // [{ youngId, veteranId }]
     this.collectiveDayPlan = {};      // { [dayIndex]: { collectiveTraining, trainedTactics } }
     this.collectiveWeek = null;       // bilan collectif de la semaine en cours
@@ -7053,11 +7057,11 @@ class Team {
   // défaut). Lu par Team.resetForMatch/recordMatchStatsForTeam (voir plus
   // bas) et par l'affichage de la forme physique côté client
   // (currentCondition).
-  conditionRecoveryPerDay() {
+  conditionRecoveryPerDay(player) {
     // Le focus « Récupération » est crédité jour de repos par jour de repos
-    // (voir Team.applyRestDayRecovery). Intensité Légère : +2/jour (retour
-    // utilisateur 2026-10-01).
-    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this)].recoveryBonus;
+    // (voir Team.applyRestDayRecovery). Plan individuel en intensité Légère :
+    // +2/jour pour CE joueur (retour utilisateur 2026-10-01), d'où `player`.
+    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this, player)].recoveryBonus;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -8100,8 +8104,6 @@ class Team {
     const nowMs = now != null ? now : Date.now();
     const trainerMult = this.trainerBonusMultiplier();
     const ceilingBonus = trainerCeilingBonus(this.trainer);
-    const intensityKey = trainingIntensityOf(this);
-    const intensity = TRAINING_INTENSITIES[intensityKey];
     const slotByPlayer = new Map(this.activeTrainingSlots().map(sl => [String(sl.playerId), sl.program]));
     const mentoredYoung = new Set(this.activeMentorships().map(m => String(m.youngId)));
     if (!this.trainingStalls || typeof this.trainingStalls !== "object") this.trainingStalls = {};
@@ -8131,6 +8133,8 @@ class Team {
       let ceilingWeights = null;
       let mult = trainerMult;
       let efficiency = null;
+      const intensityKey = trainingIntensityOf(this, p);
+      const intensity = TRAINING_INTENSITIES[intensityKey];
       if (program) {
         ({ attrWeights, synergyAttrs, ceilingWeights } = slotTrainingWeightsFor(p, program));
         mult = trainerMult * intensity.mult * coachSpecialtyMultFor(this.trainer, program, p);
@@ -8176,7 +8180,7 @@ class Team {
             handleGameEvent(this.feed, { type: "injury", week: this.week, playerId: p.id, playerName: p.name, weeks: Math.max(1, Math.round(days / 7)) }, { clubName: this.name });
           }
         }
-        slotReport.push({ playerId: p.id, name: p.name, program, changes, delta, efficiency, injured });
+        slotReport.push({ playerId: p.id, name: p.name, program, intensity: intensityKey, changes, delta, efficiency, injured });
         const tip = trainingAdviceFor(this, p, program);
         if (tip) advice.push({ ...tip, name: p.name });
       } else {
@@ -8492,7 +8496,7 @@ class Team {
     });
 
     const result = {
-      players: report, slots: slotReport, advice, collective, intensity: intensityKey, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
+      players: report, slots: slotReport, advice, collective, trainerSalaryPaid, videoAnalystSalaryPaid, recruiterSalaryPaid, doctorSalaryPaid, physioSalaryPaid, assistantCoachSalaryPaid,
       playerPayroll, youthPayroll, fanShopRevenue, tvRightsRevenue, merchRevenue, tvStationRevenue, moraleDrift, salaryChanges,
       fanMorale: this.fanMorale, budget: this.budget, trainerMult,
       deficitAlert, forcedFireSale, deficitWeeks: this.deficitWeeks,
@@ -9192,12 +9196,10 @@ class Team {
     // même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor ci-dessus.
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (retour utilisateur, 2026-09, voir
-    // Team.conditionRecoveryPerDay/collectiveTraining) : taux du CLUB,
-    // calculé UNE FOIS ici puis transmis à chaque joueur, plutôt que
-    // recalculé joueur par joueur (identique pour tout l'effectif).
-    const recoveryPerDay = this.conditionRecoveryPerDay();
+    // Team.conditionRecoveryPerDay/collectiveTraining) : taux du club, plus
+    // le bonus du joueur dont le plan individuel est en intensité Légère.
     this.players.forEach(p => {
-      p.resetForMatch(now, recoveryPerDay);
+      p.resetForMatch(now, this.conditionRecoveryPerDay(p));
       p.matchChemistryFactor = chemistryFactor;
       p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
@@ -11585,7 +11587,7 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
       // tests qui l'appellent directement sur un joueur déjà mis en jeu à
       // la main). `conditionUpdatedAt` posé à `now` : la prochaine
       // récupération (voir currentCondition) repartira de CE match.
-      const baseCondition = p.matchCondition ?? currentCondition(p, now, team.conditionRecoveryPerDay());
+      const baseCondition = p.matchCondition ?? currentCondition(p, now, team.conditionRecoveryPerDay(p));
       p.condition = clamp(Math.round(baseCondition - conditionLossForMinutes(p.secondsPlayed / 60)), 0, 100);
       p.conditionUpdatedAt = now;
       // Bonus temporaire de MVP consommé (voir Player.pendingMatchBoost/eff()
