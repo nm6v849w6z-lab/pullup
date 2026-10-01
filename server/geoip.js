@@ -86,19 +86,34 @@ function countryForIp(raw) {
 
 const CDN_HEADERS = ["cf-ipcountry", "x-vercel-ip-country", "x-country-code", "cloudfront-viewer-country"];
 
-function clientIp(req) {
-  const fwd = req && req.headers && req.headers["x-forwarded-for"];
-  if (typeof fwd === "string" && fwd.trim()) return fwd.split(",")[0].trim();
-  return (req && req.socket && req.socket.remoteAddress) || "";
+// Adresses candidates du client, de la plus sûre à la moins sûre : en-têtes
+// « IP du client » des proxys (Render passe par Cloudflare : True-Client-IP /
+// CF-Connecting-IP), puis chaque adresse de X-Forwarded-For dans l'ordre, puis
+// la socket. La première qui tombe dans un pays connu l'emporte (une adresse
+// privée ou interne au proxy est simplement sautée).
+function candidateIps(req) {
+  const h = (req && req.headers) || {};
+  const out = [];
+  for (const k of ["true-client-ip", "cf-connecting-ip", "x-real-ip", "fly-client-ip"]) {
+    if (typeof h[k] === "string" && h[k].trim()) out.push(h[k].trim());
+  }
+  const fwd = h["x-forwarded-for"];
+  if (typeof fwd === "string") fwd.split(",").map(x => x.trim()).filter(Boolean).forEach(x => out.push(x));
+  if (req && req.socket && req.socket.remoteAddress) out.push(req.socket.remoteAddress);
+  return out;
 }
 
 // Code pays (minuscules, ex. "de") pour une requête, ou null.
 function countryFromRequest(req) {
   for (const h of CDN_HEADERS) {
     const v = req && req.headers && req.headers[h];
-    if (typeof v === "string" && /^[a-z]{2}$/i.test(v.trim())) return v.trim().toLowerCase();
+    if (typeof v === "string" && /^[a-z]{2}$/i.test(v.trim()) && !/^(xx|t1)$/i.test(v.trim())) return v.trim().toLowerCase();
   }
-  return countryForIp(clientIp(req));
+  for (const ip of candidateIps(req)) {
+    const c = countryForIp(ip);
+    if (c) return c;
+  }
+  return null;
 }
 
 module.exports = { countryForIp, countryFromRequest };

@@ -38,6 +38,18 @@ const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
 const GeoIp = require("./geoip.js");
+
+// Pays du club à l'inscription (2026-10-01, retour utilisateur : « si mon ip
+// est fr je dois avoir une équipe fr ») : le pays CLIQUÉ par le manager
+// (b.countryChosen) est respecté ; sinon (présélection automatique, ancienne
+// page sans ce champ…), le pays de l'adresse IP l'emporte s'il est ouvert,
+// puis celui envoyé par la page.
+function signupCountry(req, b) {
+  const sent = World.isOpenCountry(b.country) ? b.country : null;
+  if (b.countryChosen === true && sent) return sent;
+  const ip = GeoIp.countryFromRequest(req);
+  return World.isOpenCountry(ip) ? ip : sent;
+}
 const Mailer = require("./mailer.js");
 const I18n = require("./i18n.js");
 const Engine = require("../engine.js");
@@ -320,7 +332,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       if (club.code) { sendJson(res, 400, { ok: false, code: club.code }); return true; }
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
-        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+        const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: signupCountry(req, b) }, now);
         recordIp(account, req, now);
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
@@ -649,7 +661,7 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
-          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: World.isOpenCountry(b.country) ? b.country : null }, now);
+          account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: signupCountry(req, b) }, now);
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));

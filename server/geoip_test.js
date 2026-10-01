@@ -39,7 +39,9 @@ function get(server, urlPath, headers = {}) {
   assert.strictEqual(GeoIp.countryFromRequest({ headers: { "cf-ipcountry": "CH", "x-forwarded-for": "90.84.1.1" } }), "ch");
   assert.strictEqual(GeoIp.countryFromRequest({ headers: { "x-forwarded-for": "85.214.1.1, 10.0.0.1" } }), "de");
   assert.strictEqual(GeoIp.countryFromRequest({ headers: {}, socket: { remoteAddress: "::ffff:151.38.1.1" } }), "it");
-  ok("requête : en-tête pays d'un CDN d'abord, puis première adresse de X-Forwarded-For, puis la socket");
+  assert.strictEqual(GeoIp.countryFromRequest({ headers: { "x-forwarded-for": "10.0.0.1, 90.84.1.1" } }), "fr", "adresse interne en tête sautée");
+  assert.strictEqual(GeoIp.countryFromRequest({ headers: { "true-client-ip": "90.84.1.1", "x-forwarded-for": "104.16.0.1" } }), "fr", "True-Client-IP (Render/Cloudflare)");
+  ok("requête : en-tête pays d'un CDN, puis IP du client (True-Client-IP, X-Forwarded-For en sautant les adresses internes), puis la socket");
 
   // 2) Route de configuration du site.
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "geoip-"));
@@ -54,6 +56,24 @@ function get(server, urlPath, headers = {}) {
     assert.strictEqual((await get(server, "/api/account/config", { "CF-IPCountry": "JP" })).suggestedCountry, null, "Japon : pays non ouvert");
     assert.strictEqual((await get(server, "/api/account/config")).suggestedCountry, null, "127.0.0.1 : rien");
     ok("/api/account/config : suggestedCountry d'après l'IP (de, lt), null pour un pays non ouvert ou une IP locale");
+
+    // Inscription : IP française → club français, sauf pays cliqué exprès.
+    const post = (body, headers) => new Promise((resolve, reject) => {
+      const data = JSON.stringify(body);
+      const rq = http.request({ host: "127.0.0.1", port: server.address().port, path: "/api/account/signup", method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data), ...headers } }, res => {
+        let raw = ""; res.on("data", c => { raw += c; }); res.on("end", () => resolve(JSON.parse(raw)));
+      });
+      rq.on("error", reject); rq.end(data);
+    });
+    const leagueOf = async token => (await get(server, "/api/save", { "X-TipIn-Token": token })).league.leagueId;
+    const a = await post({ email: "ipfr@x.fr", password: "motdepasse1", clubName: "Ip France", country: "us" }, { "X-Forwarded-For": "90.84.1.1" });
+    assert.strictEqual(await leagueOf(a.managerToken), "fr-1", "IP française, pays présélectionné US (navigateur en anglais) → club français");
+    const b2 = await post({ email: "ipfr2@x.fr", password: "motdepasse1", clubName: "Choix Italie", country: "it", countryChosen: true }, { "X-Forwarded-For": "90.84.1.1" });
+    assert.strictEqual(await leagueOf(b2.managerToken), "it-1", "pays cliqué exprès : respecté");
+    const c2 = await post({ email: "ipde@x.de", password: "motdepasse1", clubName: "Ip Deutschland" }, { "True-Client-IP": "85.214.1.1" });
+    assert.strictEqual(await leagueOf(c2.managerToken), "de-1", "sans pays envoyé : celui de l'IP");
+    ok("inscription : IP française → club en France (même si la page proposait un autre pays), sauf pays choisi par le manager");
 
     // 3) Page d'inscription dans un vrai navigateur.
     let chromium = null;
