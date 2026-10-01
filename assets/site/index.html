@@ -1206,6 +1206,16 @@
     return "fr";
   }
   var guessedCountry = guessCountry();
+  var countryTouched = false; // le manager a choisi lui-même : on ne change plus rien
+  // Pays sélectionné (et visible dans la grille qui défile) dans les deux formulaires.
+  function preselectCountry(code) {
+    document.querySelectorAll("[data-country-pick]").forEach(function (group) {
+      var g = group.querySelector('[data-country="' + code + '"]');
+      if (!g) return;
+      selectCountry(group, g);
+      group.scrollTop = Math.max(0, g.offsetTop - group.offsetTop - 4);
+    });
+  }
   document.querySelectorAll("[data-country-pick]").forEach(function (group) {
     var g = group.querySelector('[data-country="' + guessedCountry + '"]');
     if (g && guessedCountry !== "fr") {
@@ -1217,6 +1227,7 @@
       var b = e.target.closest("[data-country]");
       if (!b) return;
       selectCountry(group, b);
+      countryTouched = true;
     });
   });
 
@@ -1318,6 +1329,9 @@
   api("GET", "/api/account/config").then(function (c) {
     if (!c || !c.ok) return;
     config = c;
+    // Pays d'après l'adresse IP (serveur), prioritaire sur la langue du
+    // navigateur : un Allemand au navigateur en anglais tombe sur l'Allemagne.
+    if (c.suggestedCountry && !countryTouched) preselectCountry(c.suggestedCountry);
     document.querySelectorAll(".invite-only").forEach(function (el) { el.style.display = c.inviteRequired ? "" : "none"; });
     document.querySelectorAll(".discord-only").forEach(function (el) { el.style.display = c.discord ? "" : "none"; });
     if (c.discordInvite) {

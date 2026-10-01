@@ -403,6 +403,14 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Pays proposé d'après l'IP (2026-10-01)** : server/geoip.js lit la table
+  locale server/geodata/geoip.bin (17 pays ouverts, données NRO CC BY 4.0,
+  aucun service externe) ; /api/account/config renvoie `suggestedCountry`,
+  que la page d'inscription présélectionne (prioritaire sur la langue du
+  navigateur, sauf si le manager a déjà cliqué). Nouveau pays ouvert →
+  relancer `node scripts/build_geoip.js <paquet npm>` (mode d'emploi en tête
+  du script), sinon il ne sera jamais proposé par IP.
+
 - **Hébergement (2026-09-27)** : PROD = service Render `hoop-manager`
   (Frankfurt, Starter, branche `prod`, domaine hoop-manager.com, adresse
   technique hoop-manager-test.onrender.com), base Upstash `pullup`

@@ -37,6 +37,7 @@ const crypto = require("crypto");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
+const GeoIp = require("./geoip.js");
 const Mailer = require("./mailer.js");
 const I18n = require("./i18n.js");
 const Engine = require("../engine.js");
@@ -295,6 +296,9 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         publicSite: isPublicSite(),
         openSlots: openSlots(multi),
         countries: World.publicCountries(),
+        // Pays proposé d'office à l'inscription, d'après l'IP (server/geoip.js) :
+        // null hors des pays ouverts (le site prend alors la langue du navigateur).
+        suggestedCountry: (c => (World.isOpenCountry(c) ? c : null))(GeoIp.countryFromRequest(req)),
         passwordMinLength: Accounts.PASSWORD_MIN_LENGTH,
         passwordResetByMail: Mailer.mailConfigured(),
         clubNameMaxLength: Accounts.CLUB_NAME_MAX_LENGTH,

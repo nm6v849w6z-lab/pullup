@@ -169,6 +169,7 @@ ${cta()}</article>`,
 <li><b>Game data</b>: everything you do in the game (orders, transfers, messages sent to other managers…), required for it to work.</li>
 <li><b>Browser local storage</b>: a login token and your preferences (language, theme) are saved in your browser to keep you logged in. A "hm-lang" cookie remembers the language of the site's pages.</li>
 <li><b>Technical logs</b>: the host records requests (IP address, date, page requested) for security and for the service to run properly.</li>
+<li><b>Country suggested at sign-up</b>: the IP address is used, only while the page loads, to preselect your country from a local table (<a href="https://www.nro.net">NRO</a> data, CC BY 4.0); it is neither stored nor sent anywhere, and you can pick another country.</li>
 <li><b>Anti-cheating</b>: an encrypted fingerprint of the IP address (never the address itself) is kept with the account's last 5 logins, to spot multiple accounts; transfers between managers' clubs are logged (price, estimated value of the player) to spot rigged sales.</li>
 </ul>
 <h2>Why</h2>
@@ -306,6 +307,7 @@ ${cta()}</article>`,
 <li><b>Dati di gioco</b>: tutto ciò che fai nel gioco (ordini, trasferimenti, messaggi inviati agli altri manager…), necessario al suo funzionamento.</li>
 <li><b>Memoria locale del browser</b>: un token di accesso e le tue preferenze (lingua, tema) sono salvati nel tuo browser per mantenerti connesso. Un cookie « hm-lang » ricorda la lingua delle pagine del sito.</li>
 <li><b>Log tecnici</b>: l'hosting registra le richieste (indirizzo IP, data, pagina richiesta) per la sicurezza e il buon funzionamento del servizio.</li>
+<li><b>Paese proposto all'iscrizione</b>: l'indirizzo IP serve, solo durante il caricamento della pagina, a preselezionare il tuo paese da una tabella locale (dati <a href="https://www.nro.net">NRO</a>, CC BY 4.0); non viene né salvato né trasmesso, e puoi scegliere un altro paese.</li>
 <li><b>Lotta contro gli imbrogli</b>: un'impronta cifrata dell'indirizzo IP (mai l'indirizzo stesso) viene conservata con gli ultimi 5 accessi dell'account, per individuare gli account multipli; i trasferimenti tra club di manager sono registrati (prezzo, valore stimato del giocatore) per individuare le vendite combinate.</li>
 </ul>
 <h2>Perché</h2>

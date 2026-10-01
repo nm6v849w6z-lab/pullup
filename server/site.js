@@ -424,6 +424,7 @@ function pageConfidentialite() {
 <li><b>Données de jeu</b> : tout ce que vous faites dans le jeu (ordres, transferts, messages envoyés aux autres managers…), nécessaire à son fonctionnement.</li>
 <li><b>Stockage local du navigateur</b> : un jeton de connexion et vos préférences (langue, thème) sont enregistrés dans votre navigateur pour vous garder connecté. Un cookie « hm-lang » retient la langue des pages du site.</li>
 <li><b>Journaux techniques</b> : l'hébergeur enregistre les requêtes (adresse IP, date, page demandée) pour la sécurité et le bon fonctionnement du service.</li>
+<li><b>Pays proposé à l'inscription</b> : l'adresse IP sert, le temps d'afficher la page, à présélectionner ton pays, à partir d'une table locale (données <a href="https://www.nro.net">NRO</a>, CC BY 4.0) ; elle n'est ni enregistrée ni transmise, et tu peux choisir un autre pays.</li>
 <li><b>Lutte contre la triche</b> : une empreinte chiffrée de l'adresse IP (jamais l'adresse elle-même) est gardée avec les 5 dernières connexions du compte, pour repérer les comptes multiples ; les transferts entre clubs de managers sont journalisés (prix, valeur estimée du joueur) pour repérer les ventes arrangées.</li>
 </ul>
 <h2>Pourquoi</h2>

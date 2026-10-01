@@ -1,0 +1,8 @@
+server/geodata/geoip.bin (pays proposé à l'inscription d'après l'adresse IP,
+voir server/geoip.js et scripts/build_geoip.js) est dérivé du paquet
+@ip-location-db/geo-whois-asn-country, lui-même construit à partir des
+statistiques d'attribution des registres Internet régionaux.
+
+The statistics data provided by NRO is licensed under a Creative Commons
+Attribution 4.0 International License.
+Copyright Holder: Number Resource Organization (NRO) — https://www.nro.net
