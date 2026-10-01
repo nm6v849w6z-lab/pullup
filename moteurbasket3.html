@@ -38345,6 +38345,7 @@ function renderSpectateMatch() {
 function closeSpectateMatch() {
   const existing = document.getElementById("spectateOverlay");
   if (existing) existing.remove();
+  if (spectateState && spectateState.timer) clearInterval(spectateState.timer);
   spectateState = null;
 }
 
@@ -38409,6 +38410,15 @@ async function showSpectateMatch(teamIdx, pre) {
   document.getElementById("spectateRefreshBtn").addEventListener("click", () => { window.__lastSpectateRefresh = refreshSpectateMatch(); });
   overlay.querySelectorAll(".spectate-bs-tab").forEach(b => b.addEventListener("click", () => renderSpectateBoxScoreTab(b.dataset.side)));
   renderSpectateMatch();
+  // Le match avance tout seul (tous les événements sont déjà là, chacun
+  // avec son heure de diffusion) : nouveau rendu chaque seconde, plus
+  // besoin d'« Actualiser » pour suivre un direct ou un replay.
+  const state = spectateState;
+  state.timer = setInterval(() => {
+    if (spectateState !== state || !document.getElementById("spectateOverlay")) { clearInterval(state.timer); return; }
+    const n = state.live.forfeit ? 0 : state.live.events.filter(ev => ev.airAt <= Date.now()).length;
+    if (n !== state.lastAired) { state.lastAired = n; renderSpectateMatch(); }
+  }, 1000);
 }
 
 // Câblage des onglets Domicile/Extérieur du box score en direct — UNE SEULE
@@ -39334,13 +39344,34 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
-  // Premium « Revoir le direct » : seulement ses propres matchs, en ligue partagée.
-  if (managerToken && (homeIdx === myTeamIndex || awayIdx === myTeamIndex)) ctx.replay = { round, competition, home: homeIdx, away: awayIdx };
+  // Premium « Revoir le direct » : tout match diffusé de son championnat
+  // (retour utilisateur 2026-10-01 : « il faudrait pouvoir revoir les matchs
+  // de tout le monde même en championnat, coupe, po ») — au moins un club
+  // humain (un match entre deux clubs de l'IA n'est jamais diffusé). Pas
+  // depuis la page d'un autre championnat (myTeamIndex = -1).
+  if (managerToken && myTeamIndex >= 0) {
+    const ht = league.teams[homeIdx], at = league.teams[awayIdx];
+    if ((ht && ht.isHuman) || (at && at.isHuman)) ctx.replay = { round, competition, home: homeIdx, away: awayIdx, ...(matchReplayKey(round, competition, homeIdx, awayIdx) ? { key: matchReplayKey(round, competition, homeIdx, awayIdx) } : {}) };
+  }
   openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
 }
 
+// Clé de diffusion connue du navigateur (voir /api/replay) : Supercoupe et
+// Coupe nationale, où l'adversaire peut être un club invité d'un autre
+// championnat (numéro local qui ne suffit pas à retrouver le match).
+function matchReplayKey(round, competition, homeIdx, awayIdx) {
+  if (competition !== "cup") return null;
+  if (round === SUPERCUP_ROUND && league.superCup && league.superCup.season != null) return `scup:${league.superCup.season}`;
+  const cup = league.cup;
+  if (!cup || !cup.national) return null;
+  const r = (cup.rounds || []).find(x => x.index === round);
+  const m = r && (r.matches || []).find(x => x.home === homeIdx && x.away === awayIdx);
+  return m && m.replayKey ? m.replayKey : null;
+}
+
 // Revoir le direct d'un match déjà joué (Premium, voir /api/replay) : même
-// écran que le direct, horaires recalés pour démarrer maintenant.
+// écran que le direct, horaires recalés pour démarrer maintenant. Match
+// d'autres clubs : fenêtre spectateur, qui avance toute seule.
 async function startMatchReplay(params, feedbackEl) {
   const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString();
   let res, data;
@@ -39358,6 +39389,7 @@ async function startMatchReplay(params, feedbackEl) {
   }
   if (data.guest) installGuestTeams(league, [data.guest]);
   closeMatchBoxscore();
+  if (data.mine === false) { await showSpectateMatch(data.watchIdx, { data, url: null }); return true; }
   teamB = league.teams[data.live.opponentIdx];
   if (!teamB) return false;
   enterLiveMatch(data.live);

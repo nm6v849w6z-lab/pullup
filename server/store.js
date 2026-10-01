@@ -333,7 +333,14 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body
   // LiveMatch.archiveReplay) : rangés à part, jamais dans la ligue.
   if (league && Array.isArray(league.pendingReplays) && league.pendingReplays.length) {
     const items = league.pendingReplays.splice(0);
-    try { await appendReplays(league.leagueId, items, savePath); } catch (e) { console.warn("Enregistrement des directs à revoir échoué :", e.message); }
+    // Ligues privées : place à part (retour utilisateur 2026-10-01, « réserve
+    // une place séparée pour les matchs de LP »), pour ne jamais évincer les
+    // directs officiels.
+    const lp = items.filter(it => isLpReplayKey(it.key)), official = items.filter(it => !isLpReplayKey(it.key));
+    try {
+      if (official.length) await appendReplays(league.leagueId, official, savePath);
+      if (lp.length) await appendReplays(league.leagueId, lp, savePath, "lp");
+    } catch (e) { console.warn("Enregistrement des directs à revoir échoué :", e.message); }
   }
   const where = leagueStorage(league && league.leagueId, savePath);
   savePath = where.file;
@@ -353,14 +360,21 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body
 
 // Directs à revoir (Premium) d'un championnat : { version, list: [{ key,
 // season, savedAt, entry }] }, les REPLAYS_MAX plus récents.
-const REPLAYS_MAX = 60;
-function replayStorage(leagueId, savePath) {
+// Tous les matchs diffusés se revoient (retour utilisateur 2026-10-01 :
+// « il faudrait pouvoir revoir les matchs de tout le monde ») : 120 directs
+// officiels par championnat (championnat, Coupe, play-offs, Supercoupe,
+// barrage) ; les ligues privées ont leur propre stock (`kind` "lp", 80).
+const REPLAYS_MAX = 120;
+const LP_REPLAYS_MAX = 80;
+function isLpReplayKey(key) { return /(^|:)lp:/.test(String(key || "")); }
+function replayStorage(leagueId, savePath, kind = "") {
   const id = leagueId || HISTORIC_LEAGUE_ID;
   if (!/^[a-z]{2}-[0-9](\.[0-9]{1,3})?$/.test(id)) throw new Error(`Identifiant de championnat invalide : ${id}`);
-  return { redis: `${redisPrefix()}pullup:replays:${id}`, file: savePath.replace(/\.json$/, "") + `.replays.${id}.json` };
+  const k = kind === "lp" ? "lpreplays" : "replays";
+  return { redis: `${redisPrefix()}pullup:${k}:${id}`, file: savePath.replace(/\.json$/, "") + `.${k}.${id}.json` };
 }
-async function loadReplays(leagueId, savePath = defaultMultiLeaguePath()) {
-  const where = replayStorage(leagueId, savePath);
+async function loadReplays(leagueId, savePath = defaultMultiLeaguePath(), kind = "") {
+  const where = replayStorage(leagueId, savePath, kind);
   try {
     if (upstashConfigured()) {
       const raw = await redisGet(where.redis);
@@ -372,11 +386,11 @@ async function loadReplays(leagueId, savePath = defaultMultiLeaguePath()) {
     return { version: 1, list: [] };
   }
 }
-async function appendReplays(leagueId, items, savePath = defaultMultiLeaguePath()) {
-  const data = await loadReplays(leagueId, savePath);
+async function appendReplays(leagueId, items, savePath = defaultMultiLeaguePath(), kind = "") {
+  const data = await loadReplays(leagueId, savePath, kind);
   items.forEach(it => { data.list = data.list.filter(x => x.key !== it.key); data.list.push(it); });
-  data.list = data.list.slice(-REPLAYS_MAX);
-  const where = replayStorage(leagueId, savePath);
+  data.list = data.list.slice(-(kind === "lp" ? LP_REPLAYS_MAX : REPLAYS_MAX));
+  const where = replayStorage(leagueId, savePath, kind);
   const body = JSON.stringify(data);
   if (upstashConfigured()) { await redisSet(where.redis, body); return; }
   fs.mkdirSync(path.dirname(where.file), { recursive: true });
@@ -590,7 +604,7 @@ module.exports = {
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
-  loadReplays, appendReplays, REPLAYS_MAX, loadLeagueChat, saveLeagueChat,
+  loadReplays, appendReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

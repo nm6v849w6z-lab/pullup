@@ -144,7 +144,33 @@ function decrypt(body, uaEcdh, authSecret) {
   const paris = league.teams[1];
   const denied = await api(q, paris.managerLinkToken);
   assert.ok(denied.status === 404 || denied.status === 403);
-  ok(`revoir le direct : match de la journée ${e.round + 1} archivé, rejoué depuis maintenant, réservé aux clubs du match`);
+  ok(`revoir le direct : match de la journée ${e.round + 1} archivé, rejoué depuis maintenant, réservé au Premium`);
+  // Tout match diffusé se revoit (2026-10-01), même sans y avoir joué : vu
+  // depuis le club à domicile, dans la fenêtre spectateur côté navigateur.
+  {
+    const other = league.teams.findIndex((t, i) => t.isHuman && i !== e.homeIdx && i !== e.awayIdx);
+    if (other >= 0) {
+      const lg2 = (await store.loadMultiLeague(multiSavePath)).league;
+      lg2.teams[other].isPaying = true;
+      await store.saveMultiLeague(lg2, multiSavePath);
+      const rp2 = await api(q, lg2.teams[other].managerLinkToken);
+      assert.strictEqual(rp2.status, 200, JSON.stringify(rp2.body).slice(0, 200));
+      assert.ok(rp2.body.mine === false && rp2.body.watchIdx === e.homeIdx && rp2.body.live.replay && rp2.body.teamName && rp2.body.opponentName);
+      const domO = await openGame(html, `${baseUrl}?m=${lg2.teams[other].managerLinkToken}`, w => patchDateNow(w, () => clock.now));
+      const wO = domO.window, dO = wO.document;
+      if (wO.eval("currentVisiblePageId()") === "catchupSection") dO.getElementById("catchupContinueBtn").click();
+      wO.eval(`showMatchBoxscore(${e.round}, "championship", ${e.homeIdx}, ${e.awayIdx})`);
+      const b2 = dO.getElementById("matchReplayBtn");
+      assert.ok(b2, "« Revoir le direct » aussi sur le match de deux autres clubs");
+      b2.click();
+      await wait(() => dO.getElementById("spectateOverlay"), "fenêtre spectateur du replay");
+      assert.ok(/Revoir le direct/.test(dO.getElementById("spectateOverlay").textContent));
+      assert.ok(wO.eval("spectateState && !!spectateState.timer"), "le replay avance tout seul (rendu chaque seconde)");
+      wO.eval("closeSpectateMatch()");
+      domO.window.close();
+      ok("revoir le direct d'un match d'autres clubs (Premium) : fenêtre spectateur qui avance toute seule");
+    }
+  }
 
   // 5) Navigateur : bouton « Revoir le direct », stats avancées + CSV, courbe, notifications.
   const dom = await openGame(html, `${baseUrl}?m=${lyon.managerLinkToken}`, w => patchDateNow(w, () => clock.now));

@@ -146,8 +146,9 @@ async function waitFor(fn, label, tries = 60) {
     check(!d.getElementById("lpSection").classList.contains("hidden"), "le bouton de la barre du haut ouvre la page Ligues privées");
   }
 
-  // --- Vendredi 20h01 : la journée se joue au prochain accès.
-  const friday = Calendar.parisEpochForLocalTime(2026, 10, 2, 20, 1);
+  // --- Vendredi soir, diffusion de 20h00 terminée (direct de ligue privée,
+  //     2026-10-01 : score caché pendant le direct) : journée jouée.
+  const friday = Calendar.parisEpochForLocalTime(2026, 10, 2, 23, 0);
   now = friday;
   const domA3 = await openGame(html, `${baseUrl}?m=${tokens[0]}`);
   const docA3 = domA3.window.document;

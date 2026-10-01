@@ -1926,7 +1926,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const round = lp.rounds[roundIndex];
         const match = round && round.matches.find(m => m.home === home && m.away === away);
         if (!match || !match.played || typeof match.liveUntil !== "number") { sendJson(res, 404, { ok: false, error: "Pas de direct pour ce match." }); return; }
-        const data = await store.loadReplays(ctx.leagueId, multiSavePath);
+        const data = await store.loadReplays(ctx.leagueId, multiSavePath, "lp");
         const suffix = PrivateLeague.lpLiveKey(lp, roundIndex, home, away);
         const item = data.list.slice().reverse().find(x => x.key.endsWith(":" + suffix));
         if (!item) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
@@ -1952,25 +1952,36 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const team = ctx.league.teams[ctx.teamIndex];
         const data = await store.loadReplays(ctx.leagueId, multiSavePath);
         const q = route.searchParams;
-        const mine = e => e.homeIdx === ctx.teamIndex || e.awayIdx === ctx.teamIndex;
-        let item = null;
-        if (q.get("key")) item = data.list.find(x => x.key === q.get("key")) || null;
-        else {
-          const round = Number(q.get("round")), home = Number(q.get("home")), away = Number(q.get("away"));
-          const comp = q.get("competition") === "cup" ? "cup" : "championship";
-          item = data.list.slice().reverse().find(x => x.entry.round === round && (x.entry.competition || "championship") === comp && x.entry.homeIdx === home && x.entry.awayIdx === away) || null;
-        }
-        if (!item || !mine(item.entry)) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
+        // Recherche : `key` (clé de diffusion sans la saison : « ncup:… »,
+        // « scup:… », « cup:… » ou « J:dom:ext ») quand le navigateur la
+        // connaît — fiable même pour un club invité de la Coupe nationale —,
+        // sinon journée + compétition + clubs.
+        const comp = q.get("competition") === "cup" ? "cup" : "championship";
+        const round = Number(q.get("round")), home = Number(q.get("home")), away = Number(q.get("away"));
+        const key = q.get("key");
+        const byKey = x => x.key === key || x.key.endsWith(":" + key);
+        const byFields = x => x.entry.round === round && (x.entry.competition || "championship") === comp && x.entry.homeIdx === home && x.entry.awayIdx === away;
+        const list = data.list.slice().reverse();
+        const item = (key && list.find(byKey)) || (Number.isInteger(round) && list.find(byFields)) || null;
+        if (!item) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
         const premium = typeof team.hasActivePremium === "function" ? team.hasActivePremium(now) : !!team.isPaying;
         if (!premium) { sendJson(res, 403, { ok: false, code: "premium-required", error: "Revoir un direct est réservé au Premium." }); return; }
-        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [item.key]: item.entry } }, ctx.teamIndex);
+        // Tous les matchs diffusés se revoient (retour utilisateur 2026-10-01 :
+        // « il faudrait pouvoir revoir les matchs de tout le monde ») : vu
+        // depuis son club s'il a joué ce match, sinon depuis le club à
+        // domicile (`watchIdx`, fenêtre spectateur côté navigateur).
+        const mine = item.entry.homeIdx === ctx.teamIndex || item.entry.awayIdx === ctx.teamIndex;
+        // (club invité de la Coupe nationale à domicile : on suit le club local)
+        const watchIdx = mine ? ctx.teamIndex : (ctx.league.teams[item.entry.homeIdx] ? item.entry.homeIdx : item.entry.awayIdx);
+        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [item.key]: item.entry } }, watchIdx);
         const delta = now + 2000 - item.entry.kickoffAt;
         view.kickoffAt += delta;
         view.events = view.events.map(ev => (typeof ev.airAt === "number" ? { ...ev, airAt: ev.airAt + delta } : ev));
         view.pauses = (view.pauses || []).map(pz => (typeof pz.airAt === "number" ? { ...pz, airAt: pz.airAt + delta } : pz));
         view.replay = true;
         const guest = item.entry.guest ? { ...item.entry.guest, localIdx: view.opponentIdx } : null;
-        sendJson(res, 200, { ok: true, key: item.key, live: view, guest });
+        const nameOf = idx => (ctx.league.teams[idx] || {}).name || (guest && guest.team && idx === view.opponentIdx ? guest.team.name : "");
+        sendJson(res, 200, { ok: true, key: item.key, live: view, guest, mine, watchIdx, teamName: nameOf(watchIdx), opponentName: nameOf(view.opponentIdx) });
         return;
       }
 
@@ -2051,7 +2062,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         let show = null;
         if (route.pathname.endsWith("/prematch")) show = Shows.getLpPrematchShow(ctx.league, lpView, roundIndex, ctx.teamIndex, now);
         else {
-          const data = await store.loadReplays(ctx.leagueId, multiSavePath);
+          const data = await store.loadReplays(ctx.leagueId, multiSavePath, "lp");
           const prefix = `lp:${lp.id}:${roundIndex}:`;
           const entries = data.list.filter(x => x.key.includes(":" + prefix)).map(x => x.entry);
           show = Shows.getLpHalftimeShow(ctx.league, lpView, roundIndex, ctx.teamIndex, entries, now);

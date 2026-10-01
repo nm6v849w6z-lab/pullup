@@ -485,6 +485,9 @@ async function projectForLeague(Engine, cup, leagueId, teamIdx, loadTeam) {
     const withHc = (s, side) => s + (m.result && m.result.forfeit ? 0 : m.handicap[side]);
     const pm = {
       home, away, bye: !!m.bye, resolved: !!m.resolved,
+      // Clé de la diffusion (liveKey sans la saison) : « Revoir le direct »
+      // retrouve ce match même contre un club invité (voir /api/replay).
+      replayKey: `ncup:${cup.season}:${r.index}:${m.id}`,
       scoreHome: m.resolved && m.result ? withHc(m.result.scoreHome, "home") : null,
       scoreAway: m.resolved && m.result ? withHc(m.result.scoreAway, "away") : null,
       forfeit: m.result ? !!m.result.forfeit : null,

@@ -126,6 +126,35 @@ const fmt = (ms, tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday
     assert.strictEqual(mm.winner, tot("away") > tot("home") ? "away" : "home", "vainqueur = score + handicap");
   }
   {
+    // « Revoir le direct » de Coupe nationale (2026-10-01) : retrouvé par la
+    // clé exposée dans la projection (replayKey), même contre un club invité
+    // d'un autre championnat ; tout match diffusé se revoit (Premium).
+    const http = require("http");
+    const { createHandler } = require("./index.js");
+    const g = humanMatches.find(({ m }) => m.home.leagueId !== m.away.leagueId) || humanMatches[0];
+    const crossLeague = g.m.home.leagueId !== g.m.away.leagueId;
+    const lg = await World.loadLeague(ww, g.ref.leagueId, multi);
+    lg.teams[g.ref.idx].isPaying = true;
+    await store.saveMultiLeague(lg, multi);
+    const token = lg.teams[g.ref.idx].managerLinkToken;
+    const clockNow = kick0 + Calendar.MATCH_BROADCAST_DURATION_MS + 2 * 60 * 1000;
+    const server = http.createServer(createHandler(path.join(dir, "solo.json"), () => clockNow, multi, path.join(dir, "accounts.json")));
+    await new Promise(r => server.listen(0, "127.0.0.1", r));
+    const get = async p => { const r = await fetch(`http://127.0.0.1:${server.address().port}${p}`, { headers: { "X-TipIn-Token": token } }); return { status: r.status, body: await r.json() }; };
+    try {
+      const save = await get("/api/save");
+      const pm = save.body.league.cup.rounds[0].matches[0];
+      assert.ok(pm && /^ncup:1:0:/.test(pm.replayKey), "projection : clé de diffusion du match (" + (pm && pm.replayKey) + ")");
+      const rp = await get(`/api/replay?key=${encodeURIComponent(pm.replayKey)}&round=0&competition=cup&home=${pm.home}&away=${pm.away}`);
+      assert.strictEqual(rp.status, 200, JSON.stringify(rp.body).slice(0, 200));
+      assert.ok(rp.body.mine && rp.body.live.replay && rp.body.live.events.length > 50, "replay de son match de Coupe");
+      if (crossLeague) assert.ok(rp.body.guest && rp.body.guest.team && rp.body.guest.localIdx === rp.body.live.opponentIdx, "club invité fourni avec le replay");
+      const wrongIdx = await get(`/api/replay?key=${encodeURIComponent(pm.replayKey)}&round=0&competition=cup&home=999&away=998`);
+      assert.strictEqual(wrongIdx.status, 200, "la clé suffit, même si les numéros locaux ne correspondent pas");
+    } finally { server.close(); }
+    ok(`Coupe nationale : « Revoir le direct » retrouve le match par sa clé${crossLeague ? ", adversaire invité compris" : ""}`);
+  }
+  {
     // Amicaux : les jeudis de Coupe restants sont réservés aux clubs en course.
     const Friendlies = require("./friendlies.js");
     const lg = await World.loadLeague(ww, "fr-1", multi);
