@@ -10317,10 +10317,15 @@ function ceilingRoomLevel(room) {
 // Intensité des fondamentaux, choisie joueur par joueur sur son plan
 // individuel (retour utilisateur 2026-10-01).
 const TRAINING_INTENSITIES = {
-  legere: { label: "Légère", mult: 0.75, recoveryBonus: 2, conditionLoss: 0, injuryChance: 0 },
-  normale: { label: "Normale", mult: 1, recoveryBonus: 0, conditionLoss: 0, injuryChance: 0 },
-  intense: { label: "Intense", mult: 1.25, recoveryBonus: 0, conditionLoss: 8, injuryChance: 0.02 },
+// Chaque jour de repos écoulé, un joueur en plan individuel récupère moins
+// qu'un joueur au repos complet (+10) : recoveryPenalty en moins. Intense :
+// petit risque de blessure par jour, triplé si la forme est sous 60.
+  legere: { label: "Légère", mult: 0.9, recoveryPenalty: 1, injuryChancePerDay: 0 },
+  normale: { label: "Normale", mult: 1, recoveryPenalty: 3, injuryChancePerDay: 0 },
+  intense: { label: "Intense", mult: 1.1, recoveryPenalty: 5, injuryChancePerDay: 0.003 },
 };
+const TRAINING_INJURY_LOW_FORM = 60;
+const TRAINING_INJURY_LOW_FORM_MULT = 3;
 function trainingIntensityOf(team, player) {
   if (!team || !player) return "normale";
   const slots = typeof team.activeTrainingSlots === "function" ? team.activeTrainingSlots() : (team.trainingSlots || []);
@@ -16211,6 +16216,8 @@ class Team {
         dayIndex,
         collectiveTraining: cfg.collectiveTraining,
         trainedTactics: cfg.trainedTactics ? { category: cfg.trainedTactics.category, value: cfg.trainedTactics.value } : null,
+        // Intensité de chaque plan individuel ce jour-là (récupération).
+        intensities: Object.fromEntries(this.activeTrainingSlots().map(sl => [String(sl.playerId), trainingIntensityOf(this, { id: sl.playerId })])),
       };
     };
     const last = log.length ? log[log.length - 1] : null;
@@ -16348,8 +16355,13 @@ class Team {
     const bonus = CONDITION_RECOVERY_PER_DAY_TRAINED - CONDITION_RECOVERY_PER_DAY;
     const cycleStart = this.tacticsCycleStartDayIndex;
     (this.collectiveTrainingLog || []).forEach(e => {
-      if (e.recoveryApplied || e.dayIndex >= todayIndex) return;
+      if (e.dayIndex >= todayIndex) return;
       if (cycleStart != null && e.dayIndex <= cycleStart) return;
+      if (!e.intensityApplied) {
+        e.intensityApplied = true;
+        this.applyTrainingIntensityDay(e);
+      }
+      if (e.recoveryApplied) return;
       const option = e.collectiveTraining;
       if (!COLLECTIVE_DAY_OPTIONS.includes(option)) return;
       const friendly = this.isFriendlyDay(e.dayIndex);
@@ -16371,6 +16383,35 @@ class Team {
       } else {
         const mult = this.trainer && this.trainer.specialty === "physical" ? 1 + COACH_PHYSICAL_DAY_BONUS : 1;
         players.forEach(p => { week.physicalPoints += applyPhysicalDayTo(p, mult); });
+      }
+    });
+  }
+
+  // Intensité des plans individuels sur un jour de repos écoulé (retour
+  // utilisateur 2026-10-01) : récupération réduite (recoveryPenalty) et,
+  // en Intense, petit risque de blessure. Les joueurs alignés en amical ce
+  // jour-là ne s'entraînent pas.
+  applyTrainingIntensityDay(e) {
+    const intensities = e.intensities || {};
+    const excluded = new Set(this.isFriendlyDay(e.dayIndex) ? (((this.friendlyPlayersByDay || {})[e.dayIndex]) || []).map(String) : []);
+    const at = e.dayIndex + 18 * 3600 * 1000;
+    (this.players || []).forEach(p => {
+      const key = intensities[String(p.id)];
+      const intensity = key && TRAINING_INTENSITIES[key];
+      if (!intensity || excluded.has(String(p.id)) || isCurrentlyInjured(p, at)) return;
+      p.condition = clamp(p.condition - intensity.recoveryPenalty, 0, 100);
+      if (!intensity.injuryChancePerDay) return;
+      const form = currentCondition(p, at, this.conditionRecoveryPerDay());
+      const chance = intensity.injuryChancePerDay * (form < TRAINING_INJURY_LOW_FORM ? TRAINING_INJURY_LOW_FORM_MULT : 1);
+      const roll = typeof rand01 === "function" ? rand01() : Math.random();
+      if (roll >= chance) return;
+      const rolled = rollInjury(at, this.doctorInjuryDurationMult ? this.doctorInjuryDurationMult() : 1);
+      p.injuryType = rolled.injuryType;
+      p.injuryUntil = rolled.injuryUntil;
+      const days = Math.max(1, Math.round((rolled.injuryUntil - at) / CONDITION_DAY_MS));
+      this.recordInjury({ at, playerId: p.id, playerName: p.name, injuryType: rolled.injuryType, days, opponentName: null, training: true });
+      if (this.isHuman && this.feed) {
+        handleGameEvent(this.feed, { type: "injury", week: this.week, playerId: p.id, playerName: p.name, weeks: Math.max(1, Math.round(days / 7)) }, { clubName: this.name });
       }
     });
   }
@@ -16572,11 +16613,11 @@ class Team {
   // Taux de récupération de forme physique quotidien (voir engine.js, miroir
   // identique) : CONDITION_RECOVERY_PER_DAY_TRAINED si collectiveTraining
   // === "recuperation", sinon CONDITION_RECOVERY_PER_DAY.
-  conditionRecoveryPerDay(player) {
+  conditionRecoveryPerDay() {
     // Le focus « Récupération » est crédité jour de repos par jour de repos
-    // (voir Team.applyRestDayRecovery). Intensité Légère : +2/jour (retour
-    // utilisateur 2026-10-01).
-    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this, player)].recoveryBonus;
+    // (voir Team.applyRestDayRecovery), l'intensité des plans individuels
+    // aussi (Team.applyTrainingIntensityDay).
+    const base = CONDITION_RECOVERY_PER_DAY;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -18468,7 +18509,7 @@ class Team {
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (voir engine.js, miroir identique).
     this.players.forEach(p => {
-      p.resetForMatch(now, this.conditionRecoveryPerDay(p));
+      p.resetForMatch(now, this.conditionRecoveryPerDay());
       p.matchChemistryFactor = chemistryFactor;
       p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
@@ -31056,8 +31097,8 @@ function renderPlayerCompareView() {
   // que pour votre propre effectif).
   {
     const nowMs = Date.now();
-    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay(playerA));
-    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay(playerB));
+    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay());
+    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay());
     html += compareProfileTileHtml("Forme", condA, condB, "small", "small");
   }
   html += `</div>`; // compare-profile-strip
@@ -31933,12 +31974,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   html += `</div></div></div>`; // chips, id-text, id
 
-  const condValue = currentCondition(player, now, team.conditionRecoveryPerDay(player));
+  const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
   html += `<div class="pdp2-cond">` +
     `<div class="pdp2-form pdp2-form--${condBox}">` +
     `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
-    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay(player))}</div>` +
+    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
     `</div>`;
   if (isOwnTeam) html += `<div class="pdp2-kv"><span>Motivation</span>${motivationBadgeHtml(player)}</div>`;
   html += `<p class="player-quote pdp2-quote">« ${escapeHtml(playerRoleQuote(team, player, roleLabel))} »</p>`;
@@ -32739,7 +32780,7 @@ function teamDetailSortValue(p, key, team) {
     case "age": return p.age;
     case "height": return p.height;
     case "salary": return p.salary;
-    case "condition": return currentCondition(p, Date.now(), (team || teamA).conditionRecoveryPerDay(p));
+    case "condition": return currentCondition(p, Date.now(), (team || teamA).conditionRecoveryPerDay());
     case "evaluation": {
       const recent = (p.matchLog || []).slice(-5);
       return recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : 0;
@@ -32833,7 +32874,7 @@ function teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet) {
 const TDE_GENERAL_KEYS = ["name", "position", "age", "height", "salary", "condition", "evaluation", "gp", "pts", "reb", "ast"];
 function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
   const now = Date.now();
-  const recovery = p => team.conditionRecoveryPerDay(p);
+  const recovery = p => team.conditionRecoveryPerDay();
   const H = (k, l, o) => teamDetailHeaderCellHtml(k, l, isOwnTeam, revealedSet, o);
   const cols = [
     H("name", "Nom", { cls: "eff-th-name" }), H("position", "Poste"), H("age", "Âge", { cls: "eff-th-age" }),
@@ -38653,7 +38694,7 @@ function compoRoleRank(d) {
 }
 function compoRosterRowsData(team, model) {
   const now = Date.now();
-  const recovery = p => (typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay(p) : CONDITION_RECOVERY_PER_DAY);
+  const recovery = p => (typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
   const youth = new Set((teamA.youthPlayers || []).map(y => y.id));
   return team.players.map(p => {
     const on = model.convoked.has(p.id);
@@ -41467,9 +41508,12 @@ function renderTrainingPlans() {
     return;
   }
   html += `<div class="tm-int-legend"><span class="tm-label">Intensité, joueur par joueur</span>` +
-    `<span><i class="tm-int-dot legere"></i>Légère : −25 %, récupération +${TRAINING_INTENSITIES.legere.recoveryBonus}/jour</span>` +
-    `<span><i class="tm-int-dot normale"></i>Normale</span>` +
-    `<span><i class="tm-int-dot intense"></i>Intense : +25 %, forme −${TRAINING_INTENSITIES.intense.conditionLoss}, risque de blessure</span></div>`;
+    ["legere", "normale", "intense"].map(k => {
+      const it = TRAINING_INTENSITIES[k];
+      const prog = Math.round((it.mult - 1) * 100);
+      return `<span><i class="tm-int-dot ${k}"></i>${it.label} : ${prog ? `${prog > 0 ? "+" : "−"}${Math.abs(prog)} %, ` : ""}forme +${CONDITION_RECOVERY_PER_DAY - it.recoveryPenalty}/jour${it.injuryChancePerDay ? ", risque de blessure" : ""}</span>`;
+    }).join("") +
+    `<span class="tm-int-rest">Sans plan : forme +${CONDITION_RECOVERY_PER_DAY}/jour de repos</span></div>`;
   html += `<div class="tm-slots">`;
   slots.forEach((slot, idx) => {
     const p = trainingPlayerById(slot.playerId);
@@ -41656,7 +41700,7 @@ function setCollectiveDayOption(dayIndex, option, trainedTactics) {
 function teamAverageCondition(team, now = Date.now()) {
   const players = (team && team.players) || [];
   if (!players.length) return null;
-  return Math.round(players.reduce((sum, p) => sum + currentCondition(p, now, team.conditionRecoveryPerDay(p)), 0) / players.length);
+  return Math.round(players.reduce((sum, p) => sum + currentCondition(p, now, team.conditionRecoveryPerDay()), 0) / players.length);
 }
 function renderRecoveryFormGauge() {
   const holder = document.getElementById("recoveryFormGauge");
@@ -44720,7 +44764,7 @@ function rosterSortValue(p, key) {
     // Forme physique : trié sur la valeur courante rattrapée (voir
     // currentCondition), pas sur p.condition brut, pour rester cohérent
     // avec ce que la colonne affiche réellement (voir conditionBadgeHtml).
-    case "condition": return currentCondition(p, Date.now(), teamA.conditionRecoveryPerDay(p));
+    case "condition": return currentCondition(p, Date.now(), teamA.conditionRecoveryPerDay());
     // Motivation : Player.form n'a pas d'équivalent de currentCondition (voir
     // motivationBadgeHtml), donc lu directement.
     case "motivation": return p.form;
@@ -45014,7 +45058,7 @@ function renderEffectifSection() {
 
   // Sous-onglet "Général".
   const now = Date.now();
-  const recovery = p => teamA.conditionRecoveryPerDay(p);
+  const recovery = p => teamA.conditionRecoveryPerDay();
   const listedIds = new Set((league.transferListings || []).filter(l => l.status === "open").map(l => l.playerId));
   const columns = ROSTER_SORT_COLUMNS.filter(c => c.key !== "role");
   const colCount = columns.length + 1;
@@ -50607,7 +50651,7 @@ const MEDICAL_RISK_TIERS = [
 ];
 let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
 function medicalRiskFor(team, player, now = Date.now()) {
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay(player) : CONDITION_RECOVERY_PER_DAY;
+  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
   const condition = currentCondition(player, now, recovery);
   const condMult = conditionStateFor(condition).injuryMult;
   const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
@@ -50629,7 +50673,7 @@ function renderMedicalSection() {
   const holder = document.getElementById("medicalContent");
   if (!holder) return;
   const players = team.players || [];
-  const recovery = p => (team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay(p) : CONDITION_RECOVERY_PER_DAY);
+  const recovery = p => (team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
   const injured = players.filter(p => isCurrentlyInjured(p, now)).sort((a, b) => a.injuryUntil - b.injuryUntil);
   const fit = players.filter(p => !isCurrentlyInjured(p, now))
     .map(p => ({ p, r: medicalRiskFor(team, p, now) }))

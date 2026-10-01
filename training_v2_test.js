@@ -102,35 +102,67 @@ function withFixedRandom(fn) {
     const p = t.players[0];
     setup(p, { age: 19, pot: 80, value: 40 });
     t.trainingSlots = [{ playerId: p.id, program: "threePoint", intensity }];
-    p.condition = 80;
     const g = progressOf(t, p, "threePoint", 1);
-    return { g, condition: p.condition, team: t };
+    return { g, team: t };
   });
   const l = run("legere"), n = run("normale");
   const i = run("intense");
-  assert(Math.abs(l.g / n.g - 0.75) < 1e-6, "Légère : −25 % de progression");
-  assert(Math.abs(i.g / n.g - 1.25) < 1e-6, "Intense : +25 % de progression");
-  assert(i.condition === 72 && n.condition === 80, "Intense : −8 de forme au tick hebdomadaire pour un joueur en plan");
-  const lp = l.team.players[0], other = l.team.players[1];
-  assert(l.team.conditionRecoveryPerDay(lp) === n.team.conditionRecoveryPerDay(n.team.players[0]) + 2, "Légère : +2 de récupération passive par jour pour ce joueur");
-  assert(l.team.conditionRecoveryPerDay(other) === n.team.conditionRecoveryPerDay(other) && l.team.conditionRecoveryPerDay() === n.team.conditionRecoveryPerDay(), "Légère : pas de bonus pour les autres joueurs");
+  assert(Math.abs(l.g / n.g - 0.9) < 1e-6, "Légère : −10 % de progression");
+  assert(Math.abs(i.g / n.g - 1.1) < 1e-6, "Intense : +10 % de progression");
+  assert(l.team.conditionRecoveryPerDay() === n.team.conditionRecoveryPerDay(), "taux de récupération du club inchangé par l'intensité");
   // Intensité choisie joueur par joueur : deux plans, deux intensités.
   {
     const t = makeTeam(3);
     const [a, b] = t.players;
     t.trainingSlots = [{ playerId: a.id, program: "pass", intensity: "intense" }, { playerId: b.id, program: "pass", intensity: "legere" }];
     assert(E.trainingIntensityOf(t, a) === "intense" && E.trainingIntensityOf(t, b) === "legere" && E.trainingIntensityOf(t, t.players[2]) === "normale", "intensité lue sur le plan de chaque joueur");
-    assert(E.trainingEfficiencyFor(t, a, "pass").intensityMult === 1.25 && E.trainingEfficiencyFor(t, b, "pass").intensityMult === 0.75, "rendement : intensité propre à chaque joueur");
+    assert(E.trainingEfficiencyFor(t, a, "pass").intensityMult === 1.1 && E.trainingEfficiencyFor(t, b, "pass").intensityMult === 0.9, "rendement : intensité propre à chaque joueur");
   }
-  // Risque de blessure ~2 % par joueur en plan et par semaine.
-  const t = makeTeam(3);
-  const p = t.players[0];
-  t.trainingSlots = [{ playerId: p.id, program: "pass", intensity: "intense" }];
+  // Récupération jour par jour : repos +10, Légère +9, Normale +7, Intense +5.
+  const DAY = 24 * 3600 * 1000;
   const real = Math.random;
-  Math.random = () => 0.001; // tirage sous 2 %
-  try { t.trainWeek(1, NOW); } finally { Math.random = real; }
-  assert(p.injuryUntil > NOW && t.injuryLog[0].playerId === p.id && t.injuryLog[0].training === true, "Intense : blessure possible à l'entraînement (carnet des blessures)");
-  assert(t.lastTrainingReport.slots[0].injured === true, "le bilan signale la blessure à l'entraînement");
+  try {
+    Math.random = () => 0.99; // aucune blessure
+    const t = makeTeam(3);
+    const [a, b, c, d] = t.players;
+    t.trainingSlots = [{ playerId: a.id, program: "pass", intensity: "legere" }, { playerId: b.id, program: "pass", intensity: "normale" }, { playerId: c.id, program: "pass", intensity: "intense" }];
+    [a, b, c, d].forEach(p => { p.condition = 50; });
+    t.syncCollectiveTrainingLog(NOW + DAY); // mardi
+    t.syncCollectiveTrainingLog(NOW + 4 * DAY); // vendredi : mardi, mercredi, jeudi écoulés
+    assert(d.condition - a.condition === 3 && d.condition - b.condition === 9 && d.condition - c.condition === 15, "3 jours de repos : Légère −1/jour, Normale −3/jour, Intense −5/jour par rapport au repos complet");
+    // Changer d'intensité ne vaut que pour les jours suivants.
+    t.trainingSlots[0].intensity = "intense";
+    t.syncCollectiveTrainingLog(NOW + 4 * DAY + 3600e3);
+    assert(d.condition - a.condition === 3, "changement d'intensité : aucun effet rétroactif sur les jours déjà écoulés");
+    t.syncCollectiveTrainingLog(NOW + 5 * DAY);
+    assert(d.condition - a.condition === 8, "le jour suivant compte avec la nouvelle intensité");
+    // Blessure : 0,3 %/jour en Intense, triplé sous 60 de forme.
+    const mk = (cond) => {
+      const tt = makeTeam(3);
+      const p = tt.players[0];
+      tt.trainingSlots = [{ playerId: p.id, program: "pass", intensity: "intense" }];
+      p.condition = cond; p.conditionUpdatedAt = NOW + DAY;
+      tt.syncCollectiveTrainingLog(NOW + DAY);
+      Math.random = () => 0.005;
+      tt.syncCollectiveTrainingLog(NOW + 2 * DAY);
+      Math.random = () => 0.99;
+      return { tt, p };
+    };
+    const fresh = mk(100), tired = mk(20);
+    assert(!(fresh.p.injuryUntil > NOW), "Intense, forme haute : tirage 0,5 % au-dessus du risque de 0,3 %");
+    assert(tired.p.injuryUntil > NOW && tired.tt.injuryLog[0].training === true, "Intense, forme sous 60 : risque triplé (blessure à l'entraînement au carnet)");
+    tired.tt.trainWeek(1, NOW + 2 * DAY);
+    assert(tired.tt.lastTrainingReport.slots[0].injured === true, "le bilan signale la blessure à l'entraînement");
+    // Légère et Normale : jamais de blessure.
+    const safe = makeTeam(3);
+    const sp = safe.players[0];
+    safe.trainingSlots = [{ playerId: sp.id, program: "pass", intensity: "normale" }];
+    sp.condition = 10;
+    safe.syncCollectiveTrainingLog(NOW + DAY);
+    Math.random = () => 0;
+    safe.syncCollectiveTrainingLog(NOW + 3 * DAY);
+    assert(!(sp.injuryUntil > NOW), "Normale : aucun risque de blessure");
+  } finally { Math.random = real; }
 }
 
 // --- 4) Plafond souple + bonus d'entraîneur --------------------------------

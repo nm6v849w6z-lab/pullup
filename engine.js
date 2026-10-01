@@ -1466,10 +1466,15 @@ function ceilingRoomLevel(room) {
 // Intensité des fondamentaux, choisie joueur par joueur sur son plan
 // individuel (retour utilisateur 2026-10-01).
 const TRAINING_INTENSITIES = {
-  legere: { label: "Légère", mult: 0.75, recoveryBonus: 2, conditionLoss: 0, injuryChance: 0 },
-  normale: { label: "Normale", mult: 1, recoveryBonus: 0, conditionLoss: 0, injuryChance: 0 },
-  intense: { label: "Intense", mult: 1.25, recoveryBonus: 0, conditionLoss: 8, injuryChance: 0.02 },
+// Chaque jour de repos écoulé, un joueur en plan individuel récupère moins
+// qu'un joueur au repos complet (+10) : recoveryPenalty en moins. Intense :
+// petit risque de blessure par jour, triplé si la forme est sous 60.
+  legere: { label: "Légère", mult: 0.9, recoveryPenalty: 1, injuryChancePerDay: 0 },
+  normale: { label: "Normale", mult: 1, recoveryPenalty: 3, injuryChancePerDay: 0 },
+  intense: { label: "Intense", mult: 1.1, recoveryPenalty: 5, injuryChancePerDay: 0.003 },
 };
+const TRAINING_INJURY_LOW_FORM = 60;
+const TRAINING_INJURY_LOW_FORM_MULT = 3;
 function trainingIntensityOf(team, player) {
   if (!team || !player) return "normale";
   const slots = typeof team.activeTrainingSlots === "function" ? team.activeTrainingSlots() : (team.trainingSlots || []);
@@ -6634,6 +6639,8 @@ class Team {
         dayIndex,
         collectiveTraining: cfg.collectiveTraining,
         trainedTactics: cfg.trainedTactics ? { category: cfg.trainedTactics.category, value: cfg.trainedTactics.value } : null,
+        // Intensité de chaque plan individuel ce jour-là (récupération).
+        intensities: Object.fromEntries(this.activeTrainingSlots().map(sl => [String(sl.playerId), trainingIntensityOf(this, { id: sl.playerId })])),
       };
     };
     const last = log.length ? log[log.length - 1] : null;
@@ -6780,8 +6787,13 @@ class Team {
     const bonus = CONDITION_RECOVERY_PER_DAY_TRAINED - CONDITION_RECOVERY_PER_DAY;
     const cycleStart = this.tacticsCycleStartDayIndex;
     (this.collectiveTrainingLog || []).forEach(e => {
-      if (e.recoveryApplied || e.dayIndex >= todayIndex) return;
+      if (e.dayIndex >= todayIndex) return;
       if (cycleStart != null && e.dayIndex <= cycleStart) return;
+      if (!e.intensityApplied) {
+        e.intensityApplied = true;
+        this.applyTrainingIntensityDay(e);
+      }
+      if (e.recoveryApplied) return;
       const option = e.collectiveTraining;
       if (!COLLECTIVE_DAY_OPTIONS.includes(option)) return;
       const friendly = this.isFriendlyDay(e.dayIndex);
@@ -6803,6 +6815,35 @@ class Team {
       } else {
         const mult = this.trainer && this.trainer.specialty === "physical" ? 1 + COACH_PHYSICAL_DAY_BONUS : 1;
         players.forEach(p => { week.physicalPoints += applyPhysicalDayTo(p, mult); });
+      }
+    });
+  }
+
+  // Intensité des plans individuels sur un jour de repos écoulé (retour
+  // utilisateur 2026-10-01) : récupération réduite (recoveryPenalty) et,
+  // en Intense, petit risque de blessure. Les joueurs alignés en amical ce
+  // jour-là ne s'entraînent pas.
+  applyTrainingIntensityDay(e) {
+    const intensities = e.intensities || {};
+    const excluded = new Set(this.isFriendlyDay(e.dayIndex) ? (((this.friendlyPlayersByDay || {})[e.dayIndex]) || []).map(String) : []);
+    const at = e.dayIndex + 18 * 3600 * 1000;
+    (this.players || []).forEach(p => {
+      const key = intensities[String(p.id)];
+      const intensity = key && TRAINING_INTENSITIES[key];
+      if (!intensity || excluded.has(String(p.id)) || isCurrentlyInjured(p, at)) return;
+      p.condition = clamp(p.condition - intensity.recoveryPenalty, 0, 100);
+      if (!intensity.injuryChancePerDay) return;
+      const form = currentCondition(p, at, this.conditionRecoveryPerDay());
+      const chance = intensity.injuryChancePerDay * (form < TRAINING_INJURY_LOW_FORM ? TRAINING_INJURY_LOW_FORM_MULT : 1);
+      const roll = typeof rand01 === "function" ? rand01() : Math.random();
+      if (roll >= chance) return;
+      const rolled = rollInjury(at, this.doctorInjuryDurationMult ? this.doctorInjuryDurationMult() : 1);
+      p.injuryType = rolled.injuryType;
+      p.injuryUntil = rolled.injuryUntil;
+      const days = Math.max(1, Math.round((rolled.injuryUntil - at) / CONDITION_DAY_MS));
+      this.recordInjury({ at, playerId: p.id, playerName: p.name, injuryType: rolled.injuryType, days, opponentName: null, training: true });
+      if (this.isHuman && this.feed) {
+        handleGameEvent(this.feed, { type: "injury", week: this.week, playerId: p.id, playerName: p.name, weeks: Math.max(1, Math.round(days / 7)) }, { clubName: this.name });
       }
     });
   }
@@ -7057,11 +7098,11 @@ class Team {
   // défaut). Lu par Team.resetForMatch/recordMatchStatsForTeam (voir plus
   // bas) et par l'affichage de la forme physique côté client
   // (currentCondition).
-  conditionRecoveryPerDay(player) {
+  conditionRecoveryPerDay() {
     // Le focus « Récupération » est crédité jour de repos par jour de repos
-    // (voir Team.applyRestDayRecovery). Plan individuel en intensité Légère :
-    // +2/jour pour CE joueur (retour utilisateur 2026-10-01), d'où `player`.
-    const base = CONDITION_RECOVERY_PER_DAY + TRAINING_INTENSITIES[trainingIntensityOf(this, player)].recoveryBonus;
+    // (voir Team.applyRestDayRecovery), l'intensité des plans individuels
+    // aussi (Team.applyTrainingIntensityDay).
+    const base = CONDITION_RECOVERY_PER_DAY;
     // Kiné (voir MEDICAL_STAFF_ROLES) : +1 à +5 par jour selon son niveau.
     return base + (this.physioRecoveryBonus ? this.physioRecoveryBonus() : 0);
   }
@@ -8165,21 +8206,9 @@ class Team {
         const delta = changes.reduce((sum, c) => sum + (c.after - c.before), 0);
         const stall = this.trainingStalls[p.id];
         this.trainingStalls[p.id] = { program, weeks: delta > 0 ? 0 : (stall && stall.program === program ? stall.weeks + 1 : 1) };
-        // Intensité Intense : forme en baisse et petit risque de blessure
-        // pour les joueurs en plan (retour utilisateur 2026-10-01).
-        if (intensity.conditionLoss) p.condition = clamp(p.condition - intensity.conditionLoss, 0, 100);
-        let injured = false;
-        if (intensity.injuryChance && !isCurrentlyInjured(p, nowMs) && rand01() < intensity.injuryChance) {
-          const rolled = rollInjury(nowMs, this.doctorInjuryDurationMult ? this.doctorInjuryDurationMult() : 1);
-          p.injuryType = rolled.injuryType;
-          p.injuryUntil = rolled.injuryUntil;
-          injured = true;
-          const days = Math.max(1, Math.round((rolled.injuryUntil - nowMs) / CONDITION_DAY_MS));
-          this.recordInjury({ at: nowMs, playerId: p.id, playerName: p.name, injuryType: rolled.injuryType, days, opponentName: null, training: true });
-          if (this.isHuman && this.feed) {
-            handleGameEvent(this.feed, { type: "injury", week: this.week, playerId: p.id, playerName: p.name, weeks: Math.max(1, Math.round(days / 7)) }, { clubName: this.name });
-          }
-        }
+        // Blessure à l'entraînement cette semaine (Intense, jour par jour,
+        // voir Team.applyTrainingIntensityDay).
+        const injured = (this.injuryLog || []).some(x => x.training && String(x.playerId) === String(p.id) && x.at > nowMs - 7 * CONDITION_DAY_MS);
         slotReport.push({ playerId: p.id, name: p.name, program, intensity: intensityKey, changes, delta, efficiency, injured });
         const tip = trainingAdviceFor(this, p, program);
         if (tip) advice.push({ ...tip, name: p.name });
@@ -9196,10 +9225,11 @@ class Team {
     // même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor ci-dessus.
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (retour utilisateur, 2026-09, voir
-    // Team.conditionRecoveryPerDay/collectiveTraining) : taux du club, plus
-    // le bonus du joueur dont le plan individuel est en intensité Légère.
+    // Team.conditionRecoveryPerDay/collectiveTraining) : taux du club ;
+    // l'intensité des plans individuels est déjà déduite jour par jour
+    // (Team.applyTrainingIntensityDay).
     this.players.forEach(p => {
-      p.resetForMatch(now, this.conditionRecoveryPerDay(p));
+      p.resetForMatch(now, this.conditionRecoveryPerDay());
       p.matchChemistryFactor = chemistryFactor;
       p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
     });
@@ -11587,7 +11617,7 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
       // tests qui l'appellent directement sur un joueur déjà mis en jeu à
       // la main). `conditionUpdatedAt` posé à `now` : la prochaine
       // récupération (voir currentCondition) repartira de CE match.
-      const baseCondition = p.matchCondition ?? currentCondition(p, now, team.conditionRecoveryPerDay(p));
+      const baseCondition = p.matchCondition ?? currentCondition(p, now, team.conditionRecoveryPerDay());
       p.condition = clamp(Math.round(baseCondition - conditionLossForMinutes(p.secondsPlayed / 60)), 0, 100);
       p.conditionUpdatedAt = now;
       // Bonus temporaire de MVP consommé (voir Player.pendingMatchBoost/eff()
