@@ -2827,12 +2827,14 @@
   /* Contrats (demande du 2026-10-01) : carte « Contrat » de la fiche joueur,
      badge « Fin de contrat », colonne de l'Effectif, carte du marché. */
   #pdpContractCard{margin-top:18px; border-radius:16px; padding:20px 22px;}
-  .pdp-contract-sale{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; margin:18px 0 16px; align-items:stretch;}
+  .pdp-contract-sale{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr; gap:18px; margin:18px 0 16px; align-items:stretch;}
+  .pdp-contract-sale > #pdpSaleCard{grid-column:1; grid-row:1;}
+  .pdp-contract-sale > #pdpPersoCard{grid-column:1; grid-row:2;}
+  .pdp-contract-sale > #pdpContractCard{grid-column:2; grid-row:1 / span 2;}
+  .pdp-contract-sale > #pdpContractCard.is-compact{grid-row:1;}
   .pdp-contract-sale #pdpContractCard, .pdp-contract-sale #pdpSaleCard, .pdp-contract-sale #pdpPersoCard{margin-top:0; margin-bottom:0;}
-  .pdp-side-col{display:flex; flex-direction:column; gap:18px; min-width:0;}
-  .pdp-contract-sale > #pdpContractCard{align-self:start;}
-  .pdp-side-col > #pdpPersoCard{flex:1;}
-  @media (max-width:900px){ .pdp-contract-sale{grid-template-columns:minmax(0,1fr);} }
+
+  @media (max-width:900px){ .pdp-contract-sale{grid-template-columns:minmax(0,1fr); grid-template-rows:none;} .pdp-contract-sale > *{grid-column:auto !important; grid-row:auto !important;} }
   .pdp-contract-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:15px; color:var(--ink);}
   .pdp-contract-head b{font-weight:800;}
   .pdp-contract-lines{margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink-dim);}
@@ -31420,11 +31422,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   // encapsulée dans une carte .pdp-card tout en bas, réservée à isOwnTeam.
   // Ajoute la valorisation par ventes comparables (comparableSalesValuation
   // ci-dessus) quand le joueur n'est pas déjà en vente. ----
-  // Mise en vente puis Personnalisation à gauche, Contrat à droite (retours
-  // utilisateur 2026-10-01) : la colonne de gauche s'étire jusqu'au bas de
-  // la carte Contrat quand celle-ci est plus haute ; la carte Contrat, elle,
-  // garde la hauteur de son contenu (pas de grand vide sans prolongation).
-  if (isOwnTeam) html += `<div class="pdp-contract-sale"><div class="pdp-side-col">`;
+  // Grille (retours utilisateur 2026-10-01) : Mise en vente puis
+  // Personnalisation à gauche, Contrat à droite. Contrat compact (rien à
+  // négocier) : aligné sur la carte Mise en vente ; Contrat avec
+  // prolongation / augmentation : sur les deux rangées, la Personnalisation
+  // s'étire jusqu'à son bas.
+  if (isOwnTeam) html += `<div class="pdp-contract-sale">`;
   if (isOwnTeam) {
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (!onMarket && league.contractSaleBlocked(player)) {
@@ -31446,7 +31449,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     }
     html += `<div id="playerDetailMarketFeedback"></div>`;
     html += `</div>`; // #pdpSaleCard
-    html += playerPersonalizationCardHtml(team, player) + `</div>`; // .pdp-side-col
+    html += playerPersonalizationCardHtml(team, player);
     html += playerContractCardHtml(team, player) + `</div>`; // .pdp-contract-sale
   }
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
@@ -31478,7 +31481,10 @@ function renderPlayerDetail(teamIdx, playerId) {
 function playerContractCardHtml(team, player) {
   const season = league.contractSeason();
   const left = contractSeasonsLeft(player, season);
-  let html = `<div class="pdp-card pdp-contract" id="pdpContractCard"><h3>Contrat</h3>`;
+  // Rien à négocier (ni prolongation ni demande d'augmentation) : carte
+  // compacte, alignée sur la carte Mise en vente (voir .pdp-contract-sale).
+  const compact = left == null || (!player.raiseRequest && (left > 1 || !!player.retiringAfterSeason));
+  let html = `<div class="pdp-card pdp-contract${compact ? " is-compact" : ""}" id="pdpContractCard"><h3>Contrat</h3>`;
   if (left == null) {
     html += `<p class="sub">Aucun contrat enregistré pour l'instant.</p></div>`;
     return html;
