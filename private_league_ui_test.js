@@ -134,7 +134,7 @@ async function waitFor(fn, label, tries = 60) {
     // privée devient le prochain match partout.
     w.eval("scheduledTimeForCurrentMatch = () => Date.now() + 30 * 86400000");
     w.eval("updateTopbar()");
-    check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Voir la ligue privée", "barre du haut : adversaire de ligue privée + bouton « Voir la ligue privée »");
+    check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Donnez vos ordres", "barre du haut : adversaire de ligue privée + bouton « Donnez vos ordres »");
     w.eval("TAB_HANDLERS.club()");
     const hero = d.querySelector(".hm-hero");
     check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-dash-href='/ligues-privees']"), "tableau de bord : bandeau Prochain match = ligue privée");
@@ -145,7 +145,11 @@ async function waitFor(fn, label, tries = 60) {
     const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false }); })()`);
     check(/Prochain match · Ligue privée · J1/.test(card) && /data-tab="lp"/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton vers la ligue privée");
     d.getElementById("topbarOrdersBtn").click();
-    check(!d.getElementById("lpSection").classList.contains("hidden"), "le bouton de la barre du haut ouvre la page Ligues privées");
+    check(!d.getElementById("prepSection").classList.contains("hidden") && w.eval("tqEdit && tqEdit.kind") === "lp", "le bouton de la barre du haut ouvre les ordres de la ligue privée");
+    w.eval("TAB_HANDLERS.calendrier()");
+    [...d.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+    check(w.eval("tqEdit && tqEdit.kind") === "lp" && d.querySelector(".tab-btn.active").dataset.tab === "ordres", "l'onglet Ordres ouvre le prochain match, ici de ligue privée");
+    w.eval("TAB_HANDLERS.calendrier()");
   }
 
   // --- Vendredi soir, diffusion de 20h00 terminée (direct de ligue privée,

@@ -27855,10 +27855,14 @@ function updateTopbar() {
   const weekEl = document.getElementById("topbarWeek");
   // Prochain match = match de ligue privée (voir lpNextMatchIfFirst) :
   // adversaire + "Ligue privée · Jn", bouton vers la page Ligues privées.
-  const lpNext = lpNextMatchIfFirst();
+  const nextOther = nextNonOfficialMatch();
+  const lpNext = nextOther && nextOther.kind === "lp" ? nextOther.lpNext : null;
   if (oppEl && weekEl && lpNext) {
     oppEl.innerHTML = `${lpNext.isHome ? "vs " : "@ "}${teamLinkHtml(lpNext.oppIdx, league.teams[lpNext.oppIdx].name)}`;
     weekEl.textContent = `Ligue privée · J${lpNext.round.index + 1}`;
+  } else if (oppEl && weekEl && nextOther && nextOther.kind === "friendly") {
+    oppEl.innerHTML = `${nextOther.isHome ? "vs " : "@ "}${teamLinkHtml(nextOther.oppIdx, frTeamName(nextOther.oppIdx))}`;
+    weekEl.textContent = "Match amical";
   } else if (oppEl && weekEl) {
     if (currentMatch && teamB) {
       // Nom du prochain adversaire cliquable (retour utilisateur, 2026-09 :
@@ -27914,16 +27918,18 @@ function updateTopbar() {
   // second champ "ordresValidatedCupRound" redondant.
   const ordersBtn = document.getElementById("topbarOrdersBtn");
   if (ordersBtn && teamA) {
-    const validated = !!currentMatch && (currentMatch.competition === "cup"
+    // Prochain match de ligue privée ou amical (voir nextNonOfficialMatch) :
+    // le bouton ouvre ses ordres, comme pour un match officiel (retour
+    // utilisateur 2026-10-02, plus de "Voir la ligue privée").
+    const validated = nextOther ? nextOther.validated : !!currentMatch && (currentMatch.competition === "cup"
       ? teamA.hasPlanForRound(currentMatch.round, "cup")
       : teamA.ordresValidatedRound === currentMatch.round);
-    const locked = currentMatchLineupLocked();
+    const locked = !nextOther && currentMatchLineupLocked();
     const prematch = prematchShowAvailable();
     ordersBtn.textContent = prematch ? "Émission d'avant-match"
-      : lpNext ? "Voir la ligue privée"
       : locked ? "Ordres verrouillés"
       : validated ? "Modifier vos ordres" : "Donnez vos ordres";
-    ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked && !(lpNext && !prematch));
+    ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked && !prematch);
   }
 }
 
@@ -51200,13 +51206,13 @@ function frOrdersSources(f) {
   tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
   return out;
 }
-function openFriendlyOrders(fid) {
+function openFriendlyOrders(fid, tab) {
   const f = frList().find(x => x.id === fid);
   if (!f) return;
   const src = frOrdersSources(f)[0];
   tqEdit = { kind: "friendly", friendlyId: fid, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
   showPage("prepSection");
-  setActiveTab("amicaux");
+  setActiveTab(tab || "amicaux");
   renderOrdresGrid();
   if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
 }
@@ -51223,13 +51229,13 @@ function lpOrdersSources(lp) {
   tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
   return out;
 }
-function openPrivateLeagueOrders(lpId) {
+function openPrivateLeagueOrders(lpId, tab) {
   const lp = findLpById(lpId);
   if (!lp) return;
   const src = lpOrdersSources(lp)[0];
   tqEdit = { kind: "lp", lpId, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
   showPage("prepSection");
-  setActiveTab("lp");
+  setActiveTab(tab || "lp");
   renderOrdresGrid();
   if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
 }
@@ -52278,6 +52284,40 @@ function lpNextMatchIfFirst() {
   const official = currentMatch && teamB ? scheduledTimeForCurrentMatch() : null;
   if (official != null && official <= n.dueAt) return null;
   return n;
+}
+// Prochain match de l'onglet Ordres et du bouton de la barre du haut, quel
+// qu'il soit (retour utilisateur 2026-10-02 : « l'onglet ordre doit afficher
+// le prochain match quel qu'il soit, pas le prochain match de championnat
+// uniquement ») : un match de ligue privée ou un amical accepté qui passe
+// AVANT le prochain match officiel l'emporte. Renvoie null quand c'est le
+// match officiel (championnat, coupe, play-offs) qui vient en premier.
+function frMyNextFriendly() {
+  if (!league || league.liveMatch) return null;
+  const now = Date.now();
+  const list = frList().filter(f => f.status === "accepted" && typeof f.at === "number" && f.at > now &&
+    (f.homeIdx === myTeamIndex || f.awayIdx === myTeamIndex));
+  list.sort((a, b) => a.at - b.at);
+  return list[0] || null;
+}
+function nextNonOfficialMatch() {
+  const official = currentMatch && teamB ? scheduledTimeForCurrentMatch() : null;
+  let best = null;
+  const lp = lpNextMatchIfFirst();
+  if (lp) best = { kind: "lp", at: lp.dueAt, lpId: lp.lp.id, oppIdx: lp.oppIdx, isHome: lp.isHome, validated: !!lp.lp.myOrders, lpNext: lp };
+  const f = frMyNextFriendly();
+  if (f && (official == null || f.at < official) && (!best || f.at < best.at)) {
+    best = { kind: "friendly", at: f.at, friendlyId: f.id, oppIdx: frOppIdx(f), isHome: f.homeIdx === myTeamIndex,
+      validated: !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex])), friendly: f };
+  }
+  return best;
+}
+// Ouvre les ordres du prochain match (onglet Ordres, bouton du topbar).
+function openNextMatchOrders() {
+  const n = nextNonOfficialMatch();
+  if (n && n.kind === "lp") { openPrivateLeagueOrders(n.lpId, "ordres"); return; }
+  if (n && n.kind === "friendly") { openFriendlyOrders(n.friendlyId, "ordres"); return; }
+  tqEdit = null;
+  goToOrdresTab();
 }
 // Bilan "V-D" d'un club dans une ligue privée.
 function lpRecordOf(lp, idx) {
@@ -54263,7 +54303,7 @@ const TAB_HANDLERS = {
   medical: () => { renderMedicalSection(); showPage("medicalSection"); setActiveTab("medical"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
-  ordres: () => { tqEdit = null; goToOrdresTab(); },
+  ordres: () => { openNextMatchOrders(); },
   tactiques: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
   effectif: () => { renderEffectifSection(); showPage("effectifSection"); setActiveTab("effectif"); },
   marche: () => { refreshTransferMarket(); renderMarcheSection(); showPage("marcheSection"); setActiveTab("marche"); },
@@ -54994,8 +55034,7 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // réutilise exactement la même logique que l'onglet Ordres (goToOrdresTab).
 document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
   if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
-  if (lpNextMatchIfFirst()) { TAB_HANDLERS.lp(); return; }
-  goToOrdresTab();
+  openNextMatchOrders();
 });
 
 // Recherche globale du topbar (voir renderTopbarSearchResults) : filtre à
