@@ -120,6 +120,24 @@ const ok = m => console.log("✅ " + m);
   assert.ok(r.status === 200 && r.body.dissolved && !r.body.privateLeagues.length);
   ok("Paris dissout sa ligue privée (créateur qui part)");
 
+  // Ordres propres à la ligue privée (retour utilisateur 2026-10-02) :
+  // Boston laisse son meilleur joueur hors de la feuille de match.
+  const bostonLg = await World.loadLeague(w, boston.leagueId, multiSavePath);
+  const bostonTeam = bostonLg.teams[boston.teamIndex];
+  const best = bostonTeam.players.slice().sort((a, b) => b.overall() - a.overall())[0];
+  const lpOrders = JSON.parse(JSON.stringify(bostonTeam.snapshotTactics()));
+  const others = bostonTeam.players.filter(p => p.id !== best.id);
+  lpOrders.lineup = { starters: {}, backupPositions: {}, convoked: others.slice(0, 12).map(p => p.id) };
+  Engine.POSITIONS.forEach((pos, i) => { lpOrders.lineup.starters[pos] = others[i].id; });
+  r = await api("/api/private-league/orders", boston, { id: lpId, orders: lpOrders });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.privateLeagues.find(l => l.id === lpId).myOrders, "Boston voit ses ordres");
+  const romaSees = (await api("/api/save", roma)).body.league.privateLeagues.find(l => l.id === lpId);
+  assert.ok(!romaSees.myOrders, "Rome ne voit pas les ordres de Boston");
+  r = await api("/api/private-league/orders", berlin, { id: lpId, orders: lpOrders });
+  assert.ok(r.status >= 400, "un non-membre ne peut pas enregistrer d'ordres");
+  ok("ordres de ligue privée : enregistrés par Boston, invisibles pour les autres, refusés à un non-membre");
+
   // 3) J1 au rattrapage du monde.
   let raw = await store.loadWorldAuxStrict("privateleagues", multiSavePath);
   let wlp = raw.list.find(l => l.id === lpId);
@@ -134,6 +152,16 @@ const ok = m => console.log("✅ " + m);
   raw = await store.loadWorldAuxStrict("privateleagues", multiSavePath);
   wlp = raw.list.find(l => l.id === lpId);
   assert.ok(wlp.rounds[0].matches.every(m => m.played && typeof m.liveUntil === "number"));
+  {
+    const bSlot = wlp.members.findIndex(x => x.leagueId === boston.leagueId && x.idx === boston.teamIndex);
+    const bm = wlp.rounds[0].matches.find(m => m.home === bSlot || m.away === bSlot);
+    const box = bm.home === bSlot ? bm.boxScoreHome : bm.boxScoreAway;
+    const row = (box || []).find(x => String(x.id) === String(best.id));
+    assert.ok(box && box.length && (!row || !row.min), "ordres de ligue privée appliqués : le meilleur joueur de Boston n'a pas joué");
+    const realBest = (await World.loadLeague(w, boston.leagueId, multiSavePath)).teams[boston.teamIndex].players.find(p => p.id === best.id);
+    assert.ok(realBest, "vrai club intact");
+    ok("ordres de ligue privée appliqués au match (sur la copie de l'équipe)");
+  }
   ok("J1 jouée au rattrapage du monde (clubs de 4 championnats)");
   // Direct d'un membre étranger.
   const bView = (await api("/api/save", boston)).body.league.privateLeagues.find(l => l.id === lpId);

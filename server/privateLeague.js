@@ -270,6 +270,30 @@ function leavePrivateLeague(Engine, store, me, body, now) {
   return { ok: true, dissolved: false };
 }
 
+// POST /api/private-league/orders  body: { id, orders } | { id, reset: true }
+// Ordres propres à la ligue privée (retour utilisateur 2026-10-02 : « il n'y
+// a pas de bouton pour faire sa compo ou la modifier en ligue privée ») :
+// rangés sur la fiche du club dans la ligue (member.orders, jamais vus des
+// autres), valables pour tous ses matchs de ligue privée à venir, appliqués
+// sur la COPIE de l'équipe au coup d'envoi (voir playMatch) — rien sur les
+// ordres des matchs officiels. Sans ordres propres : ordres actuels du club.
+function setPrivateLeagueOrders(Engine, store, me, body, now) {
+  const lp = findById(store, body && body.id);
+  if (!lp || !isActive(lp)) return fail("Ligue privée introuvable.");
+  const slot = memberSlot(lp, me.ref.leagueId, me.idx);
+  if (slot < 0) return fail("Votre club ne fait pas partie de cette ligue privée.");
+  const member = lp.members[slot];
+  if (body && body.reset) { delete member.orders; return { ok: true, privateLeagueId: lp.id }; }
+  const team = me.league && me.league.teams[me.idx];
+  if (!team) return fail("Club introuvable.");
+  const Friendlies = require("./friendlies.js");
+  const Actions = require("./actions.js");
+  const v = Actions.validateOrdersSnapshot({ players: Friendlies.friendlyPool(team) }, body && body.orders);
+  if (!v.ok) return fail(v.error);
+  member.orders = v.value;
+  return { ok: true, privateLeagueId: lp.id };
+}
+
 // POST /api/private-league/start  body: { id }
 // Lancement anticipé par le créateur, dès PRIVATE_LEAGUE_MIN_TEAMS_TO_START
 // clubs (le lancement est automatique quand la ligue est complète).
@@ -394,8 +418,15 @@ function lpLiveKey(lp, roundIndex, home, away) {
 // Joue UN match sur des copies de `homeReal`/`awayReal` (null = club
 // introuvable : forfait). `archive(entry)` reçoit le direct à ranger.
 function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundIndex, archive) {
-  const home = homeReal ? cloneTeamForExhibition(Engine, homeReal) : null;
-  const away = awayReal ? cloneTeamForExhibition(Engine, awayReal) : null;
+  // Ordres propres à la ligue privée (setPrivateLeagueOrders) : appliqués à
+  // la copie, avec ses propres joueurs copiés (jamais les vrais).
+  const withOrders = (copy, slot) => {
+    const orders = copy && lp.members && lp.members[slot] && lp.members[slot].orders;
+    if (!orders) return copy;
+    try { return require("./friendlies.js").applyFriendlyOrders(Engine, copy, copy, orders, kickoffAt); } catch (e) { return copy; }
+  };
+  const home = homeReal ? withOrders(cloneTeamForExhibition(Engine, homeReal), match.home) : null;
+  const away = awayReal ? withOrders(cloneTeamForExhibition(Engine, awayReal), match.away) : null;
   const homeOk = !!home && home.hasValidLineup();
   const awayOk = !!away && away.hasValidLineup();
   match.played = true;
@@ -736,6 +767,8 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
       status: lp.status, createdAt: lp.createdAt, startedAt: lp.startedAt, finishedAt: lp.finishedAt,
       teamIndices: local.slice(),
       members: lp.members.map((r, s) => ({ idx: local[s], name: r.name, country: r.country || null, label: r.label || null, leagueId: r.leagueId, sameLeague: r.leagueId === leagueId })),
+      // Ses propres ordres de ligue privée seulement (jamais ceux des autres).
+      myOrders: (lp.members.find(r => r.leagueId === leagueId && r.idx === idx) || {}).orders || null,
       rounds: (lp.rounds || []).map(round => ({
         index: round.index, dueAt: round.dueAt,
         matches: round.matches.map(m => {
@@ -833,7 +866,7 @@ module.exports = {
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS, PRIVATE_LEAGUE_GUEST_IDX, STORE_NAME,
   // Monde
   emptyStore, isValidStore, refFor, teamLook, activeFor, findById, memberSlot, sameRef,
-  createPrivateLeague, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
+  createPrivateLeague, setPrivateLeagueOrders, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
   catchUp, nextDeadline, refreshRefs, remapMoves, busyTimesByIdx, projectForViewer, localIndexMap,
   migrateLeague, migrateAndSave, loadStore, saveStore,
   // Communs

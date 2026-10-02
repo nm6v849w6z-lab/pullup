@@ -7614,6 +7614,8 @@
   .lp-btn:disabled{opacity:.5; cursor:not-allowed;}
   .lp-danger{margin-left:auto; color:var(--danger); border-color:var(--danger);}
   .lp-actions-page{justify-content:center; margin-top:22px;}
+  .lp-orders-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0 0;}
+  .lp-orders-row .cal-next-btn{display:inline-block; width:auto; margin-top:0; padding:10px 18px;}
   .lp-actions-page .lp-danger{margin-left:0;}
   .lp-hint{font-size:12.5px; color:var(--ink-dim); max-width:420px; line-height:1.45;}
   .lp-premium-note{background:rgba(240,162,60,.1); border:1px solid rgba(240,162,60,.45); color:var(--ink); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-bottom:16px;}
@@ -8262,7 +8264,6 @@
         <div class="stf-top__titles">
           <span class="stf-eyebrow">Club</span>
           <h2 class="page-title">Staff</h2>
-          <p class="stf-intro">Six postes pour faire progresser, soigner et renseigner votre équipe.</p>
         </div>
         <div class="stf-kpis">
           <div class="stf-kpi"><span class="stf-kpi__label">Budget club</span><span class="stf-kpi__value" id="staffBudget"></span></div>
@@ -47460,7 +47461,7 @@ function renderCalendrierSection() {
         location: lp.venue === "neutral" ? "Terrain neutre" : isHomeLp ? "Domicile" : "Extérieur",
         scoreText, boxscore: null,
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
-        cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : `<button type="button" class="calendar-order-btn calendar-lp-btn" data-tab="lp">Ligue privée</button>`,
+        cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
         isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
@@ -51156,9 +51157,10 @@ function openTacticEditor(slot) {
 
 function closeTacticEditor() {
   const wasFriendly = !!(tqEdit && tqEdit.kind === "friendly");
+  const wasLp = !!(tqEdit && tqEdit.kind === "lp");
   tqEdit = null;
   renderTacticEditorBar();
-  if (wasFriendly) TAB_HANDLERS.amicaux(); else TAB_HANDLERS.tactiques();
+  if (wasLp) TAB_HANDLERS.lp(); else if (wasFriendly) TAB_HANDLERS.amicaux(); else TAB_HANDLERS.tactiques();
 }
 
 // Ordres d'un match amical (retour utilisateur 2026-09-27 : "pour le match
@@ -51187,6 +51189,35 @@ function openFriendlyOrders(fid) {
   if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
 }
 
+// Ordres de ligue privée (retour utilisateur 2026-10-02 : « il n'y a pas de
+// bouton pour faire sa compo ou la modifier en ligue privée ») : même page
+// Ordres en mode édition que pour un amical, enregistrés sur la ligue
+// (POST /api/private-league/orders), valables pour tous ses matchs de ligue
+// privée à venir, jamais appliqués aux matchs officiels.
+function lpOrdersSources(lp) {
+  const out = [];
+  if (lp && lp.myOrders) out.push({ key: "lp", label: "Ordres enregistrés pour la ligue privée", orders: lp.myOrders });
+  out.push({ key: "club", label: "Ordres actuels du club", orders: teamA.snapshotTactics() });
+  tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
+  return out;
+}
+function openPrivateLeagueOrders(lpId) {
+  const lp = findLpById(lpId);
+  if (!lp) return;
+  const src = lpOrdersSources(lp)[0];
+  tqEdit = { kind: "lp", lpId, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
+  showPage("prepSection");
+  setActiveTab("lp");
+  renderOrdresGrid();
+  if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-lp-orders]");
+  if (!b) return;
+  e.preventDefault();
+  openPrivateLeagueOrders(b.dataset.lpOrders);
+});
+
 function renderTacticEditorBar() {
   const bar = document.getElementById("tqEditorBar");
   const title = document.querySelector("#ordresActionBar .oab-title");
@@ -51194,6 +51225,19 @@ function renderTacticEditorBar() {
   if (!tqEdit) {
     bar.innerHTML = "";
     if (title) title.textContent = "Ordres de match";
+    return;
+  }
+  if (tqEdit.kind === "lp") {
+    const lp = findLpById(tqEdit.lpId);
+    if (title) title.textContent = "Ordres de la ligue privée";
+    const opts = lpOrdersSources(lp).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
+    const saved = !!(lp && lp.myOrders);
+    bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Ligue privée</label><div class="fr-oe-vs"><span><b>${escapeHtml(lp ? lp.name : "")}</b><small>vendredi ${lp ? escapeHtml(lpTimeLabel(lp)) : ""}</small></span></div></div>` +
+      `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${opts}</select></div>` +
+      `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer les ordres</button>` +
+        (saved ? `<button type="button" class="tq-btn" id="lpOrdersReset">Revenir aux ordres du club</button>` : "") +
+        `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
+      `<p class="tq-editor-note">${tqEdit.feedback ? `<b class="${tqEdit.feedback.ok ? "gain-up" : "gain-down"}">${escapeHtml(tqEdit.feedback.text)}</b> ` : ""}Ces ordres valent pour tous vos matchs de ligue privée à venir, jamais pour les matchs officiels. Sans ordres enregistrés, la ligue privée se joue avec les ordres actuels du club.</p>`;
     return;
   }
   if (tqEdit.kind === "friendly") {
@@ -51227,8 +51271,9 @@ document.getElementById("tqEditorBar").addEventListener("input", (e) => {
 });
 document.getElementById("tqEditorBar").addEventListener("change", (e) => {
   if (!tqEdit || e.target.id !== "tqEditorSource") return;
-  const isFr = tqEdit.kind === "friendly";
-  const src = (isFr ? frOrdersSources(frList().find(x => x.id === tqEdit.friendlyId)) : tqOrdersSources()).find(x => x.key === e.target.value);
+  const isFr = tqEdit.kind === "friendly" || tqEdit.kind === "lp";
+  const list = tqEdit.kind === "lp" ? lpOrdersSources(findLpById(tqEdit.lpId)) : tqEdit.kind === "friendly" ? frOrdersSources(frList().find(x => x.id === tqEdit.friendlyId)) : tqOrdersSources();
+  const src = list.find(x => x.key === e.target.value);
   if (!src) return;
   tqEdit.source = src.key;
   tqEdit.proxy = isFr ? tqProxyFrom(src.orders, frOrdersPool()) : tqProxyFrom(src.orders);
@@ -51237,6 +51282,25 @@ document.getElementById("tqEditorBar").addEventListener("change", (e) => {
 document.getElementById("tqEditorBar").addEventListener("click", (e) => {
   if (!tqEdit) return;
   if (e.target.closest("#tqEditorCancel")) { closeTacticEditor(); return; }
+  if (tqEdit.kind === "lp") {
+    const id = tqEdit.lpId;
+    const reset = !!e.target.closest("#lpOrdersReset");
+    if (!reset && !e.target.closest("#tqEditorSave")) return;
+    let body = { id, reset: true };
+    if (!reset) {
+      const px = tqEdit.proxy;
+      const orders = { lineup: JSON.parse(JSON.stringify(px.lineup)) };
+      TACTIC_PRESET_FIELDS.forEach(k => { orders[k] = Array.isArray(px[k]) ? [...px[k]] : px[k]; });
+      body = { id, orders };
+    }
+    window.__lastLpOrdersSave = lpAction("/api/private-league/orders", body, reset ? "La ligue privée se jouera avec les ordres du club." : "Ordres de la ligue privée enregistrés.").then(() => {
+      const fb = lpUi.feedback;
+      if (fb && fb.ok) { closeTacticEditor(); return true; }
+      if (tqEdit) { tqEdit.feedback = fb; renderTacticEditorBar(); }
+      return false;
+    });
+    return;
+  }
   if (tqEdit.kind === "friendly") {
     const fid = tqEdit.friendlyId;
     const reset = !!e.target.closest("#frOrdersReset");
@@ -52365,6 +52429,7 @@ function lpLobbyHtml(lp) {
   // Boutons sous les deux colonnes, centrés sur la page (même retour).
   html += `</div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
   html += `<div class="lp-actions lp-actions-page">`;
+  html += `<button type="button" class="secondary lp-btn" data-lp-orders="${lp.id}">${lp.myOrders ? "Modifier mes ordres" : "Faire mes ordres"}</button>`;
   if (isCreator) {
     const can = lp.teamIndices.length >= 4;
     html += `<button type="button" class="cal-next-btn lp-btn" id="lpStartBtn" data-lp-id="${lp.id}"${can ? "" : " disabled"}>Lancer maintenant</button>` +
@@ -52382,7 +52447,8 @@ function lpLeagueHtml(lp) {
   const playedRounds = lp.rounds.filter(r => r.matches.every(m => m.played)).length;
   let html = `<div class="lp-intro"><span class="lp-kicker">Ligue privée <span class="lp-tag lp-tag-muted">Hors compétition</span></span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
     `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}` +
-    (lp.status === "finished" ? " · <b>terminée</b>" : lp.code ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p></div>`;
+    (lp.status === "finished" ? " · <b>terminée</b>" : lp.code ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p>` +
+    (lp.status !== "finished" ? `<p class="lp-orders-row"><button type="button" class="cal-next-btn lp-btn" data-lp-orders="${lp.id}">${lp.myOrders ? "Modifier mes ordres de ligue privée" : "Faire mes ordres de ligue privée"}</button><span class="lp-hint">${lp.myOrders ? "Vos ordres propres à la ligue privée sont enregistrés." : "Sans ordres propres, la ligue privée se joue avec les ordres actuels du club."}</span></p>` : "") + `</div>`;
   html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
   // Classement
   html += `<section class="lg-panel lp-panel"><div class="lg-panel-title"><h2>Classement</h2><span>${playedRounds ? `après la ${playedRounds}${playedRounds === 1 ? "re" : "e"} journée` : "aucune journée jouée"} · Victoire 2 pts · Défaite 1 pt</span></div>`;
@@ -53561,7 +53627,7 @@ function renderSponsorsPanel() {
   if (!holder) return;
   const rep = typeof teamA.sponsorReputation === "number" ? teamA.sponsorReputation : SPONSOR_REPUTATION_DEFAULT;
   const offers = teamA.sponsorOffers || [];
-  let html = `<div class="spo-head"><div><p class="spo-sub">Trois emplacements : le maillot, la salle et le panneau publicitaire devant la salle. Les sponsors vous approchent ; à vous d'accepter ou non. Un contrat dure une saison.</p></div>` +
+  let html = `<div class="spo-head"><div></div>` +
     `<div class="spo-rep"><div class="spo-rep-top"><span class="spo-kicker">Réputation sponsors</span><span class="spo-rep-num">${Math.round(rep)} <small>/ 100</small></span></div>` +
     `<div class="spo-rep-bar"><div style="width:${Math.round(rep)}%"></div></div>` +
     // Paliers réellement débloqués (réputation ET division) en ambre, les

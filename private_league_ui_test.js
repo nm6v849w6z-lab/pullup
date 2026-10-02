@@ -123,7 +123,7 @@ async function waitFor(fn, label, tries = 60) {
     w.eval("TAB_HANDLERS.calendrier()");
     const lpRows = [...d.querySelectorAll("#calendrierContent tr.cal-row")].filter(tr => tr.querySelector(".cal-lp-badge"));
     check(lpRows.length === 6, `Calendrier : 6 lignes de ligue privée (${lpRows.length})`);
-    check(/LP J1/.test(lpRows[0].textContent) && lpRows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)) && !!lpRows[0].querySelector("[data-tab='lp']"), "ligne LP J1 à 20:00 (heure de Paris, affichée à l'heure locale) avec bouton vers la ligue privée");
+    check(/LP J1/.test(lpRows[0].textContent) && lpRows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)) && !!lpRows[0].querySelector("[data-lp-orders]"), "ligne LP J1 à 20:00 (heure de Paris, affichée à l'heure locale) avec bouton Ordres de la ligue privée");
     // Match officiel du jour avant 20h00 : le prochain match reste l'officiel.
     w.eval("updateTopbar()");
     const officialFirst = !!w.eval("scheduledTimeForCurrentMatch() <= lpMyNextMatch().dueAt");

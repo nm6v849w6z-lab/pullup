@@ -664,5 +664,5 @@ module.exports = {
   inviteDeadlineOf: inviteDeadline, validateLineup, friendlyPool, playFriendlyMatch, friendlyResultFeeds,
   FRIENDLY_PLAYED_RETENTION_MS, FRIENDLY_CLOSED_RETENTION_MS,
   proposeFriendly, respondFriendly, cancelFriendly, setFriendlyLineup,
-  buildFriendlyTeam, simulateFriendly, catchUpFriendlies, sanitizeFriendliesForViewer, isRevealed, hideUnrevealedFriendly,
+  buildFriendlyTeam, applyFriendlyOrders, simulateFriendly, catchUpFriendlies, sanitizeFriendliesForViewer, isRevealed, hideUnrevealedFriendly,
 };

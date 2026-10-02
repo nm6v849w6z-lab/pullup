@@ -928,6 +928,7 @@ const PRIVATE_LEAGUE_ACTIONS = {
   "/api/private-league/join": PrivateLeague.joinPrivateLeague,
   "/api/private-league/leave": PrivateLeague.leavePrivateLeague,
   "/api/private-league/start": PrivateLeague.startPrivateLeague,
+  "/api/private-league/orders": PrivateLeague.setPrivateLeagueOrders,
 };
 // Ligues privées vues par CE manager : les siennes au niveau du monde (code
 // compris), plus, tant qu'elles n'ont pas pu être migrées (stockage du monde
