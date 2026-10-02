@@ -386,7 +386,9 @@ function topScorerMapForMatch(league, round, competition, homeIdx, awayIdx) {
 // Événements d'un direct déjà calculé, convertis pour showData (direct de
 // ligue privée, voir server/shows.js:getLpHalftimeShow).
 function convertEventsFor(league, rawEvents, homeIdx, awayIdx) {
-  league_teamsCache = new Map(league.teams.map((t, i) => [i, t]));
+  // `filter` : tableau creux (ligue factice d'une ligue privée « monde »,
+  // clubs invités à des index 4000+, voir server/index.js).
+  league_teamsCache = new Map(league.teams.map((t, i) => [i, t]).filter(Boolean));
   try { return convertEvents(rawEvents, homeIdx, awayIdx); } finally { league_teamsCache = new Map(); }
 }
 

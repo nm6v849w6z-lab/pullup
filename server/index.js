@@ -477,7 +477,21 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   }
   // Barrage 7e-8e seulement s'il a un enjeu (voir World.divisionMovesFor).
   found.league.barrageHasStakes = World.divisionMovesFor(world, found.leagueId).barrage;
-  return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId };
+  // Ligues privées « monde » (server/privateLeague.js) : stock chargé une
+  // fois par requête (null = lecture en échec : fonctions de ligue privée
+  // momentanément indisponibles, rien n'est réécrit), anciennes ligues de
+  // ce championnat migrées au passage, vendredis de ligue privée posés sur
+  // la ligue (jours de match, voir Friendlies.officialMatchTimesFor).
+  const lpStore = await PrivateLeague.loadStore(multiSavePath);
+  if (lpStore) {
+    const label = World.divisionLabelOf(world, found.leagueId);
+    const cleared = await PrivateLeague.migrateAndSave(lpStore, [{
+      leagueId: found.leagueId, league: found.league, refOf: idx => PrivateLeague.refFor(found.leagueId, found.league, idx, label),
+    }], multiSavePath);
+    if (cleared.length) await store.saveMultiLeague(found.league, multiSavePath);
+    found.league.worldPrivateLeagueTimes = PrivateLeague.busyTimesByIdx(lpStore, found.leagueId);
+  }
+  return { ok: true, league: found.league, teamIndex: found.teamIndex, isMulti: true, savePath: multiSavePath, world, leagueId: found.leagueId, lpStore };
 }
 
 // Coupe nationale du pays d'un manager, projetée pour sa ligue (voir
@@ -904,17 +918,90 @@ function buildStateSnapshot(league, teamIndex, now) {
 // Team.upgradeArena/setTicketPrice/upgradeFanShop côté moteur (voir
 // actions.js) — ce ne sont pas de nouvelles règles, juste le même calcul
 // déplacé côté serveur pour qu'il persiste réellement.
-// Ligues privées (voir server/privateLeague.js) : mêmes signatures que les
-// autres actions, Engine résolu ici ; chaque réponse renvoie AUSSI la liste
-// des ligues privées telle que ce manager a le droit de la voir (code
-// d'invitation masqué hors membres), pour que le navigateur se mette à jour
-// sans recharger toute la sauvegarde.
-function privateLeagueAction(fn) {
-  return (team, teamIndex, league, body, now) => {
-    const result = fn(Engine, team, teamIndex, league, body, now);
-    if (!result.ok) return result;
-    return { ...result, privateLeagues: PrivateLeague.sanitizePrivateLeaguesForViewer(league.privateLeagues, teamIndex, now) };
-  };
+// Ligues privées (voir server/privateLeague.js) : rangées au niveau du
+// monde (membres de n'importe quel championnat), donc traitées à part
+// (PRIVATE_LEAGUE_ACTIONS, plus bas dans createHandler) ; chaque réponse
+// renvoie AUSSI les ligues privées de ce manager dans le repère de sa ligue
+// (privateLeaguesForViewer) et les clubs invités des autres championnats.
+const PRIVATE_LEAGUE_ACTIONS = {
+  "/api/private-league/create": PrivateLeague.createPrivateLeague,
+  "/api/private-league/join": PrivateLeague.joinPrivateLeague,
+  "/api/private-league/leave": PrivateLeague.leavePrivateLeague,
+  "/api/private-league/start": PrivateLeague.startPrivateLeague,
+};
+// Ligues privées vues par CE manager : les siennes au niveau du monde (code
+// compris), plus, tant qu'elles n'ont pas pu être migrées (stockage du monde
+// illisible), les anciennes ligues de son championnat.
+function privateLeaguesForViewer(ctx, now) {
+  const legacy = PrivateLeague.sanitizePrivateLeaguesForViewer(ctx.league.privateLeagues, ctx.teamIndex, now);
+  if (!ctx.lpStore) return { privateLeagues: legacy, guests: [] };
+  const w = PrivateLeague.projectForViewer(ctx.lpStore, ctx.leagueId, ctx.teamIndex, now);
+  return { privateLeagues: w.privateLeagues.concat(legacy), guests: w.guests };
+}
+// Ligue privée « monde » dont ce manager est membre (id), avec son repère
+// local (place → index local, clubs invités) ; null sinon.
+function memberPrivateLeague(ctx, id) {
+  const lp = ctx.lpStore ? PrivateLeague.findById(ctx.lpStore, id) : null;
+  if (!lp || PrivateLeague.memberSlot(lp, ctx.leagueId, ctx.teamIndex) < 0) return null;
+  const map = PrivateLeague.localIndexMap(ctx.lpStore, lp, ctx.leagueId, ctx.teamIndex);
+  return map ? { lp, ...map } : null;
+}
+// Vrai club derrière une place d'une ligue privée « monde » (sa ligue est
+// chargée au besoin, `cache` : Map leagueId → League) — null si introuvable.
+async function privateLeagueMemberTeam(ctx, lp, slot, cache, multiSavePath) {
+  const ref = lp.members[slot];
+  if (!ref) return null;
+  if (!cache.has(ref.leagueId)) {
+    cache.set(ref.leagueId, ref.leagueId === ctx.leagueId ? ctx.league
+      : (ctx.world.leagues.some(e => e.id === ref.leagueId) ? await World.loadLeague(ctx.world, ref.leagueId, multiSavePath) : null));
+  }
+  const lg = cache.get(ref.leagueId);
+  const t = lg && lg.teams[ref.idx];
+  return t && t.name === ref.name ? t : null;
+}
+// Directs d'une ligue privée « monde » pour une journée (et un match
+// précis si `slots` est donné), entrées recopiées dans le repère local
+// (homeIdx/awayIdx). Ligue migrée : directs d'avant la migration cherchés
+// sous leur ancienne clé, dans les directs du championnat d'origine.
+async function privateLeagueLiveEntries(lp, roundIndex, slotToLocal, multiSavePath, slots = null) {
+  const round = lp.rounds[roundIndex];
+  if (!round) return [];
+  const matches = round.matches.filter(m => !slots || (m.home === slots.home && m.away === slots.away));
+  const data = await store.loadLpReplays(lp.id, multiSavePath);
+  let legacy = null;
+  const out = [];
+  for (const m of matches) {
+    const suffix = PrivateLeague.lpLiveKey(lp, roundIndex, m.home, m.away);
+    let item = data.list.slice().reverse().find(x => x.key === suffix || x.key.endsWith(":" + suffix));
+    if (!item && m.legacyKey && lp.legacy && lp.legacy.leagueId) {
+      if (!legacy) legacy = await store.loadReplays(lp.legacy.leagueId, multiSavePath, "lp");
+      item = legacy.list.slice().reverse().find(x => x.key.endsWith(":" + m.legacyKey));
+    }
+    if (!item) continue;
+    out.push({ match: m, item, entry: { ...item.entry, homeIdx: slotToLocal[m.home], awayIdx: slotToLocal[m.away] } });
+  }
+  return out;
+}
+// Ligue « factice » pour les émissions d'un match de ligue privée
+// (server/shows.js:getLpPrematchShow/getLpHalftimeShow lisent
+// league.teams[idx] et league.results) : vrais clubs aux index locaux
+// (`full` : places dont l'effectif est utile), simple nom ailleurs ;
+// résultats = matchs déjà joués de la ligue privée (forme récente).
+async function privateLeagueShowLeague(ctx, lp, slotToLocal, fullSlots, multiSavePath, now) {
+  const teams = [];
+  const cache = new Map();
+  for (let slot = 0; slot < lp.members.length; slot++) {
+    const local = slotToLocal[slot];
+    const real = fullSlots.includes(slot) ? await privateLeagueMemberTeam(ctx, lp, slot, cache, multiSavePath) : null;
+    teams[local] = real || { name: lp.members[slot].name, players: [], lineup: { starters: {} } };
+  }
+  const results = [];
+  lp.rounds.forEach(r => r.matches.forEach(m => {
+    if (m.played && !(typeof m.liveUntil === "number" && m.liveUntil > now)) {
+      results.push({ round: r.index, home: slotToLocal[m.home], away: slotToLocal[m.away], scoreHome: m.scoreHome, scoreAway: m.scoreAway });
+    }
+  }));
+  return { teams, results };
 }
 
 // Matchs amicaux (voir server/friendlies.js) : même principe que les ligues
@@ -935,10 +1022,6 @@ const ACTION_ROUTES = {
   "/api/friendly/cancel": friendlyAction(Friendlies.cancelFriendly),
   "/api/friendly/lineup": friendlyAction(Friendlies.setFriendlyLineup),
   "/api/lineup": actions.setLineup,
-  "/api/private-league/create": privateLeagueAction(PrivateLeague.createPrivateLeague),
-  "/api/private-league/join": privateLeagueAction(PrivateLeague.joinPrivateLeague),
-  "/api/private-league/leave": privateLeagueAction(PrivateLeague.leavePrivateLeague),
-  "/api/private-league/start": privateLeagueAction(PrivateLeague.startPrivateLeague),
   "/api/tactics": actions.setTactics,
   "/api/training": actions.setTraining,
   "/api/plan": actions.setPlan,
@@ -1795,8 +1878,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Zones du classement réellement en jeu (montée / barrage / descentes),
         // voir World.divisionMovesFor. Absent = aucune division autour.
         if (ctx.world) payload.league.divisionMoves = World.divisionMovesFor(ctx.world, ctx.leagueId);
-        // Ligues privées : le code d'invitation n'est envoyé qu'aux membres.
-        payload.league.privateLeagues = PrivateLeague.sanitizePrivateLeaguesForViewer(payload.league.privateLeagues, ctx.teamIndex, now);
+        // Ligues privées « monde » de ce manager (code compris), clubs des
+        // autres championnats en invités légers (server/privateLeague.js).
+        {
+          const lpv = privateLeaguesForViewer(ctx, now);
+          payload.league.privateLeagues = lpv.privateLeagues;
+          payload.league.guestTeams = (payload.league.guestTeams || []).concat(lpv.guests);
+        }
         // Matchs amicaux : seulement les siens, sans la compo de l'adversaire.
         payload.league.friendlies = Friendlies.sanitizeFriendliesForViewer(payload.league.friendlies, ctx.teamIndex, now);
         // Permaliens actifs de ses joueurs { playerId: code } (fiche joueur,
@@ -1980,29 +2068,40 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
         const q = route.searchParams;
-        const lp = (ctx.league.privateLeagues || []).find(x => x.id === q.get("lp"));
-        if (!lp || !lp.teamIndices.includes(ctx.teamIndex)) { sendJson(res, 404, { ok: false, error: "Ligue privée introuvable." }); return; }
+        const mine = memberPrivateLeague(ctx, q.get("lp"));
+        if (!mine) { sendJson(res, 404, { ok: false, error: "Ligue privée introuvable." }); return; }
+        const { lp, slotToLocal } = mine;
         const roundIndex = Number(q.get("round")), home = Number(q.get("home")), away = Number(q.get("away"));
         const round = lp.rounds[roundIndex];
-        const match = round && round.matches.find(m => m.home === home && m.away === away);
+        const match = round && round.matches.find(m => slotToLocal[m.home] === home && slotToLocal[m.away] === away);
         if (!match || !match.played || typeof match.liveUntil !== "number") { sendJson(res, 404, { ok: false, error: "Pas de direct pour ce match." }); return; }
-        const data = await store.loadReplays(ctx.leagueId, multiSavePath, "lp");
-        const suffix = PrivateLeague.lpLiveKey(lp, roundIndex, home, away);
-        const item = data.list.slice().reverse().find(x => x.key.endsWith(":" + suffix));
-        if (!item) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
-        const watchIdx = item.entry.homeIdx === ctx.teamIndex || item.entry.awayIdx === ctx.teamIndex ? ctx.teamIndex : item.entry.homeIdx;
-        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [item.key]: item.entry } }, watchIdx);
-        view.privateLeague = item.entry.privateLeague;
+        const found = (await privateLeagueLiveEntries(lp, roundIndex, slotToLocal, multiSavePath, { home: match.home, away: match.away }))[0];
+        if (!found) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
+        const entry = found.entry;
+        const watchIdx = entry.homeIdx === ctx.teamIndex || entry.awayIdx === ctx.teamIndex ? ctx.teamIndex : entry.homeIdx;
+        const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [found.item.key]: entry } }, watchIdx);
+        view.privateLeague = entry.privateLeague;
         const ended = now >= match.liveUntil;
         if (ended) {
-          const delta = now + 2000 - item.entry.kickoffAt;
+          const delta = now + 2000 - entry.kickoffAt;
           view.kickoffAt += delta;
           view.events = view.events.map(ev => (typeof ev.airAt === "number" ? { ...ev, airAt: ev.airAt + delta } : ev));
           view.pauses = (view.pauses || []).map(pz => (typeof pz.airAt === "number" ? { ...pz, airAt: pz.airAt + delta } : pz));
           view.replay = true;
         }
-        sendJson(res, 200, { ok: true, live: view, watchIdx, mine: watchIdx === ctx.teamIndex, ended,
-          teamName: (ctx.league.teams[watchIdx] || {}).name || "", opponentName: (ctx.league.teams[view.opponentIdx] || {}).name || "" });
+        // Clubs d'un autre championnat dans ce match : effectif complet (le
+        // direct affiche leurs joueurs), comme les invités de la Coupe nationale.
+        const guestTeams = [];
+        const cache = new Map();
+        for (const slot of [match.home, match.away]) {
+          const ref = lp.members[slot];
+          if (!ref || ref.leagueId === ctx.leagueId) continue;
+          const team = await privateLeagueMemberTeam(ctx, lp, slot, cache, multiSavePath);
+          if (team) guestTeams.push({ ...World.NationalCup.guestForTeam(Engine, team, ref), localIdx: slotToLocal[slot] });
+        }
+        const nameOf = idx => { const s2 = slotToLocal.indexOf(idx); return s2 >= 0 ? lp.members[s2].name : ""; };
+        sendJson(res, 200, { ok: true, live: view, watchIdx, mine: watchIdx === ctx.teamIndex, ended, guestTeams,
+          teamName: nameOf(watchIdx), opponentName: nameOf(view.opponentIdx) });
         return;
       }
 
@@ -2115,17 +2214,23 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
         const { changed } = tick(ctx.league, now);
         if (changed) await persistContext(ctx);
-        const lp = (ctx.league.privateLeagues || []).find(x => x.id === route.searchParams.get("lp"));
+        const mine = memberPrivateLeague(ctx, route.searchParams.get("lp"));
         const roundIndex = Number(route.searchParams.get("round"));
-        if (!lp || !lp.teamIndices.includes(ctx.teamIndex) || !lp.rounds[roundIndex]) { sendJson(res, 404, { ok: false, error: "Aucune émission disponible." }); return; }
-        const lpView = PrivateLeague.sanitizePrivateLeaguesForViewer([lp], ctx.teamIndex, now)[0];
+        if (!mine || !mine.lp.rounds[roundIndex]) { sendJson(res, 404, { ok: false, error: "Aucune émission disponible." }); return; }
+        const { lp, slotToLocal } = mine;
+        const lpView = privateLeaguesForViewer(ctx, now).privateLeagues.find(x => x.id === lp.id);
+        const mySlot = PrivateLeague.memberSlot(lp, ctx.leagueId, ctx.teamIndex);
+        const myMatch = lp.rounds[roundIndex].matches.find(m => m.home === mySlot || m.away === mySlot);
         let show = null;
-        if (route.pathname.endsWith("/prematch")) show = Shows.getLpPrematchShow(ctx.league, lpView, roundIndex, ctx.teamIndex, now);
-        else {
-          const data = await store.loadReplays(ctx.leagueId, multiSavePath, "lp");
-          const prefix = `lp:${lp.id}:${roundIndex}:`;
-          const entries = data.list.filter(x => x.key.includes(":" + prefix)).map(x => x.entry);
-          show = Shows.getLpHalftimeShow(ctx.league, lpView, roundIndex, ctx.teamIndex, entries, now);
+        if (route.pathname.endsWith("/prematch")) {
+          const showLeague = await privateLeagueShowLeague(ctx, lp, slotToLocal, myMatch ? [myMatch.home, myMatch.away] : [], multiSavePath, now);
+          show = Shows.getLpPrematchShow(showLeague, lpView, roundIndex, ctx.teamIndex, now);
+        } else {
+          const found = await privateLeagueLiveEntries(lp, roundIndex, slotToLocal, multiSavePath);
+          const slots = [];
+          found.forEach(f => slots.push(f.match.home, f.match.away));
+          const showLeague = await privateLeagueShowLeague(ctx, lp, slotToLocal, slots, multiSavePath, now);
+          show = Shows.getLpHalftimeShow(showLeague, lpView, roundIndex, ctx.teamIndex, found.map(f => f.entry), now);
         }
         if (!show) { sendJson(res, 404, { ok: false, error: "Émission pas encore ouverte." }); return; }
         sendJson(res, 200, show);
@@ -2399,6 +2504,36 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           return;
         }
         req.__parsedBody = body;
+      }
+
+      // Ligues privées « monde » (server/privateLeague.js) : création,
+      // adhésion par code depuis n'importe quel championnat, départ, lancement.
+      if (req.method === "POST" && PRIVATE_LEAGUE_ACTIONS[route.pathname]) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body = req.__parsedBody;
+        if (body === undefined) {
+          try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        }
+        if (!ctx.lpStore) { sendJson(res, 503, { ok: false, error: "Ligues privées momentanément indisponibles, réessayez dans quelques minutes." }); return; }
+        const label = World.divisionLabelOf(ctx.world, ctx.leagueId);
+        const me = { league: ctx.league, idx: ctx.teamIndex, ref: PrivateLeague.refFor(ctx.leagueId, ctx.league, ctx.teamIndex, label) };
+        const result = PRIVATE_LEAGUE_ACTIONS[route.pathname](Engine, ctx.lpStore, me, body, now);
+        if (!result.ok) { sendJson(res, 400, result); return; }
+        try {
+          await PrivateLeague.saveStore(ctx.lpStore, multiSavePath);
+        } catch (e) {
+          sendJson(res, 503, { ok: false, error: "Ligues privées momentanément indisponibles, réessayez dans quelques minutes." });
+          return;
+        }
+        // Lancement : premier vendredi = échéance du rattrapage du monde.
+        const lpNext = PrivateLeague.nextDeadline(ctx.lpStore, now);
+        const cur = nextWorldDeadlineAt.get(multiSavePath);
+        if (lpNext != null && (cur == null || lpNext < cur)) nextWorldDeadlineAt.set(multiSavePath, lpNext);
+        ctx.league.worldPrivateLeagueTimes = PrivateLeague.busyTimesByIdx(ctx.lpStore, ctx.leagueId);
+        const lpv = privateLeaguesForViewer(ctx, now);
+        sendJson(res, 200, { ...result, privateLeagues: lpv.privateLeagues, guestTeams: lpv.guests, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+        return;
       }
 
       const actionFn = req.method === "POST" ? ACTION_ROUTES[route.pathname] : null;

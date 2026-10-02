@@ -10,36 +10,60 @@
 // revenu de billetterie dans tous les cas", "pour créer et rejoindre la LP il
 // faut etre premium".
 //
-// Principes :
-// - Réservé à la ligue multi-manager (League.calendarDailyAnchored) : une
-//   ligue privée regroupe des clubs HUMAINS d'une même ligue partagée.
+// LIGUES PRIVÉES MONDIALES (retour utilisateur 2026-10-02 : « Pour la ligue
+// privée il faut que n'importe quel joueur du monde qui est premium puisse
+// rejoindre la LP sinon ça n'a aucun sens. ») : une ligue privée n'appartient
+// plus à UN championnat. Elle est rangée au niveau du monde (données annexes
+// « privateleagues », comme les amicaux entre championnats de
+// server/worldFriendlies.js) et ses membres sont des références de club
+// { leagueId, idx, name, country, label, look } : n'importe quel club humain
+// Premium de n'importe quel pays ou division la rejoint avec le code.
+//
+// Principes (inchangés) :
 // - Création ET participation réservées aux clubs Premium
 //   (Team.hasActivePremium), vérifié côté serveur à chaque action.
+// - Un club ne participe qu'à UNE ligue privée active à la fois (dans le
+//   monde entier) ; codes d'invitation uniques dans le monde entier.
 // - Une journée par semaine, le VENDREDI, à l'heure choisie par le créateur
 //   (heure de Paris, par demi-heure de 08h00 à 23h30 ; 21h30 par défaut et
 //   pour les ligues créées avant ce choix — retour utilisateur 2026-09-26 :
-//   "laisse le choix de l'heure des matchs"). Les matchs sont simulés sur
-//   des copies : aucun conflit possible avec les créneaux officiels.
-//   Aller-retour (generateRoundRobinSchedule), 4/6/8/10 équipes.
+//   "laisse le choix de l'heure des matchs").
+//   Aller-retour (generateRoundRobinSchedule), 4/6/8/10 équipes, lancement
+//   automatique quand la ligue est complète ou anticipé par le créateur dès
+//   4 clubs ; le créateur qui part dissout la ligue.
 // - Les matchs sont simulés sur des COPIES des équipes (serializeTeam →
 //   teamFromSave) : MatchEngine.simulate a ses propres effets de bord
 //   (blessures, minutes d'entraînement, snapshots de forme), qui tombent avec
 //   la copie. RIEN n'est écrit sur les joueurs ni le club réels — ni forme,
 //   ni fatigue, ni entraînement, ni finances, ni stats de carrière
-//   (matchLog), ni classement mondial. Seul le résultat est stocké dans
-//   League.privateLeagues (+ une entrée de fil d'actu pour les membres).
+//   (matchLog), ni classement mondial. Seul le résultat est stocké (+ une
+//   entrée de fil d'actu pour les membres).
 // - Avantage du terrain optionnel (venue "home") : option homeAdvantage de
 //   MatchEngine, voir HOME_ADVANTAGE_FACTOR côté moteur ; "neutral" = aucun.
+// - Les journées sont jouées par server/world.js:catchUpWorld, qui a toutes
+//   les ligues en main. Un championnat illisible (stockage injoignable) :
+//   la journée attend le passage suivant, jamais un forfait.
 //
-// Forme d'une ligue privée (JSON brut dans League.privateLeagues) :
-// { id, name, code, creatorTeamIndex, size, venue, hour, minute, status
-//   ("open"|"running"|"finished"), createdAt, startedAt, finishedAt,
-//   teamIndices: [idx...],
-//   rounds: [{ index, dueAt, matches: [{ home, away, played, playedAt,
-//     scoreHome, scoreAway, forfeit, quarterScores, boxScoreHome,
-//     boxScoreAway }] }] }
-// `home`/`away` sont des index dans league.teams ; -1 = exempt (nombre
-// impair d'équipes au lancement).
+// Forme d'une ligue privée « monde » (données annexes, store.list) :
+// { id, name, code, creator: { leagueId, idx }, size, venue, hour, minute,
+//   status ("open"|"running"|"finished"), createdAt, startedAt, finishedAt,
+//   members: [ref...],
+//   rounds: [{ index, dueAt, feedPushed?, matches: [{ home, away, played,
+//     playedAt, scoreHome, scoreAway, forfeit, quarterScores, boxScoreHome,
+//     boxScoreAway, seed?, kickoffAt?, liveUntil?, legacyKey? }] }],
+//   legacy?: { leagueId } }
+// `home`/`away` sont des PLACES dans `members` (figées au lancement).
+// Navigateur : projetée dans le repère de la ligue du manager (projectForViewer)
+// sous l'ancienne forme (teamIndices, creatorTeamIndex, home/away = index
+// locaux ; clubs des autres championnats = clubs invités légers
+// PRIVATE_LEAGUE_GUEST_IDX + k), pour que l'affichage existant reste tel quel.
+//
+// Ancienne forme (avant 2026-10-02, JSON brut dans League.privateLeagues,
+// teamIndices/creatorTeamIndex/home/away = index dans league.teams) :
+// migrée vers le monde sans perte (migrateLeague, même id, même code, mêmes
+// membres, journées et résultats) dès que le stockage du monde est lisible ;
+// catchUpPrivateLeagues reste le chemin de compatibilité d'une ligue pas
+// encore migrée (stockage du monde illisible).
 // ---------------------------------------------------------------------
 
 const Calendar = require("./calendar.js");
@@ -61,6 +85,15 @@ const PRIVATE_LEAGUE_CODE_LENGTH = 6;
 // Une ligue terminée reste consultable un moment (palmarès) puis est purgée
 // pour ne pas faire grossir la sauvegarde indéfiniment.
 const PRIVATE_LEAGUE_FINISHED_RETENTION_MS = 60 * 24 * 3600 * 1000;
+// Clubs des autres championnats dans le navigateur (voir projectForViewer) :
+// au-delà des invités de la Coupe nationale (100+), du marché mondial
+// (1000+/2000+) et des amicaux entre championnats (3000+).
+const PRIVATE_LEAGUE_GUEST_IDX = 4000;
+// Nom des données annexes du monde (store.loadWorldAuxStrict).
+const STORE_NAME = "privateleagues";
+// Logo personnalisé recopié dans la référence d'un membre (affiché chez les
+// autres membres) seulement s'il reste léger ; sinon logo type.
+const LOOK_LOGO_MAX = 120000;
 
 function fail(error) { return { ok: false, error }; }
 
@@ -108,21 +141,54 @@ function isActive(lp) {
   return lp.status === "open" || lp.status === "running";
 }
 
-// La ligue privée ACTIVE (ouverte ou en cours) dont ce club est membre — un
-// club ne peut être que dans une seule à la fois (voir createPrivateLeague/
-// joinPrivateLeague).
-function activePrivateLeagueFor(league, teamIndex) {
-  return (league.privateLeagues || []).find(lp => isActive(lp) && lp.teamIndices.includes(teamIndex)) || null;
+// --- Références de clubs ------------------------------------------------------
+
+function emptyStore() { return { version: 1, list: [] }; }
+function isValidStore(s) { return !!(s && typeof s === "object" && Array.isArray(s.list)); }
+
+function sameRef(a, b) { return !!a && !!b && a.leagueId === b.leagueId && a.idx === b.idx; }
+function memberSlot(lp, leagueId, idx) {
+  return (lp.members || []).findIndex(r => r.leagueId === leagueId && r.idx === idx);
+}
+function isCreator(lp, leagueId, idx) { return !!lp.creator && lp.creator.leagueId === leagueId && lp.creator.idx === idx; }
+
+// Apparence d'un club pour les autres membres (logo, maillot, trigramme).
+function teamLook(team) {
+  if (!team) return null;
+  const logo = typeof team.customLogoDataUrl === "string" && team.customLogoDataUrl.length <= LOOK_LOGO_MAX ? team.customLogoDataUrl : null;
+  return {
+    trigram: team.trigram || null,
+    jerseyColor: team.jerseyColor || null, jerseyShape: team.jerseyShape || null,
+    jerseyPattern: team.jerseyPattern || null, jerseyTwoTone: team.jerseyTwoTone || null,
+    isPaying: !!team.isPaying, premiumUntil: typeof team.premiumUntil === "number" ? team.premiumUntil : null,
+    customLogoDataUrl: logo,
+  };
 }
 
-function findById(league, id) {
-  return (league.privateLeagues || []).find(lp => lp.id === id) || null;
+// Référence d'un club : { leagueId, idx, name, country, label, look }.
+function refFor(leagueId, league, idx, label = "") {
+  const t = league && league.teams[idx];
+  return {
+    leagueId, idx, name: t ? t.name : "?",
+    country: (league && league.country) || "fr",
+    label: label || "", look: teamLook(t),
+  };
+}
+
+// La ligue privée ACTIVE (ouverte ou en cours) dont ce club est membre — un
+// club ne peut être que dans une seule à la fois, dans le monde entier.
+function activeFor(store, leagueId, idx) {
+  return ((store && store.list) || []).find(lp => isActive(lp) && memberSlot(lp, leagueId, idx) >= 0) || null;
+}
+
+function findById(store, id) {
+  return ((store && store.list) || []).find(lp => lp.id === id) || null;
 }
 
 // Garde-fous communs à toute action : ligue multi-manager, club humain,
 // Premium actif.
 function checkEligibility(team, league, now) {
-  if (!league.calendarDailyAnchored) return "Les ligues privées ne sont disponibles que dans la ligue partagée.";
+  if (!league || !league.calendarDailyAnchored) return "Les ligues privées ne sont disponibles que dans la ligue partagée.";
   if (!team || !team.isHuman) return "Seul un club géré par un manager peut participer à une ligue privée.";
   if (typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) {
     return "Les ligues privées sont réservées aux clubs Premium.";
@@ -130,13 +196,17 @@ function checkEligibility(team, league, now) {
   return null;
 }
 
-// --- Actions --------------------------------------------------------------
+// --- Actions (monde) -------------------------------------------------------
+// `me` = { league, idx, ref } : le club qui agit, sa ligue et sa référence
+// (refFor). `store` (données « privateleagues ») est modifié sur place ; à
+// l'appelant de le sauvegarder si la réponse est { ok: true }.
 
 // POST /api/private-league/create  body: { name, size, venue, time: "HH:MM" }
-function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
-  const err = checkEligibility(team, league, now);
+function createPrivateLeague(Engine, store, me, body, now) {
+  const team = me.league && me.league.teams[me.idx];
+  const err = checkEligibility(team, me.league, now);
   if (err) return fail(err);
-  if (activePrivateLeagueFor(league, teamIndex)) return fail("Votre club participe déjà à une ligue privée.");
+  if (activeFor(store, me.ref.leagueId, me.idx)) return fail("Votre club participe déjà à une ligue privée.");
   const name = normalizeName(body && body.name);
   if (!name) return fail(`Le nom de la ligue doit faire entre 2 et ${PRIVATE_LEAGUE_NAME_MAX} caractères.`);
   const size = Number(body && body.size);
@@ -146,65 +216,69 @@ function createPrivateLeague(Engine, team, teamIndex, league, body, now) {
   const time = normalizeTime(body && body.time);
   if (!time) return fail("Heure des matchs invalide.");
 
-  if (!Array.isArray(league.privateLeagues)) league.privateLeagues = [];
+  // Code unique dans le monde entier (toutes les ligues stockées, même
+  // terminées : un vieux code ne désigne jamais une autre ligue).
   let code = randomCode();
-  while (league.privateLeagues.some(lp => lp.code === code)) code = randomCode();
+  while (store.list.some(lp => lp.code === code)) code = randomCode();
   const lp = {
     id: randomId(Engine),
     name, code,
-    creatorTeamIndex: teamIndex,
+    creator: { leagueId: me.ref.leagueId, idx: me.idx },
     size, venue,
     hour: time.hour, minute: time.minute,
     status: "open",
     createdAt: now, startedAt: null, finishedAt: null,
-    teamIndices: [teamIndex],
+    members: [{ ...me.ref, idx: me.idx }],
     rounds: [],
   };
-  league.privateLeagues.push(lp);
+  store.list.push(lp);
   return { ok: true, privateLeagueId: lp.id };
 }
 
-// POST /api/private-league/join  body: { code }
-function joinPrivateLeague(Engine, team, teamIndex, league, body, now) {
-  const err = checkEligibility(team, league, now);
+// POST /api/private-league/join  body: { code } — depuis n'importe quel
+// championnat du monde.
+function joinPrivateLeague(Engine, store, me, body, now) {
+  const team = me.league && me.league.teams[me.idx];
+  const err = checkEligibility(team, me.league, now);
   if (err) return fail(err);
-  if (activePrivateLeagueFor(league, teamIndex)) return fail("Votre club participe déjà à une ligue privée.");
+  if (activeFor(store, me.ref.leagueId, me.idx)) return fail("Votre club participe déjà à une ligue privée.");
   const code = normalizeCode(body && body.code);
   if (!code) return fail("Code d'invitation invalide.");
-  const lp = (league.privateLeagues || []).find(l => l.code === code && isActive(l));
+  const lp = store.list.find(l => l.code === code && isActive(l));
   if (!lp) return fail("Aucune ligue privée ouverte ne correspond à ce code.");
   if (lp.status !== "open") return fail("Cette ligue privée a déjà commencé.");
-  if (lp.teamIndices.length >= lp.size) return fail("Cette ligue privée est complète.");
-  lp.teamIndices.push(teamIndex);
-  if (lp.teamIndices.length >= lp.size) startPrivateLeagueNow(Engine, lp, now);
+  if (lp.members.length >= lp.size) return fail("Cette ligue privée est complète.");
+  lp.members.push({ ...me.ref, idx: me.idx });
+  if (lp.members.length >= lp.size) startPrivateLeagueNow(Engine, lp, now);
   return { ok: true, privateLeagueId: lp.id, started: lp.status === "running" };
 }
 
 // POST /api/private-league/leave  body: { id }
 // Uniquement tant que la ligue n'a pas commencé. Le créateur qui part
 // dissout la ligue (les autres redeviennent libres).
-function leavePrivateLeague(Engine, team, teamIndex, league, body, now) {
-  const lp = findById(league, body && body.id);
+function leavePrivateLeague(Engine, store, me, body, now) {
+  const lp = findById(store, body && body.id);
   if (!lp) return fail("Ligue privée introuvable.");
-  if (!lp.teamIndices.includes(teamIndex)) return fail("Votre club ne fait pas partie de cette ligue privée.");
+  const slot = memberSlot(lp, me.ref.leagueId, me.idx);
+  if (slot < 0) return fail("Votre club ne fait pas partie de cette ligue privée.");
   if (lp.status !== "open") return fail("Impossible de quitter une ligue privée déjà lancée.");
-  if (lp.creatorTeamIndex === teamIndex) {
-    league.privateLeagues = league.privateLeagues.filter(l => l.id !== lp.id);
+  if (isCreator(lp, me.ref.leagueId, me.idx)) {
+    store.list = store.list.filter(l => l.id !== lp.id);
     return { ok: true, dissolved: true };
   }
-  lp.teamIndices = lp.teamIndices.filter(i => i !== teamIndex);
+  lp.members.splice(slot, 1);
   return { ok: true, dissolved: false };
 }
 
 // POST /api/private-league/start  body: { id }
 // Lancement anticipé par le créateur, dès PRIVATE_LEAGUE_MIN_TEAMS_TO_START
 // clubs (le lancement est automatique quand la ligue est complète).
-function startPrivateLeague(Engine, team, teamIndex, league, body, now) {
-  const lp = findById(league, body && body.id);
+function startPrivateLeague(Engine, store, me, body, now) {
+  const lp = findById(store, body && body.id);
   if (!lp) return fail("Ligue privée introuvable.");
-  if (lp.creatorTeamIndex !== teamIndex) return fail("Seul le créateur de la ligue peut la lancer.");
+  if (!isCreator(lp, me.ref.leagueId, me.idx)) return fail("Seul le créateur de la ligue peut la lancer.");
   if (lp.status !== "open") return fail("Cette ligue privée a déjà commencé.");
-  if (lp.teamIndices.length < PRIVATE_LEAGUE_MIN_TEAMS_TO_START) {
+  if (lp.members.length < PRIVATE_LEAGUE_MIN_TEAMS_TO_START) {
     return fail(`Il faut au moins ${PRIVATE_LEAGUE_MIN_TEAMS_TO_START} clubs pour lancer la ligue.`);
   }
   startPrivateLeagueNow(Engine, lp, now);
@@ -235,10 +309,16 @@ function privateLeagueSlotForRound(firstSlot, roundIndex, hour = PRIVATE_LEAGUE_
   return Calendar.parisEpochForLocalTime(target.year, target.month, target.day, hour, minute);
 }
 
+// Participants : les places de `members` (ligue « monde ») ou les index de
+// `teamIndices` (ancienne forme).
+function participantsOf(lp) {
+  return Array.isArray(lp.members) ? lp.members.map((_, slot) => slot) : (lp.teamIndices || []).slice();
+}
+
 function startPrivateLeagueNow(Engine, lp, now) {
   // Ordre de tirage mélangé pour que le créateur ne reçoive pas toujours en
   // premier ; exempt (-1) ajouté si nombre impair.
-  const participants = lp.teamIndices.slice();
+  const participants = participantsOf(lp);
   for (let i = participants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [participants[i], participants[j]] = [participants[j], participants[i]];
@@ -257,6 +337,28 @@ function startPrivateLeagueNow(Engine, lp, now) {
   }));
   lp.status = "running";
   lp.startedAt = now;
+}
+
+// Instants des matchs de ligue privée à venir de chaque club d'un
+// championnat (Map idx → [epoch]) : posé sur la ligue
+// (league.worldPrivateLeagueTimes, jamais sauvegardé) pour que
+// Friendlies.officialMatchTimesFor compte ces vendredis comme jours de
+// match (amicaux, entraînement).
+function busyTimesByIdx(store, leagueId) {
+  const out = new Map();
+  ((store && store.list) || []).forEach(lp => {
+    if (lp.status !== "running") return;
+    (lp.rounds || []).forEach(r => r.matches.forEach(m => {
+      if (m.played) return;
+      [m.home, m.away].forEach(slot => {
+        const ref = lp.members[slot];
+        if (!ref || ref.leagueId !== leagueId) return;
+        if (!out.has(ref.idx)) out.set(ref.idx, []);
+        out.get(ref.idx).push(r.dueAt);
+      });
+    }));
+  });
+  return out;
 }
 
 // --- Simulation -------------------------------------------------------------
@@ -280,32 +382,22 @@ function compactBoxScore(rows) {
 // faut ajouter le live sur les matchs de ligue privée ») : le match reste
 // simulé d'un coup sur des copies (aucun effet sur les vrais clubs), mais
 // sa diffusion est calée sur le coup d'envoi de la journée (round.dueAt) et
-// rangée avec les directs à revoir (league.pendingReplays → store, clé
-// « lp:… », voir lpLiveKey et /api/private-leagues/live). Tant que la
-// diffusion n'est pas finie (match.liveUntil), le score reste caché aux
-// managers (sanitizePrivateLeaguesForViewer) et le fil d'actu attend
-// (round.feedPushed).
+// rangée avec les directs à revoir (clé « lp:… », voir lpLiveKey ;
+// stockage propre à chaque ligue privée « monde », store.appendLpReplays).
+// Tant que la diffusion n'est pas finie (match.liveUntil), le score reste
+// caché aux managers (projectForViewer) et le fil d'actu attend
+// (round.feedPushed). `home`/`away` : places (monde) ou index (ancienne forme).
 function lpLiveKey(lp, roundIndex, home, away) {
   return `lp:${lp.id}:${roundIndex}:${home}:${away}`;
 }
 
-function archivePrivateLeagueLive(league, lp, roundIndex, match, entry) {
-  if (!league.pendingReplays) Object.defineProperty(league, "pendingReplays", { value: [], writable: true, enumerable: false, configurable: true });
-  league.pendingReplays.push({ key: `${league.seasonNumber || 1}:${lpLiveKey(lp, roundIndex, match.home, match.away)}`, season: league.seasonNumber || 1, savedAt: Date.now(), entry });
-}
-
-function simulatePrivateLeagueMatch(Engine, league, lp, match, now, kickoffAt = now, roundIndex = null) {
-  const homeReal = league.teams[match.home];
-  const awayReal = league.teams[match.away];
-  if (!homeReal || !awayReal) {
-    match.played = true; match.playedAt = now; match.forfeit = "both";
-    match.scoreHome = 0; match.scoreAway = 0;
-    return;
-  }
-  const home = cloneTeamForExhibition(Engine, homeReal);
-  const away = cloneTeamForExhibition(Engine, awayReal);
-  const homeOk = home.hasValidLineup();
-  const awayOk = away.hasValidLineup();
+// Joue UN match sur des copies de `homeReal`/`awayReal` (null = club
+// introuvable : forfait). `archive(entry)` reçoit le direct à ranger.
+function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundIndex, archive) {
+  const home = homeReal ? cloneTeamForExhibition(Engine, homeReal) : null;
+  const away = awayReal ? cloneTeamForExhibition(Engine, awayReal) : null;
+  const homeOk = !!home && home.hasValidLineup();
+  const awayOk = !!away && away.hasValidLineup();
   match.played = true;
   match.playedAt = now;
   if (homeOk && awayOk) {
@@ -318,11 +410,11 @@ function simulatePrivateLeagueMatch(Engine, league, lp, match, now, kickoffAt = 
     match.seed = result.seed;
     match.boxScoreHome = compactBoxScore(result.boxScoreA);
     match.boxScoreAway = compactBoxScore(result.boxScoreB);
-    if (roundIndex != null && Array.isArray(result.events) && result.events.length) {
+    if (roundIndex != null && archive && Array.isArray(result.events) && result.events.length) {
       const pb = schedulePlayback(result.events, kickoffAt);
       match.kickoffAt = kickoffAt;
       match.liveUntil = kickoffAt + pb.totalDurationMs;
-      archivePrivateLeagueLive(league, lp, roundIndex, match, {
+      archive({
         round: roundIndex, kickoffAt, homeIdx: match.home, awayIdx: match.away, competition: "lp",
         privateLeague: { id: lp.id, name: lp.name, round: roundIndex, venue: lp.venue },
         forfeit: false, finalScore: { home: match.scoreHome, away: match.scoreAway },
@@ -339,70 +431,253 @@ function simulatePrivateLeagueMatch(Engine, league, lp, match, now, kickoffAt = 
   match.forfeit = "away"; match.scoreHome = Engine.FORFEIT_SCORE; match.scoreAway = 0;
 }
 
-function pushRoundFeed(Engine, league, lp, round) {
-  round.matches.forEach(m => {
-    [m.home, m.away].forEach(idx => {
-      const team = league.teams[idx];
-      if (!team || !team.isHuman || !team.feed) return;
-      const mine = idx === m.home;
-      const opp = league.teams[mine ? m.away : m.home];
-      const pf = mine ? m.scoreHome : m.scoreAway;
-      const pa = mine ? m.scoreAway : m.scoreHome;
-      const win = pf > pa;
-      Engine.pushEntry(team.feed, {
-        key: `private_league_${lp.id}_${round.index}_${idx}`,
-        category: "ligue",
-        week: team.week,
-        title: `${lp.name} · J${round.index + 1} : ${win ? "victoire" : "défaite"} ${pf}-${pa} ${mine ? "contre" : "chez"} ${opp ? opp.name : "?"}`,
-        text: m.forfeit ? "Match perdu ou gagné par forfait (cinq incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement ni les finances.",
-        action: { label: "Ligue privée", href: "/ligues-privees" },
-      });
-    });
-  });
+function feedEntryFor(lp, round, m, mine, oppName) {
+  const pf = mine ? m.scoreHome : m.scoreAway;
+  const pa = mine ? m.scoreAway : m.scoreHome;
+  const win = pf > pa;
+  return {
+    category: "ligue",
+    title: `${lp.name} · J${round.index + 1} : ${win ? "victoire" : "défaite"} ${pf}-${pa} ${mine ? "contre" : "chez"} ${oppName || "?"}`,
+    text: m.forfeit ? "Match perdu ou gagné par forfait (cinq incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement ni les finances.",
+    action: { label: "Ligue privée", href: "/ligues-privees" },
+  };
 }
 
-// Appelée à chaque tick serveur (voir server/index.js) : joue toutes les
-// journées dues des ligues en cours, clôt celles qui sont terminées, purge
-// les anciennes. Renvoie les journées jouées (pour les tests/journalisation).
-function catchUpPrivateLeagues(Engine, league, now) {
-  const played = [];
-  if (!league || !Array.isArray(league.privateLeagues) || league.privateLeagues.length === 0) return played;
-  league.privateLeagues.forEach(lp => {
+// Club réel derrière une référence (ligues en main), ou null : club
+// introuvable ou devenu un autre club (nom différent).
+function teamOfRef(leagues, ref) {
+  const lg = ref && leagues.get(ref.leagueId);
+  const t = lg && lg.teams[ref.idx];
+  return t && t.name === ref.name ? t : null;
+}
+
+// Rattrapage des ligues privées « monde » (server/world.js:catchUpWorld,
+// toutes les ligues en main dans `leagues` : Map leagueId → League). Joue
+// les journées dues, annonce les résultats une fois la diffusion finie,
+// clôt et purge. `out.replays` reçoit les directs à ranger ({ lpId, item }).
+// Renvoie true si `store` a changé.
+function catchUp(Engine, store, leagues, now, out = {}) {
+  if (!isValidStore(store)) return false;
+  const replays = out.replays || (out.replays = []);
+  const played = out.played || (out.played = []);
+  let changed = false;
+  store.list.forEach(lp => {
     if (lp.status !== "running") return;
     lp.rounds.forEach(round => {
       if (round.dueAt > now) return;
-      if (round.matches.every(m => m.played)) return;
-      round.matches.forEach(m => { if (!m.played) simulatePrivateLeagueMatch(Engine, league, lp, m, now, round.dueAt, round.index); });
+      const todo = round.matches.filter(m => !m.played);
+      if (!todo.length) return;
+      // Un championnat d'un membre illisible ce passage-ci : la journée
+      // attend (jamais un forfait pour une panne de stockage).
+      const missing = todo.some(m => [m.home, m.away].some(slot => { const r = lp.members[slot]; return !r || !leagues.has(r.leagueId); }));
+      if (missing) return;
+      todo.forEach(m => {
+        const homeReal = teamOfRef(leagues, lp.members[m.home]);
+        const awayReal = teamOfRef(leagues, lp.members[m.away]);
+        playMatch(Engine, homeReal, awayReal, lp, m, now, round.dueAt, round.index, entry => {
+          replays.push({ lpId: lp.id, item: { key: lpLiveKey(lp, round.index, m.home, m.away), savedAt: now, entry } });
+        });
+      });
       round.feedPushed = false;
       played.push({ privateLeagueId: lp.id, round: round.index });
+      changed = true;
     });
     // Fil d'actu (résultat) seulement une fois la diffusion de la journée
     // finie ; feedPushed absent = journée d'avant le direct, déjà annoncée.
     lp.rounds.forEach(round => {
       if (round.feedPushed !== false || !round.matches.every(m => m.played)) return;
       if (round.matches.some(m => typeof m.liveUntil === "number" && m.liveUntil > now)) return;
-      pushRoundFeed(Engine, league, lp, round);
+      round.matches.forEach(m => {
+        [m.home, m.away].forEach(slot => {
+          const ref = lp.members[slot];
+          const team = teamOfRef(leagues, ref);
+          if (!team || !team.isHuman || !team.feed) return;
+          const mine = slot === m.home;
+          const opp = lp.members[mine ? m.away : m.home];
+          Engine.pushEntry(team.feed, { key: `private_league_${lp.id}_${round.index}_${ref.idx}`, week: team.week, ...feedEntryFor(lp, round, m, mine, opp && opp.name) });
+        });
+      });
       round.feedPushed = true;
+      changed = true;
     });
     if (lp.rounds.every(r => r.matches.every(m => m.played)) && lp.rounds.every(r => r.feedPushed !== false)) {
       lp.status = "finished";
       lp.finishedAt = now;
+      changed = true;
     }
   });
-  league.privateLeagues = league.privateLeagues.filter(lp => {
+  const before = store.list.length;
+  store.list = store.list.filter(lp => {
     if (lp.status !== "finished") return true;
     return typeof lp.finishedAt !== "number" || now - lp.finishedAt < PRIVATE_LEAGUE_FINISHED_RETENTION_MS;
   });
-  return played;
+  return changed || store.list.length !== before;
+}
+
+// Prochaine échéance (coup d'envoi d'une journée, fin de diffusion à
+// annoncer) — server/world.js la donne à server/index.js pour relancer le
+// rattrapage à l'heure.
+function nextDeadline(store, now) {
+  let next = null;
+  const take = t => { if (typeof t === "number" && t > now && (next == null || t < next)) next = t; };
+  ((store && store.list) || []).forEach(lp => {
+    if (lp.status !== "running") return;
+    lp.rounds.forEach(round => {
+      if (round.matches.some(m => !m.played)) take(round.dueAt);
+      if (round.feedPushed === false) round.matches.forEach(m => take(typeof m.liveUntil === "number" ? m.liveUntil + 1000 : null));
+    });
+  });
+  return next;
+}
+
+// Noms, libellés de division et apparence des membres rafraîchis depuis les
+// vrais clubs (ligues en main). `labelOf(leagueId)` : « Division I »…
+// Renvoie true si quelque chose a changé.
+function refreshRefs(store, leagues, labelOf = () => null) {
+  let changed = false;
+  ((store && store.list) || []).forEach(lp => {
+    if (lp.status === "finished") return;
+    lp.members.forEach(ref => {
+      const lg = leagues.get(ref.leagueId);
+      const team = lg && lg.teams[ref.idx];
+      if (!team || team.name !== ref.name) return;
+      const look = teamLook(team);
+      const label = labelOf(ref.leagueId) || ref.label || "";
+      const country = lg.country || ref.country || "fr";
+      if (JSON.stringify(look) !== JSON.stringify(ref.look) || label !== ref.label || country !== ref.country) {
+        ref.look = look; ref.label = label; ref.country = country;
+        changed = true;
+      }
+    });
+  });
+  return changed;
+}
+
+// Montées/descentes (server/world.js:applyCountryMoves échange deux clubs
+// entre deux championnats) : les références suivent le club. Même ordre
+// que les échanges eux-mêmes. Renvoie true si une référence a bougé.
+function remapMoves(store, moves) {
+  let changed = false;
+  (moves || []).forEach(m => {
+    if (!m || !m.up || !m.down) return;
+    const swap = r => {
+      if (!r) return;
+      if (r.leagueId === m.up.leagueId && r.idx === m.up.idx) { r.leagueId = m.down.leagueId; r.idx = m.down.idx; changed = true; return; }
+      if (r.leagueId === m.down.leagueId && r.idx === m.down.idx) { r.leagueId = m.up.leagueId; r.idx = m.up.idx; changed = true; }
+    };
+    ((store && store.list) || []).forEach(lp => { lp.members.forEach(swap); swap(lp.creator); });
+  });
+  return changed;
+}
+
+// --- Migration des anciennes ligues privées ----------------------------------
+
+// Range dans `store` les ligues privées de l'ancienne forme encore dans
+// league.privateLeagues (même id, même code, mêmes membres, journées et
+// résultats ; index → références). Idempotent : une ligue déjà présente
+// (même id) n'est pas recopiée. Ne touche PAS à league.privateLeagues (voir
+// migrateAndSave : vidé seulement une fois l'écriture vérifiée).
+// `refOf(idx)` : référence du club `idx` de cette ligue (refFor).
+// Renvoie les ids recopiés.
+function migrateLeague(store, leagueId, league, refOf) {
+  const moved = [];
+  (league && Array.isArray(league.privateLeagues) ? league.privateLeagues : []).forEach(old => {
+    if (!old || !old.id || !Array.isArray(old.teamIndices)) return;
+    if (store.list.some(lp => lp.id === old.id)) return;
+    const slotOf = idx => old.teamIndices.indexOf(idx);
+    // Code unique dans le monde : deux championnats ont pu tirer le même
+    // code avant la mise en commun (improbable) — le second en change.
+    let code = old.code;
+    if (store.list.some(lp => lp.code === code)) {
+      do { code = randomCode(); } while (store.list.some(lp => lp.code === code));
+      console.warn(`[ligues privées] code ${old.code} déjà pris dans le monde : « ${old.name} » (${leagueId}) passe au code ${code}.`);
+    }
+    const creatorIdx = Number.isInteger(old.creatorTeamIndex) ? old.creatorTeamIndex : old.teamIndices[0];
+    const lp = {
+      id: old.id, name: old.name, code,
+      creator: { leagueId, idx: creatorIdx },
+      size: old.size, venue: old.venue,
+      ...(Number.isInteger(old.hour) && Number.isInteger(old.minute) ? { hour: old.hour, minute: old.minute } : {}),
+      status: old.status, createdAt: old.createdAt || null, startedAt: old.startedAt || null, finishedAt: old.finishedAt || null,
+      members: old.teamIndices.map(idx => refOf(idx)),
+      rounds: (old.rounds || []).map(r => ({
+        ...r,
+        matches: (r.matches || []).map(m => {
+          const out = { ...m, home: slotOf(m.home), away: slotOf(m.away) };
+          // Direct déjà rangé sous l'ancienne clé, dans les directs de
+          // ligue privée de ce championnat (store.loadReplays(…, "lp")).
+          if (typeof m.liveUntil === "number") out.legacyKey = lpLiveKey(old, r.index, m.home, m.away);
+          return out;
+        }).filter(m => m.home >= 0 && m.away >= 0),
+      })),
+      legacy: { leagueId },
+    };
+    store.list.push(lp);
+    moved.push(lp.id);
+  });
+  return moved;
+}
+
+// --- Stockage (données annexes du monde) -------------------------------------
+
+// Lecture : le stockage, `emptyStore()` s'il n'existe pas encore, `null` si
+// la lecture a ÉCHOUÉ (stockage injoignable, JSON abîmé) — jamais un stock
+// vide à la place (il serait réécrit par-dessus les vraies ligues).
+async function loadStore(savePath) {
+  const store = require("./store.js");
+  const raw = await store.loadWorldAuxStrict(STORE_NAME, savePath);
+  if (raw === store.WORLD_READ_FAILED) return null;
+  if (raw == null) return emptyStore();
+  if (!isValidStore(raw)) { console.warn("[ligues privées] données du monde inattendues : laissées telles quelles."); return null; }
+  return raw;
+}
+
+// Écriture : lève une exception si elle échoue.
+async function saveStore(data, savePath) {
+  const store = require("./store.js");
+  await store.saveWorldAuxRaw(STORE_NAME, data, savePath, { strict: true });
+}
+
+// Migration sûre de plusieurs ligues : `entries` = [{ leagueId, league,
+// refOf }]. Recopie dans une COPIE du stock, l'écrit, la RELIT et vérifie
+// chaque ligue recopiée avant de vider league.privateLeagues (à l'appelant
+// de sauvegarder ces ligues — elles sont renvoyées). Au moindre échec, rien
+// ne change (les anciennes ligues continuent comme avant, voir
+// catchUpPrivateLeagues) et la migration sera retentée au passage suivant.
+async function migrateAndSave(storeData, entries, savePath) {
+  const withLegacy = (entries || []).filter(e => e.league && Array.isArray(e.league.privateLeagues) && e.league.privateLeagues.length);
+  if (!withLegacy.length || !isValidStore(storeData)) return [];
+  const next = JSON.parse(JSON.stringify(storeData));
+  let moved = 0;
+  withLegacy.forEach(e => { moved += migrateLeague(next, e.leagueId, e.league, e.refOf).length; });
+  try {
+    if (moved) {
+      await saveStore(next, savePath);
+      const check = await loadStore(savePath);
+      const ok = check && withLegacy.every(e => e.league.privateLeagues.every(old => !old || !old.id || check.list.some(lp => lp.id === old.id)));
+      if (!ok) throw new Error("relecture incomplète");
+    }
+  } catch (e) {
+    console.warn("[ligues privées] migration vers le monde reportée :", e.message);
+    return [];
+  }
+  storeData.version = next.version;
+  storeData.list = next.list;
+  withLegacy.forEach(e => {
+    console.log(`[ligues privées] ${e.league.privateLeagues.length} ligue(s) privée(s) de ${e.leagueId} rangée(s) au niveau du monde.`);
+    e.league.privateLeagues = [];
+  });
+  return withLegacy.map(e => e.league);
 }
 
 // --- Lecture ----------------------------------------------------------------
 
 // Classement : 2 pts la victoire, 1 la défaite (convention du championnat du
-// jeu), départage au +/- puis aux points marqués.
+// jeu), départage au +/- puis aux points marqués. Sur une vue projetée
+// (teamIndices) ou une ligue « monde » (places de members).
 function privateLeagueStandings(lp) {
   const rows = new Map();
-  lp.teamIndices.forEach(idx => rows.set(idx, { idx, played: 0, wins: 0, losses: 0, pf: 0, pa: 0, pts: 0, form: [] }));
+  participantsOf(lp).forEach(idx => rows.set(idx, { idx, played: 0, wins: 0, losses: 0, pf: 0, pa: 0, pts: 0, form: [] }));
   lp.rounds.forEach(round => round.matches.forEach(m => {
     if (!m.played) return;
     const h = rows.get(m.home), a = rows.get(m.away);
@@ -418,35 +693,152 @@ function privateLeagueStandings(lp) {
   return list.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-// Vue envoyée au navigateur : le code d'invitation n'est visible que des
-// membres (c'est le seul secret d'une ligue privée).
 // Match encore en direct : score, quarts et feuilles retirés (pas de
 // spoiler, ni dans le calendrier ni au classement) ; `live: true` et
 // l'heure de fin suffisent au navigateur pour proposer « Voir le direct ».
-function publicView(lp, viewerTeamIndex, now = Date.now()) {
-  const member = lp.teamIndices.includes(viewerTeamIndex);
-  const rounds = (lp.rounds || []).map(round => {
-    if (!round.matches.some(m => m.played && typeof m.liveUntil === "number" && m.liveUntil > now)) return round;
-    return {
-      ...round,
-      matches: round.matches.map(m => (m.played && typeof m.liveUntil === "number" && m.liveUntil > now
-        ? { ...m, played: false, live: true, scoreHome: null, scoreAway: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, forfeit: null }
-        : m)),
-    };
-  });
-  return { ...lp, rounds, code: member ? lp.code : null };
+function hideLive(m, now) {
+  if (!(m.played && typeof m.liveUntil === "number" && m.liveUntil > now)) return m;
+  return { ...m, played: false, live: true, scoreHome: null, scoreAway: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, forfeit: null };
 }
 
+// Ligues privées « monde » d'un manager, dans le repère de sa ligue :
+// seulement celles dont son club est membre (code d'invitation compris),
+// sous l'ancienne forme (teamIndices, creatorTeamIndex, home/away locaux) +
+// `members` (pays, division, championnat de chaque club). Clubs des autres
+// championnats = invités légers (nom, pays, apparence), index
+// PRIVATE_LEAGUE_GUEST_IDX + k. Renvoie { privateLeagues, guests, localOf }.
+function projectForViewer(store, leagueId, idx, now = Date.now()) {
+  const guests = [];
+  const byKey = new Map();
+  const localOf = ref => {
+    if (!ref) return -1;
+    if (ref.leagueId === leagueId) return ref.idx;
+    const key = `${ref.leagueId}:${ref.idx}`;
+    let g = byKey.get(key);
+    if (!g) {
+      g = {
+        localIdx: PRIVATE_LEAGUE_GUEST_IDX + byKey.size, leagueId: ref.leagueId, idx: ref.idx,
+        light: { name: ref.name, country: ref.country || null, label: ref.label || null, players: [], look: { ...(ref.look || {}), isHuman: true } },
+      };
+      byKey.set(key, g);
+      guests.push(g);
+    }
+    return g.localIdx;
+  };
+  const privateLeagues = ((store && store.list) || []).filter(lp => memberSlot(lp, leagueId, idx) >= 0).map(lp => {
+    const local = lp.members.map(localOf);
+    const creatorSlot = lp.members.findIndex(r => sameRef(r, lp.creator));
+    return {
+      id: lp.id, name: lp.name, code: lp.code,
+      creatorTeamIndex: creatorSlot >= 0 ? local[creatorSlot] : (lp.creator && lp.creator.leagueId === leagueId ? lp.creator.idx : -1),
+      size: lp.size, venue: lp.venue,
+      ...(Number.isInteger(lp.hour) && Number.isInteger(lp.minute) ? { hour: lp.hour, minute: lp.minute } : {}),
+      status: lp.status, createdAt: lp.createdAt, startedAt: lp.startedAt, finishedAt: lp.finishedAt,
+      teamIndices: local.slice(),
+      members: lp.members.map((r, s) => ({ idx: local[s], name: r.name, country: r.country || null, label: r.label || null, leagueId: r.leagueId, sameLeague: r.leagueId === leagueId })),
+      rounds: (lp.rounds || []).map(round => ({
+        index: round.index, dueAt: round.dueAt,
+        matches: round.matches.map(m => {
+          const v = hideLive({ ...m, home: local[m.home], away: local[m.away] }, now);
+          delete v.legacyKey;
+          return v;
+        }),
+      })),
+    };
+  });
+  return { privateLeagues, guests };
+}
+
+// Repère d'un manager pour UNE ligue « monde » : place → index local (même
+// numérotation que projectForViewer, qui doit être appelée sur le même
+// stock pour que les invités coïncident).
+function localIndexMap(store, lp, leagueId, idx) {
+  const proj = projectForViewer(store, leagueId, idx);
+  const view = proj.privateLeagues.find(x => x.id === lp.id);
+  return view ? { slotToLocal: view.teamIndices.slice(), guests: proj.guests } : null;
+}
+
+// --- Compatibilité : ancienne forme (League.privateLeagues) -------------------
+// Ligues pas encore rangées au niveau du monde (stockage du monde illisible
+// au moment de la migration) : elles continuent de se jouer comme avant,
+// dans leur championnat, jusqu'à la migration (migrateAndSave).
+
+function archivePrivateLeagueLive(league, lp, roundIndex, match, entry) {
+  if (!league.pendingReplays) Object.defineProperty(league, "pendingReplays", { value: [], writable: true, enumerable: false, configurable: true });
+  league.pendingReplays.push({ key: `${league.seasonNumber || 1}:${lpLiveKey(lp, roundIndex, match.home, match.away)}`, season: league.seasonNumber || 1, savedAt: Date.now(), entry });
+}
+
+function simulatePrivateLeagueMatch(Engine, league, lp, match, now, kickoffAt = now, roundIndex = null) {
+  const homeReal = league.teams[match.home] || null;
+  const awayReal = league.teams[match.away] || null;
+  if (!homeReal || !awayReal) {
+    match.played = true; match.playedAt = now; match.forfeit = "both";
+    match.scoreHome = 0; match.scoreAway = 0;
+    return;
+  }
+  playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundIndex, entry => archivePrivateLeagueLive(league, lp, roundIndex, match, entry));
+}
+
+function catchUpPrivateLeagues(Engine, league, now) {
+  const played = [];
+  if (!league || !Array.isArray(league.privateLeagues) || league.privateLeagues.length === 0) return played;
+  league.privateLeagues.forEach(lp => {
+    if (lp.status !== "running") return;
+    lp.rounds.forEach(round => {
+      if (round.dueAt > now) return;
+      if (round.matches.every(m => m.played)) return;
+      round.matches.forEach(m => { if (!m.played) simulatePrivateLeagueMatch(Engine, league, lp, m, now, round.dueAt, round.index); });
+      round.feedPushed = false;
+      played.push({ privateLeagueId: lp.id, round: round.index });
+    });
+    lp.rounds.forEach(round => {
+      if (round.feedPushed !== false || !round.matches.every(m => m.played)) return;
+      if (round.matches.some(m => typeof m.liveUntil === "number" && m.liveUntil > now)) return;
+      round.matches.forEach(m => {
+        [m.home, m.away].forEach(idx => {
+          const team = league.teams[idx];
+          if (!team || !team.isHuman || !team.feed) return;
+          const mine = idx === m.home;
+          const opp = league.teams[mine ? m.away : m.home];
+          Engine.pushEntry(team.feed, { key: `private_league_${lp.id}_${round.index}_${idx}`, week: team.week, ...feedEntryFor(lp, round, m, mine, opp && opp.name) });
+        });
+      });
+      round.feedPushed = true;
+    });
+    if (lp.rounds.every(r => r.matches.every(m => m.played)) && lp.rounds.every(r => r.feedPushed !== false)) {
+      lp.status = "finished";
+      lp.finishedAt = now;
+    }
+  });
+  league.privateLeagues = league.privateLeagues.filter(lp => {
+    if (lp.status !== "finished") return true;
+    return typeof lp.finishedAt !== "number" || now - lp.finishedAt < PRIVATE_LEAGUE_FINISHED_RETENTION_MS;
+  });
+  return played;
+}
+
+// Vue de l'ancienne forme pour un manager de ce championnat (code masqué
+// hors membres, score caché pendant le direct).
 function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = Date.now()) {
-  return (privateLeagues || []).map(lp => publicView(lp, viewerTeamIndex, now));
+  return (privateLeagues || []).map(lp => {
+    const member = (lp.teamIndices || []).includes(viewerTeamIndex);
+    const rounds = (lp.rounds || []).map(round => ({ ...round, matches: round.matches.map(m => hideLive(m, now)) }));
+    return { ...lp, rounds, code: member ? lp.code : null };
+  });
 }
 
 module.exports = {
   PRIVATE_LEAGUE_SIZES, PRIVATE_LEAGUE_MIN_TEAMS_TO_START, PRIVATE_LEAGUE_VENUES,
   PRIVATE_LEAGUE_WEEKDAY, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE, PRIVATE_LEAGUE_TIMES, PRIVATE_LEAGUE_NAME_MAX,
-  PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS,
+  PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS, PRIVATE_LEAGUE_GUEST_IDX, STORE_NAME,
+  // Monde
+  emptyStore, isValidStore, refFor, teamLook, activeFor, findById, memberSlot, sameRef,
   createPrivateLeague, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
+  catchUp, nextDeadline, refreshRefs, remapMoves, busyTimesByIdx, projectForViewer, localIndexMap,
+  migrateLeague, migrateAndSave, loadStore, saveStore,
+  // Communs
   startPrivateLeagueNow, firstPrivateLeagueSlotAfter, privateLeagueSlotForRound,
-  simulatePrivateLeagueMatch, catchUpPrivateLeagues, privateLeagueStandings, lpLiveKey,
-  activePrivateLeagueFor, sanitizePrivateLeaguesForViewer, normalizeCode, normalizeTime,
+  privateLeagueStandings, lpLiveKey, normalizeCode, normalizeTime,
+  // Compatibilité (ancienne forme)
+  simulatePrivateLeagueMatch, catchUpPrivateLeagues, sanitizePrivateLeaguesForViewer,
 };

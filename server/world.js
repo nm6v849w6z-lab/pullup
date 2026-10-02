@@ -32,6 +32,7 @@ const LiveMatch = require("./liveMatch.js");
 const NationalCup = require("./nationalCup.js");
 const WorldMarket = require("./worldMarket.js");
 const WorldFriendlies = require("./worldFriendlies.js");
+const PrivateLeague = require("./privateLeague.js");
 const Push = require("./push.js");
 
 const WORLD_VERSION = 1;
@@ -304,6 +305,11 @@ function divisionLabel(level, group) {
   const name = Engine.divisionInfo(level).name;
   return level > 1 ? `${name}.${(group || 0) + 1}` : name;
 }
+// Libellé de division d'un championnat du registre (« Division I »…), "" si inconnu.
+function divisionLabelOf(world, id) {
+  const e = world && world.leagues.find(x => x.id === id);
+  return e ? divisionLabel(e.level, e.group) : "";
+}
 
 function childrenEntries(world, entry) {
   return world.leagues
@@ -540,6 +546,11 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   };
   let worldDirty = false;
   let nextDeadlineAt = null;
+  // Ligues privées « monde » (server/privateLeague.js) : `null` si la
+  // lecture a échoué — rien n'y est alors ni joué ni réécrit ce passage-ci.
+  const lpStore = await PrivateLeague.loadStore(savePath);
+  let lpDirty = false;
+  const labelOfId = id => { const e = world.leagues.find(x => x.id === id); return e ? divisionLabel(e.level, e.group) : ""; };
   // Toutes les ligues restent en main jusqu'à la fin (transferts du marché
   // mondial entre deux championnats) ; seules celles qui ont changé sont
   // réécrites (empreinte de la sérialisation au chargement).
@@ -554,6 +565,15 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
       leagues.set(e.id, lg);
       allLeagues.set(e.id, lg);
       fingerprints.set(e.id, leagueFingerprint(lg));
+    }
+    // Anciennes ligues privées (League.privateLeagues) rangées au niveau du
+    // monde, puis vendredis de ligue privée posés sur chaque ligue (jours de
+    // match pour les amicaux, voir Friendlies.officialMatchTimesFor).
+    if (lpStore) {
+      await PrivateLeague.migrateAndSave(lpStore, [...leagues].map(([id, lg]) => ({
+        leagueId: id, league: lg, refOf: idx => PrivateLeague.refFor(id, lg, idx, labelOfId(id)),
+      })), savePath);
+      for (const [id, lg] of leagues) lg.worldPrivateLeagueTimes = PrivateLeague.busyTimesByIdx(lpStore, id);
     }
     for (let guard = 0; guard < 10; guard++) {
       for (const [id, lg] of leagues) {
@@ -632,6 +652,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
       }
       useLeagueTimeZone(null);
       applyCountryMoves(world, state.moves || [], leagues);
+      // Ligues privées : les membres suivent leur club dans sa nouvelle division.
+      if (lpStore && PrivateLeague.remapMoves(lpStore, state.moves || [])) lpDirty = true;
       let next = null;
       for (const lg of all) { next = lg.startNextSeason(ecoAt); }
       state.moves = [];
@@ -684,6 +706,24 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   if (WorldFriendlies.catchUp(Engine, fstore, allLeagues, now, events)) await store.saveWorldAuxRaw("friendlies", fstore, savePath);
   const kick = WorldFriendlies.nextKickoff(fstore, now);
   if (kick != null && (nextDeadlineAt == null || kick < nextDeadlineAt)) nextDeadlineAt = kick;
+  // Ligues privées « monde » : journées dues, résultats annoncés, membres
+  // rafraîchis (nom, division, logo), directs rangés par ligue privée.
+  if (lpStore) {
+    const out = {};
+    if (PrivateLeague.catchUp(Engine, lpStore, allLeagues, now, out)) lpDirty = true;
+    if (PrivateLeague.refreshRefs(lpStore, allLeagues, labelOfId)) lpDirty = true;
+    if (lpDirty) {
+      try { await PrivateLeague.saveStore(lpStore, savePath); } catch (e) { console.warn("[ligues privées] écriture échouée :", e.message); }
+    }
+    const byLp = new Map();
+    (out.replays || []).forEach(r => { if (!byLp.has(r.lpId)) byLp.set(r.lpId, []); byLp.get(r.lpId).push(r.item); });
+    for (const [lpId, items] of byLp) {
+      try { await store.appendLpReplays(lpId, items, savePath); } catch (e) { console.warn("[ligues privées] directs non rangés :", e.message); }
+    }
+    (out.played || []).forEach(p => events.push({ type: "private-league-round", ...p }));
+    const lpNext = PrivateLeague.nextDeadline(lpStore, now);
+    if (lpNext != null && (nextDeadlineAt == null || lpNext < nextDeadlineAt)) nextDeadlineAt = lpNext;
+  }
   const closing = WorldMarket.nextForeignClosing(index, now);
   if (closing != null && (nextDeadlineAt == null || closing < nextDeadlineAt)) nextDeadlineAt = closing + 1000;
   // Notifications (Premium, server/push.js) : envoyées avant la sauvegarde
@@ -1064,7 +1104,7 @@ module.exports = {
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld, isManagerPseudoTakenInWorld,
   isOpenCountry, publicCountries,
-  NationalCup, WorldMarket, WorldFriendlies, divisionLabel,
+  NationalCup, WorldMarket, WorldFriendlies, PrivateLeague, divisionLabel, divisionLabelOf,
   countryOverview, countryTitles,
   INACTIVE_RELEASE_DAYS, releaseClubToCpu, releaseInactiveManagers, reclaimClub, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,
 };

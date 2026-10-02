@@ -7627,6 +7627,10 @@
   .lp-member{display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; background:var(--panel-2); font-size:14px; font-weight:600;}
   .lp-member.me{box-shadow:inset 3px 0 0 var(--amber);}
   .lp-member .lg-badge svg, .lp-member .lg-badge img{width:28px; height:28px; border-radius:50%;}
+  .lp-member-main{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .lp-origin{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--ink-dim);}
+  .lp-origin .nat-flag{width:16px; height:auto; border-radius:2px;}
+  .lp-table .lg-tname-wrap{display:flex; flex-direction:column; gap:1px; min-width:0;}
   .lp-member-empty{color:var(--ink-faint); font-style:italic; font-weight:500; border:1px dashed var(--line);}
   .lp-tag{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); border:1px solid rgba(240,162,60,.5); border-radius:4px; padding:1px 6px; margin-left:8px;}
   .lp-tag-muted{color:var(--ink-dim); border-color:var(--line); background:var(--panel-2);}
@@ -9102,7 +9106,7 @@
 
       <div class="guide-entry" data-guide-id="lp" data-guide-group="Compétitions">
         <h3>Ligues privées</h3>
-        <p class="training-intro">Une compétition entre managers, à côté de la saison officielle et réservée aux clubs <button type="button" class="gd-link" data-guide-goto="premium">Premium</button>. Le créateur choisit le nom, le nombre d'équipes, l'heure des matchs (le <b>vendredi</b>) et le terrain (domicile / extérieur ou neutre), puis transmet le code d'invitation. La ligue démarre dès qu'elle est complète, ou quand son créateur la lance (4 clubs minimum). Un club ne participe qu'à une ligue privée à la fois.</p>
+        <p class="training-intro">Une compétition entre managers, à côté de la saison officielle et réservée aux clubs <button type="button" class="gd-link" data-guide-goto="premium">Premium</button>. Le créateur choisit le nom, le nombre d'équipes, l'heure des matchs (le <b>vendredi</b>) et le terrain (domicile / extérieur ou neutre), puis transmet le code d'invitation. N'importe quel club Premium du monde peut la rejoindre avec ce code, quel que soit son pays ou sa division. La ligue démarre dès qu'elle est complète, ou quand son créateur la lance (4 clubs minimum). Un club ne participe qu'à une ligue privée à la fois.</p>
         <p class="training-intro" style="margin-top:10px;">Les matchs se jouent sur des copies de vos équipes : ils ne touchent ni à la fatigue, ni aux blessures, ni au classement, ni aux finances de la saison officielle.</p>
       </div>
 
@@ -24249,6 +24253,14 @@ function installGuestTeams(lg, guests) {
         // Invité « léger » (marché mondial) : nom + joueurs en vente seulement.
         : new Team({ name: g.light.name, country: g.light.country || null, players: (g.light.players || []).map(playerFromSave) });
     } catch (e) { return; }
+    // Membre d'une ligue privée d'un autre championnat (server/privateLeague.js,
+    // projectForViewer) : apparence (logo, maillot, trigramme) et division.
+    if (!g.team && g.light.look && typeof g.light.look === "object") {
+      ["trigram", "jerseyColor", "jerseyShape", "jerseyPattern", "jerseyTwoTone", "isPaying", "premiumUntil", "customLogoDataUrl", "isHuman"].forEach(k => {
+        if (g.light.look[k] != null) t[k] = g.light.look[k];
+      });
+    }
+    if (g.light && g.light.label) t.guestLabel = g.light.label;
     t.isGuest = true;
     t.guestLeagueId = g.leagueId;
     t.guestIdx = g.idx;
@@ -52087,14 +52099,17 @@ document.getElementById("guideSection").addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 // LIGUES PRIVÉES (Premium) — retour communauté relayé par l'utilisateur,
 // 2026-09-26 (voir server/privateLeague.js pour les règles) : une
-// compétition à part entre clubs humains Premium d'une même ligue partagée,
-// jouée le vendredi soir sur des copies des équipes — aucun effet sur la
+// compétition à part entre clubs humains Premium de n'importe quel
+// championnat du monde (retour utilisateur 2026-10-02 : « n'importe quel
+// joueur du monde qui est premium [doit pouvoir] rejoindre la LP »), jouée
+// le vendredi soir sur des copies des équipes — aucun effet sur la
 // forme, l'entraînement, les blessures, les finances ni les stats de
 // carrière. Cette page : création (nom, 4/6/8/10 équipes, terrain), adhésion
 // par code, salle d'attente, puis classement + calendrier + feuilles de
-// match. Les données arrivent avec la sauvegarde (league.privateLeagues,
-// code d'invitation masqué hors membres) et sont rafraîchies par chaque
-// réponse d'action (result.privateLeagues).
+// match. Les données arrivent avec la sauvegarde (league.privateLeagues :
+// seulement les ligues du club, dans le repère de sa ligue ; clubs des autres
+// championnats = invités légers league.guestTeams, index 4000+) et sont
+// rafraîchies par chaque réponse d'action (result.privateLeagues/guestTeams).
 // ---------------------------------------------------------------------
 const LP_SIZES = [4, 6, 8, 10];
 let lpUi = { venue: "home", size: 8, time: "21:30", filter: "mine", feedback: null };
@@ -52133,6 +52148,15 @@ function lpStandings(lp) {
 }
 function findLpById(id) { return (league.privateLeagues || []).find(lp => lp.id === id) || null; }
 function lpTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
+// Pays et division d'un membre (ligue privée « monde ») : affichés dès que la
+// ligue réunit des clubs de plusieurs championnats.
+function lpIsWorld(lp) { return Array.isArray(lp && lp.members) && lp.members.some(m => !m.sameLeague); }
+function lpOriginHtml(lp, idx) {
+  if (!lpIsWorld(lp)) return "";
+  const m = lp.members.find(x => x.idx === idx);
+  if (!m) return "";
+  return `<span class="lp-origin">${m.country ? nationFlagHtml(m.country) : ""}${escapeHtml(m.label || "Autre championnat")}</span>`;
+}
 function lpVenueLabel(venue) { return venue === "neutral" ? "Terrain neutre" : "Domicile / extérieur"; }
 
 // Matchs de ligue privée dans le Calendrier, le tableau de bord et la barre
@@ -52190,7 +52214,7 @@ function teamIsPremium(team) {
 const PREMIUM_PERKS = [
   { title: "Scouting Pro illimité", text: "L'analyse complète de n'importe quel adversaire, sans pub. En gratuit : une analyse par mois contre une pub." },
   { title: "Analyse de votre équipe", text: "Comment vos adversaires vous voient : vos tendances de jeu et la défense qu'on vous conseillerait." },
-  { title: "Ligues privées", text: "Créer ou rejoindre une ligue privée entre managers." },
+  { title: "Ligues privées", text: "Créer ou rejoindre une ligue privée entre managers Premium du monde entier, tous pays et divisions confondus." },
   { title: "Maillots et logo", text: "Motifs, combinaisons de deux couleurs, maillot extérieur et logo personnalisé." },
   { title: "6 tactiques enregistrées", text: "Au lieu de 3, dans l'onglet Tactiques." },
   { title: "Sans pub", text: "Aucune pub, ni dans les émissions Hoop Shows ni ailleurs." },
@@ -52307,7 +52331,7 @@ function lpHubHtml(premium) {
     `<button type="button" class="lp-venue${lpUi.venue === "neutral" ? " on" : ""}" data-lp-venue="neutral" aria-pressed="${lpUi.venue === "neutral"}"${dis}>` +
     `<span class="lp-venue-title">Terrain neutre</span></button></div>`;
   html += `<div class="lp-actions"><button type="button" class="cal-next-btn lp-btn" id="lpCreateBtn"${dis}>Créer la ligue</button>` +
-    `<span class="lp-hint">Seuls les clubs Premium peuvent rejoindre. La ligue démarre dès qu'elle est complète, ou quand vous la lancez (4 clubs minimum).</span></div></div>`;
+    `<span class="lp-hint">N'importe quel club Premium du monde peut la rejoindre, quel que soit son pays ou sa division. La ligue démarre dès qu'elle est complète, ou quand vous la lancez (4 clubs minimum).</span></div></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Rejoindre une ligue</div>` +
     `<div class="lp-form-row"><div class="lp-field lp-field-grow"><label class="field-label" for="lpCodeInput">Code d'invitation</label>` +
     `<input type="text" id="lpCodeInput" class="lp-input lp-code-input" maxlength="6" placeholder="ABC123" autocomplete="off"${dis}></div>` +
@@ -52332,9 +52356,9 @@ function lpLobbyHtml(lp) {
     `<p class="lp-lead">${lp.teamIndices.length} / ${lp.size} clubs · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}</p></div>`;
   html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
   html += `<div class="lp-card"><div class="lp-card-title">Code d'invitation</div>` +
-    `<div class="lp-code-row"><span class="lp-code">${escapeHtml(lp.code || "••••••")}</span><span class="lp-hint">Transmettez ce code aux managers Premium que vous voulez inviter. Ils le saisissent dans l'onglet Ligues privées.</span></div></div>`;
+    `<div class="lp-code-row"><span class="lp-code">${escapeHtml(lp.code || "••••••")}</span><span class="lp-hint">Transmettez ce code aux managers Premium que vous voulez inviter, de n'importe quel pays ou division. Ils le saisissent dans l'onglet Ligues privées.</span></div></div>`;
   html += `<div class="lp-card"><div class="lp-card-title">Clubs inscrits</div><div class="lp-members">` +
-    lp.teamIndices.map(idx => { const t = league.teams[idx]; return `<div class="lp-member${idx === myTeamIndex ? " me" : ""}"><span class="lg-badge">${t ? teamLogoHtml(t, 28) : ""}</span><span>${teamLinkHtml(idx, lpTeamName(idx))}</span>${idx === lp.creatorTeamIndex ? `<span class="lp-tag">Créateur</span>` : ""}</div>`; }).join("") +
+    lp.teamIndices.map(idx => { const t = league.teams[idx]; return `<div class="lp-member${idx === myTeamIndex ? " me" : ""}"><span class="lg-badge">${t ? teamLogoHtml(t, 28) : ""}</span><span class="lp-member-main"><span>${teamLinkHtml(idx, lpTeamName(idx))}</span>${lpOriginHtml(lp, idx)}</span>${idx === lp.creatorTeamIndex ? `<span class="lp-tag">Créateur</span>` : ""}</div>`; }).join("") +
     Array.from({ length: Math.max(0, lp.size - lp.teamIndices.length) }, () => `<div class="lp-member lp-member-empty">Place libre</div>`).join("") + `</div></div>`;
   // Boutons sous les deux colonnes, centrés sur la page (même retour).
   html += `</div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
@@ -52365,7 +52389,7 @@ function lpLeagueHtml(lp) {
     const t = league.teams[r.idx];
     const form = r.form.map(f => `<span class="lg-f ${f === "V" ? "w" : "l"}">${f}</span>`).join("");
     html += `<tr class="${r.idx === myTeamIndex ? "me lg-mine" : ""}" data-lp-team="${r.idx}"><td><span class="lg-rank">${i + 1}</span></td>` +
-      `<td><div class="lg-team"><span class="lg-badge">${t ? teamLogoHtml(t, 32) : ""}</span><span class="lg-tname">${teamLinkHtml(r.idx, lpTeamName(r.idx))}</span>${r.idx === myTeamIndex ? `<span class="lp-tag">Vous</span>` : ""}</div></td>` +
+      `<td><div class="lg-team"><span class="lg-badge">${t ? teamLogoHtml(t, 32) : ""}</span><span class="lg-tname-wrap"><span class="lg-tname">${teamLinkHtml(r.idx, lpTeamName(r.idx))}</span>${lpOriginHtml(lp, r.idx)}</span>${r.idx === myTeamIndex ? `<span class="lp-tag">Vous</span>` : ""}</div></td>` +
       `<td class="c dim">${r.played}</td><td class="c">${r.wins}</td><td class="c">${r.losses}</td>` +
       `<td class="r lg-hide-sm ${r.diff > 0 ? "pos" : r.diff < 0 ? "neg" : "dim"}">${r.diff > 0 ? "+" : ""}${r.diff}</td>` +
       `<td class="r lg-pts">${r.pts}</td><td class="r"><div class="lg-form">${form || `<span class="lg-f-empty">–</span>`}</div></td></tr>`;
@@ -52413,6 +52437,9 @@ async function openPrivateLeagueLive(params, feedbackEl) {
     data = await res.json().catch(() => ({}));
   } catch (e) { if (feedbackEl) feedbackEl.textContent = "Serveur injoignable."; return false; }
   if (!res.ok || !data.ok) { if (feedbackEl) feedbackEl.textContent = data.error || "Ce direct n'est plus disponible."; return false; }
+  // Club d'un autre championnat (ligue privée « monde ») : effectif complet
+  // pour le direct, à la place de l'invité léger.
+  if (Array.isArray(data.guestTeams) && data.guestTeams.length) installGuestTeams(league, data.guestTeams);
   closeMatchBoxscore();
   if (!data.mine) { await showSpectateMatch(data.watchIdx, { data, url }); return true; }
   teamB = league.teams[data.live.opponentIdx];
@@ -52501,6 +52528,7 @@ async function lpAction(path, body, okText) {
     if (!res.ok || !data.ok) {
       lpUi.feedback = { ok: false, text: data.error || `Le serveur a refusé l'action (${res.status}).` };
     } else {
+      if (Array.isArray(data.guestTeams)) installGuestTeams(league, data.guestTeams);
       if (Array.isArray(data.privateLeagues)) league.privateLeagues = data.privateLeagues;
       lpUi.feedback = okText ? { ok: true, text: okText } : null;
     }
@@ -54338,7 +54366,7 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Compétitions", page: "lp", target: "#lpContent",
     title: "Les ligues privées",
-    text: "Une compétition entre managers, le vendredi à l'heure choisie par le créateur, sur des copies de vos équipes : rien n'y touche à votre saison officielle. Réservé au Premium.",
+    text: "Une compétition entre managers Premium du monde entier, le vendredi à l'heure choisie par le créateur, sur des copies de vos équipes : rien n'y touche à votre saison officielle.",
   },
 
   { kind: "spotlight", topic: "Entraînement", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="entrainement"]', pos: "right",

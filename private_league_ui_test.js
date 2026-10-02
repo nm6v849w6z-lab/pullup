@@ -60,7 +60,9 @@ async function waitFor(fn, label, tries = 60) {
   const docD = domD.window.document;
   [...docD.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "lp").click();
   check(!!docD.querySelector(".lp-premium-note") && docD.getElementById("lpCreateBtn").disabled && docD.getElementById("lpJoinBtn").disabled, "club gratuit : note Premium et boutons désactivés");
-  check(!/[A-Z2-9]{6}/.test(JSON.stringify(domD.window.eval("league.privateLeagues[0].code"))), "le code d'invitation n'est pas envoyé à un non-membre");
+  // Ligues privées « monde » (2026-10-02) : un non-membre ne reçoit plus du
+  // tout la ligue (ni son code).
+  check(!/[A-Z2-9]{6}/.test(JSON.stringify(domD.window.eval("(league.privateLeagues || []).map(l => l.code)"))), "le code d'invitation n'est pas envoyé à un non-membre");
   domD.window.close();
 
   // --- B et C rejoignent par code (B via l'interface, C via l'API).

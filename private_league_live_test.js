@@ -32,18 +32,27 @@ async function waitFor(fn, label, tries = 100) {
   const humans = league.teams.map((t, i) => (t.isHuman ? i : -1)).filter(i => i >= 0);
   humans.forEach(i => { league.teams[i].isPaying = true; });
   const [A, B, C, D, E] = humans;
-  let r = PL.createPrivateLeague(Engine, league.teams[A], A, league, { name: "Coupe des Potes", size: 4, venue: "home" }, now);
-  const lp = league.privateLeagues[0];
-  [B, C, D].forEach(i => { r = PL.joinPrivateLeague(Engine, league.teams[i], i, league, { code: lp.code }, now); });
+  // Ligues privées « monde » (2026-10-02) : la ligue est rangée au niveau du
+  // monde (stock « privateleagues »), membres = références de club ; les
+  // matchs y sont notés par place dans `members` (toLocal : index du club).
+  const lpStore = PL.emptyStore();
+  const me = i => ({ league, idx: i, ref: PL.refFor(store.HISTORIC_LEAGUE_ID, league, i, "Division I") });
+  let r = PL.createPrivateLeague(Engine, lpStore, me(A), { name: "Coupe des Potes", size: 4, venue: "home" }, now);
+  const lp = lpStore.list[0];
+  [B, C, D].forEach(i => { r = PL.joinPrivateLeague(Engine, lpStore, me(i), { code: lp.code }, now); });
   check(lp.status === "running", "ligue privée de 4 clubs lancée (E n'en fait pas partie)");
   const tokens = league.teams.map(t => t.managerLinkToken);
   const kickoff = lp.rounds[0].dueAt;
-  const myMatch = lp.rounds[0].matches.find(m => m.home === A || m.away === A);
-  const other = lp.rounds[0].matches.find(m => m !== myMatch);
+  const toLocal = m => ({ home: lp.members[m.home].idx, away: lp.members[m.away].idx });
+  const slotA = lp.members.findIndex(x => x.idx === A);
+  const rawMine = lp.rounds[0].matches.find(m => m.home === slotA || m.away === slotA);
+  const myMatch = toLocal(rawMine);
+  const other = toLocal(lp.rounds[0].matches.find(m => m !== rawMine));
 
   const { server, multiSavePath, baseUrl } = await startTestServer(() => now);
   const root = baseUrl.replace(/\/$/, "");
   await store.saveMultiLeague(league, multiSavePath);
+  await PL.saveStore(lpStore, multiSavePath);
   // Émission d'avant-match (sans pronostics) : ouverte 5 min avant.
   now = kickoff - 2 * 60 * 1000;
   const api = async (path, tok) => { const r = await fetch(root + path, { headers: { "X-TipIn-Token": tok } }); return { status: r.status, body: await r.json().catch(() => null) }; };

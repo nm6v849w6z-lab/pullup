@@ -468,6 +468,41 @@ async function appendReplays(leagueId, items, savePath = defaultMultiLeaguePath(
   fs.renameSync(tmp, where.file);
 }
 
+// Directs des ligues privées « monde » (server/privateLeague.js, une ligue
+// privée réunit des clubs de plusieurs championnats) : un stock par ligue
+// privée, clé "pullup:lpreplays:world:<id>" / fichier
+// "<multi-league>.lpreplays.world.<id>.json", mêmes entrées que les
+// directs de championnat ({ key, savedAt, entry }), LP_REPLAYS_MAX au plus.
+function lpWorldReplayStorage(lpId, savePath) {
+  if (!/^[0-9a-f]{4,64}$/i.test(String(lpId || ""))) throw new Error(`Identifiant de ligue privée invalide : ${lpId}`);
+  return { redis: `${redisPrefix()}pullup:lpreplays:world:${lpId}`, file: savePath.replace(/\.json$/, "") + `.lpreplays.world.${lpId}.json` };
+}
+async function loadLpReplays(lpId, savePath = defaultMultiLeaguePath()) {
+  try {
+    const where = lpWorldReplayStorage(lpId, savePath);
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? { version: 1, list: [] } : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return { version: 1, list: [] };
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    return { version: 1, list: [] };
+  }
+}
+async function appendLpReplays(lpId, items, savePath = defaultMultiLeaguePath()) {
+  const data = await loadLpReplays(lpId, savePath);
+  items.forEach(it => { data.list = data.list.filter(x => x.key !== it.key); data.list.push(it); });
+  data.list = data.list.slice(-LP_REPLAYS_MAX);
+  const where = lpWorldReplayStorage(lpId, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+
 // Chat de la ligue (server/leagueChat.js) : un bloc JSON par championnat,
 // clé "pullup:leaguechat:<id>" / fichier "<multi-league>.chat.<id>.json".
 // Contrairement aux replays, une lecture en échec LÈVE une exception : on ne
@@ -517,11 +552,34 @@ async function loadWorldAuxRaw(name, savePath = defaultMultiLeaguePath()) {
     return null;
   }
 }
-async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath()) {
+// Lecture STRICTE (ligues privées « monde », server/privateLeague.js) :
+// `null` = pas encore de données, WORLD_READ_FAILED = lecture en échec
+// (stockage injoignable, JSON abîmé) — jamais confondus, pour ne jamais
+// réécrire un bloc vide par-dessus les vraies données.
+async function loadWorldAuxStrict(name, savePath = defaultMultiLeaguePath()) {
+  const where = worldAuxStorage(name, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? null : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return null;
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    console.warn(`Données du monde « ${name} » illisibles :`, e.message);
+    return WORLD_READ_FAILED;
+  }
+}
+// `opts.strict` : une écriture Redis en échec LÈVE l'exception (au lieu
+// d'être seulement journalisée) — l'appelant doit savoir que rien n'est écrit.
+async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath(), opts = {}) {
   const where = worldAuxStorage(name, savePath);
   const body = JSON.stringify(data);
   if (upstashConfigured()) {
-    try { await redisSet(where.redis, body); } catch (e) { console.warn(`Écriture Redis des données du monde « ${name} » échouée :`, e.message); }
+    try { await redisSet(where.redis, body); } catch (e) {
+      console.warn(`Écriture Redis des données du monde « ${name} » échouée :`, e.message);
+      if (opts.strict) throw e;
+    }
     return;
   }
   fs.mkdirSync(path.dirname(where.file), { recursive: true });
@@ -718,8 +776,8 @@ module.exports = {
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
-  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
-  loadReplays, appendReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
+  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw,
+  loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,

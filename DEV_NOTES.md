@@ -20,6 +20,38 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-02), committé localement — Ligues
+  privées mondiales (retour utilisateur 2026-10-02 : « n'importe quel joueur
+  du monde qui est premium [doit pouvoir] rejoindre la LP »)**. Les LP sont
+  rangées au niveau du monde (données annexes `privateleagues`,
+  `store.loadWorldAuxStrict` : lecture en échec ≠ absent, jamais réécrit
+  après un échec), membres = références `{ leagueId, idx, name, country,
+  label, look }`, matchs notés par place dans `members`. Création / adhésion
+  par code / départ / lancement : route dédiée de server/index.js
+  (PRIVATE_LEAGUE_ACTIONS), Premium et « une LP active par club » vérifiés
+  dans le monde entier, codes uniques dans le monde. Journées jouées par
+  `World.catchUpWorld` (toutes les ligues en main ; championnat d'un membre
+  illisible = journée reportée, jamais un forfait), toujours sur des copies ;
+  directs rangés par LP (`store.appendLpReplays`, clé
+  `pullup:lpreplays:world:<id>`) ; montées/descentes suivies
+  (`remapMoves`) ; vendredis de LP = jours de match via
+  `league.worldPrivateLeagueTimes` (Friendlies.officialMatchTimesFor).
+  Navigateur : projection dans le repère de sa ligue (`projectForViewer`,
+  ancienne forme teamIndices/home/away), clubs étrangers = invités légers
+  4000+ (nom, pays, division, logo/maillot), drapeau + division sur la page
+  LP ; direct d'un club étranger : effectif complet renvoyé par
+  /api/private-league/live. Migration des anciennes LP (`league.privateLeagues`,
+  ex. « Coupe des champions » 59LDVG) : même id, code, membres, journées,
+  résultats ; écrite puis RELUE avant de vider la copie du championnat
+  (`migrateAndSave`, au rattrapage du monde et à chaque requête du
+  championnat) ; anciens directs retrouvés sous leur ancienne clé
+  (`legacyKey`). Tests : server/private_league_test.js (adapté),
+  world_private_league_test.js (nouveau : France/USA/Italie/Espagne D2,
+  refus non Premium et « déjà dans une LP », J1 au rattrapage, migration,
+  stockage illisible). Reste à surveiller en prod : la migration de 59LDVG au
+  premier rattrapage après déploiement (journal « rangée(s) au niveau du
+  monde »).
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Staff v2 +
   Marché du staff (retour utilisateur 2026-10-01 : « la page staff est fade
   et ne ressemble pas au reste du jeu »)**. Page Staff = staff EN POSTE

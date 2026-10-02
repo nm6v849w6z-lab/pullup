@@ -140,6 +140,11 @@ function officialMatchTimesFor(Engine, league, teamIdx) {
       if (r.matches.some(m => !m.played && (m.home === teamIdx || m.away === teamIdx))) out.push(r.dueAt);
     });
   });
+  // Ligues privées « monde » (server/privateLeague.js, membres de plusieurs
+  // championnats) : posées sur la ligue par server/index.js et
+  // server/world.js (league.worldPrivateLeagueTimes, jamais sauvegardé).
+  const lpTimes = league.worldPrivateLeagueTimes && league.worldPrivateLeagueTimes.get(teamIdx);
+  if (lpTimes) lpTimes.forEach(t => out.push(t));
   return out;
 }
 
