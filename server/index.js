@@ -1343,7 +1343,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // restent ouvertes /api/health, les routes admin (secret
       // X-Admin-Token) et les comptes (ci-dessus).
       if (route.pathname.startsWith("/api/")
-          && route.pathname !== "/api/health" && !route.pathname.startsWith("/api/admin/")
+          && !route.pathname.startsWith("/api/health") && !route.pathname.startsWith("/api/admin/")
           && !getManagerToken(req)) {
         sendJson(res, 401, { ok: false, code: "login-required", error: "Connexion requise." });
         return;
@@ -1713,6 +1713,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // `league.liveMatches` (le pluriel, TOUTES les diffusions en cours,
       // potentiellement celles d'AUTRES managers) n'est jamais exposé par
       // cette route.
+      // Diagnostic public du stockage (incident 2026-10-02) : ouvrir
+      // https://hoop-manager.com/api/health/storage dans un navigateur.
+      if (route.pathname === "/api/health/storage" && req.method === "GET") {
+        const h = await store.storageHealth(multiSavePath);
+        sendJson(res, h.ok ? 200 : 503, h);
+        return;
+      }
       if (route.pathname === "/api/save" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }

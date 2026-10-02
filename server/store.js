@@ -631,7 +631,26 @@ async function loadOrCreate(savePath = defaultSavePath(), now = Date.now()) {
   return created;
 }
 
+// Diagnostic du stockage (GET /api/health, incident 2026-10-02) : lit le
+// registre du monde et renvoie l'erreur exacte en cas d'échec (jamais de
+// donnée ni de secret).
+async function storageHealth(savePath = defaultMultiLeaguePath()) {
+  const where = worldStorage(savePath);
+  const storage = upstashConfigured() ? "upstash" : "fichiers";
+  const t0 = Date.now();
+  try {
+    let raw;
+    if (upstashConfigured()) raw = await redisGet(where.redis);
+    else raw = fs.existsSync(where.file) ? fs.readFileSync(where.file, "utf-8") : null;
+    let leagues = null;
+    if (raw != null) leagues = (JSON.parse(raw).leagues || []).length;
+    return { ok: raw != null, storage, worldFound: raw != null, leagues, ms: Date.now() - t0, error: raw == null ? "Registre du monde introuvable." : null };
+  } catch (e) {
+    return { ok: false, storage, worldFound: false, leagues: null, ms: Date.now() - t0, error: String(e && e.message || e) };
+  }
+}
 module.exports = {
+  storageHealth,
   SAVE_VERSION, defaultSavePath, createNewCareer,
   serialize, deserialize, load, save, loadOrCreate,
   // Multi-manager (voir bloc dédié plus haut) :
