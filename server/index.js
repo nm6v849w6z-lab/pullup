@@ -1537,12 +1537,26 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           sendJson(res, 400, { ok: false, error: "'amount' (nombre non nul, positif ou négatif) requis." });
           return;
         }
-        const team = multi.league.teams.find(t => t.name === body.teamName.trim());
-        if (!team) { sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${body.teamName}" dans la ligue partagée.` }); return; }
+        // Club cherché dans TOUS les championnats du monde (2026-10-02 : le
+        // club visé n'était pas dans le championnat historique), nom exact
+        // sans tenir compte des majuscules.
+        const wanted = body.teamName.trim().toLowerCase();
+        let hostLeague = null, team = null;
+        const world = await World.loadWorld(multiSavePath, now);
+        for (const entry of (world ? world.leagues : [])) {
+          const lg = await World.loadLeague(world, entry.id, multiSavePath);
+          const t = lg && lg.teams.find(x => String(x.name || "").trim().toLowerCase() === wanted);
+          if (t) { hostLeague = lg; team = t; break; }
+        }
+        if (!team) {
+          team = multi.league.teams.find(t => String(t.name || "").trim().toLowerCase() === wanted) || null;
+          hostLeague = team ? multi.league : null;
+        }
+        if (!team) { sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${body.teamName}" dans le monde.` }); return; }
         const label = typeof body.label === "string" && body.label.trim() ? body.label.trim() : "Ajustement manuel (support)";
         team.recordTransaction(label, body.amount);
-        await store.saveMultiLeague(multi.league, multiSavePath);
-        sendJson(res, 200, { ok: true, teamName: team.name, amount: body.amount, budget: team.budget });
+        await store.saveMultiLeague(hostLeague, multiSavePath);
+        sendJson(res, 200, { ok: true, teamName: team.name, leagueId: hostLeague.leagueId || null, amount: body.amount, budget: team.budget });
         return;
       }
 
