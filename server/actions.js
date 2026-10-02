@@ -638,9 +638,11 @@ function setTraining(team, teamIndex, league, body, now = Date.now()) {
     const d = body.day;
     if (!d || typeof d !== "object" || typeof d.dayIndex !== "number" || !Number.isFinite(d.dayIndex)) return fail("Jour invalide.");
     const todayIndex = Engine.parisCalendarDayIndex(now);
-    const weekEnd = Engine.parisWeekStartDayIndex(todayIndex) + 6 * Engine.PARIS_DAY_MS;
-    if (d.dayIndex !== Engine.parisCalendarDayIndex(d.dayIndex + 12 * 3600 * 1000) || d.dayIndex < todayIndex || d.dayIndex > weekEnd) {
-      return fail("Seuls aujourd'hui et les jours suivants de la semaine peuvent être planifiés.");
+    // Semaine en cours + TRAINING_PLAN_WEEKS_AHEAD semaines suivantes
+    // (midi du dernier dimanche, robuste aux changements d'heure).
+    const lastDay = Engine.parisCalendarDayIndex(Engine.parisWeekStartDayIndex(todayIndex) + (7 * (1 + Engine.TRAINING_PLAN_WEEKS_AHEAD) - 1) * Engine.PARIS_DAY_MS + 12 * 3600 * 1000);
+    if (d.dayIndex !== Engine.parisCalendarDayIndex(d.dayIndex + 12 * 3600 * 1000) || d.dayIndex < todayIndex || d.dayIndex > lastDay) {
+      return fail("Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.");
     }
     if (d.collectiveTraining !== null && !Engine.COLLECTIVE_DAY_OPTIONS.includes(d.collectiveTraining)) {
       return fail(`Entraînement collectif inconnu : ${d.collectiveTraining}.`);

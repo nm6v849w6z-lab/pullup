@@ -5690,6 +5690,8 @@ window.HM_I18N_ZH = {
   "Sans minutes cette semaine": "本周未上场",
   "Jour passé : plus modifiable": "已过去的日子：无法再修改",
   "Jour de match officiel": "正式比赛日",
+  "Semaine du {0} au {1}": "{0}至{1}这一周",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "只能安排今天以及所列未来几周的日子。",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "本周上场时间（常规首发≈60分钟）。",
   "Bilan du lundi": "周一总结",
   "joueurs suivis": "跟进球员",

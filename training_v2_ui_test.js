@@ -91,6 +91,28 @@ const D = 24 * 60 * 60 * 1000;
   assert(/Connaissance tactique en cours/.test(doc.getElementById("collectiveTrainingConfig").textContent) && !!doc.querySelector(".tm-tier")
     && [...doc.querySelectorAll(".tm-gain")].every(g => /^\+\d+ × \d+ j$|^en match$/.test(g.textContent)), "jauges tactiques : palier, gain sur les jours travaillés sinon « en match »");
 
+  // 4 bis) Semaines à venir (retour utilisateur 2026-10-02) : menu en haut à
+  // droite du Collectif, la bande affiche la semaine choisie.
+  {
+    const sel = doc.querySelector("#collectiveTrainingConfig > .tm-h [data-train-week-select]");
+    const n = win.eval("TRAINING_PLAN_WEEKS_AHEAD") + 1;
+    assert(sel && sel.options.length === n && [...sel.options].every(o => /^Semaine du \d+( \S+)? au \d+ \S+$/.test(o.textContent)), "menu des semaines : " + (sel ? [...sel.options].map(o => o.textContent).join(" | ") : "absent"));
+    sel.value = "1";
+    sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+    const nextMonday = win.eval("trainingWeekMonday(Date.now(), 1)");
+    const dayBtns = [...doc.querySelectorAll("[data-train-day]")];
+    assert(dayBtns.length === 7 && Number(dayBtns[0].dataset.trainDay) === nextMonday && !doc.querySelector(".tm-day.past"), "semaine suivante affichée (lundi → dimanche, aucun jour passé)");
+    const free = dayBtns.find(b => !b.disabled);
+    if (free) {
+      free.click();
+      doc.querySelector('[data-day-option="physique"]').click();
+      assert(win.eval(`teamA.collectiveDayConfig(${free.dataset.trainDay}).collectiveTraining`) === "physique", "semaine suivante : jour planifié");
+    }
+    const sel2 = doc.querySelector("[data-train-week-select]");
+    sel2.value = "0";
+    sel2.dispatchEvent(new win.Event("change", { bubbles: true }));
+  }
+
   // 5) Bilan du lundi
   win.eval(`(() => {
     const [a, b] = teamA.players;

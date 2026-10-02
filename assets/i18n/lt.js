@@ -5690,6 +5690,8 @@ window.HM_I18N_LT = {
   "Sans minutes cette semaine": "Šią savaitę be minučių",
   "Jour passé : plus modifiable": "Praėjusi diena: nebegalima keisti",
   "Jour de match officiel": "Oficialių rungtynių diena",
+  "Semaine du {0} au {1}": "Savaitė nuo {0} iki {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Planuoti galima tik šiandieną ir siūlomų artimiausių savaičių dienas.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Šios savaitės minutės (nuolatinis startinio penketo žaidėjas ≈ 60 min).",
   "Bilan du lundi": "Pirmadienio ataskaita",
   "joueurs suivis": "žaidėjai plane",

@@ -378,7 +378,13 @@ function withFixedRandom(fn) {
   const today = E.parisCalendarDayIndex(NOW);
   assert(actions.setTraining(t, 0, null, { day: { dayIndex: today + 2 * D, collectiveTraining: "recuperation" } }, NOW).ok && t.collectiveDayPlan[today + 2 * D].collectiveTraining === "recuperation", "serveur : plan d'un jour de la semaine accepté");
   assert(!actions.setTraining(t, 0, null, { day: { dayIndex: today - D, collectiveTraining: "physique" } }, NOW).ok, "serveur : un jour passé ne se planifie pas");
-  assert(!actions.setTraining(t, 0, null, { day: { dayIndex: today + 9 * D, collectiveTraining: "physique" } }, NOW).ok, "serveur : un jour d'une autre semaine ne se planifie pas");
+  // Semaines à venir (retour utilisateur 2026-10-02) : jusqu'à
+  // TRAINING_PLAN_WEEKS_AHEAD semaines après la semaine en cours.
+  const monday = E.parisWeekStartDayIndex(today);
+  const dayAt = n => E.parisCalendarDayIndex(monday + n * D + 12 * 3600 * 1000);
+  const inTwoWeeks = dayAt(16);
+  assert(actions.setTraining(t, 0, null, { day: { dayIndex: inTwoWeeks, collectiveTraining: "physique" } }, NOW).ok && t.collectiveDayPlan[inTwoWeeks].collectiveTraining === "physique", "serveur : un jour d'une semaine à venir se planifie");
+  assert(!actions.setTraining(t, 0, null, { day: { dayIndex: dayAt(7 * (1 + E.TRAINING_PLAN_WEEKS_AHEAD)), collectiveTraining: "physique" } }, NOW).ok, "serveur : au-delà des semaines proposées, refusé");
   const y = t.players.find(p => p.age <= 22) || t.players[1];
   y.age = 20;
   const v = t.players.find(p => p !== y);

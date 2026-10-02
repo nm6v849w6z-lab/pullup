@@ -5413,6 +5413,14 @@
   .tm-x:hover{color:var(--ink);}
   .tm-add{display:flex; align-items:center; justify-content:center; gap:10px; padding:10px 14px; border:1.5px dashed var(--line); border-radius:12px; color:var(--ink-dim); font-size:13.5px; flex-wrap:wrap;}
   .tm-add select{margin:0; min-height:36px; max-width:100%; font-size:13px;}
+  /* Menu des semaines en haut à droite du Collectif (le sous-titre passe à la ligne si besoin). */
+  #collectiveTrainingConfig > .tm-h{flex-wrap:nowrap; align-items:flex-start;}
+  #collectiveTrainingConfig > .tm-h .tm-h-main{flex:1 1 auto;}
+  .tm-week-select{margin:0; min-height:34px; flex:0 1 auto; width:auto; max-width:58%; font-size:12.5px; font-weight:600; text-overflow:ellipsis;}
+  @media (max-width:600px){
+    #collectiveTrainingConfig > .tm-h{flex-wrap:wrap;}
+    .tm-week-select{flex:1 1 100%; max-width:100%;}
+  }
   .tm-note{font-size:12.5px; color:var(--ink-dim);}
   .tm-empty{display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding:16px; border-radius:12px; border:1.5px dashed rgba(226,105,79,.5); background:rgba(226,105,79,.06); font-size:13.5px; color:var(--ink);}
   .tm-btn{font:inherit; font-size:13px; font-weight:700; border-radius:9px; border:1px solid var(--amber); background:rgba(240,162,60,.12); color:var(--amber); padding:7px 12px; cursor:pointer; white-space:nowrap;}
@@ -10654,6 +10662,9 @@ function tacticTierFor(level) {
 }
 // Options du plan collectif d'un jour de repos.
 const COLLECTIVE_DAY_OPTIONS = ["tactique", "recuperation", "physique"];
+// Le collectif se planifie sur la semaine en cours et les N suivantes
+// (retour utilisateur 2026-10-02 : menu « Semaine du … au … »).
+const TRAINING_PLAN_WEEKS_AHEAD = 3;
 const PARIS_DAY_MS = 24 * 60 * 60 * 1000;
 // Lundi (jour civil de Paris) de la semaine qui contient `dayIndex`.
 function parisWeekStartDayIndex(dayIndex) {
@@ -25769,6 +25780,8 @@ let teamA, teamB, league, currentMatch, matchResult;
 // (voir myTeamIndex dans la réponse de GET /api/save côté serveur, et
 // loadMyTeam() plus bas, qui le lit).
 let myTeamIndex = 0;
+// Jours de match officiel (« AAAA-MM-JJ », heure de Paris) envoyés par /api/save.
+let myOfficialDayKeys = new Set();
 // `true` si un jeton manager a été fourni (URL ou localStorage) mais que le
 // serveur l'a refusé (401/404 — voir loadMyTeam) : affiche un message clair
 // plutôt qu'une page cassée (retour utilisateur, 2026-09). Un navigateur qui
@@ -26732,6 +26745,7 @@ async function loadMyTeam() {
     // (data.team, voir ci-dessous), résolu par le serveur pour n'importe
     // quel autre index une fois plusieurs managers humains en jeu.
     myTeamIndex = typeof data.myTeamIndex === "number" ? data.myTeamIndex : 0;
+    myOfficialDayKeys = new Set(Array.isArray(data.myOfficialDays) ? data.myOfficialDays : []);
     playerShareLinks = data.playerShareLinks && typeof data.playerShareLinks === "object" ? { ...data.playerShareLinks } : {};
     let userTeam, loadedLeague;
     if (data.team) {
@@ -41505,6 +41519,7 @@ function trainingReportAvatarHtml(playerKey, entry) {
 let trainingReportSelectedWeek = null;
 // Jour choisi dans la bande de la semaine (dayIndex, voir parisCalendarDayIndex).
 let trainingSelectedDay = null;
+let trainingWeekOffset = 0; // 0 = semaine en cours, jusqu'à TRAINING_PLAN_WEEKS_AHEAD
 const TRAINING_DAY_SHORT = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
 const TRAINING_DAY_LONG = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 // Petits dessins à la place des émojis (retour utilisateur 2026-10-01).
@@ -41747,17 +41762,22 @@ function applyTrainingAdvice(playerId, program) {
 // Jours de la semaine en cours (lundi → dimanche) : match officiel, amical,
 // choix collectif (planifié, réglage courant, ou déjà crédité pour les jours
 // passés).
-function trainingWeekDays(now = Date.now()) {
+function trainingWeekDays(now = Date.now(), offset = trainingWeekOffset) {
   const todayIndex = parisCalendarDayIndex(now);
-  const monday = parisWeekStartDayIndex(todayIndex);
+  const monday = trainingWeekMonday(now, offset);
   const rows = typeof teamCalendarRows === "function" && league ? teamCalendarRows(myTeamIndex) : [];
   const friendlies = (league && Array.isArray(league.friendlies) ? league.friendlies : [])
     .filter(f => (f.homeIdx === myTeamIndex || f.awayIdx === myTeamIndex) && ["accepted", "played"].includes(f.status) && typeof f.at === "number");
   const credited = ((teamA.collectiveWeek && teamA.collectiveWeek.log) || []);
   const days = [];
   for (let i = 0; i < 7; i++) {
-    const dayIndex = monday + i * PARIS_DAY_MS;
-    const match = rows.find(r => typeof r.scheduledAt === "number" && parisCalendarDayIndex(r.scheduledAt) === dayIndex);
+    // Midi du jour i : robuste au changement d'heure.
+    const dayIndex = parisCalendarDayIndex(monday + i * PARIS_DAY_MS + 12 * 3600000);
+    const row = rows.find(r => typeof r.scheduledAt === "number" && parisCalendarDayIndex(r.scheduledAt) === dayIndex);
+    // Jour officiel connu du serveur sans ligne au calendrier (tour de coupe
+    // à venir, adversaire pas encore tiré) : bloqué aussi.
+    const dayKey = new Date(dayIndex + 12 * 3600000).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+    const match = row || (myOfficialDayKeys.has(dayKey) ? { competition: "official" } : null);
     const friendly = friendlies.find(f => parisCalendarDayIndex(f.at) === dayIndex);
     let option = null;
     if (dayIndex < todayIndex) {
@@ -41767,7 +41787,7 @@ function trainingWeekDays(now = Date.now()) {
       option = teamA.collectiveDayConfig(dayIndex).collectiveTraining;
     }
     let opponent = null;
-    if (match) opponent = `${match.isHome ? "vs" : "@"} ${match.opponent}`;
+    if (match) opponent = match.competition === "official" ? "Match" : `${match.isHome ? "vs" : "@"} ${match.opponent}`;
     else if (friendly) {
       const oppIdx = friendly.homeIdx === myTeamIndex ? friendly.awayIdx : friendly.homeIdx;
       opponent = league.teams[oppIdx] ? league.teams[oppIdx].name : null;
@@ -41779,6 +41799,20 @@ function trainingWeekDays(now = Date.now()) {
   }
   return days;
 }
+// Lundi de la semaine affichée (décalage en semaines depuis la semaine en cours).
+function trainingWeekMonday(now = Date.now(), offset = 0) {
+  return parisWeekStartDayIndex(parisCalendarDayIndex(parisWeekStartDayIndex(parisCalendarDayIndex(now)) + offset * 7 * PARIS_DAY_MS + 12 * 3600000));
+}
+// « Semaine du 5 au 11 octobre » / « Semaine du 28 septembre au 4 octobre ».
+function trainingWeekLabel(offset) {
+  const monday = trainingWeekMonday(Date.now(), offset);
+  const sunday = parisCalendarDayIndex(monday + 6 * PARIS_DAY_MS + 12 * 3600000);
+  const fmt = (t, o) => new Date(t + 12 * 3600000).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", ...o });
+  // Chinois : le mois ne se sous-entend pas (« 5日至10月11日 » se lit mal).
+  const sameMonth = fmt(monday, { month: "long" }) === fmt(sunday, { month: "long" }) && !(window.hmI18n && window.hmI18n.lang === "zh");
+  const from = sameMonth ? fmt(monday, { day: "numeric" }) : fmt(monday, { day: "numeric", month: "long" });
+  return `Semaine du ${from} au ${fmt(sunday, { day: "numeric", month: "long" })}`;
+}
 function renderCollectivePlan() {
   const holder = document.getElementById("collectiveTrainingConfig");
   if (!holder) return;
@@ -41789,7 +41823,10 @@ function renderCollectivePlan() {
   }
   let html = `<div class="tm-h"><div class="tm-h-main">` +
     `<span class="tp-icon tp-icon-coll" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="7" r="2.5"></circle><circle cx="18" cy="7" r="2.5"></circle><circle cx="12" cy="17" r="2.5"></circle><path d="M8 8.5l2.5 6M16 8.5l-2.5 6M8.5 7h7"></path></svg></span>` +
-    `<div><h3 id="tpCollTitle">Collectif</h3><span class="tm-sub">Un choix par jour sans match</span></div></div></div>`;
+    `<div><h3 id="tpCollTitle">Collectif</h3><span class="tm-sub">Un choix par jour sans match</span></div></div>` +
+    `<select class="tm-week-select" data-train-week-select aria-label="Semaine affichée">` +
+      Array.from({ length: TRAINING_PLAN_WEEKS_AHEAD + 1 }, (_, k) => `<option value="${k}"${k === trainingWeekOffset ? " selected" : ""}>${escapeHtml(trainingWeekLabel(k))}</option>`).join("") +
+    `</select></div>`;
   html += `<div class="tm-week" role="group" aria-label="Semaine">` + days.map(d => {
     const ui = COLLECTIVE_OPTION_UI[d.option];
     let cls = "tm-day", body;
@@ -42234,6 +42271,12 @@ document.addEventListener("change", (e) => {
   const sec = document.getElementById("trainingSection");
   if (!sec || !sec.contains(e.target)) return;
   const t = e.target;
+  if (t.dataset && t.dataset.trainWeekSelect != null) {
+    trainingWeekOffset = Math.max(0, Math.min(TRAINING_PLAN_WEEKS_AHEAD, Number(t.value) || 0));
+    trainingSelectedDay = null;
+    renderCollectivePlan();
+    return;
+  }
   if (t.dataset && t.dataset.slotProgram != null) {
     const slots = teamA.activeTrainingSlots().map(s => ({ ...s }));
     const slot = slots[Number(t.dataset.slotProgram)];

@@ -1735,6 +1735,9 @@ function tacticTierFor(level) {
 }
 // Options du plan collectif d'un jour de repos.
 const COLLECTIVE_DAY_OPTIONS = ["tactique", "recuperation", "physique"];
+// Le collectif se planifie sur la semaine en cours et les N suivantes
+// (retour utilisateur 2026-10-02 : menu « Semaine du … au … »).
+const TRAINING_PLAN_WEEKS_AHEAD = 3;
 const PARIS_DAY_MS = 24 * 60 * 60 * 1000;
 // Lundi (jour civil de Paris) de la semaine qui contient `dayIndex`.
 function parisWeekStartDayIndex(dayIndex) {
@@ -18806,7 +18809,7 @@ return {
   playerWeekSeconds, MENTAL_NATURAL_SHARE, MENTAL_XP_FULL_SECONDS, mentalExperienceMult, MENTORSHIP_MAX_PAIRS, MENTORSHIP_YOUNG_MAX_AGE,
   MENTORSHIP_VETERAN_MIN_AGE, MENTORSHIP_MENTAL_MULT, sanitizeTrainingSlots, mentorshipPairError, sanitizeMentorships,
   trainingEfficiencyFor, slotTrainingWeightsFor, TRAINING_STALL_WEEKS, trainingAdviceFor, PHYSICAL_DAY_FACTOR, applyPhysicalDayTo,
-  TACTIC_DAILY_GAIN_CURVE, tacticDailyGainForLevel, TACTIC_TIERS, tacticTierFor, COLLECTIVE_DAY_OPTIONS, PARIS_DAY_MS, parisWeekStartDayIndex,
+  TACTIC_DAILY_GAIN_CURVE, tacticDailyGainForLevel, TACTIC_TIERS, tacticTierFor, COLLECTIVE_DAY_OPTIONS, TRAINING_PLAN_WEEKS_AHEAD, PARIS_DAY_MS, parisWeekStartDayIndex,
   LEGACY_TRAINING_ROOM_DIVISOR, migrateTrainingSlots, serializeTrainingV2State, restoreTrainingV2State, CPU_IMPLICIT_COACH_LEVEL, CPU_BACKGROUND_TRAINING_WEIGHT, cpuTrainingSlots,
   ANALYST_REVEAL_COUNT_BY_LEVEL,
   // Académie de jeunes (voir le grand commentaire au-dessus de MAX_YOUTH_ROSTER_SIZE) :

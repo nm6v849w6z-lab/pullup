@@ -5690,6 +5690,8 @@ window.HM_I18N_EL = {
   "Sans minutes cette semaine": "Χωρίς λεπτά αυτή την εβδομάδα",
   "Jour passé : plus modifiable": "Περασμένη ημέρα: δεν αλλάζει πια",
   "Jour de match officiel": "Ημέρα επίσημου αγώνα",
+  "Semaine du {0} au {1}": "Εβδομάδα {0} έως {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Μπορείς να προγραμματίσεις μόνο σήμερα και τις ημέρες των προτεινόμενων επόμενων εβδομάδων.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Λεπτά της τρέχουσας εβδομάδας (βασικός ≈ 60 λ.).",
   "Bilan du lundi": "Απολογισμός Δευτέρας",
   "joueurs suivis": "παίκτες σε πρόγραμμα",

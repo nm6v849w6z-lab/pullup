@@ -5715,6 +5715,8 @@ window.HM_I18N_EN = {
   "Sans minutes cette semaine": "No minutes this week",
   "Jour passé : plus modifiable": "Past day: can no longer be changed",
   "Jour de match officiel": "Official match day",
+  "Semaine du {0} au {1}": "Week of {0} to {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Only today and the days of the upcoming weeks shown can be planned.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minutes this week (regular starter ≈ 60 min).",
   "Bilan du lundi": "Monday report",
   "joueurs suivis": "players followed",

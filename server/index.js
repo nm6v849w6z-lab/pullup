@@ -1717,6 +1717,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (changed) await persistContext(ctx);
         const payload = store.serializeMultiLeague(ctx.league);
         payload.myTeamIndex = ctx.teamIndex;
+        // Jours de match officiel de CE club (championnat, coupe, play-offs,
+        // ligues privées), mêmes que la validation de /api/training : la page
+        // Entraînement les bloque aussi sur les semaines à venir, même quand
+        // l'adversaire de coupe n'est pas encore connu.
+        payload.myOfficialDays = [...Friendlies.officialDaysFor(Engine, ctx.league, ctx.teamIndex)];
         // SÉCURITÉ (2026-09-26, relevé en codant la messagerie) : la
         // sauvegarde complète contenait le jeton privé de TOUS les managers
         // (serializeTeam → managerLinkToken), donc n'importe quel manager

@@ -5690,6 +5690,8 @@ window.HM_I18N_DE = {
   "Sans minutes cette semaine": "Keine Spielminuten diese Woche",
   "Jour passé : plus modifiable": "Vergangener Tag: nicht mehr änderbar",
   "Jour de match officiel": "Pflichtspieltag",
+  "Semaine du {0} au {1}": "Woche vom {0} bis {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Nur heute und die Tage der angebotenen kommenden Wochen können geplant werden.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minuten der laufenden Woche (Stammspieler ≈ 60 Min.).",
   "Bilan du lundi": "Montagsbilanz",
   "joueurs suivis": "betreute Spieler",

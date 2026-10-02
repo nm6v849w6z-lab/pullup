@@ -5690,6 +5690,8 @@ window.HM_I18N_PL = {
   "Sans minutes cette semaine": "Bez minut w tym tygodniu",
   "Jour passé : plus modifiable": "Miniony dzień: nie można już zmienić",
   "Jour de match officiel": "Dzień meczu oficjalnego",
+  "Semaine du {0} au {1}": "Tydzień od {0} do {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Można planować tylko dziś i dni z proponowanych nadchodzących tygodni.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minuty w bieżącym tygodniu (regularny starter ≈ 60 min).",
   "Bilan du lundi": "Podsumowanie poniedziałku",
   "joueurs suivis": "zawodników w planie",

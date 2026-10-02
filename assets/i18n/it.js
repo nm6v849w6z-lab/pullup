@@ -5753,6 +5753,8 @@ window.HM_I18N_IT = {
   "Sans minutes cette semaine": "Nessun minuto questa settimana",
   "Jour passé : plus modifiable": "Giorno passato: non più modificabile",
   "Jour de match officiel": "Giorno di partita ufficiale",
+  "Semaine du {0} au {1}": "Settimana dal {0} al {1}",
+  "Seuls aujourd'hui et les jours des semaines à venir proposées peuvent être planifiés.": "Si possono pianificare solo oggi e i giorni delle prossime settimane proposte.",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minuti della settimana in corso (titolare fisso ≈ 60 min).",
   "Bilan du lundi": "Bilancio del lunedì",
   "joueurs suivis": "giocatori seguiti",
