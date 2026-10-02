@@ -43263,7 +43263,9 @@ function dashRenderNextMatch(data) {
   const rightRec = m.home ? m.opponentRecord : m.clubRecord;
   const leftLvl = m.home ? m.clubLevel : m.opponentLevel;
   const rightLvl = m.home ? m.opponentLevel : m.clubLevel;
-  const lvl = (v) => (v == null ? "" : ` · Niveau ${dashEsc(v)}`);
+  // Niveaux des équipes retirés du bandeau (retour utilisateur 2026-10-02 :
+  // « N'affiche pas les niveaux. C'est nul d'avoir niveau 0 ») : bilan seul.
+  const lvl = () => "";
 
   return `<section class="hm-hero" style="--home:${dashEsc((left.colors && left.colors.primary) || "#F26B1D")};--away:${dashEsc((right.colors && right.colors.primary) || "#D7263D")}" aria-label="Prochain match">
     <div class="hm-hero__split" aria-hidden="true"></div>
