@@ -274,6 +274,26 @@ programmé.
 
 ## Persistance en ligne (Render + Upstash Redis)
 
+### Render Key Value (depuis le 2026-10-02)
+
+Si la variable **`REDIS_URL`** est définie (adresse interne de la base
+Render Key Value, `redis://red-...:6379`), elle a la priorité sur Upstash :
+le serveur parle directement le protocole Redis (`server/redisClient.js`,
+sans dépendance), avec la même compression et la même mémoire.
+`/api/health/storage` indique alors `"storage": "redis"`.
+
+Bascule :
+1. Créer une base Key Value payante (avec persistance) dans la même région
+   que le service web, politique d'éviction `noeviction`.
+2. Dans le Shell du service web, copier les données (Upstash n'est jamais
+   modifié) :
+   `REDIS_URL=<adresse interne> node scripts/migrate_upstash_to_redis.js`
+   (`--dry-run` pour seulement lister les clés).
+3. Ajouter `REDIS_URL` aux variables d'environnement du service web
+   (redéploiement automatique), vérifier `/api/health/storage`.
+4. Garder les variables Upstash une semaine comme copie de secours, puis
+   les retirer.
+
 Par défaut (aucune variable d'environnement particulière définie), la
 persistance reste EXACTEMENT celle décrite plus haut (`store.js`) : un
 fichier JSON local par sauvegarde (`server/data/league.json` pour la

@@ -89,7 +89,8 @@ let fetchImpl = (...args) => fetch(...args);
 function _setFetchImplForTests(fn) { fetchImpl = fn || ((...args) => fetch(...args)); require("./store.js")._setFetchImplForTests(fn); }
 
 function upstashConfigured() {
-  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  // Base Redis active (Render via REDIS_URL, ou Upstash) : voir server/store.js.
+  return require("./store.js").upstashConfigured();
 }
 
 function messagesPathFor(multiSavePath) {

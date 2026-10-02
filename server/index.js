@@ -2617,7 +2617,7 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
     console.log(`Serveur basket (calendrier réel) démarré sur http://localhost:${port}`);
     console.log(`Sauvegarde multi-manager : ${multiSavePath}`);
     if (store.upstashConfigured()) {
-      console.log(`Sauvegardes sur Upstash, clés « ${store.redisKey("multiLeague")} », « ${store.redisKey("accounts")} »...`);
+      console.log(`Sauvegardes sur ${store.storageBackendName() === "redis" ? "Redis (REDIS_URL)" : "Upstash"}, clés « ${store.redisKey("multiLeague")} », « ${store.redisKey("accounts")} »...`);
     }
     console.log(`Connexion Discord : ${AccountRoutes.discordConfigured() ? "activée" : "désactivée (DISCORD_CLIENT_ID/DISCORD_CLIENT_SECRET absents)"}.`);
     if (!process.env.BASKET_ADMIN_TOKEN) {

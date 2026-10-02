@@ -152,8 +152,28 @@ async function saveWorldRaw(world, savePath = defaultMultiLeaguePath()) {
   fs.renameSync(tmpPath, where.file);
 }
 
+// Deux bases possibles (bascule du 2026-10-02 vers Render Key Value) :
+// REDIS_URL (Render, protocole Redis direct, voir server/redisClient.js) a
+// la priorité ; sinon Upstash (API REST). Le nom upstashConfigured est gardé
+// pour les appelants existants : il signifie « une base Redis est active ».
+function nativeRedisConfigured() {
+  return !!process.env.REDIS_URL;
+}
 function upstashConfigured() {
-  return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return nativeRedisConfigured() || !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+}
+function storageBackendName() {
+  return nativeRedisConfigured() ? "redis" : upstashConfigured() ? "upstash" : "fichiers";
+}
+let nativeClient = null;
+let nativeClientUrl = null;
+function nativeRedis() {
+  if (!nativeClient || nativeClientUrl !== process.env.REDIS_URL) {
+    if (nativeClient) nativeClient.quit();
+    nativeClient = require("./redisClient.js").createClient(process.env.REDIS_URL);
+    nativeClientUrl = process.env.REDIS_URL;
+  }
+  return nativeClient;
 }
 
 // Renvoie la chaîne stockée pour `key`, ou `null` si absente — ne plante
@@ -217,6 +237,12 @@ function redisDecode(stored) {
 async function redisGet(key, opts = {}) {
   const cached = opts.fresh ? undefined : redisCacheGet(key);
   if (cached !== undefined) return cached;
+  if (nativeRedisConfigured()) {
+    const stored = await nativeRedis().command("GET", key);
+    const value = typeof stored === "string" ? redisDecode(stored) : null;
+    redisCacheSet(key, value);
+    return value;
+  }
   const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`;
   const res = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
@@ -240,6 +266,10 @@ async function redisSet(key, value) {
   const e = redisCache.get(key);
   if (e && e.value === value && Date.now() - e.at <= REDIS_CACHE_TTL_MS) return;
   redisCacheSet(key, value);
+  if (nativeRedisConfigured()) {
+    await nativeRedis().command("SET", key, redisEncode(value));
+    return;
+  }
   const url = `${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(key)}`;
   const res = await fetchImpl(url, {
     method: "POST",
@@ -754,7 +784,7 @@ async function loadOrCreate(savePath = defaultSavePath(), now = Date.now()) {
 // donnée ni de secret).
 async function storageHealth(savePath = defaultMultiLeaguePath()) {
   const where = worldStorage(savePath);
-  const storage = upstashConfigured() ? "upstash" : "fichiers";
+  const storage = storageBackendName();
   const t0 = Date.now();
   try {
     let raw;
@@ -768,7 +798,7 @@ async function storageHealth(savePath = defaultMultiLeaguePath()) {
   }
 }
 module.exports = {
-  storageHealth, redisGet, redisSet, clearRedisCache, redisEncode, redisDecode,
+  storageHealth, storageBackendName, redisGet, redisSet, clearRedisCache, redisEncode, redisDecode,
   SAVE_VERSION, defaultSavePath, createNewCareer,
   serialize, deserialize, load, save, loadOrCreate,
   // Multi-manager (voir bloc dédié plus haut) :
