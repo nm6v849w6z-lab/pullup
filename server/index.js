@@ -1811,8 +1811,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (changed) await persistContext(ctx);
         const payload = store.serializeMultiLeague(ctx.league);
         payload.myTeamIndex = ctx.teamIndex;
-        // Jours de match officiel de CE club (championnat, coupe, play-offs,
-        // ligues privées), mêmes que la validation de /api/training : la page
+        // Jours de match officiel de CE club (championnat, coupe, play-offs ;
+        // PAS les ligues privées, qui n'empêchent pas l'entraînement), mêmes que la validation de /api/training : la page
         // Entraînement les bloque aussi sur les semaines à venir, même quand
         // l'adversaire de coupe n'est pas encore connu.
         payload.myOfficialDays = [...Friendlies.officialDaysFor(Engine, ctx.league, ctx.teamIndex)];

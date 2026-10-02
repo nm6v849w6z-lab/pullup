@@ -69,7 +69,7 @@ check(Calendar.parisLocalDateParts(lp.rounds[4].dueAt).hour === 21 && Calendar.p
 {
   const Friendlies = require("./friendlies.js");
   league.worldPrivateLeagueTimes = PL.busyTimesByIdx(store, LID);
-  check(Friendlies.officialMatchTimesFor(Engine, league, humans[0]).includes(friday), "le vendredi de ligue privée compte comme jour de match du club");
+  check(!Friendlies.officialMatchTimesFor(Engine, league, humans[0]).includes(friday), "le vendredi de ligue privée ne compte pas comme jour de match du club");
   check(!Friendlies.officialMatchTimesFor(Engine, league, humans[5]).includes(friday), "… pas pour un club hors de la ligue");
   delete league.worldPrivateLeagueTimes;
 }

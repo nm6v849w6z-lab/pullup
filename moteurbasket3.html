@@ -5392,6 +5392,16 @@
   .tm-who{min-width:0; align-self:center;}
   .tm-who b{display:block; color:var(--ink); font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .tm-who small{color:var(--ink-dim); font-size:12px;}
+  /* Infos d'entraînement : sous le nom (colonne 2, 2e ligne) ; le reste de
+     la carte s'étend sur les deux lignes. */
+  .tm-slot > .tm-av, .tm-slot > .tm-prog, .tm-slot > .tm-eff, .tm-slot > .tm-x{grid-row:1 / span 2;}
+  .tm-slot > .tm-who{grid-column:2; grid-row:1; align-self:end;}
+  .tm-slot > .tm-facts{grid-column:2; grid-row:2; align-self:start;}
+  .tm-facts{display:grid; gap:3px; margin:0; font-size:12px;}
+  .tm-facts > div{display:grid; grid-template-columns:62px minmax(0,1fr); align-items:center; gap:6px;}
+  .tm-facts dt{color:var(--ink-dim);}
+  .tm-facts dd{margin:0; color:var(--ink); min-width:0;}
+  .tm-facts .eff-pot{display:inline-flex; flex-wrap:wrap; align-items:center; gap:2px 6px; font-size:12px;}
   .tm-prog{min-width:0;}
   .tm-prog select{width:100%; min-height:36px; margin:0; font-size:13px;}
   .tm-int{display:inline-flex; gap:2px; margin-top:8px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:2px;}
@@ -5575,7 +5585,11 @@
   @media (max-width: 900px){
     .tm-cols{grid-template-columns:minmax(0,1fr);}
     .tm-slot{grid-template-columns:auto minmax(0,1fr) auto auto;}
-    .tm-slot .tm-prog{grid-column:1 / -1; grid-row:2;}
+    .tm-slot > .tm-av, .tm-slot > .tm-eff, .tm-slot > .tm-x{grid-row:1;}
+    .tm-slot > .tm-who{align-self:center;}
+    .tm-slot > .tm-facts{grid-column:1 / -1; grid-row:2; display:flex; flex-wrap:wrap; gap:4px 16px;}
+    .tm-facts > div{display:flex; gap:6px;}
+    .tm-slot .tm-prog{grid-column:1 / -1; grid-row:3;}
     .tm-tip{right:auto; left:auto; right:0;}
     .tm-row{grid-template-columns:auto minmax(0,1fr) auto;}
     .tm-row .tm-rval{grid-column:2 / 3; grid-row:2;}
@@ -29385,8 +29399,14 @@ async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetit
 // ce cas-là, éditer les ordres ne peut rien résoudre, contrairement à un
 // titulaire juste pas encore choisi (voir toggleBackupPosition/setStarter,
 // onglet Ordres) — seul un forfait ou un recrutement peut en sortir.
+// Vrai forfait inévitable : moins de 5 joueurs dans l'effectif. N'importe
+// quel joueur peut être titulaire à n'importe quel poste (le serveur ne
+// déclare forfait que s'il manque un titulaire, voir POSITIONS_MISSING dans
+// server/liveMatch.js). Correctif 2026-10-02 (retour d'un joueur : alerte de
+// forfait avec un effectif complet) : l'ancien test exigeait un joueur par
+// poste de CARTE, or ces postes changent seuls avec la progression.
 function rosterCannotFieldLineup(team) {
-  return POSITIONS.some(pos => !team.players.some(p => p.position === pos));
+  return !team || (team.players || []).length < POSITIONS.length;
 }
 
 // ---------------------------------------------------------------------
@@ -41814,6 +41834,22 @@ function trainingIntensityPickerHtml(slotIdx, player) {
     ["legere", "normale", "intense"].map(k => `<button type="button" class="${k}${k === current ? " on" : ""}" data-slot-intensity="${slotIdx}" data-int="${k}" aria-pressed="${k === current}" title="${escapeHtml(trainingIntensityHint(k))}">${TRAINING_INTENSITIES[k].label}</button>`).join("") +
     `</div>`;
 }
+// Ce qui joue sur le rendement d'un plan individuel, sous le nom du joueur
+// (retour utilisateur 2026-10-02 : « ajouter les attributs qui influent sur
+// l'entraînement, minutes jouées, taille, potentiel ») : minutes de la
+// semaine (plein rendement à 30 min), taille et effet du gabarit sur ce
+// programme, potentiel.
+function trainingSlotFactsHtml(p, eff) {
+  const fullMin = Math.round(TRAINING_FULL_MATCH_SECONDS / 60);
+  const minCls = eff.minutes >= fullMin ? "tm-up" : eff.minutes > 0 ? "tm-flat" : "tm-low";
+  const hPct = Math.round((eff.heightMult - 1) * 100);
+  const hCls = hPct > 0 ? "tm-up" : hPct < 0 ? "tm-low" : "tm-flat";
+  return `<dl class="tm-facts">` +
+    `<div><dt>Minutes</dt><dd class="${minCls}">${eff.minutes} / ${fullMin} min</dd></div>` +
+    `<div><dt>Taille</dt><dd>${p.height} cm <span class="${hCls}">${hPct > 0 ? "+" : hPct < 0 ? "−" : "±"}${Math.abs(hPct)} %</span></dd></div>` +
+    `<div><dt>Potentiel</dt><dd>${effPotentialHtml(p)}</dd></div>` +
+    `</dl>`;
+}
 function renderTrainingPlans() {
   const holder = document.getElementById("trainingPlansCard");
   if (!holder) return;
@@ -41837,6 +41873,7 @@ function renderTrainingPlans() {
     html += `<div class="tm-slot" data-slot-player="${escapeHtml(String(p.id))}">` +
       trainingAvatarHtml(p, p.name) +
       `<div class="tm-who"><b>${trainingNameHtml(p)}</b><small>${escapeHtml(p.position)} · ${p.age} ans</small></div>` +
+      trainingSlotFactsHtml(p, eff) +
       `<div class="tm-prog">${trainingProgramSelectHtml(idx, slot.program)}${trainingCeilingGaugesHtml(p, slot.program)}${trainingIntensityPickerHtml(idx, p)}</div>` +
       `<div class="tm-eff"><button type="button" class="tm-eff-btn" data-eff-toggle aria-expanded="false" aria-label="Rendement de ${escapeHtml(p.name)}">${eff.pct} %</button>` +
       `<span class="tm-eff-cap">rendement</span><div class="tm-tip" role="tooltip">${trainingEfficiencyTipHtml(eff)}</div></div>` +
@@ -48763,7 +48800,10 @@ function ecoRenderLedger() {
     // 2026-10-01 : « il manque une ligne sponsors dans les revenus de la
     // semaine ») ; les autres seulement quand il y a un montant.
     const ALWAYS = { tickets: 1, tv: 1, sponsors: 1, merch: 1, shop: 1 };
-    const cats = FINANCE_CATEGORIES.filter(c => c.dir === dir && (ALWAYS[c.key] || (cur[c.key] || 0) !== 0 || (cmp && (cmp[c.key] || 0) !== 0)));
+    // Une ligne seulement prévue (ex. staff engagé cette semaine, payé lundi)
+    // est listée aussi (retour d'un joueur 2026-10-02 : « j'ai engagé un
+    // entraîneur et un recruteur, la dépense n'apparaît pas »).
+    const cats = FINANCE_CATEGORIES.filter(c => c.dir === dir && (ALWAYS[c.key] || est[c.key] != null || (cur[c.key] || 0) !== 0 || (cmp && (cmp[c.key] || 0) !== 0)));
     const tot = o => FINANCE_CATEGORIES.filter(c => c.dir === dir).reduce((a, c) => a + val(o, c.key), 0);
     const rows = cats.map(c => {
       const v = val(cur, c.key);
@@ -51591,8 +51631,13 @@ function renderMedicalSection() {
     html += tableOpen(g.title, `${g.rows.length} blessure${g.rows.length > 1 ? "s" : ""}`, "history");
     g.rows.forEach(e => {
       const p = players.find(x => x.id === e.playerId);
+      // Jeune de l'académie blessé en amical (retour utilisateur 2026-10-02 :
+      // noté « a quitté le club » alors qu'il est toujours au centre de
+      // formation) : cherché aussi parmi les jeunes.
+      const youth = !p ? (team.youthPlayers || []).find(x => String(x.id) === String(e.playerId)) : null;
       const vs = e.opponentName ? ` · contre ${escapeHtml(e.opponentName)}` : "";
       const who = p ? medicalPlayerCellHtml(p, team, `Semaine ${e.week}${vs}`)
+        : youth ? `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(youth.name)}</b><span class="sub">Semaine ${e.week}${vs} <span>· centre de formation</span></span></div></div>`
         : `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(e.playerName)}</b><span class="sub">Semaine ${e.week}${vs} · a quitté le club</span></div></div>`;
       html += `<tr class="cal-row med-hist-row" data-med-kind="history">` +
         `<td class="med-c-player">${who}</td>` +

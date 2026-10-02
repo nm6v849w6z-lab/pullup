@@ -103,7 +103,10 @@ function playoffAlive(po, idx) {
 
 // Instants (epoch ms) de tous les matchs officiels encore à jouer pour ce
 // club : championnat, play-offs (s'il y est encore), coupe (s'il y est
-// encore, tous les tours restants), ligue privée en cours.
+// encore, tous les tours restants). JAMAIS les ligues privées : elles se
+// jouent « dans un monde parallèle », sur des copies sans effet sur
+// l'effectif, et ne bloquent ni l'entraînement ni les amicaux (retour
+// utilisateur 2026-10-02).
 function officialMatchTimesFor(Engine, league, teamIdx) {
   const out = [];
   if (!league || typeof league.calendarStartAt !== "number") return out;
@@ -134,17 +137,6 @@ function officialMatchTimesFor(Engine, league, teamIdx) {
   if (nc && league.calendarDailyAnchored && (nc.teams || []).includes(teamIdx)) {
     for (let k = nc.nextRound; k < nc.totalRounds; k++) out.push(Calendar.scheduledTimeForLeagueCupRound(league, k));
   }
-  (league.privateLeagues || []).forEach(lp => {
-    if (lp.status !== "running") return;
-    (lp.rounds || []).forEach(r => {
-      if (r.matches.some(m => !m.played && (m.home === teamIdx || m.away === teamIdx))) out.push(r.dueAt);
-    });
-  });
-  // Ligues privées « monde » (server/privateLeague.js, membres de plusieurs
-  // championnats) : posées sur la ligue par server/index.js et
-  // server/world.js (league.worldPrivateLeagueTimes, jamais sauvegardé).
-  const lpTimes = league.worldPrivateLeagueTimes && league.worldPrivateLeagueTimes.get(teamIdx);
-  if (lpTimes) lpTimes.forEach(t => out.push(t));
   return out;
 }
 

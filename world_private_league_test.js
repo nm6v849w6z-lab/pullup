@@ -142,10 +142,11 @@ const ok = m => console.log("✅ " + m);
   let raw = await store.loadWorldAuxStrict("privateleagues", multiSavePath);
   let wlp = raw.list.find(l => l.id === lpId);
   const kickoff = wlp.rounds[0].dueAt;
-  // Vendredi de ligue privée = jour de match pour Boston (calendrier, amicaux).
+  // Vendredi de ligue privée : PAS un jour de match (monde parallèle, retour
+  // utilisateur 2026-10-02) — entraînement et amicaux restent possibles.
   const dayKey = require("./server/friendlies.js").dayKeyOf(kickoff);
-  assert.ok((await api("/api/save", boston)).body.myOfficialDays.includes(dayKey), "le vendredi compte comme jour de match à Boston");
-  ok("le vendredi de ligue privée est un jour de match pour Boston (USA)");
+  assert.ok(!(await api("/api/save", boston)).body.myOfficialDays.includes(dayKey), "le vendredi ne compte pas comme jour de match à Boston");
+  ok("le vendredi de ligue privée ne bloque ni l'entraînement ni les amicaux");
   clock.now = kickoff + 60 * 1000;
   const evs = await World.catchUpWorld(multiSavePath, clock.now);
   assert.ok(evs.some(e => e.type === "private-league-round" && e.privateLeagueId === lpId && e.round === 0));
