@@ -53,9 +53,9 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   assert.strictEqual(contractOfferFloor(10000), 9000);
   assert.strictEqual(contractAcceptanceChance(10000, 10000, 55, 50), 1, "au salaire demandé : toujours");
   const atFloor = contractAcceptanceChance(10000, 9000, 55, 50);
-  assert.ok(atFloor > 0.05 && atFloor < 0.12, `~8 % au plancher (${atFloor})`);
-  // Courbe raide (rééquilibrage 2026-10-02) : ~75 % à -2 %, ~47 % à -5 %, ~23 % à -8 %.
-  [[9800, 0.75], [9500, 0.47], [9200, 0.23]].forEach(([offer, target]) => {
+  assert.ok(atFloor > 0.2 && atFloor < 0.3, `~25 % au plancher (${atFloor})`);
+  // Compromis (2026-10-02) : ~82 % à -2 %, ~60 % à -5 %, ~39 % à -8 %.
+  [[9800, 0.82], [9500, 0.60], [9200, 0.39]].forEach(([offer, target]) => {
     const c = contractAcceptanceChance(10000, offer, 55, 50);
     assert.ok(Math.abs(c - target) < 0.04, `${offer} : ~${target} (${c})`);
   });

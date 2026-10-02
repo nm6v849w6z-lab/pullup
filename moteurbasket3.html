@@ -14078,10 +14078,12 @@ const CONTRACT_DEFAULT_SEASONS = 3;
 const CONTRACT_NEGOTIATION_MARGIN = 0.10;
 // Chance d'acceptation d'une offre au plancher (-10 %), avant motivation/club.
 // Rééquilibrage (retour utilisateur 2026-10-02 : on pouvait faire une offre
-// au plancher chaque semaine sans risque) : courbe plus raide, ~75 % à -2 %,
-// ~47 % à -5 %, ~23 % à -8 %, ~8 % à -10 % (voir contractAcceptanceChance).
-const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.08;
-const CONTRACT_ACCEPT_CURVE = 0.8;
+// au plancher chaque semaine sans risque), puis compromis entre l'ancienne
+// droite (89/78/67/56/45 %) et la courbe raide proposée (75/47/23/8 %) :
+// ~82 % à -2 %, ~60 % à -5 %, ~39 % à -8 %, ~25 % à -10 %
+// (voir contractAcceptanceChance).
+const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.25;
+const CONTRACT_ACCEPT_CURVE = 0.9;
 // Refus d'une prolongation : perte de motivation selon l'écart avec sa
 // demande (2 points pour une offre presque correcte, 8 au plancher), et sa
 // demande monte de 3 % ; après 3 refus, il ne signe plus qu'à sa demande.
@@ -14164,7 +14166,7 @@ function contractRefusalMoraleMalus(asked, offered) {
 
 // Chance qu'un joueur accepte une prolongation à `offered` (`asked` =
 // salaire demandé). Au salaire demandé : toujours. En dessous : décroît
-// jusqu'à ~8 % au plancher, modulée par la motivation et par la renommée
+// jusqu'à ~25 % au plancher, modulée par la motivation et par la renommée
 // du club (effet jamais affiché).
 function contractAcceptanceChance(asked, offered, form, prestige) {
   if (!(asked > 0) || offered >= asked) return 1;
