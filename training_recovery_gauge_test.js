@@ -19,8 +19,10 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement" || b.dataset.tab === "training").click();
   const page = doc.querySelector("#trainingSection .tp-page");
   const kids = [...page.children].map(c => c.id || c.className);
-  assert(kids[kids.length - 1] === "lastTrainingReportHolder", "bilan du lundi en dernier sur la page");
-  assert(kids.indexOf("lastTrainingReportHolder") > kids.findIndex(k => /tm-cols2/.test(k)), "bilan après Parrainage / Expérience");
+  // Ordre (retour utilisateur 2026-10-02) : Plans / Collectif, Bilan du lundi,
+  // Expérience, Parrainage.
+  const at = id => kids.indexOf(id);
+  assert(at("lastTrainingReportHolder") > kids.findIndex(k => /tm-cols/.test(k)) && at("lastTrainingReportHolder") < at("experienceCard") && at("experienceCard") < at("mentorshipCard") && kids[kids.length - 1] === "mentorshipCard", "bilan sous Plans / Collectif, puis Expérience, Parrainage en dernier");
 
   const team = win.eval("teamA");
   const now = Date.now();

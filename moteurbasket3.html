@@ -5348,8 +5348,10 @@
   .tm-badge.teal{background:rgba(51,180,161,.14); color:var(--ok);}
   .tm-badge.grey{background:var(--panel-2); color:var(--ink-dim);}
   .tm-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:14px; min-width:0;}
-  .tm-cols{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; align-items:start;}
+  .tm-cols{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; align-items:stretch;}
   .tm-col{display:flex; flex-direction:column; gap:20px; min-width:0;}
+  /* Les deux colonnes finissent à la même hauteur (pas de vide sous la plus courte). */
+  .tm-col > .tm-card:last-child{flex:1 1 auto;}
   .tm-h{display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap;}
   .tm-h-main{display:flex; gap:12px; align-items:center; min-width:0;}
   .tm-h h3{margin:0; font-size:19px; font-weight:800; color:var(--ink);}
@@ -8160,14 +8162,17 @@
       <div class="tm-cols">
         <div class="tm-col">
           <section class="tm-card" id="trainingPlansCard" aria-labelledby="tpFondTitle"></section>
-          <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
         </div>
         <div class="tm-col">
           <section class="tm-card" id="collectiveTrainingConfig" aria-labelledby="tpCollTitle"></section>
         </div>
       </div>
-      <section class="tm-card" id="experienceCard" aria-labelledby="tpXpTitle"></section>
+      <!-- Bilan du lundi juste sous Plans / Collectif, Parrainage en dernier
+           (retour utilisateur 2026-10-02 : le bilan compte plus que
+           l'expérience et le parrainage). -->
       <div id="lastTrainingReportHolder"></div>
+      <section class="tm-card" id="experienceCard" aria-labelledby="tpXpTitle"></section>
+      <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
     </div>
   </div>
 
@@ -41572,7 +41577,6 @@ function showTrainingSection() {
   renderTrainingPage();
   showPage("trainingSection");
   setActiveTab("entrainement");
-  balanceTrainingColumns(); // hauteurs mesurables une fois la page visible
 }
 function renderTrainingPage() {
   const title = document.getElementById("trainingTitle");
@@ -41584,22 +41588,7 @@ function renderTrainingPage() {
   renderMentorshipCard();
   renderExperienceCard();
   renderLastTrainingReport();
-  balanceTrainingColumns();
 }
-// Parrainage dans la colonne la plus courte (retour utilisateur 2026-10-01 :
-// « on a un vide immense »), la hauteur des Plans variant avec le nombre de
-// joueurs suivis. Sur une seule colonne (mobile) : juste sous les Plans.
-function balanceTrainingColumns() {
-  const mentor = document.getElementById("mentorshipCard");
-  const plans = document.getElementById("trainingPlansCard");
-  const coll = document.getElementById("collectiveTrainingConfig");
-  if (!mentor || !plans || !coll) return;
-  const left = plans.parentElement, right = coll.parentElement;
-  const oneColumn = typeof window.matchMedia === "function" && window.matchMedia("(max-width: 900px)").matches;
-  const target = oneColumn || plans.offsetHeight <= coll.offsetHeight ? left : right;
-  if (mentor.parentElement !== target) target.appendChild(mentor);
-}
-if (typeof window !== "undefined") window.addEventListener("resize", () => { if (document.getElementById("trainingSection") && !document.getElementById("trainingSection").classList.contains("hidden")) balanceTrainingColumns(); });
 
 // --- Entraîneur ------------------------------------------------------
 function renderTrainingCoachCard() {

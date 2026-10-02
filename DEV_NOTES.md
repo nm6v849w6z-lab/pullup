@@ -71,7 +71,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   de fond 0,95 calibré), migration (`migrateTrainingSlots`). Serveur :
   /api/training (plans, intensité, parrainages, `day`) validé ;
   friendlies.js transmet les joueurs de l'amical. Écran Entraînement refait
-  (maquette v2 + rendement % avec détail, jauge de plafond), Staff (spécialité
+  (maquette v2 + rendement % avec détail, jauge de plafond ; ordre depuis le
+  2026-10-02 : Plans | Collectif (colonnes de même hauteur, dernière carte
+  étirée), Bilan du lundi, Expérience, Parrainage), Staff (spécialité
   de l'entraîneur), Guide, tutoriel. Traductions ×9. Tests : nouveaux
   training_v2_test.js et training_v2_ui_test.js ; adaptés :
   synergy_training_test, tactical_knowledge_test (point 4),
