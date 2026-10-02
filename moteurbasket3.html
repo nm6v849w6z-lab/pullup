@@ -27978,6 +27978,7 @@ function updateTopbar() {
     const locked = !nextOther && currentMatchLineupLocked();
     const prematch = prematchShowAvailable();
     ordersBtn.textContent = prematch ? "Émission d'avant-match"
+      : lpNext && lpNext.live ? "Voir le direct"
       : locked ? "Ordres verrouillés"
       : validated ? "Modifier vos ordres" : "Donnez vos ordres";
     ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked && !prematch);
@@ -43335,7 +43336,7 @@ function dashRenderNextMatch(data) {
     ${m.rivalryHtml || ""}
     <div class="hm-hero__actions">
       ${m.privateLeague
-        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>
+        ? `${m.lpLiveBtn || `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`}
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
@@ -44022,6 +44023,7 @@ function dashboardDataFromGameState() {
     nextMatch = {
       privateLeague: true,
       lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders,
+      lpLiveBtn: lpNext.live ? lpLiveBtnHtml(lpNext.lp, lpNext.round.index, lpNext.match, "hm-btn hm-btn--primary hm-btn--display") : null,
       competition: "Ligue privée",
       round: lpNext.round.index + 1,
       totalRounds: lpNext.lp.rounds.length,
@@ -52374,7 +52376,7 @@ function lpMyNextMatch() {
     const m = round.matches.find(x => !x.played && (x.home === myTeamIndex || x.away === myTeamIndex));
     if (m) {
       const isHome = m.home === myTeamIndex;
-      return { lp, round, match: m, dueAt: round.dueAt, isHome, oppIdx: isHome ? m.away : m.home };
+      return { lp, round, match: m, dueAt: round.dueAt, isHome, oppIdx: isHome ? m.away : m.home, live: !!m.live };
     }
   }
   return null;
@@ -52386,6 +52388,10 @@ function lpNextMatchIfFirst() {
   if (!league || !league.calendarDailyAnchored || league.liveMatch) return null;
   const n = lpMyNextMatch();
   if (!n || !league.teams[n.oppIdx]) return null;
+  // En direct (journée lancée, diffusion en cours, retour utilisateur
+  // 2026-10-02 : « il est 21h ça n'a toujours pas commencé ») : c'est LE
+  // match du moment, avec « Voir le direct » au lieu des ordres.
+  if (n.live) return n;
   const official = currentMatch && teamB ? scheduledTimeForCurrentMatch() : null;
   if (official != null && official <= n.dueAt) return null;
   return n;
@@ -55139,6 +55145,13 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // réutilise exactement la même logique que l'onglet Ordres (goToOrdresTab).
 document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
   if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
+  // Match de ligue privée en direct : le bouton ouvre le direct.
+  const n = nextNonOfficialMatch();
+  if (n && n.kind === "lp" && n.lpNext.live) {
+    const m = n.lpNext.match;
+    window.__lastLpLive = openPrivateLeagueLive({ lp: n.lpId, round: n.lpNext.round.index, home: m.home, away: m.away });
+    return;
+  }
   openNextMatchOrders();
 });
 

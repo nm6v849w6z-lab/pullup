@@ -149,6 +149,13 @@ async function waitFor(fn, label, tries = 60) {
     w.eval("TAB_HANDLERS.calendrier()");
     [...d.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
     check(w.eval("tqEdit && tqEdit.kind") === "lp" && d.querySelector(".tab-btn.active").dataset.tab === "ordres", "l'onglet Ordres ouvre le prochain match, ici de ligue privée");
+    // Journée lancée, diffusion en cours : « Voir le direct » en haut et sur
+    // l'accueil (retour utilisateur 2026-10-02 : « il est 21h ça n'a
+    // toujours pas commencé »).
+    w.eval("lpMyNextMatch().match.live = true; updateTopbar(); TAB_HANDLERS.club()");
+    check(d.getElementById("topbarOrdersBtn").textContent === "Voir le direct", "direct de ligue privée : bouton du haut « Voir le direct »");
+    check(!!d.querySelector(".hm-hero [data-lp-live]"), "direct de ligue privée : bouton « Voir le direct » sur l'accueil");
+    w.eval("lpMyNextMatch().match.live = false; updateTopbar()");
     w.eval("TAB_HANDLERS.calendrier()");
   }
 
