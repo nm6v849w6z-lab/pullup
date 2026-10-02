@@ -9070,7 +9070,7 @@
       <div class="guide-entry" data-guide-id="amicaux" data-guide-group="Compétitions">
         <h3>Matchs amicaux</h3>
         <p class="training-intro">Un amical se joue un <b>jour de repos</b> des deux clubs (aucun match officiel ce jour-là), à l'heure de votre choix, jusqu'à 3 semaines à l'avance, et un seul par jour. Une équipe CPU accepte tout de suite ; un autre manager reçoit un message privé et doit accepter avant l'heure du match.</p>
-        <p class="training-intro" style="margin-top:10px;">C'est un vrai match pour les joueurs : fatigue, blessures possibles et minutes comptées pour l'entraînement des fondamentaux, comme en championnat. Le jour d'un amical n'est pas un jour de repos : pas d'entraînement collectif ce jour-là (ni tactique, ni récupération). L'amical fait un peu progresser la connaissance tactique selon les minutes de vos titulaires et joueurs de rotation. Il ne change rien au classement, aux finances ni aux stats de saison. Dans la <b>composition</b> de l'amical, vous pouvez aligner les jeunes de l'académie ; sans composition propre, l'amical se joue avec les ordres actuels du club.</p>
+        <p class="training-intro" style="margin-top:10px;">C'est un vrai match pour les joueurs : fatigue, blessures possibles et minutes comptées pour l'entraînement des fondamentaux, comme en championnat. Le jour d'un amical, pas d'entraînement tactique ; les joueurs non retenus pour l'amical peuvent faire récupération ou physique (à choisir dans l'Entraînement). L'amical fait un peu progresser la connaissance tactique selon les minutes de vos titulaires et joueurs de rotation. Il ne change rien au classement, aux finances ni aux stats de saison. Dans la <b>composition</b> de l'amical, vous pouvez aligner les jeunes de l'académie ; sans composition propre, l'amical se joue avec les ordres actuels du club.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Contre un club d'un autre championnat</b>, même d'un autre pays : tapez son nom dans la recherche d'adversaire, les clubs du monde entier apparaissent sous ceux de votre ligue (drapeau et division). Mêmes règles : jour de repos des deux clubs, heure de Paris, invitation à accepter contre un manager (il est prévenu dans son fil d'actualité).</p>
       </div>
 
@@ -42290,15 +42290,16 @@ const STAFF_ROLES = [
     firedMsg: "Entraîneur congédié", noneText: "Aucun entraîneur sous contrat.",
   },
   {
-    key: "analyst", label: "Analyste vidéo", noun: "analyste vidéo",
-    listKey: "analystListings", currentId: "staffAnalystCurrent", gridId: "staffAnalystHireGrid",
-    bodyId: "staffAnalystBody", inputPrefix: "analystBid_",
-    member: () => teamA.videoAnalyst, salary: () => teamA.videoAnalystSalary(),
-    placeBid: (id, amount, now) => league.placeAnalystBid(id, myTeamIndex, amount, now),
-    syncBid: (id, amount) => syncAnalystBidToServer(id, amount),
-    fire: (now) => league.fireTeamVideoAnalyst(myTeamIndex, now),
-    syncFire: () => syncFireAnalystToServer(),
-    firedMsg: "Analyste vidéo congédié", noneText: "Aucun analyste vidéo sous contrat.",
+    key: "assistant", label: "Entraîneur adjoint", noun: "entraîneur adjoint",
+    listKey: "assistantCoachListings", currentId: "staffAssistantCurrent", gridId: "staffAssistantHireGrid",
+    bodyId: "staffAssistantBody", inputPrefix: "assistantBid_",
+    member: () => teamA.assistantCoach, salary: () => teamA.assistantCoachSalary(),
+    placeBid: (id, amount, now) => league.placeAssistantCoachBid(id, myTeamIndex, amount, now),
+    syncBid: (id, amount) => syncAssistantCoachBidToServer(id, amount),
+    fire: (now) => league.fireTeamAssistantCoach(myTeamIndex, now),
+    syncFire: () => syncFireAssistantCoachToServer(),
+    firedMsg: "Entraîneur adjoint congédié", noneText: "Aucun entraîneur adjoint sous contrat.",
+    baseSalaryTable: ASSISTANT_BASE_SALARY,
   },
   {
     key: "recruiter", label: "Recruteur", noun: "recruteur",
@@ -42339,16 +42340,15 @@ const STAFF_ROLES = [
   // Entraîneur adjoint (voir ASSISTANT_SPECIALTIES côté moteur) : un seul par
   // club ; chaque candidat a une spécialité (affichée à côté du niveau).
   {
-    key: "assistant", label: "Entraîneur adjoint", noun: "entraîneur adjoint",
-    listKey: "assistantCoachListings", currentId: "staffAssistantCurrent", gridId: "staffAssistantHireGrid",
-    bodyId: "staffAssistantBody", inputPrefix: "assistantBid_",
-    member: () => teamA.assistantCoach, salary: () => teamA.assistantCoachSalary(),
-    placeBid: (id, amount, now) => league.placeAssistantCoachBid(id, myTeamIndex, amount, now),
-    syncBid: (id, amount) => syncAssistantCoachBidToServer(id, amount),
-    fire: (now) => league.fireTeamAssistantCoach(myTeamIndex, now),
-    syncFire: () => syncFireAssistantCoachToServer(),
-    firedMsg: "Entraîneur adjoint congédié", noneText: "Aucun entraîneur adjoint sous contrat.",
-    baseSalaryTable: ASSISTANT_BASE_SALARY,
+    key: "analyst", label: "Analyste vidéo", noun: "analyste vidéo",
+    listKey: "analystListings", currentId: "staffAnalystCurrent", gridId: "staffAnalystHireGrid",
+    bodyId: "staffAnalystBody", inputPrefix: "analystBid_",
+    member: () => teamA.videoAnalyst, salary: () => teamA.videoAnalystSalary(),
+    placeBid: (id, amount, now) => league.placeAnalystBid(id, myTeamIndex, amount, now),
+    syncBid: (id, amount) => syncAnalystBidToServer(id, amount),
+    fire: (now) => league.fireTeamVideoAnalyst(myTeamIndex, now),
+    syncFire: () => syncFireAnalystToServer(),
+    firedMsg: "Analyste vidéo congédié", noneText: "Aucun analyste vidéo sous contrat.",
   },
 ];
 // Spécialité d'un membre du staff selon son rôle : entraîneur principal
@@ -42447,7 +42447,9 @@ function staffEffectLines(roleKey, level, specialty) {
     lines.push("Une séance vidéo par jour sur vos adversaires");
     lines.push("Plus il est bon, plus vous en voyez");
   } else if (roleKey === "recruiter") {
-    lines.push(`Prospect proposé : ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[level] || 0) * 100)} % de chance par jour`);
+    // Tirage une fois par semaine, à la mise à jour du lundi (Team.trainWeek →
+    // refreshYouthCandidates), malgré le nom de la constante.
+    lines.push(`Prospect proposé chaque lundi : ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[level] || 0) * 100)} % de chance`);
     lines.push(`Qualité des prospects ×${staffNum(YOUTH_QUALITY_TIER_BY_LEVEL[level] || 1)}`);
   } else if (roleKey === "doctor") {
     lines.push(`Blessures plus courtes : ${staffPct(-(DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL[level] || 0))}`);
@@ -42555,17 +42557,16 @@ function staffCardHtml(role, now) {
         `<button type="button" class="stf-btn stf-btn--danger staff-fire-btn" data-staff-fire="${role.key}">${STAFF_UI_ICONS.fire}<span>Congédier</span></button>` +
       `</div>`;
   } else if (state === "bidding") {
+    // Poste toujours vacant tant que l'enchère n'est pas gagnée : on ne
+    // montre pas le candidat comme s'il était au club (retour utilisateur
+    // 2026-10-02), juste l'état de l'enchère et le lien vers le Marché.
     const l = lead[0] || mine[0];
-    const ident = staffIdentity(staffListingKey(l));
     const isLead = l.currentBidderIdx === myTeamIndex;
-    body = `<div class="stf-who" id="${role.currentId}">` +
-        staffAvatarHtml(ident, STAFF_NEUTRAL_POLO, 64) +
-        `<div class="stf-who__txt">` +
-          `<b class="stf-name" data-no-i18n>${escapeHtml(ident.name)}</b>` +
-          `<span class="stf-who__line">${staffStarsHtml(l.level)}${l.specialty ? `<span class="stf-chip">${escapeHtml(staffSpecialtyLabel(role.key, l.specialty))}</span>` : ""}</span>` +
-        `</div></div>` +
-      `<div class="stf-effect"><span class="stf-k">${isLead ? "Votre offre" : "Meilleure offre"}</span>` +
-        `<ul><li>${escapeHtml(`${formatMoney(l.currentBid || 0)} par semaine`)}</li><li>${escapeHtml(`Fin de l'enchère dans ${timeLeftLabel(l.closesAt, now)}`)}</li></ul></div>` +
+    const pitch = (STAFF_ROLE_PITCH[role.key] || []).map(t => `<li>${escapeHtml(t)}</li>`).join("");
+    body = `<div class="stf-vac" id="${role.currentId}"><span class="stf-vac__ic" aria-hidden="true">${STAFF_ICONS[role.key]}</span>` +
+        `<b class="staff-none">Poste à pourvoir</b><ul>${pitch}</ul></div>` +
+      `<div class="stf-strip">${isLead ? `<span class="mk-badge lead">Vous êtes en tête</span>` : `<span class="mk-badge out">Dépassé</span>`}` +
+        `<span>${escapeHtml(`Fin de l'enchère dans ${timeLeftLabel(l.closesAt, now)}`)}</span></div>` +
       `<div class="stf-acts"><button type="button" class="stf-btn${isLead ? "" : " stf-btn--primary"}" data-staff-goto="${role.key}:${l.id}">${STAFF_UI_ICONS.gavel}<span>${isLead ? "Voir l'enchère" : "Relancer"}</span></button></div>`;
   } else {
     const table = role.baseSalaryTable || TRAINER_BASE_SALARY;
@@ -48962,7 +48963,7 @@ function renderYouthCandidates() {
   if (!candidates.length) {
     const rec = teamA.recruiter;
     holder.innerHTML = rec
-      ? `<div class="ac-empty"><b>Aucun prospect en attente.</b><br>Votre recruteur (niveau ${rec.level}) a environ ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[rec.level] || 0) * 100)} % de chances par jour d'en proposer un nouveau. Un meilleur recruteur en trouve plus souvent, et de meilleurs.</div>`
+      ? `<div class="ac-empty"><b>Aucun prospect en attente.</b><br>Votre recruteur (niveau ${rec.level}) a environ ${Math.round((YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL[rec.level] || 0) * 100)} % de chances d'en proposer un nouveau chaque lundi. Un meilleur recruteur en trouve plus souvent, et de meilleurs.</div>`
       : `<div class="ac-empty"><b>Pas de recruteur sous contrat.</b><br>C'est lui qui fait remonter des prospects de 15 à 17 ans : sans recruteur, aucun jeune ne vous sera proposé.<br><button class="primary" data-ac-goto="staff">Engager un recruteur</button></div>`;
     return;
   }

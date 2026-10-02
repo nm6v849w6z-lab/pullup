@@ -40,7 +40,7 @@ const POLO_PATH = "M41 86 Q48 92 58 95"; // pan de col du polo (voir renderPolo)
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "staff").click();
     const cards = [...doc.querySelectorAll("#staffSlots .stf-card")];
     assert.strictEqual(cards.length, 6, "6 postes");
-    assert.deepStrictEqual(cards.map(c => c.dataset.staffRole), ["coach", "analyst", "recruiter", "doctor", "physio", "assistant"]);
+    assert.deepStrictEqual(cards.map(c => c.dataset.staffRole), ["coach", "assistant", "recruiter", "doctor", "physio", "analyst"]);
     const sec = doc.getElementById("staffSection");
     assert.ok(!sec.querySelector("table, .mk-stf, [data-mk-staff-bid], [data-staff-bid], input[type=number]"), "aucune enchère sur la page Staff");
     const coach = sec.querySelector('.stf-card[data-staff-role="coach"]');
