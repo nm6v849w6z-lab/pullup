@@ -5687,6 +5687,7 @@ window.HM_I18N_EL = {
   "Aucun duo possible : il faut un jeune (≤ 22 ans) et un vétéran (≥ 29 ans) au même poste.": "Δεν υπάρχει δυνατό δίδυμο: χρειάζεται ένας νέος (≤ 22 ετών) και ένας βετεράνος (≥ 29 ετών) στην ίδια θέση.",
   "Expérience": "Εμπειρία",
   "Le mental progresse avec les minutes jouées": "Τα πνευματικά βελτιώνονται με τα λεπτά συμμετοχής",
+  "Sans minutes cette semaine": "Χωρίς λεπτά αυτή την εβδομάδα",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Λεπτά της τρέχουσας εβδομάδας (βασικός ≈ 60 λ.).",
   "Bilan du lundi": "Απολογισμός Δευτέρας",
   "joueurs suivis": "παίκτες σε πρόγραμμα",

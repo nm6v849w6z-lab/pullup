@@ -5687,6 +5687,7 @@ window.HM_I18N_LT = {
   "Aucun duo possible : il faut un jeune (≤ 22 ans) et un vétéran (≥ 29 ans) au même poste.": "Pora negalima: reikia jaunuolio (≤ 22 m.) ir veterano (≥ 29 m.) toje pačioje pozicijoje.",
   "Expérience": "Patirtis",
   "Le mental progresse avec les minutes jouées": "Psichologija tobulėja su sužaistomis minutėmis",
+  "Sans minutes cette semaine": "Šią savaitę be minučių",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Šios savaitės minutės (nuolatinis startinio penketo žaidėjas ≈ 60 min).",
   "Bilan du lundi": "Pirmadienio ataskaita",
   "joueurs suivis": "žaidėjai plane",

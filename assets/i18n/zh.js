@@ -5687,6 +5687,7 @@ window.HM_I18N_ZH = {
   "Aucun duo possible : il faut un jeune (≤ 22 ans) et un vétéran (≥ 29 ans) au même poste.": "无法配对：需要同位置的一名年轻球员（≤22岁）和一名老将（≥29岁）。",
   "Expérience": "经验",
   "Le mental progresse avec les minutes jouées": "心理属性随上场时间提升",
+  "Sans minutes cette semaine": "本周未上场",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "本周上场时间（常规首发≈60分钟）。",
   "Bilan du lundi": "周一总结",
   "joueurs suivis": "跟进球员",

@@ -5687,6 +5687,7 @@ window.HM_I18N_PT = {
   "Aucun duo possible : il faut un jeune (≤ 22 ans) et un vétéran (≥ 29 ans) au même poste.": "Nenhuma dupla possível: é preciso um jovem (≤ 22 anos) e um veterano (≥ 29 anos) na mesma posição.",
   "Expérience": "Experiência",
   "Le mental progresse avec les minutes jouées": "O mental evolui com os minutos jogados",
+  "Sans minutes cette semaine": "Sem minutos esta semana",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minutos da semana atual (titular regular ≈ 60 min).",
   "Bilan du lundi": "Balanço de segunda-feira",
   "joueurs suivis": "jogadores acompanhados",

@@ -3623,6 +3623,9 @@
   .stf-effect li{position:relative; padding-left:12px;}
   .stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--rc, var(--amber));}
   .stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
+  /* Lignes Salaire / Hausse / En poste / Contrat alignées d'une carte à
+     l'autre (retour utilisateur 2026-10-02) : l'encadré Effet s'étire. */
+  .stf-body > .stf-effect{flex:1 0 auto;}
   .stf-meta{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; padding:2px 2px 0;}
   .stf-meta > div{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .stf-meta b{font-size:14px; color:var(--ink); white-space:nowrap;}
