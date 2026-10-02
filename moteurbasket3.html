@@ -13520,6 +13520,21 @@ const ArenaGen = (function () {
     const flags = [[-9, D / 2 + 13.5, main], [-6.5, D / 2 + 13.5, second], [6.5, D / 2 + 13.5, second], [9, D / 2 + 13.5, main]];
     const behind = (o) => o.y < -D / 2 || o.x < -W / 2;
     if (billboard) decor.push({ x: BBX, y: BBY, kind: 'billboard' });
+    // Lumières de la passe du soir (feux des voitures, lampadaires) dessinées
+    // par-dessus tout le décor : masquées quand elles sont DERRIÈRE le
+    // panneau publicitaire et cachées par lui à l'écran (retour utilisateur
+    // 2026-10-02 : « les phares des voitures traversent le panneau »).
+    const bbFace = billboard ? [[BBX, BBY - 8.6, 0], [BBX, BBY + 8.6, 0], [BBX, BBY + 8.6, 12.4], [BBX, BBY - 8.6, 12.4]].map(q => P(q[0], q[1], q[2])) : null;
+    const hiddenByBillboard = (x, y, z) => {
+      if (!bbFace || x + y >= BBX + BBY) return false;
+      const [px, py] = P(x, y, z);
+      let inside = false;
+      for (let i = 0, j = bbFace.length - 1; i < bbFace.length; j = i++) {
+        const [xi, yi] = bbFace[i], [xj, yj] = bbFace[j];
+        if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    };
     const drawBillboard = (x, y) => {
       // Panneau orienté vers +x (vers le parking), texte lisible sans miroir.
       const y0 = y - 8, y1 = y + 8, z0 = 5, z1 = 12;
@@ -13756,8 +13771,11 @@ const ArenaGen = (function () {
       // lampadaires : halos au sol et lumières
       decor.filter((o) => o.kind === 'lamp').forEach((o) => {
         const gnd = P(o.x + 0.9, o.y, 0), top = P(o.x + 0.9, o.y, 6.2);
-        s += `<ellipse cx="${f1(gnd[0])}" cy="${f1(gnd[1])}" rx="${f1(7 * K)}" ry="${f1(3.8 * K)}" fill="url(#${id}g)"/>` +
-          `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="0.6" fill="#fff6d6"/>`;
+        // Halo au sol (sur une zone large) et tête : chacun masqué s'il est
+        // derrière le panneau publicitaire.
+        const haloHidden = [[0, 0], [-4, 0], [4, 0], [0, -4], [0, 4]].some(([dx, dy]) => hiddenByBillboard(o.x + 0.9 + dx, o.y + dy, 0));
+        if (!haloHidden) s += `<ellipse cx="${f1(gnd[0])}" cy="${f1(gnd[1])}" rx="${f1(7 * K)}" ry="${f1(3.8 * K)}" fill="url(#${id}g)"/>`;
+        if (!hiddenByBillboard(o.x + 0.9, o.y, 6.2) && !hiddenByBillboard(o.x + 0.9, o.y, 7.4)) s += `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="0.6" fill="#fff6d6"/>`;
       });
       // projecteurs de toiture plus lumineux
       s += spots(spotsBack).replace(/opacity="0.22"/g, 'opacity="0.5"') + spots(spotsFront).replace(/opacity="0.22"/g, 'opacity="0.5"');
@@ -13767,7 +13785,7 @@ const ArenaGen = (function () {
       // bandeau du club lumineux
       s += flat(faceY(-W / 2, W / 2, D / 2, H - 0.7, H - 0.1), shade(main, 40)) + flat(faceX(W / 2, -D / 2, D / 2, H - 0.7, H - 0.1), shade(main, 10));
       // feux des voitures
-      decor.filter((o) => o.kind === 'car').forEach((o) => { const q = P(o.x + 2, o.y, 0.6); s += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.5" fill="#ff6a5a" opacity="0.8"/>`; });
+      decor.filter((o) => o.kind === 'car' && !hiddenByBillboard(o.x + 2, o.y, 0.6)).forEach((o) => { const q = P(o.x + 2, o.y, 0.6); s += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="0.5" fill="#ff6a5a" opacity="0.8"/>`; });
       s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="url(#${id}v)"/>`;
     } else {
       s += `<rect x="${f1(vx)}" y="${f1(vy)}" width="${f1(vw)}" height="${f1(vh)}" fill="rgba(255,196,130,0.06)"/>` +
