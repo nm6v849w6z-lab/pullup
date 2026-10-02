@@ -6744,7 +6744,7 @@
   .eff-pot.attr-tier-red{--eff-tier:var(--attr-tier-red);}
   .eff-pot.attr-tier-orange{--eff-tier:var(--attr-tier-amber);}
   .eff-pot.attr-tier-white{--eff-tier:var(--ink);}
-  .eff-pot.attr-tier-green{--eff-tier:#3fd08f;}
+  .eff-pot.attr-tier-green{--eff-tier:#3ecf67;}
   .eff-pips{display:inline-flex; gap:3px;}
   .eff-pip{width:12px; height:6px; border-radius:3px; background:#2a3550;}
   .eff-pip.on{background:var(--eff-tier);}
@@ -45223,7 +45223,9 @@ function effPosBadgeHtml(position) {
 // chiffre caché 1-99.
 function effPotentialHtml(p) {
   const idx = potentialTierIndex(p.potential);
-  const tier = attrColorTier(idx * 10);
+  // Couleur au barème des caractéristiques sur le potentiel lui-même (retour
+  // utilisateur 2026-10-02) : 0-20 rouge, 21-50 orange, 51-80 blanc, 81+ vert.
+  const tier = attrColorTier(p.potential);
   let pips = "";
   for (let i = 1; i <= 5; i++) {
     const state = idx >= 2 * i ? " on" : idx === 2 * i - 1 ? " half" : "";
