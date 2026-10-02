@@ -1836,7 +1836,9 @@
   .sidebar-item > .sidebar-link .sidebar-badge{margin-right:26px;}
   .sidebar-pin{position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center;
     background:none; border:0; border-radius:6px; color:var(--ink-faint); cursor:pointer; opacity:0; transition:opacity .12s ease;}
-  .sidebar-item:hover .sidebar-pin, .sidebar-pin:focus-visible, .sidebar-pin[aria-pressed="true"]{opacity:1;}
+  /* Épingle visible seulement au survol de l'épingle elle-même (retour
+     utilisateur 2026-10-02 : pas dès qu'on survole l'onglet). */
+  .sidebar-pin:hover, .sidebar-pin:focus-visible, .sidebar-pin[aria-pressed="true"]{opacity:1;}
   .sidebar-pin[aria-pressed="true"]{color:var(--amber);}
   .sidebar-pin:hover{background:var(--panel-2); color:var(--ink);}
   @media (pointer:coarse){ .sidebar-pin{opacity:.55;} }
