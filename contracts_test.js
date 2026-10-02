@@ -17,7 +17,7 @@ const WorldMarket = require("./server/worldMarket.js");
 const {
   generateMultiManagerLeague, askedSalary, contractOfferFloor, contractAcceptanceChance, contractOfferHint,
   initialContractSeasonsFor, contractSeasonsLeft, serializeLeague, leagueFromSave, serializePlayerRecord, playerFromSave,
-  CONTRACT_REFUSAL_MORALE_MALUS, CONTRACT_RAISE_REFUSED_MORALE_MALUS, CONTRACT_RAISE_RESPONSE_MS, SEASON_LENGTH_WEEKS,
+  CONTRACT_REFUSAL_MORALE_MALUS, CONTRACT_FIRM_AFTER_REFUSALS, contractExtensionFloor, contractRefusalMoraleMalus, CONTRACT_RAISE_REFUSED_MORALE_MALUS, CONTRACT_RAISE_RESPONSE_MS, SEASON_LENGTH_WEEKS,
   FREE_AGENT_AUCTION_DURATION_MS, TRANSFER_AUCTION_DURATION_MS, financeCategoryOf,
 } = E;
 
@@ -53,11 +53,19 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   assert.strictEqual(contractOfferFloor(10000), 9000);
   assert.strictEqual(contractAcceptanceChance(10000, 10000, 55, 50), 1, "au salaire demandé : toujours");
   const atFloor = contractAcceptanceChance(10000, 9000, 55, 50);
-  assert.ok(atFloor > 0.35 && atFloor < 0.55, `~45 % au plancher (${atFloor})`);
+  assert.ok(atFloor > 0.05 && atFloor < 0.12, `~8 % au plancher (${atFloor})`);
+  // Courbe raide (rééquilibrage 2026-10-02) : ~75 % à -2 %, ~47 % à -5 %, ~23 % à -8 %.
+  [[9800, 0.75], [9500, 0.47], [9200, 0.23]].forEach(([offer, target]) => {
+    const c = contractAcceptanceChance(10000, offer, 55, 50);
+    assert.ok(Math.abs(c - target) < 0.04, `${offer} : ~${target} (${c})`);
+  });
+  assert.strictEqual(contractRefusalMoraleMalus(10000, 9900), 3, "offre presque correcte : petite perte de motivation");
+  assert.strictEqual(contractRefusalMoraleMalus(10000, 9000), CONTRACT_REFUSAL_MORALE_MALUS, "offre au plancher : grosse perte");
   assert.ok(contractAcceptanceChance(10000, 9500, 55, 50) > atFloor, "décroît vers le plancher");
   assert.ok(contractAcceptanceChance(10000, 9000, 55, 90) > atFloor, "renommée (cachée) : un peu plus de chances");
   assert.ok(contractAcceptanceChance(10000, 9000, 20, 50) < atFloor, "joueur mécontent : moins de chances");
   assert.strictEqual(contractOfferHint(10000, 10000).key, "sure");
+  assert.strictEqual(contractOfferHint(10000, 9800).key, "likely");
   assert.strictEqual(contractOfferHint(10000, 9500).key, "hesitant");
   assert.strictEqual(contractOfferHint(10000, 9000).key, "risky");
   ok("salaire demandé (âge, motivation, arrondi), plancher -10 %, chance d'acceptation et indice");
@@ -127,10 +135,18 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   const refused = team.offerContractExtension(p.id, { seasons: 3, salary: contractOfferFloor(asked) }, season, T0, never);
   assert.strictEqual(refused.ok, true);
   assert.strictEqual(refused.accepted, false);
-  assert.strictEqual(p.form, 60 - CONTRACT_REFUSAL_MORALE_MALUS, "refus : motivation un peu en baisse");
+  assert.strictEqual(p.form, 60 - CONTRACT_REFUSAL_MORALE_MALUS, "refus au plancher : motivation en baisse");
+  assert.strictEqual(refused.moraleLoss, CONTRACT_REFUSAL_MORALE_MALUS);
+  assert.strictEqual(p.contractRefusals, 1);
   assert.strictEqual(team.offerContractExtension(p.id, { seasons: 3, salary: asked }, season, T0, always).reason, "already-offered", "une seule offre refusée par semaine");
   team.week += 1;
   const askedNow = askedSalary(p);
+  { const q = { ...p, contractRefusals: 0 }; assert.ok(askedNow > askedSalary(q), "refus : sa demande augmente"); }
+  // Après 3 refus : plus de marge, il ne signe qu'à sa demande.
+  p.contractRefusals = CONTRACT_FIRM_AFTER_REFUSALS;
+  assert.strictEqual(contractExtensionFloor(p, askedSalary(p)), askedSalary(p));
+  assert.strictEqual(team.offerContractExtension(p.id, { seasons: 4, salary: askedSalary(p) - 10 }, season, T0, always).reason, "invalid-salary", "après 3 refus : plus de négociation");
+  p.contractRefusals = 1;
   const acc = team.offerContractExtension(p.id, { seasons: 4, salary: askedNow }, season, T0, never);
   assert.strictEqual(acc.accepted, true, "au salaire demandé : toujours acceptée");
   assert.strictEqual(p.contractUntilSeason, season + 4);

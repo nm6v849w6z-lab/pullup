@@ -3520,6 +3520,9 @@ function salaryForOverall(overall) {
 //  - lastContractOfferWeek : team.week de la dernière offre refusée (une
 //    seule tentative par semaine de jeu).
 //  - raiseRequest : demande d'augmentation de mi-saison en attente.
+//  - contractRefusals : offres de prolongation refusées pendant ce contrat
+//    (sa demande monte de 3 % à chaque refus ; à partir de 3 refus il
+//    n'accepte plus que son salaire demandé).
 // Le salaire n'est plus recalculé à l'intersaison pour un joueur sous
 // contrat : il ne change qu'à la signature d'un nouveau contrat.
 // ---------------------------------------------------------------------
@@ -3529,8 +3532,18 @@ const CONTRACT_DEFAULT_SEASONS = 3;
 // Marge de négociation d'une prolongation : jusqu'à -10 % du salaire demandé.
 const CONTRACT_NEGOTIATION_MARGIN = 0.10;
 // Chance d'acceptation d'une offre au plancher (-10 %), avant motivation/club.
-const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.45;
-const CONTRACT_REFUSAL_MORALE_MALUS = 3;      // chaque refus de prolongation
+// Rééquilibrage (retour utilisateur 2026-10-02 : on pouvait faire une offre
+// au plancher chaque semaine sans risque) : courbe plus raide, ~75 % à -2 %,
+// ~47 % à -5 %, ~23 % à -8 %, ~8 % à -10 % (voir contractAcceptanceChance).
+const CONTRACT_FLOOR_ACCEPT_CHANCE = 0.08;
+const CONTRACT_ACCEPT_CURVE = 0.8;
+// Refus d'une prolongation : perte de motivation selon l'écart avec sa
+// demande (2 points pour une offre presque correcte, 8 au plancher), et sa
+// demande monte de 3 % ; après 3 refus, il ne signe plus qu'à sa demande.
+const CONTRACT_REFUSAL_MORALE_MALUS_MIN = 2;
+const CONTRACT_REFUSAL_MORALE_MALUS = 8;      // refus d'une offre au plancher
+const CONTRACT_REFUSAL_DEMAND_BUMP = 0.03;
+const CONTRACT_FIRM_AFTER_REFUSALS = 3;
 const CONTRACT_RAISE_THRESHOLD = 0.25;        // salaire demandé >= +25 % du salaire actuel
 const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peut la demander
 const CONTRACT_RAISE_RESPONSE_MS = 7 * 24 * 60 * 60 * 1000; // sans réponse sous 1 semaine (retour 2026-10-01) : refus
@@ -3582,7 +3595,8 @@ function contractMoraleFactor(form) {
 function askedSalary(player) {
   if (!player || !player.attrs) return SALARY_MIN;
   const level = levelCoefficientFor(player.attrs, player.position);
-  const raw = salaryForOverall(level.coefficient) * contractAgeFactor(player.age) * contractMoraleFactor(player.form);
+  const bump = 1 + CONTRACT_REFUSAL_DEMAND_BUMP * (player.contractRefusals || 0);
+  const raw = salaryForOverall(level.coefficient) * contractAgeFactor(player.age) * contractMoraleFactor(player.form) * bump;
   return Math.max(SALARY_MIN, Math.round(raw / 10) * 10);
 }
 
@@ -3591,18 +3605,30 @@ function contractOfferFloor(asked) {
   return Math.max(SALARY_MIN, Math.ceil(asked * (1 - CONTRACT_NEGOTIATION_MARGIN)));
 }
 
+// Plancher d'une prolongation pour ce joueur : après
+// CONTRACT_FIRM_AFTER_REFUSALS refus, plus de marge (salaire demandé).
+function contractExtensionFloor(player, asked) {
+  return (player && (player.contractRefusals || 0) >= CONTRACT_FIRM_AFTER_REFUSALS) ? asked : contractOfferFloor(asked);
+}
+
+// Motivation perdue quand il refuse une prolongation à `offered`.
+function contractRefusalMoraleMalus(asked, offered) {
+  const gap = asked > 0 ? clamp((asked - offered) / asked / CONTRACT_NEGOTIATION_MARGIN, 0, 1) : 0;
+  return Math.round(CONTRACT_REFUSAL_MORALE_MALUS_MIN + (CONTRACT_REFUSAL_MORALE_MALUS - CONTRACT_REFUSAL_MORALE_MALUS_MIN) * gap);
+}
+
 // Chance qu'un joueur accepte une prolongation à `offered` (`asked` =
 // salaire demandé). Au salaire demandé : toujours. En dessous : décroît
-// jusqu'à ~45 % au plancher, modulée par la motivation et par la renommée
+// jusqu'à ~8 % au plancher, modulée par la motivation et par la renommée
 // du club (effet jamais affiché).
 function contractAcceptanceChance(asked, offered, form, prestige) {
   if (!(asked > 0) || offered >= asked) return 1;
   const gap = clamp((asked - offered) / asked / CONTRACT_NEGOTIATION_MARGIN, 0, 1);
-  let chance = 1 - gap * (1 - CONTRACT_FLOOR_ACCEPT_CHANCE);
+  let chance = 1 - Math.pow(gap, CONTRACT_ACCEPT_CURVE) * (1 - CONTRACT_FLOOR_ACCEPT_CHANCE);
   const f = typeof form === "number" ? clamp(form, 0, 100) : 55;
   chance += (f - 55) / 100 * 0.2 * gap;
   if (typeof prestige === "number") chance += (clamp(prestige, 0, 100) - 50) / 100 * 0.2 * gap;
-  return clamp(chance, 0.05, 1);
+  return clamp(chance, 0.03, 1);
 }
 
 // Indice affiché à côté d'une offre de prolongation : fondé UNIQUEMENT sur
@@ -3610,8 +3636,8 @@ function contractAcceptanceChance(asked, offered, form, prestige) {
 function contractOfferHint(asked, offered) {
   if (!(asked > 0) || offered >= asked) return { key: "sure", label: "Il acceptera" };
   const gap = (asked - offered) / asked;
-  if (gap <= 0.03) return { key: "likely", label: "Il devrait accepter" };
-  if (gap <= 0.07) return { key: "hesitant", label: "Le joueur hésite" };
+  if (gap <= 0.02) return { key: "likely", label: "Il devrait accepter" };
+  if (gap <= 0.05) return { key: "hesitant", label: "Le joueur hésite" };
   return { key: "risky", label: "Offre risquée" };
 }
 
@@ -3640,6 +3666,7 @@ function signNewContract(player, seasons, season, salary = null) {
   player.nextSalary = null;
   player.raiseRequest = null;
   player.lastContractOfferWeek = null;
+  player.contractRefusals = 0;
 }
 
 // ---------------------------------------------------------------------
@@ -4606,6 +4633,7 @@ class Player {
     this.contractUntilSeason = null;
     this.nextSalary = null;
     this.lastContractOfferWeek = null;
+    this.contractRefusals = 0;
     this.raiseRequest = null;
     this.raiseRequestSeason = null;
     this.extensionRequestSeason = null;
@@ -8650,18 +8678,24 @@ class Team {
     const seasons = normalizeContractSeasons(terms && terms.seasons, null);
     if (seasons == null) return { ok: false, reason: "invalid-seasons" };
     const asked = askedSalary(p);
-    const floor = contractOfferFloor(asked);
+    const floor = contractExtensionFloor(p, asked);
     const salary = Math.round(Number(terms && terms.salary));
     if (!Number.isFinite(salary) || salary < floor || salary > asked) return { ok: false, reason: "invalid-salary", asked, floor };
     const accepted = rng() < contractAcceptanceChance(asked, salary, p.form, this.prestige);
     if (!accepted) {
+      // Refus (rééquilibrage 2026-10-02) : motivation en baisse selon l'écart
+      // (voir contractRefusalMoraleMalus), demande +3 %, et plus de marge
+      // après CONTRACT_FIRM_AFTER_REFUSALS refus (voir contractExtensionFloor).
+      const moraleLoss = contractRefusalMoraleMalus(asked, salary);
       p.lastContractOfferWeek = this.week;
-      p.form = clamp(Math.round((p.form || 0) - CONTRACT_REFUSAL_MORALE_MALUS), 0, 100);
-      return { ok: true, accepted: false, asked, floor };
+      p.contractRefusals = (p.contractRefusals || 0) + 1;
+      p.form = clamp(Math.round((p.form || 0) - moraleLoss), 0, 100);
+      return { ok: true, accepted: false, asked, floor, moraleLoss, refusals: p.contractRefusals };
     }
     p.contractUntilSeason = season + seasons;
     p.nextSalary = salary;
     p.lastContractOfferWeek = null;
+    p.contractRefusals = 0;
     p.raiseRequest = null;
     if (this.feed) removeByKey(this.feed, `contract_ext_${p.id}`);
     return { ok: true, accepted: true, asked, floor, salary, untilSeason: p.contractUntilSeason };
@@ -13107,6 +13141,7 @@ class League {
     p.nextSalary = null;
     p.raiseRequest = null;
     p.lastContractOfferWeek = null;
+    p.contractRefusals = 0;
     p.forSale = false;
     p.salePrice = null;
     p.retiringAfterSeason = false;
@@ -15655,6 +15690,7 @@ function serializePlayerRecord(p) {
     contractUntilSeason: typeof p.contractUntilSeason === "number" ? p.contractUntilSeason : null,
     nextSalary: typeof p.nextSalary === "number" ? p.nextSalary : null,
     lastContractOfferWeek: typeof p.lastContractOfferWeek === "number" ? p.lastContractOfferWeek : null,
+    contractRefusals: p.contractRefusals || 0,
     raiseRequest: p.raiseRequest ? { ...p.raiseRequest } : null,
     raiseRequestSeason: typeof p.raiseRequestSeason === "number" ? p.raiseRequestSeason : null,
     extensionRequestSeason: typeof p.extensionRequestSeason === "number" ? p.extensionRequestSeason : null,
@@ -16279,6 +16315,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.contractUntilSeason === "number") p.contractUntilSeason = pdata.contractUntilSeason;
   if (typeof pdata.nextSalary === "number") p.nextSalary = pdata.nextSalary;
   if (typeof pdata.lastContractOfferWeek === "number") p.lastContractOfferWeek = pdata.lastContractOfferWeek;
+  if (typeof pdata.contractRefusals === "number") p.contractRefusals = pdata.contractRefusals;
   if (pdata.raiseRequest && typeof pdata.raiseRequest.asked === "number") p.raiseRequest = { ...pdata.raiseRequest };
   if (typeof pdata.raiseRequestSeason === "number") p.raiseRequestSeason = pdata.raiseRequestSeason;
   if (typeof pdata.extensionRequestSeason === "number") p.extensionRequestSeason = pdata.extensionRequestSeason;
@@ -18857,7 +18894,7 @@ return {
   PHYSIO_RECOVERY_BONUS_BY_LEVEL, PHYSIO_INJURY_RISK_MULT_BY_LEVEL,
   // Contrats des joueurs (demande du 2026-10-01, voir CONTRACT_MIN_SEASONS) :
   CONTRACT_MIN_SEASONS, CONTRACT_MAX_SEASONS, CONTRACT_DEFAULT_SEASONS, CONTRACT_NEGOTIATION_MARGIN, CONTRACT_FLOOR_ACCEPT_CHANCE,
-  CONTRACT_REFUSAL_MORALE_MALUS, CONTRACT_RAISE_THRESHOLD, CONTRACT_RAISE_WEEK, CONTRACT_RAISE_RESPONSE_MS, CONTRACT_RAISE_REFUSED_MORALE_MALUS,
+  CONTRACT_REFUSAL_MORALE_MALUS, CONTRACT_REFUSAL_MORALE_MALUS_MIN, CONTRACT_REFUSAL_DEMAND_BUMP, CONTRACT_FIRM_AFTER_REFUSALS, contractExtensionFloor, contractRefusalMoraleMalus, CONTRACT_RAISE_THRESHOLD, CONTRACT_RAISE_WEEK, CONTRACT_RAISE_RESPONSE_MS, CONTRACT_RAISE_REFUSED_MORALE_MALUS,
   YOUTH_PROMOTION_CONTRACT_SEASONS, FREE_AGENT_AUCTION_DURATION_MS, FREE_AGENT_RETIRE_AGE, FREE_AGENT_SIGNING_LABEL, CPU_MIN_ROSTER_AFTER_CONTRACTS,
   contractHash, initialContractSeasonsFor, contractAgeFactor, contractMoraleFactor, askedSalary, contractOfferFloor,
   contractAcceptanceChance, contractOfferHint, normalizeContractSeasons, contractSeasonsLeft, isLastContractSeason, signNewContract,

@@ -1195,11 +1195,14 @@ function offerContractExtension(team, teamIndex, league, body, now) {
       "not-last-season": "La prolongation n'est possible que pendant la dernière saison du contrat.",
       "already-offered": "Il a déjà refusé une offre cette semaine : réessayez la semaine prochaine.",
       "invalid-seasons": "Durée de contrat invalide (1 à 5 saisons).",
-      "invalid-salary": "Le salaire proposé doit être compris entre le salaire demandé -10 % et le salaire demandé.",
+      "invalid-salary": result.floor === result.asked
+        ? "Après trois refus, il ne signera qu'au salaire qu'il demande."
+        : "Le salaire proposé doit être compris entre le salaire demandé -10 % et le salaire demandé.",
     };
     return { ...fail(reasons[result.reason] || "Offre refusée."), reason: result.reason };
   }
-  return { ok: true, accepted: result.accepted, salary: result.salary || null, untilSeason: result.untilSeason || null, asked: result.asked };
+  return { ok: true, accepted: result.accepted, salary: result.salary || null, untilSeason: result.untilSeason || null, asked: result.asked,
+    moraleLoss: result.moraleLoss || 0, refusals: result.refusals || 0 };
 }
 
 // Demande d'augmentation de mi-saison : { playerId, accept, counter? }
