@@ -9150,7 +9150,7 @@
 
       <div class="guide-entry" data-guide-id="salle" data-guide-group="Club et finances">
         <h3>Salle</h3>
-        <p class="training-intro">Agrandissez votre salle place par place pour accueillir plus de spectateurs (brique Agrandir la salle : chaque type de gradin a son prix par place et son nombre maximum de places), et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 4 paliers : Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
+        <p class="training-intro">Agrandissez votre salle place par place pour accueillir plus de spectateurs (brique Agrandir la salle : chaque type de gradin a son prix par place et son nombre maximum de places), et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 5 niveaux comme le centre de formation : Boutique des supporters (revenu fixe chaque semaine), Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
       </div>
 
       <div class="guide-entry" data-guide-id="boutique" data-guide-group="Club et finances">
@@ -11369,6 +11369,11 @@ const FAN_SHOP_LEVELS = [
   { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 2000 },
   { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 6000 },
   { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 15000 },
+  // Niveaux 4 et 5 (retour utilisateur 2026-10-02 : « toutes les
+  // infrastructures doivent avoir 5 niveaux comme le centre de formation ») :
+  // même rentabilité qu'au niveau 3 (environ 33 semaines par palier).
+  { level: 4, name: "Grand magasin du club", cost: 600000, weeklyRevenue: 33000 },
+  { level: 5, name: "Mégastore", cost: 1100000, weeklyRevenue: 66000 },
 ];
 
 function fanShopInfo(level) {
@@ -11392,9 +11397,9 @@ function fanShopInfo(level) {
 //     infrastructure, les deux idées du retour utilisateur étant redondantes)
 //     : réduit l'accumulation de fatigue en match (voir MatchEngine.
 //     applyFatigue, fatigueMult) — joueurs plus frais en fin de match.
-// 4 paliers chacune (retour utilisateur explicite : "il faut 4 niveaux
-// (rien, pas cher, moyen cher, cher)"), le niveau 0 valant toujours "rien
-// construit, aucun effet".
+// À l'origine 4 paliers (« rien, pas cher, moyen cher, cher ») ; depuis le
+// 2026-10-02, 5 niveaux construisibles comme le centre de formation, le
+// niveau 0 valant toujours "rien construit, aucun effet".
 // ---------------------------------------------------------------------
 const CLUB_FACILITIES = {
   tvStation: {
@@ -11408,6 +11413,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 3000 },
       { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 8500 },
       { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 20000 },
+      { level: 4, name: "Chaîne nationale", cost: 800000, weeklyRevenue: 43000 },
+      { level: 5, name: "Média international", cost: 1400000, weeklyRevenue: 83000 },
     ],
   },
   gym: {
@@ -11418,6 +11425,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Salle basique", cost: 45000, injuryRiskMult: 0.90 },
       { level: 2, name: "Salle équipée", cost: 130000, injuryRiskMult: 0.78 },
       { level: 3, name: "Salle haut de gamme", cost: 300000, injuryRiskMult: 0.65 },
+      { level: 4, name: "Centre de performance", cost: 550000, injuryRiskMult: 0.56 },
+      { level: 5, name: "Centre de haute performance", cost: 900000, injuryRiskMult: 0.48 },
     ],
   },
   wellness: {
@@ -11428,6 +11437,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Espace détente", cost: 45000, fatigueMult: 0.93 },
       { level: 2, name: "Spa du club", cost: 130000, fatigueMult: 0.85 },
       { level: 3, name: "Centre de récupération", cost: 300000, fatigueMult: 0.75 },
+      { level: 4, name: "Clinique du sport", cost: 550000, fatigueMult: 0.68 },
+      { level: 5, name: "Institut de récupération", cost: 900000, fatigueMult: 0.62 },
     ],
   },
 };
@@ -49684,42 +49695,51 @@ function clubDistrictBuilder(team) {
       frame.push([x0, y0, 0], [x1, y1, 0], [x0, y1, z + 3], [x1, y0, z + 3]);
     };
     const yb1 = roadY[0] - 4, xb1 = roadX[0] - 4;
-    // Boutique (0-3) : vitrine et auvent rayé aux couleurs du club.
-    { const L = lv.fanShop, w = [0, 9, 15, 22][L] || 9, d = [0, 7, 11, 16][L] || 7, hh = [0, 3.4, 5.5, 8][L] || 3.4;
+    // Boutique (0-5) : vitrine et auvent rayé aux couleurs du club ; maillot
+    // géant (3+), drapeaux (4+), écran géant en façade (5).
+    { const L = lv.fanShop, w = [0, 8, 12, 16, 20, 23][L] || 8, d = [0, 6, 9, 12, 14, 16][L] || 6, hh = [0, 3.3, 4.4, 5.6, 7, 8.6][L] || 3.3;
       place("fanShop", -44, -20, yb1 - 16, yb1, () => {
         const x0 = -20 - w, x1 = -20, y0 = yb1 - d, y1 = yb1;
-        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#efe3c8", L >= 3 ? "#b8452f" : "#c9582f", L >= 2 ? "Boutique" : "Souvenirs", { glassGround: true, signBg: cA, signFg: cB, doorX: x1 - 2 });
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#efe3c8", L >= 4 ? "#b8452f" : "#c9582f", L >= 5 ? "Mégastore" : L >= 2 ? "Boutique" : "Souvenirs", { glassGround: true, signBg: cA, signFg: cB, doorX: x1 - 2 });
         // auvent rayé
         const aw = [];
         for (let x = x0 + 0.3, i = 0; x < x1 - 0.3; x += 1.2, i++) aw.push(poly([[x, y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1, 2.95], [Math.min(x + 1.2, x1 - 0.3), y1 + 1.3, 2.45], [x, y1 + 1.3, 2.45]], i % 2 ? cB : cA, 0.25));
         s += aw.join("");
         if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.5, y1 + 1.8);
-        // maillot géant du club sur le flanc (à partir du niveau 2)
-        if (L >= 2) {
-          const jy = (y0 + y1) / 2, jz = hh - 0.9, sc = L >= 3 ? 1.4 : 1;
+        // maillot géant du club sur le flanc (à partir du niveau 3)
+        if (L >= 3) {
+          const jy = (y0 + y1) / 2, jz = hh - 0.9, sc = L >= 4 ? 1.4 : 1;
           const J = [[-1.1, 0], [-0.55, 0], [-0.3, -0.25], [0.3, -0.25], [0.55, 0], [1.1, 0], [1.1, -0.9], [0.65, -0.9], [0.65, -2.4], [-0.65, -2.4], [-0.65, -0.9], [-1.1, -0.9]];
           s += poly(J.map(([a, b]) => [x1 + 0.06, jy + a * sc * 1.2, jz + b * sc * 1.1]), cA, 0.35) +
             flat([[-0.65, -1.2], [0.65, -1.2], [0.65, -1.55], [-0.65, -1.55]].map(([a, b]) => [x1 + 0.08, jy + a * sc * 1.2, jz + b * sc * 1.1]), cB);
         }
-        if (L >= 3) for (let k = 0; k < 2; k++) { const fx = x0 + 1.5 + k * (w - 3); s += box(fx, fx + 0.2, y1 + 1.6, y1 + 1.8, 0, 5.5, "#dcdcdc", "#cfcfcf", "#b5b5b5", 0.3) + poly([[fx + 0.2, y1 + 1.7, 5.4], [fx + 2.4, y1 + 1.7, 5.1], [fx + 2.4, y1 + 1.7, 3.9], [fx + 0.2, y1 + 1.7, 4.2]], k ? cB : cA, 0.3); }
+        if (L >= 5) {
+          // écran géant sur la façade, au-dessus de la vitrine
+          const ex0 = x0 + w * 0.25, ex1 = x0 + w * 0.75;
+          s += poly(faceY(ex0 - 0.2, ex1 + 0.2, y1 + 0.05, 3.5, 6.4), "#1b1f27", 0.35) + poly(faceY(ex0, ex1, y1 + 0.08, 3.7, 6.2), dusk ? "#3a7bd5" : "#2d5fa8", 0.25) +
+            textOnFaceY((ex0 + ex1) / 2, y1 + 0.1, 5.3, "GO!", 1.2, cB, ex1 - ex0);
+          s += solar(x0 + 1, x1 - 2, y0 + 1.5, y1 - 2, hh + 0.36);
+        }
+        if (L >= 4) for (let k = 0; k < 2; k++) { const fx = x0 + 1.5 + k * (w - 3); s += box(fx, fx + 0.2, y1 + 1.6, y1 + 1.8, 0, 5.5, "#dcdcdc", "#cfcfcf", "#b5b5b5", 0.3) + poly([[fx + 0.2, y1 + 1.7, 5.4], [fx + 2.4, y1 + 1.7, 5.1], [fx + 2.4, y1 + 1.7, 3.9], [fx + 0.2, y1 + 1.7, 4.2]], k ? cB : cA, 0.3); }
         return s;
       }, hh); }
-    // Station TV (0-3) : paraboles, puis antenne en treillis rouge et blanche.
-    { const L = lv.tvStation, w = [0, 10, 14, 18][L] || 10, d = [0, 8, 12, 16][L] || 8, hh = [0, 4.5, 7.5, 11][L] || 4.5;
+    // Station TV (0-5) : paraboles (1 à 3), camion régie (3+), antenne en
+    // treillis rouge et blanche (4+, plus haute au 5).
+    { const L = lv.tvStation, w = [0, 9, 11, 13, 15, 18][L] || 9, d = [0, 7, 9, 11, 13, 16][L] || 7, hh = [0, 4, 5.5, 7.5, 9.5, 11][L] || 4;
       const x1 = 6, x0 = x1 - w, y1 = yb1, y0 = y1 - d, ax = x0 + w * 0.7, ay = y0 + d * 0.45;
-      const mastH = L >= 3 ? 12 : L >= 2 ? 8 : 0;
+      const mastH = L >= 5 ? 12 : L >= 4 ? 8 : 0;
       place("tvStation", -12, 6, yb1 - 16, yb1, () => {
-        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#d5dae2", "#4f5968", "HMTV", { signBg: "#b3202a", signFg: "#ffffff", glassGround: L >= 2 });
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#d5dae2", "#4f5968", "HMTV", { signBg: "#b3202a", signFg: "#ffffff", glassGround: L >= 3 });
         s += hedge(x0 + 0.5, x0 + 3, y1 + 1.8);
         // paraboles sur le toit
-        const dishes = [[x0 + 2.2, y0 + 2.2]].concat(L >= 2 ? [[x0 + 5.2, y0 + 2.4]] : []).concat(L >= 3 ? [[x0 + 8.2, y0 + 2.6]] : []);
+        const dishes = [[x0 + 2.2, y0 + 2.2]].concat(L >= 2 ? [[x0 + 5.2, y0 + 2.4]] : []).concat(L >= 4 ? [[x0 + 8.2, y0 + 2.6]] : []);
         dishes.forEach(([dx, dy]) => {
           const z = hh + 0.35, pts = [];
           for (let t = 0; t < 12; t++) { const a = (t / 12) * Math.PI * 2; pts.push([dx + Math.cos(a) * 1.1, dy + 0.9, z + 1.4 + Math.sin(a) * 1.1]); }
           s += box(dx - 0.15, dx + 0.15, dy + 0.6, dy + 0.9, z, z + 1.2, "#aab2bd", "#aab2bd", "#8b939e", 0.25) + poly(pts, "#eef2f6", 0.35) + flat(faceY(dx - 0.12, dx + 0.12, dy + 0.95, z + 1.3, z + 1.5), "#8b939e");
         });
-        // camion régie devant la station (niveau 2+)
-        if (L >= 2) {
+        // camion régie devant la station (niveau 3+)
+        if (L >= 3) {
           const vx = x0 + 1, vy = y1 + 1.6;
           s += box(vx, vx + 4.6, vy, vy + 1.8, 0.3, 2.2, "#f2f2f2", "#e6e6e6", "#c9c9c9", 0.35) + box(vx + 4.6, vx + 5.8, vy, vy + 1.8, 0.3, 1.7, "#e6e6e6", "#b3202a", "#8f1a22", 0.35) +
             flat(faceY(vx, vx + 4.6, vy + 1.82, 1.0, 1.4), "#b3202a") + textOnFaceY(vx + 2.3, vy + 1.85, 2.05, "HMTV", 0.55, "#b3202a", 3.8);
@@ -49760,27 +49780,30 @@ function clubDistrictBuilder(team) {
         if (L >= 4) s += solar(12 + 1.5, 12 + w - 4, yb1 - d + 3.5, yb1 - 1.5, hh + 0.36);
         return s;
       }, hh); }
-    // Musculation (0-3) : grande façade vitrée éclairée, enseigne haltère.
-    { const L = lv.gym, w = [0, 9, 13, 17][L] || 9, d = [0, 8, 13, 18][L] || 8, hh = [0, 3.8, 5.5, 7][L] || 3.8;
+    // Musculation (0-5) : grande façade vitrée éclairée, enseigne haltère ;
+    // agrès de plein air (4+), panneaux solaires (5).
+    { const L = lv.gym, w = [0, 8, 10, 12, 14, 17][L] || 8, d = [0, 7, 10, 13, 16, 18][L] || 7, hh = [0, 3.5, 4.5, 5.5, 6.5, 7.5][L] || 3.5;
       place("gym", xb1 - 17, xb1, -26, -6, () => {
         const x0 = xb1 - w, x1 = xb1, y0 = -6 - d, y1 = -6;
-        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#aeb8c3", L >= 3 ? "#2f8f82" : "#56636f", "Muscu", { glassGround: true, trim: L >= 2 ? "#2fbf9f" : cA });
+        let s = pad(x0, x1, y0, y1) + bldg(x0, x1, y0, y1, hh, "#aeb8c3", L >= 4 ? "#2f8f82" : "#56636f", "Muscu", { glassGround: true, trim: L >= 3 ? "#2fbf9f" : cA });
         // haltère sur la façade latérale
         const hz = hh - 1.3, hy = (y0 + y1) / 2;
         s += box(x1 + 0.05, x1 + 0.25, hy - 1.2, hy + 1.2, hz - 0.12, hz + 0.12, "#e8e8e8", "#e8e8e8", "#d0d0d0", 0.25) +
           box(x1 + 0.05, x1 + 0.35, hy - 1.5, hy - 1.0, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25) +
           box(x1 + 0.05, x1 + 0.35, hy + 1.0, hy + 1.5, hz - 0.6, hz + 0.6, "#2b2f35", "#2b2f35", "#1c1f24", 0.25);
         if (L >= 2) s += hedge(x0 + 0.5, x0 + 3.2, y1 + 1.8);
-        // agrès de plein air (niveau 3)
-        if (L >= 3) for (let k = 0; k < 3; k++) {
+        if (L >= 5) s += solar(x0 + 1, x1 - 2, y0 + 1.5, y1 - 2, hh + 0.36) + hedge(x1 - 3.5, x1 - 0.5, y1 + 1.8);
+        // agrès de plein air (niveau 4+)
+        if (L >= 4) for (let k = 0; k < 3; k++) {
           const bx = x0 + 1.5 + k * 2.4, by = y1 + 2.4;
           s += box(bx, bx + 0.15, by, by + 0.15, 0, 2.4, "#ccd2d8", "#ccd2d8", "#9aa2aa", 0.2) + box(bx + 1.6, bx + 1.75, by, by + 0.15, 0, 2.4, "#ccd2d8", "#ccd2d8", "#9aa2aa", 0.2) +
             line([[bx, by + 0.08, 2.35], [bx + 1.75, by + 0.08, 2.35]], "#ccd2d8", 0.45);
         }
         return s;
       }, hh); }
-    // Bien-être (0-3) : terrasse en bois, bassin (plus grand avec le niveau), transats, parasols.
-    { const L = lv.wellness, w = [0, 9, 13, 17][L] || 9, d = [0, 7, 10, 13][L] || 7, hh = [0, 2.8, 3.8, 5][L] || 2.8;
+    // Bien-être (0-5) : terrasse en bois, bassin (plus grand avec le niveau),
+    // transats, parasols ; jacuzzi (4+), étage et palmiers (5).
+    { const L = lv.wellness, w = [0, 8, 10, 12, 14, 17][L] || 8, d = [0, 6, 7, 8.5, 10, 12][L] || 6, hh = [0, 2.6, 3.1, 3.6, 4.4, 6][L] || 2.6;
       place("wellness", xb1 - 17, xb1, 1, 24, () => {
         const x0 = xb1 - w, x1 = xb1, y0 = 1, y1 = 1 + d;
         const deckY1 = Math.min(24, y1 + (L >= 2 ? 8 : 4.5));
@@ -49791,7 +49814,7 @@ function clubDistrictBuilder(team) {
         s += poly(rect(px0 - 0.3, px1 + 0.3, py0 - 0.3, py1 + 0.3, 0.04), "#e8e4dc", 0.35) + poly(rect(px0, px1, py0, py1, 0.06), "#3fa7d0", 0.3) +
           flat(rect(px0 + 0.4, px1 - 0.4, py0 + 0.4, py0 + 1.2, 0.07), "rgba(255,255,255,0.25)");
         // transats et parasols
-        const nL = L >= 3 ? 3 : L >= 2 ? 2 : 1;
+        const nL = L >= 4 ? 3 : L >= 3 ? 2 : 1;
         for (let i = 0; i < nL; i++) {
           const lx = x1 - 0.6 - (i + 1) * 1.6, ly = deckY1 - 0.4;
           if (L < 2) break;
@@ -49805,14 +49828,16 @@ function clubDistrictBuilder(team) {
         }
         // bassin éclairé le soir
         if (dusk) s += flat(rect(px0 + 0.3, px1 - 0.3, py0 + 0.3, py1 - 0.3, 0.07), "rgba(140,230,255,0.25)");
-        // jacuzzi rond (niveau 3)
-        if (L >= 3) {
+        // jacuzzi rond (niveau 4+)
+        if (L >= 4) {
           const jx = x0 + 2.2, jy = deckY1 - 1.8, jp = [], jw = [];
           for (let t = 0; t < 14; t++) { const a = (t / 14) * Math.PI * 2; jp.push([jx + Math.cos(a) * 1.5, jy + Math.sin(a) * 1.5, 0.3]); jw.push([jx + Math.cos(a) * 1.15, jy + Math.sin(a) * 1.15, 0.32]); }
           s += poly(jp, "#e8e4dc", 0.3) + poly(jw, "#58c3e6", 0.2);
         }
         if (L >= 2) s += palm(x0 - 0.2, deckY1 - 0.6);
-        if (L >= 3) s += palm(x0 - 0.2, y1 + 1.2) + hedge(x0 + 0.3, x0 + 3, deckY1 + 0.2);
+        if (L >= 3) s += hedge(x0 + 0.3, x0 + 3, deckY1 + 0.2);
+        if (L >= 4) s += palm(x0 - 0.2, y1 + 1.2);
+        if (L >= 5) s += palm(x1 - 0.5, deckY1 + 0.4) + solar(x0 + 1, x1 - 2, y0 + 1.2, y1 - 1.2, hh + 0.36);
         return s;
       }, hh); }
     return { lots, items, labels, frame };

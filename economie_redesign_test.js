@@ -84,7 +84,7 @@ assert(norm(doc.getElementById("economiePayroll").textContent).startsWith(charge
 const arena = norm(doc.getElementById("economieArenaSummary").textContent);
 assert(arena.includes("159 455 €") && !arena.includes("%") && !arena.includes("Prix"), "Carte Salle : uniquement la dernière recette (" + arena + ")");
 const shop = norm(doc.getElementById("economieFanShopSummary").textContent);
-assert(shop.includes("2 000 €") && shop.includes("Niveau 1/3") && shop.includes("Stand souvenirs") && !shop.includes("Amortissement") && !shop.includes("Niveau suivant"), "Carte Boutique : uniquement revenu + niveau (" + shop + ")");
+assert(shop.includes("2 000 €") && shop.includes("Niveau 1/5") && shop.includes("Stand souvenirs") && !shop.includes("Amortissement") && !shop.includes("Niveau suivant"), "Carte Boutique : uniquement revenu + niveau (" + shop + ")");
 
 assert(doc.getElementById("economieBudgetChart").querySelectorAll(".eco-chart-dot").length === 3, "Courbe du budget : départ + fin S1 + fin S2");
 const pageText = norm(doc.getElementById("economieSection").textContent);

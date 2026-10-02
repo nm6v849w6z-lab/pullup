@@ -654,3 +654,11 @@ points réellement ouverts.
   (`ECONNRESET`, trop de connexions HTTP locales simultanées). Tous passent
   individuellement — limiter à ~8 jobs en parallèle max, et relancer seul
   avant de conclure à une régression.
+
+- **Infrastructures à 5 niveaux (2026-10-02)** : Boutique, Station TV,
+  Musculation et Bien-être passent de 3 à 5 niveaux construisibles (+ 0 =
+  rien), comme le centre de formation. Niveaux 1-3 inchangés (aucune
+  migration) ; 4 et 5 : boutique 600 k/33 k, 1,1 M/66 k par semaine ; TV
+  800 k/43 k, 1,4 M/83 k ; musculation 550 k (blessures ×0,56), 900 k
+  (×0,48) ; bien-être 550 k (fatigue ×0,68), 900 k (×0,62). Quartier du
+  club (clubDistrictBuilder) : tailles et détails répartis sur 5 niveaux.

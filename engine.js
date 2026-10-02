@@ -2487,6 +2487,11 @@ const FAN_SHOP_LEVELS = [
   { level: 1, name: "Stand souvenirs", cost: 40000, weeklyRevenue: 2000 },
   { level: 2, name: "Boutique du club", cost: 120000, weeklyRevenue: 6000 },
   { level: 3, name: "Boutique officielle", cost: 300000, weeklyRevenue: 15000 },
+  // Niveaux 4 et 5 (retour utilisateur 2026-10-02 : « toutes les
+  // infrastructures doivent avoir 5 niveaux comme le centre de formation ») :
+  // même rentabilité qu'au niveau 3 (environ 33 semaines par palier).
+  { level: 4, name: "Grand magasin du club", cost: 600000, weeklyRevenue: 33000 },
+  { level: 5, name: "Mégastore", cost: 1100000, weeklyRevenue: 66000 },
 ];
 
 function fanShopInfo(level) {
@@ -2510,9 +2515,9 @@ function fanShopInfo(level) {
 //     infrastructure, les deux idées du retour utilisateur étant redondantes)
 //     : réduit l'accumulation de fatigue en match (voir MatchEngine.
 //     applyFatigue, fatigueMult) — joueurs plus frais en fin de match.
-// 4 paliers chacune (retour utilisateur explicite : "il faut 4 niveaux
-// (rien, pas cher, moyen cher, cher)"), le niveau 0 valant toujours "rien
-// construit, aucun effet".
+// À l'origine 4 paliers (« rien, pas cher, moyen cher, cher ») ; depuis le
+// 2026-10-02, 5 niveaux construisibles comme le centre de formation, le
+// niveau 0 valant toujours "rien construit, aucun effet".
 // ---------------------------------------------------------------------
 const CLUB_FACILITIES = {
   tvStation: {
@@ -2526,6 +2531,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Studio local", cost: 60000, weeklyRevenue: 3000 },
       { level: 2, name: "Chaîne régionale", cost: 170000, weeklyRevenue: 8500 },
       { level: 3, name: "Chaîne du club", cost: 400000, weeklyRevenue: 20000 },
+      { level: 4, name: "Chaîne nationale", cost: 800000, weeklyRevenue: 43000 },
+      { level: 5, name: "Média international", cost: 1400000, weeklyRevenue: 83000 },
     ],
   },
   gym: {
@@ -2536,6 +2543,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Salle basique", cost: 45000, injuryRiskMult: 0.90 },
       { level: 2, name: "Salle équipée", cost: 130000, injuryRiskMult: 0.78 },
       { level: 3, name: "Salle haut de gamme", cost: 300000, injuryRiskMult: 0.65 },
+      { level: 4, name: "Centre de performance", cost: 550000, injuryRiskMult: 0.56 },
+      { level: 5, name: "Centre de haute performance", cost: 900000, injuryRiskMult: 0.48 },
     ],
   },
   wellness: {
@@ -2546,6 +2555,8 @@ const CLUB_FACILITIES = {
       { level: 1, name: "Espace détente", cost: 45000, fatigueMult: 0.93 },
       { level: 2, name: "Spa du club", cost: 130000, fatigueMult: 0.85 },
       { level: 3, name: "Centre de récupération", cost: 300000, fatigueMult: 0.75 },
+      { level: 4, name: "Clinique du sport", cost: 550000, fatigueMult: 0.68 },
+      { level: 5, name: "Institut de récupération", cost: 900000, fatigueMult: 0.62 },
     ],
   },
 };

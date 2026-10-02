@@ -160,7 +160,7 @@ doc.querySelector('#arenaVisualCard .qd-label[data-district="gym"]').dispatchEve
 const gym = doc.querySelector('#facilityModalOverlay [data-facility-card="gym"]');
 if (!gym) throw new Error("❌ Cliquer sur la musculation devrait ouvrir sa brique.");
 if (gym.classList.contains("sl-fac--off")) throw new Error("❌ Une infrastructure construite ne devrait pas être grisée.");
-if (gym.querySelectorAll(".sl-pips span.on").length !== 2 || gym.querySelectorAll(".sl-pips span").length !== 3) throw new Error("❌ La jauge de la salle de musculation (niveau 2/3) devrait avoir 2 pastilles allumées sur 3.");
+if (gym.querySelectorAll(".sl-pips span.on").length !== 2 || gym.querySelectorAll(".sl-pips span").length !== 5) throw new Error("❌ La jauge de la salle de musculation (niveau 2/5) devrait avoir 2 pastilles allumées sur 5.");
 doc.querySelector("#facilityModalOverlay .qd-close").click();
 doc.querySelector('#arenaVisualCard [data-district="tvStation"]').dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
 const tv = doc.querySelector('#facilityModalOverlay [data-facility-card="tvStation"]');

@@ -16,7 +16,7 @@
 //   - Salle de musculation : réduit le risque de blessure en match.
 //   - Espace bien-être (spa + soins) : réduit l'accumulation de fatigue en
 //     match.
-// Chacune avec 4 paliers (0 = rien construit, aucun effet, jusqu'à 3 = le
+// Chacune avec 5 niveaux depuis le 2026-10-02 (0 = rien construit, aucun effet, jusqu'à 5 = le
 // plus cher/performant), exactement le nombre demandé.
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
@@ -38,7 +38,7 @@ function freshTeamAndLeague() {
 }
 
 // ---------------------------------------------------------------------
-// Partie 1 : CLUB_FACILITIES — structure (4 paliers chacune, niveau 0 = rien).
+// Partie 1 : CLUB_FACILITIES — structure (5 niveaux chacune, niveau 0 = rien).
 // ---------------------------------------------------------------------
 {
   const keys = Object.keys(CLUB_FACILITIES);
@@ -46,7 +46,7 @@ function freshTeamAndLeague() {
   if (keys.length !== 3) throw new Error(`❌ 3 infrastructures attendues (tvStation, gym, wellness), obtenu : ${keys.length}.`);
   keys.forEach(key => {
     const cfg = CLUB_FACILITIES[key];
-    if (cfg.levels.length !== 4) throw new Error(`❌ ${key} devrait avoir 4 paliers (rien, pas cher, moyen cher, cher), obtenu ${cfg.levels.length}.`);
+    if (cfg.levels.length !== 6) throw new Error(`❌ ${key} devrait avoir 5 niveaux construisibles + « rien » (comme le centre de formation, 2026-10-02), obtenu ${cfg.levels.length - 1}.`);
     if (cfg.levels[0].level !== 0 || cfg.levels[0].cost !== 0) throw new Error(`❌ ${key} : le palier 0 devrait être gratuit ("rien").`);
     for (let i = 1; i < cfg.levels.length; i++) {
       if (cfg.levels[i].cost <= cfg.levels[i - 1].cost) {
@@ -54,7 +54,8 @@ function freshTeamAndLeague() {
       }
     }
   });
-  console.log("✅ Les 3 infrastructures ont bien 4 paliers chacune (0 = rien), coût strictement croissant.");
+  console.log("✅ Les 3 infrastructures ont bien 5 niveaux chacune (0 = rien), coût strictement croissant.");
+  if (E.FAN_SHOP_LEVELS.length !== 6 || E.TRAINING_CENTER_LEVELS.length !== 5) throw new Error("❌ Boutique : 5 niveaux (+ rien) ; centre de formation : 5 niveaux.");
 
   // Performance strictement croissante avec le prix, palier par palier.
   const gymLevels = CLUB_FACILITIES.gym.levels;
@@ -353,6 +354,6 @@ console.log("✅ L'achat de la Station TV est bien persisté côté serveur.");
 
 win.close();
 server.close();
-console.log("\n✅ Autres infrastructures du club vérifiées : 3 nouvelles infrastructures à 4 paliers chacune, achat/rejet corrects, effets exacts (revenu station TV, réduction du risque de blessure, réduction de l'accumulation de fatigue), persistance fidèle (y compris repli propre sur une ancienne sauvegarde), action serveur isolée par équipe, et grille visible/fonctionnelle sur l'onglet Salle.");
+console.log("\n✅ Autres infrastructures du club vérifiées : 3 nouvelles infrastructures à 5 niveaux chacune, achat/rejet corrects, effets exacts (revenu station TV, réduction du risque de blessure, réduction de l'accumulation de fatigue), persistance fidèle (y compris repli propre sur une ancienne sauvegarde), action serveur isolée par équipe, et grille visible/fonctionnelle sur l'onglet Salle.");
 
 })().catch(e => { console.error(e); process.exit(1); });
