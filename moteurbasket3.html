@@ -13548,7 +13548,7 @@ const ArenaGen = (function () {
         (billboardStyle
           ? logoOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboardText, 1.9, billboardStyle, (y1 - y0) * 0.88)
           : textOnFaceX(x + 0.02, y, (z0 + z1) / 2 + 1, billboard, 1.9, empty ? '#f1f1ee' : (luminance(main) > 0.6 ? '#1a1a1a' : '#ffffff'), (y1 - y0) * 0.86)) +
-        (dusk ? `<ellipse cx="${f1(P(x + 2, y, z1)[0])}" cy="${f1(P(x + 2, y, z1)[1])}" rx="${f1(3 * K)}" ry="${f1(6 * K)}" fill="rgba(255,236,170,0.16)"/>` : '');
+''; // plus de halo du soir sur le panneau : il débordait (retour utilisateur 2026-10-02)
     };
     if (DX) DX.items.forEach((it) => decor.push({ ...it, kind: 'district' }));
     const drawHome = (o) => {
@@ -13775,7 +13775,8 @@ const ArenaGen = (function () {
         // derrière le panneau publicitaire.
         const haloHidden = [[0, 0], [-4, 0], [4, 0], [0, -4], [0, 4]].some(([dx, dy]) => hiddenByBillboard(o.x + 0.9 + dx, o.y + dy, 0));
         if (!haloHidden) s += `<ellipse cx="${f1(gnd[0])}" cy="${f1(gnd[1])}" rx="${f1(7 * K)}" ry="${f1(3.8 * K)}" fill="url(#${id}g)"/>`;
-        if (!hiddenByBillboard(o.x + 0.9, o.y, 6.2) && !hiddenByBillboard(o.x + 0.9, o.y, 7.4)) s += `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="0.6" fill="#fff6d6"/>`;
+        const headHidden = [[0, 0], [0, -1.2], [0, 1.2]].some(([dy, dz]) => [5.6, 6.2, 7.0, 7.8].some(z => hiddenByBillboard(o.x + 0.9, o.y + dy, z + dz)));
+        if (!headHidden) s += `<circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="1.6" fill="#ffd98a" opacity="0.35"/><circle cx="${f1(top[0])}" cy="${f1(top[1] + 0.8)}" r="0.6" fill="#fff6d6"/>`;
       });
       // projecteurs de toiture plus lumineux
       s += spots(spotsBack).replace(/opacity="0.22"/g, 'opacity="0.5"') + spots(spotsFront).replace(/opacity="0.22"/g, 'opacity="0.5"');
