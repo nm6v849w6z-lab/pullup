@@ -137,13 +137,13 @@ async function waitFor(fn, label, tries = 60) {
     check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Donnez vos ordres", "barre du haut : adversaire de ligue privée + bouton « Donnez vos ordres »");
     w.eval("TAB_HANDLERS.club()");
     const hero = d.querySelector(".hm-hero");
-    check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-dash-href='/ligues-privees']"), "tableau de bord : bandeau Prochain match = ligue privée");
+    check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-lp-orders]") && /Donnez vos ordres/.test(hero.textContent) && !/Niveau/.test(hero.textContent), "tableau de bord : bandeau Prochain match = ligue privée");
     check(![...d.querySelectorAll(".hm-task__title")].some(t => new RegExp(w.eval("league.teams[lpMyNextMatch().oppIdx].name")).test(t.textContent) && /Ordres de match/.test(t.textContent)) || w.eval("league.teams[lpMyNextMatch().oppIdx].name === teamB.name"), "la tâche « Ordres de match » vise toujours le match officiel");
     w.eval("TAB_HANDLERS.calendrier()");
     // Carte "Prochain match" du Calendrier : elle suit l'ordre chronologique
     // réel des lignes ; rendue ici directement pour une ligne de ligue privée.
-    const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false }); })()`);
-    check(/Prochain match · Ligue privée · J1/.test(card) && /data-tab="lp"/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton vers la ligue privée");
+    const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false, lpId: n.lp.id, lpOrdered: false }); })()`);
+    check(/Prochain match · Ligue privée · J1/.test(card) && /data-lp-orders="/.test(card) && /Donner les ordres/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton Donner les ordres");
     d.getElementById("topbarOrdersBtn").click();
     check(!d.getElementById("prepSection").classList.contains("hidden") && w.eval("tqEdit && tqEdit.kind") === "lp", "le bouton de la barre du haut ouvre les ordres de la ligue privée");
     w.eval("TAB_HANDLERS.calendrier()");

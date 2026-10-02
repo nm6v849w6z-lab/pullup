@@ -43291,7 +43291,7 @@ function dashRenderNextMatch(data) {
     ${m.rivalryHtml || ""}
     <div class="hm-hero__actions">
       ${m.privateLeague
-        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ligues-privees">Voir la ligue privée</button>
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
@@ -43977,6 +43977,7 @@ function dashboardDataFromGameState() {
     const oppTeam = league.teams[lpNext.oppIdx];
     nextMatch = {
       privateLeague: true,
+      lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders,
       competition: "Ligue privée",
       round: lpNext.round.index + 1,
       totalRounds: lpNext.lp.rounds.length,
@@ -47210,8 +47211,14 @@ function calendarNextMatchCardHtml(row) {
     ? `<button type="button" class="cal-next-btn" data-tab="coupe">Voir la Supercoupe</button>`
     : row.barrage
     ? `<button type="button" class="cal-next-btn" data-tab="ordres">Préparer le barrage</button>`
+    // Ligue privée et amical : le bouton ouvre leurs ordres, comme pour un
+    // match officiel (retour utilisateur 2026-10-02).
+    : row.competition === "lp" && row.lpId
+    ? `<button type="button" class="cal-next-btn" data-lp-orders="${escapeHtml(row.lpId)}">${row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
+    : row.competition === "fr" && row.frId && !row.frPending
+    ? `<button type="button" class="cal-next-btn" data-open-fr-orders="${escapeHtml(row.frId)}">${row.frOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "fr"
     ? `<button type="button" class="cal-next-btn" data-tab="amicaux">Voir les amicaux</button>`
     : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
@@ -47528,6 +47535,7 @@ function renderCalendrierSection() {
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
         isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
+        lpId: lp.id, lpOrdered: !!lp.myOrders,
       });
     });
   });
@@ -47564,6 +47572,7 @@ function renderCalendrierSection() {
       scheduledAt: f.at, fallbackOrder: 200000,
       isHome: isHomeFr, played, won: cls === "result-win", lost: cls === "result-loss",
       isLive: false, alreadyOrdered: false, isPrivate: true, frPending: f.status === "pending",
+      frId: f.id, frOrdered: !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex])),
     });
   });
 
@@ -51277,6 +51286,12 @@ function openPrivateLeagueOrders(lpId, tab) {
   renderOrdresGrid();
   if (typeof window.scrollTo === "function") try { window.scrollTo(0, 0); } catch (e) { /* jsdom */ }
 }
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-open-fr-orders]");
+  if (!b) return;
+  e.preventDefault();
+  openFriendlyOrders(b.dataset.openFrOrders);
+});
 document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("[data-lp-orders]");
   if (!b) return;
