@@ -5690,6 +5690,7 @@ window.HM_I18N_LT = {
   "Sans minutes cette semaine": "Šią savaitę be minučių",
   "Jour passé : plus modifiable": "Praėjusi diena: nebegalima keisti",
   "Jour de match officiel": "Oficialių rungtynių diena",
+  "Autocollants": "Lipdukai",
   "Porte-clés": "Raktų pakabukai",
   "Détail des ventes de produits dérivés": "Atributikos pardavimų detalės",
   "Voir le détail des ventes": "Žiūrėti pardavimų detales",

@@ -5690,6 +5690,7 @@ window.HM_I18N_PL = {
   "Sans minutes cette semaine": "Bez minut w tym tygodniu",
   "Jour passé : plus modifiable": "Miniony dzień: nie można już zmienić",
   "Jour de match officiel": "Dzień meczu oficjalnego",
+  "Autocollants": "Naklejki",
   "Porte-clés": "Breloki",
   "Détail des ventes de produits dérivés": "Szczegóły sprzedaży gadżetów",
   "Voir le détail des ventes": "Zobacz szczegóły sprzedaży",

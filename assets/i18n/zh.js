@@ -5690,6 +5690,7 @@ window.HM_I18N_ZH = {
   "Sans minutes cette semaine": "本周未上场",
   "Jour passé : plus modifiable": "已过去的日子：无法再修改",
   "Jour de match officiel": "正式比赛日",
+  "Autocollants": "贴纸",
   "Porte-clés": "钥匙扣",
   "Détail des ventes de produits dérivés": "周边商品销售明细",
   "Voir le détail des ventes": "查看销售明细",

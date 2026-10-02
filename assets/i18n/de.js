@@ -5690,6 +5690,7 @@ window.HM_I18N_DE = {
   "Sans minutes cette semaine": "Keine Spielminuten diese Woche",
   "Jour passé : plus modifiable": "Vergangener Tag: nicht mehr änderbar",
   "Jour de match officiel": "Pflichtspieltag",
+  "Autocollants": "Aufkleber",
   "Porte-clés": "Schlüsselanhänger",
   "Détail des ventes de produits dérivés": "Aufschlüsselung der Fanartikel-Verkäufe",
   "Voir le détail des ventes": "Verkäufe im Detail ansehen",

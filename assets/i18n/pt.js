@@ -5690,6 +5690,7 @@ window.HM_I18N_PT = {
   "Sans minutes cette semaine": "Sem minutos esta semana",
   "Jour passé : plus modifiable": "Dia passado: já não pode ser alterado",
   "Jour de match officiel": "Dia de jogo oficial",
+  "Autocollants": "Autocolantes",
   "Porte-clés": "Porta-chaves",
   "Détail des ventes de produits dérivés": "Detalhe das vendas de produtos",
   "Voir le détail des ventes": "Ver o detalhe das vendas",

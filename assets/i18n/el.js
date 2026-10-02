@@ -5690,6 +5690,7 @@ window.HM_I18N_EL = {
   "Sans minutes cette semaine": "Χωρίς λεπτά αυτή την εβδομάδα",
   "Jour passé : plus modifiable": "Περασμένη ημέρα: δεν αλλάζει πια",
   "Jour de match officiel": "Ημέρα επίσημου αγώνα",
+  "Autocollants": "Αυτοκόλλητα",
   "Porte-clés": "Μπρελόκ",
   "Détail des ventes de produits dérivés": "Ανάλυση πωλήσεων προϊόντων",
   "Voir le détail des ventes": "Δες την ανάλυση των πωλήσεων",

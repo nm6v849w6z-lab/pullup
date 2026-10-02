@@ -5715,6 +5715,7 @@ window.HM_I18N_EN = {
   "Sans minutes cette semaine": "No minutes this week",
   "Jour passé : plus modifiable": "Past day: can no longer be changed",
   "Jour de match officiel": "Official match day",
+  "Autocollants": "Stickers",
   "Porte-clés": "Keyrings",
   "Détail des ventes de produits dérivés": "Merchandise sales breakdown",
   "Voir le détail des ventes": "See sales breakdown",

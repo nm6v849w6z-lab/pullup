@@ -5753,6 +5753,7 @@ window.HM_I18N_IT = {
   "Sans minutes cette semaine": "Nessun minuto questa settimana",
   "Jour passé : plus modifiable": "Giorno passato: non più modificabile",
   "Jour de match officiel": "Giorno di partita ufficiale",
+  "Autocollants": "Adesivi",
   "Porte-clés": "Portachiavi",
   "Détail des ventes de produits dérivés": "Dettaglio delle vendite di merchandising",
   "Voir le détail des ventes": "Vedi il dettaglio delle vendite",

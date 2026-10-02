@@ -10861,7 +10861,8 @@ function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8
 function merchandiseWeeklyRevenue(team, divisionLevel) {
   const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
   if (!base || !team) return 0;
-  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige) / 100) * 100;
+  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 € « fait trop propre »).
+  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige));
 }
 
 // ---------------------------------------------------------------------
@@ -43279,40 +43280,48 @@ document.addEventListener("click", e => {
 // total affiché est exactement celui de la carte ; maillots répartis selon
 // la popularité des joueurs (niveau général). Aucun effet de jeu.
 const MERCH_ITEMS = [
-  { key: "jersey", label: "Maillots", price: 60, share: 0.40 },
+  { key: "jersey", label: "Maillots", price: 59, share: 0.40 },
   { key: "hoodie", label: "Sweats à capuche", price: 45, share: 0.14 },
-  { key: "scarf", label: "Écharpes", price: 20, share: 0.13 },
-  { key: "cap", label: "Casquettes", price: 25, share: 0.12 },
-  { key: "tee", label: "T-shirts", price: 25, share: 0.10 },
-  { key: "goodies", label: "Ballons et goodies", price: 15, share: 0.08 },
-  // Dernier article à 5 € : absorbe l'arrondi (recette hebdomadaire au
-  // multiple de 100 €, tous les prix multiples de 5) → total exact.
-  { key: "keyring", label: "Porte-clés", price: 5, share: 0.03 },
+  { key: "scarf", label: "Écharpes", price: 19, share: 0.13 },
+  { key: "cap", label: "Casquettes", price: 24, share: 0.12 },
+  { key: "tee", label: "T-shirts", price: 22, share: 0.10 },
+  { key: "goodies", label: "Ballons et goodies", price: 14, share: 0.09 },
+  // Dernier article à 1 € : absorbe l'arrondi → total exact.
+  { key: "sticker", label: "Autocollants", price: 1, share: 0.02 },
 ];
+// Petit aléa stable pour une semaine donnée (même affichage à chaque
+// ouverture, différent d'une semaine à l'autre) : rien de trop « propre ».
+function merchJitter(seed, k) {
+  let h = 2166136261;
+  for (const c of `${seed}:${k}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return ((h >>> 0) % 1000) / 1000; // [0, 1)
+}
 // Quantités entières par article (recette = quantité × prix), somme exacte.
 function merchBreakdown(team, total) {
+  const seed = `${team.name}|${team.week}`;
   const players = (team.players || []).slice().sort((a, b) => b.overall() - a.overall());
   const minOvr = players.length ? players[players.length - 1].overall() : 0;
-  // Popularité : écart au moins bon de l'effectif, au carré (les meilleurs
-  // joueurs vendent nettement plus de maillots).
-  const weights = players.map(p => Math.pow(p.overall() - minOvr + 4, 2));
+  // Popularité : écart au moins bon de l'effectif, au carré, ±20 % selon la
+  // semaine (les meilleurs joueurs vendent nettement plus de maillots).
+  const weights = players.map(p => Math.pow(p.overall() - minOvr + 4, 2) * (0.8 + 0.4 * merchJitter(seed, "p" + p.id)));
   const wSum = weights.reduce((a, w) => a + w, 0) || 1;
-  const jerseyItem = MERCH_ITEMS[0];
-  const jerseyUnits = Math.floor(total * jerseyItem.share / jerseyItem.price);
-  // Maillots par joueur (plus forts restes).
-  const raw = weights.map(w => jerseyUnits * w / wSum);
-  const units = raw.map(Math.floor);
-  let left = jerseyUnits - units.reduce((a, u) => a + u, 0);
-  raw.map((r, k) => k).sort((a, b) => (raw[b] - units[b]) - (raw[a] - units[a])).forEach(k => { if (left > 0) { units[k]++; left--; } });
-  const jerseys = players.map((p, k) => ({ player: p, units: units[k], revenue: units[k] * jerseyItem.price })).filter(r => r.units > 0);
+  const shares = MERCH_ITEMS.map((it, k) => it.share * (0.88 + 0.24 * merchJitter(seed, it.key)));
+  const sSum = shares.reduce((a, x) => a + x, 0);
   const items = MERCH_ITEMS.map((it, k) => {
-    const u = k === 0 ? jerseyUnits : Math.floor(total * it.share / it.price);
+    const u = Math.floor(total * (shares[k] / sSum) / it.price);
     return { ...it, units: u, revenue: u * it.price };
   });
   const last = items[items.length - 1];
   const others = items.slice(0, -1).reduce((a, it) => a + it.revenue, 0);
-  last.units = Math.max(0, Math.round((total - others) / last.price));
+  last.units = Math.max(0, total - others);
   last.revenue = last.units * last.price;
+  // Maillots par joueur (plus forts restes).
+  const jerseyUnits = items[0].units;
+  const raw = weights.map(w => jerseyUnits * w / wSum);
+  const units = raw.map(Math.floor);
+  let left = jerseyUnits - units.reduce((a, u) => a + u, 0);
+  raw.map((r, k) => k).sort((a, b) => (raw[b] - units[b]) - (raw[a] - units[a])).forEach(k => { if (left > 0) { units[k]++; left--; } });
+  const jerseys = players.map((p, k) => ({ player: p, units: units[k], revenue: units[k] * items[0].price })).filter(r => r.units > 0).sort((a, b) => b.units - a.units);
   return { items, jerseys };
 }
 function showMerchModal() {
@@ -43335,7 +43344,6 @@ function showMerchModal() {
   overlay.innerHTML = `<div class="upgrade-confirm-box pr-box mc-box" role="dialog" aria-modal="true" aria-labelledby="merchModalTitle">` +
     `<button type="button" class="sl-hist-close" data-merch-close aria-label="Fermer">×</button>` +
     `<h3 id="merchModalTitle">Produits dérivés : ventes de la semaine</h3>` +
-    `<p class="pr-intro"><span class="eco-pill-tag">Supporters : ${escapeHtml(moraleLabel(teamA.fanMorale).toLowerCase())}</span> <span>Plus vos supporters sont heureux, plus ils achètent. Les maillots les plus vendus sont ceux de vos meilleurs joueurs.</span></p>` +
     `<div class="mc-sec">${escapeHtml(`Maillots (${formatMoney(d.items[0].price)})`)}</div>` +
     `<table class="pr-table">${headPlayers}<tbody>${jerseyRows}</tbody></table>` +
     `<div class="mc-sec">Autres articles</div>` +

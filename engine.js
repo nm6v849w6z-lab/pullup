@@ -1924,7 +1924,8 @@ function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8
 function merchandiseWeeklyRevenue(team, divisionLevel) {
   const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
   if (!base || !team) return 0;
-  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige) / 100) * 100;
+  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 € « fait trop propre »).
+  return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige));
 }
 
 // ---------------------------------------------------------------------
