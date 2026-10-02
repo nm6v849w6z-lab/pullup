@@ -421,12 +421,11 @@ function paris(ms) {
   const friendlyDay = E.parisCalendarDayIndex(Date.UTC(2026, 8, 30, 13));
   team.markFriendlyDay(friendlyDay, [team.players[0].id]);
   const k0 = team.tacticalKnowledge.defense[target.value];
+  // Depuis le 2026-10-02 : la tactique prévue un jour d'amical devient une
+  // récupération pour les joueurs non retenus (jamais de tactique ce jour-là).
+  team.players.forEach(p => { p.condition = 50; });
   team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 8)); // jeudi
   if (team.tacticalKnowledge.defense[target.value] !== k0) throw new Error("❌ Un jour d'amical ne doit pas compter comme jour d'entraînement tactique.");
-  team.collectiveTraining = "recuperation";
-  team.collectiveTrainingLog.forEach(e => { e.collectiveTraining = "recuperation"; });
-  team.players.forEach(p => { p.condition = 50; });
-  team.syncCollectiveTrainingLog(Date.UTC(2026, 9, 1, 9));
   if (team.players[0].condition !== 50) throw new Error("❌ Le joueur retenu pour l'amical ne doit pas avoir le bonus de récupération.");
   if (team.players[1].condition !== 55) throw new Error("❌ Un joueur non retenu pour l'amical doit avoir le bonus de récupération.");
   const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(team))));
