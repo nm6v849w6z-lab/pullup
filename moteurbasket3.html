@@ -42590,15 +42590,11 @@ document.getElementById("staffSection").addEventListener("click", (e) => {
   if (d.staffGoto) { const [k, id] = d.staffGoto.split(":"); mkGotoStaff(k, Number(id)); return; }
   if (d.staffFire) {
     const role = STAFF_ROLE_BY_KEY[d.staffFire];
-    const result = role.fire(Date.now());
+    // Pas de message après le renvoi (retour utilisateur 2026-10-02) : la
+    // carte repasse simplement en « Poste à pourvoir ».
+    role.fire(Date.now());
     saveMyTeam();
     role.syncFire();
-    staffFeedback(
-      result.relisted
-        ? `${role.firedMsg}, il est remis sur le marché à prix réduit (-30%).`
-        : `${role.firedMsg}.`,
-      true
-    );
     renderStaffPanel();
   }
 });
