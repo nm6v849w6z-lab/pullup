@@ -28,10 +28,20 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   check(/Semaine 3/.test(txt()) && /Semaine 2/.test(txt()) && /Saison/.test(txt()), "trois vues : semaine en cours, précédente, saison");
   check(/Sponsors/.test(txt()) && /Salaires des joueurs/.test(txt()) && /sem\. 2/.test(txt()), "semaine en cours comparée à la précédente");
   check(/Solde de la semaine \(en cours\) ?−20\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")), "solde de la semaine en cours");
+  // Semaine en cours sans salaires encore versés : montant prévu d'après la
+  // semaine précédente (retour utilisateur 2026-10-02), puis vrais chiffres.
+  win.eval(`teamA.week = 4; teamA.recordTransaction("Billetterie vs C (3000 spect.)", 50000);`);
+  win.eval("ecoRenderLedger()");
+  const t4 = txt().replace(/\u202f|\u00a0/g, " ");
+  check(/Salaires des joueurs ?≈ −40 000/.test(t4) && /Sponsors ?≈ \+20 000/.test(t4) && /Solde prévu de la semaine ?≈ \+30 000/.test(t4) && /Montant prévu d'après la semaine 3/.test(t4), "semaine en cours : salaires et sponsors prévus (≈) au lieu de 0 : " + t4.slice(0, 400));
+  win.eval(`teamA.recordTransaction("Salaires des joueurs", -41000);`);
+  win.eval("ecoRenderLedger()");
+  check(/Salaires des joueurs ?−41 000/.test(txt().replace(/\u202f|\u00a0/g, " ")), "montant versé : vrai chiffre à la place du prévu");
+  win.eval(`teamA.week = 3`); win.eval("ecoRenderLedger()");
   card.querySelector('[data-eco-ledger="prev"]').click();
   check(/Sponsors/.test(txt()) && /Droits TV/.test(txt()) && /Boutique des supporters/.test(txt()), "semaine sans sponsor : ligne Sponsors (et Droits TV, Boutique) affichée quand même");
   card.querySelector('[data-eco-ledger="season"]').click();
-  check(/Solde de la saison ?\+30\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")) && /Billetterie/.test(txt()), "vue saison : cumul");
+  check(/Solde de la saison ?\+39\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")) && /Billetterie/.test(txt()), "vue saison : cumul");
   server.close();
   console.log("\n🏁 economy_ledger_test.js : tout est vert");
   process.exit(0);
