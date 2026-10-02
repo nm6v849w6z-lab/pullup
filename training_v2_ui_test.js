@@ -122,6 +122,11 @@ const D = 24 * 60 * 60 * 1000;
   vSel.value = String(win.eval("teamA.players[4].id"));
   vSel.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert(doc.querySelectorAll("#mentorshipCard .tm-pair").length === 1 && /1 \/ 2/.test(doc.getElementById("mentorshipCard").textContent), "parrainage créé (1 / 2)");
+  // Noms cliquables vers la fiche joueur (retour utilisateur 2026-10-02).
+  for (const sel of ["#trainingPlansCard .tm-who", "#mentorshipCard .who", "#experienceCard .tm-xp-row"]) {
+    const link = doc.querySelector(`${sel} .player-link[data-player-id]`);
+    assert(link && link.tagName === "BUTTON" && win.eval("teamA").players.some(p => String(p.id) === link.dataset.playerId), `nom cliquable : ${sel}`);
+  }
   await flush(dom);
   assert(readRawSave(savePath).team.mentorships.length === 1, "parrainage enregistré côté serveur");
   assert(doc.querySelectorAll("#experienceCard .tm-xp-row").length === win.eval("teamA.players.length"), "carte Expérience : une ligne par joueur");
