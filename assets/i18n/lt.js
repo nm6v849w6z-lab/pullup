@@ -5690,6 +5690,8 @@ window.HM_I18N_LT = {
   "Sans minutes cette semaine": "Šią savaitę be minučių",
   "Jour passé : plus modifiable": "Praėjusi diena: nebegalima keisti",
   "Jour de match officiel": "Oficialių rungtynių diena",
+  "Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.": "Blankios sumos yra numatomos pagal dabartinę klubo padėtį ir bus išmokėtos pirmadienio atnaujinimo metu. Tikri skaičiai pasirodys juos išmokėjus.",
+  "Prévu": "Numatoma",
   "Prévu, d'après la semaine {0}": "Numatoma pagal {0} savaitę",
   "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Numatoma suma pagal {0} savaitę, išmokama pirmadienio atnaujinimo metu. Tikri skaičiai pasirodys savaitei pasibaigus.",
   "Solde prévu de la semaine": "Numatomas savaitės balansas",

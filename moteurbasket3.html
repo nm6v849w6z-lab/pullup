@@ -5625,7 +5625,7 @@
   .eco-label{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); font-weight:600;}
   .wk-card{margin:18px 0;}
   .wk-row .v.zero{color:var(--ink-faint) !important;}
-  .wk-row .v.est{opacity:.75;}
+  .wk-row .v.est{opacity:.55;}
   .wk-note{margin:10px 0 0; font-size:12px; color:var(--ink-dim);}
   .wk-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
   .wk-tabs{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:var(--panel-2); border:1px solid var(--line); max-width:100%; overflow-x:auto;}
@@ -11547,7 +11547,8 @@ const FINANCE_CATEGORIES = [
   { key: "tvstation", dir: "in", label: "Station TV", re: /^Recettes station TV/ },
   { key: "prizes", dir: "in", label: "Primes (coupe, montée…)", re: /^Prime de (Coupe|Supercoupe|montée)/ },
   { key: "sales", dir: "in", label: "Ventes de joueurs", re: /^Vente de / },
-  { key: "subsidy", dir: "in", label: "Subvention de démarrage", re: /^Subvention de démarrage/ },
+  // Subvention de démarrage : rangée dans « Autres recettes » (retour
+  // utilisateur 2026-10-02 : « enlève la ligne, mets ça dans autre »).
   { key: "other_in", dir: "in", label: "Autres recettes", re: null },
   { key: "wages", dir: "out", label: "Salaires des joueurs", re: /^Salaires des joueurs/ },
   { key: "staff", dir: "out", label: "Salaires du staff", re: /^Salaire du staff/ },
@@ -48328,6 +48329,7 @@ function ecoRecurring() {
     { label: "Recruteur", amount: teamA.recruiterSalary(), color: "#4cc9a0" },
     { label: "Médecin", amount: teamA.doctorSalary(), color: "#e8707a" },
     { label: "Kiné", amount: teamA.physioSalary(), color: "#e0c35a" },
+    { label: "Entraîneur adjoint", amount: typeof teamA.assistantCoachSalary === "function" ? teamA.assistantCoachSalary() : 0, color: "#c9a227" },
     { label: "Centre de formation", amount: youth, color: "#7f8ca3" },
   ].filter(x => x.amount > 0);
   const revenueParts = [];
@@ -48336,7 +48338,7 @@ function ecoRecurring() {
   if (shop) revenueParts.push("boutique");
   if (station) revenueParts.push("station TV");
   const chargeParts = ["joueurs"];
-  if (teamA.trainer || teamA.videoAnalyst || teamA.recruiter || teamA.doctor || teamA.physio) chargeParts.push("staff");
+  if (teamA.trainer || teamA.videoAnalyst || teamA.recruiter || teamA.doctor || teamA.physio || teamA.assistantCoach) chargeParts.push("staff");
   if (youth) chargeParts.push("académie");
   const revenue = tv + merch + shop + station;
   const charges = payroll.reduce((s, x) => s + x.amount, 0);
@@ -48589,10 +48591,16 @@ function ecoBindEvents() {
 // reconstitués depuis le journal des 40 dernières transactions pour les
 // semaines d'avant cette fonctionnalité) ou de toute la saison.
 let ecoLedgerView = "week";
+// Anciennes lignes « subsidy » (avant le 2026-10-02) → Autres recettes.
+function ecoLedgerNormalize(row) {
+  const out = { ...row };
+  if (out.subsidy) { out.other_in = (out.other_in || 0) + out.subsidy; delete out.subsidy; }
+  return out;
+}
 function ecoLedgerWeek(week) {
   const seasonNo = (teamA.seasonHistory || []).length + 1;
   const row = (teamA.financeLedger || {})[`${seasonNo}:${week}`];
-  if (row) return row;
+  if (row) return ecoLedgerNormalize(row);
   const out = {};
   (teamA.transactions || []).filter(t => t.week === week).forEach(t => {
     const c = financeCategoryOf(t.label, t.amount);
@@ -48607,7 +48615,7 @@ function ecoLedgerSeason() {
   Object.entries(teamA.financeLedger || {}).forEach(([k, row]) => {
     if (!k.startsWith(`${seasonNo}:`)) return;
     any = true;
-    Object.entries(row).forEach(([c, v]) => { out[c] = (out[c] || 0) + v; });
+    Object.entries(ecoLedgerNormalize(row)).forEach(([c, v]) => { out[c] = (out[c] || 0) + v; });
   });
   if (!any) for (let w = 1; w <= teamA.week; w++) Object.entries(ecoLedgerWeek(w)).forEach(([c, v]) => { out[c] = (out[c] || 0) + v; });
   return out;
@@ -48625,12 +48633,20 @@ function ecoRenderLedger() {
   // pas encore tombés ; plutôt qu'un 0, on affiche le montant prévu d'après
   // la semaine précédente (atténué). Une fois la semaine passée,
   // ce sont les vrais chiffres.
-  const RECURRING = { tv: 1, sponsors: 1, merch: 1, shop: 1, tvstation: 1, wages: 1, staff: 1, academy: 1, other_out: 1 };
+  // Prévu = situation actuelle (contrats de sponsors en cours, salaires,
+  // division…), pas la semaine d'avant : un sponsor signé cette semaine
+  // compte déjà (retour utilisateur 2026-10-02). « Autres dépenses » n'a pas
+  // de calcul : semaine précédente.
   const est = {};
-  if (ecoLedgerView === "week" && cmp) {
-    Object.keys(RECURRING).forEach(k => { if (!(cur[k] || 0) && (cmp[k] || 0)) est[k] = true; });
+  if (ecoLedgerView === "week") {
+    const rec = ecoRecurring();
+    const staffPay = rec.payroll.filter(x => x.label !== "Joueurs" && x.label !== "Centre de formation").reduce((a, x) => a + x.amount, 0);
+    const youthPay = (rec.payroll.find(x => x.label === "Centre de formation") || {}).amount || 0;
+    const sponsorsWeekly = (teamA.sponsorContracts || []).filter(c => c.status === "active").reduce((a, c) => a + (c.weekly || 0), 0);
+    const expected = { tv: rec.tv, sponsors: sponsorsWeekly, merch: rec.merch, shop: rec.shop, tvstation: rec.station, wages: -rec.players, staff: -staffPay, academy: -youthPay, other_out: cmp ? (cmp.other_out || 0) : 0 };
+    Object.entries(expected).forEach(([k, v]) => { if (!(cur[k] || 0) && v) est[k] = v; });
   }
-  const val = (o, k) => (o === cur && est[k] ? cmp[k] : (o && o[k]) || 0);
+  const val = (o, k) => (o === cur && est[k] != null ? est[k] : (o && o[k]) || 0);
   const anyEst = Object.keys(est).length > 0;
   const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "") + ecoMoney(Math.abs(n)).replace(/^[-−+]/, "");
   const col = dir => {
@@ -48642,8 +48658,8 @@ function ecoRenderLedger() {
     const tot = o => FINANCE_CATEGORIES.filter(c => c.dir === dir).reduce((a, c) => a + val(o, c.key), 0);
     const rows = cats.map(c => {
       const v = val(cur, c.key);
-      const cls = est[c.key] ? " est" : v === 0 ? " zero" : "";
-      return `<div class="wk-row"><span class="l">${escapeHtml(c.label)}</span><b class="v${cls}"${est[c.key] ? ` title="Prévu, d'après la semaine ${week - 1}"` : ""}>${signed(v)}</b>${cmp ? `<span class="p">${signed(cmp[c.key] || 0)}</span>` : ""}</div>`;
+      const cls = est[c.key] != null ? " est" : v === 0 ? " zero" : "";
+      return `<div class="wk-row"><span class="l">${escapeHtml(c.label)}</span><b class="v${cls}"${est[c.key] != null ? ` title="Prévu"` : ""}>${signed(v)}</b>${cmp ? `<span class="p">${signed(cmp[c.key] || 0)}</span>` : ""}</div>`;
     }).join("");
     return `<div class="wk-col wk-${dir}"><div class="wk-colhead"><span>${dir === "in" ? "Recettes" : "Dépenses"}</span>${cmp ? `<span class="wk-cmp"><span>sem. ${ecoLedgerView === "prev" ? week - 2 : week - 1}</span></span>` : ""}</div>` +
       (rows || `<p class="wk-empty">${dir === "in" ? "Aucune recette." : "Aucune dépense."}</p>`) +
@@ -48653,7 +48669,7 @@ function ecoRenderLedger() {
   el.innerHTML = `<div class="wk-head"><span class="eco-label">Bilan</span>` +
     `<div class="wk-tabs" role="group" aria-label="Période du bilan">${views.map(([k, lab]) => `<button type="button" class="${k === ecoLedgerView ? "on" : ""}" data-eco-ledger="${k}" aria-pressed="${k === ecoLedgerView}">${escapeHtml(lab)}</button>`).join("")}</div></div>` +
     `<div class="wk-grid">${col("in")}${col("out")}</div>` +
-    (anyEst ? `<p class="wk-note">Montant prévu d'après la semaine ${week - 1}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.</p>` : "") +
+    (anyEst ? `<p class="wk-note">Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.</p>` : "") +
     `<div class="wk-bal ${net >= 0 ? "pos" : "neg"}"><span>${ecoLedgerView === "season" ? "Solde de la saison" : ecoLedgerView === "week" ? (anyEst ? "Solde prévu de la semaine" : "Solde de la semaine (en cours)") : "Solde de la semaine"}</span><b>${signed(net)}</b></div>`;
 }
 

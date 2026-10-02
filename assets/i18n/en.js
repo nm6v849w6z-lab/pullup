@@ -5715,6 +5715,8 @@ window.HM_I18N_EN = {
   "Sans minutes cette semaine": "No minutes this week",
   "Jour passé : plus modifiable": "Past day: can no longer be changed",
   "Jour de match officiel": "Official match day",
+  "Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.": "Dimmed amounts are expected, based on the club's current situation, and will be paid at the Monday update. The real figures appear once paid.",
+  "Prévu": "Expected",
   "Prévu, d'après la semaine {0}": "Expected, based on week {0}",
   "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Expected amount based on week {0}, paid at the Monday update. The real figures appear once the week is over.",
   "Solde prévu de la semaine": "Expected balance for the week",

@@ -5690,6 +5690,8 @@ window.HM_I18N_EL = {
   "Sans minutes cette semaine": "Χωρίς λεπτά αυτή την εβδομάδα",
   "Jour passé : plus modifiable": "Περασμένη ημέρα: δεν αλλάζει πια",
   "Jour de match officiel": "Ημέρα επίσημου αγώνα",
+  "Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.": "Τα αχνά ποσά είναι αναμενόμενα, με βάση την τρέχουσα κατάσταση του συλλόγου, και θα καταβληθούν στην ενημέρωση της Δευτέρας. Τα πραγματικά ποσά εμφανίζονται μόλις καταβληθούν.",
+  "Prévu": "Αναμενόμενο",
   "Prévu, d'après la semaine {0}": "Αναμενόμενο, με βάση την εβδομάδα {0}",
   "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Αναμενόμενο ποσό με βάση την εβδομάδα {0}, καταβάλλεται στην ενημέρωση της Δευτέρας. Τα πραγματικά ποσά εμφανίζονται όταν τελειώσει η εβδομάδα.",
   "Solde prévu de la semaine": "Αναμενόμενο υπόλοιπο εβδομάδας",

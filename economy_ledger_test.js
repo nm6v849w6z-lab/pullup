@@ -9,7 +9,7 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
 (async () => {
   const cat = Engine.financeCategoryOf;
   check(cat("Billetterie vs Nice (3000 spect.)", 1) === "tickets" && cat("Prime de victoire Bar", 1) === "sponsors" && cat("Salaire du staff (médecin)", -1) === "staff"
-    && cat("Station TV : Studio local", -1) === "works" && cat("Achat de X (enchères)", -1) === "purchases" && cat("Subvention de démarrage", 1) === "subsidy" && cat("Sponsor Fnac (Maillot)", 1) === "sponsors", "catégories des transactions (subvention et sponsors à part)");
+    && cat("Station TV : Studio local", -1) === "works" && cat("Achat de X (enchères)", -1) === "purchases" && cat("Subvention de démarrage", 1) === "other_in" && cat("Sponsor Fnac (Maillot)", 1) === "sponsors", "catégories des transactions (subvention dans Autres recettes, sponsors à part)");
   const lg = Engine.generateLeague(Engine.generateStartingRoster("X"));
   const t = lg.teams[0];
   t.week = 4; t.recordTransaction("Salaires des joueurs", -1000); t.recordTransaction("Droits TV (Division I)", 5000); t.recordTransaction("Droits TV (Division I)", 5000);
@@ -27,16 +27,22 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   const txt = () => card.textContent.replace(/\s+/g, " ");
   check(/Semaine 3/.test(txt()) && /Semaine 2/.test(txt()) && /Saison/.test(txt()), "trois vues : semaine en cours, précédente, saison");
   check(/Sponsors/.test(txt()) && /Salaires des joueurs/.test(txt()) && /sem\. 2/.test(txt()), "semaine en cours comparée à la précédente");
-  check(/Solde de la semaine \(en cours\) ?−20\s?000/.test(txt().replace(/\u202f|\u00a0/g," ")), "solde de la semaine en cours");
-  // Semaine en cours sans salaires encore versés : montant prévu d'après la
-  // semaine précédente (retour utilisateur 2026-10-02), puis vrais chiffres.
-  win.eval(`teamA.week = 4; teamA.recordTransaction("Billetterie vs C (3000 spect.)", 50000);`);
+  // Semaine en cours (retour utilisateur 2026-10-02) : ce qui n'est pas
+  // encore versé est PRÉVU d'après la situation actuelle (salaires, droits TV,
+  // produits dérivés, contrats de sponsors en cours), jamais 0.
+  win.eval(`teamA.week = 4; teamA.sponsorContracts = [{ id: "s1", status: "active", weekly: 12345, sponsorName: "Test", slotLabel: "Maillot" }]; teamA.recordTransaction("Billetterie vs C (3000 spect.)", 50000);`);
   win.eval("ecoRenderLedger()");
+  const fmt = n => win.eval(`ecoMoney(${n})`).replace(/\u202f|\u00a0/g, " ").replace(/^[-−+]/, "");
   const t4 = txt().replace(/\u202f|\u00a0/g, " ");
-  check(/Salaires des joueurs ?−40 000/.test(t4) && /Sponsors ?\+20 000/.test(t4) && /Solde prévu de la semaine ?\+30 000/.test(t4) && /Montant prévu d'après la semaine 3/.test(t4), "semaine en cours : salaires et sponsors prévus au lieu de 0 : " + t4.slice(0, 400));
+  const wages = win.eval("teamA.players.reduce((s, p) => s + p.salary, 0)");
+  const merch = win.eval("ecoRecurring().merch");
+  check(new RegExp("Salaires des joueurs ?−" + fmt(wages)).test(t4) && /Sponsors ?\+12 345/.test(t4) && (!merch || new RegExp("Produits dérivés ?\\+" + fmt(merch)).test(t4))
+    && /Solde prévu de la semaine/.test(t4) && /prévus d'après la situation actuelle/.test(t4) && !/≈/.test(t4), "semaine en cours : salaires, sponsors et produits dérivés prévus d'après la situation actuelle : " + t4.slice(0, 500));
+  check(!/Subvention/.test(t4), "plus de ligne Subvention de démarrage (dans Autres recettes)");
   win.eval(`teamA.recordTransaction("Salaires des joueurs", -41000);`);
   win.eval("ecoRenderLedger()");
   check(/Salaires des joueurs ?−41 000/.test(txt().replace(/\u202f|\u00a0/g, " ")), "montant versé : vrai chiffre à la place du prévu");
+  win.eval(`teamA.sponsorContracts = []`);
   win.eval(`teamA.week = 3`); win.eval("ecoRenderLedger()");
   card.querySelector('[data-eco-ledger="prev"]').click();
   check(/Sponsors/.test(txt()) && /Droits TV/.test(txt()) && /Boutique des supporters/.test(txt()), "semaine sans sponsor : ligne Sponsors (et Droits TV, Boutique) affichée quand même");

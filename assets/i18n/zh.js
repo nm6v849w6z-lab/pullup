@@ -5690,6 +5690,8 @@ window.HM_I18N_ZH = {
   "Sans minutes cette semaine": "本周未上场",
   "Jour passé : plus modifiable": "已过去的日子：无法再修改",
   "Jour de match officiel": "正式比赛日",
+  "Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.": "淡色金额为依据俱乐部当前情况的预计数，将在周一更新时结算。结算后显示实际数字。",
+  "Prévu": "预计",
   "Prévu, d'après la semaine {0}": "预计，依据第{0}周",
   "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "依据第{0}周的预计金额，在周一更新时结算。本周结束后显示实际数字。",
   "Solde prévu de la semaine": "本周预计结余",

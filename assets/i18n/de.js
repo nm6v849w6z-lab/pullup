@@ -5690,6 +5690,8 @@ window.HM_I18N_DE = {
   "Sans minutes cette semaine": "Keine Spielminuten diese Woche",
   "Jour passé : plus modifiable": "Vergangener Tag: nicht mehr änderbar",
   "Jour de match officiel": "Pflichtspieltag",
+  "Les montants atténués sont prévus d'après la situation actuelle du club et seront versés à la mise à jour du lundi. Les vrais chiffres s'affichent une fois versés.": "Abgeschwächte Beträge sind erwartet, basierend auf der aktuellen Lage des Vereins, und werden beim Montags-Update gezahlt. Die echten Zahlen erscheinen nach der Zahlung.",
+  "Prévu": "Erwartet",
   "Prévu, d'après la semaine {0}": "Erwartet, basierend auf Woche {0}",
   "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Erwarteter Betrag basierend auf Woche {0}, gezahlt beim Montags-Update. Die echten Zahlen erscheinen, sobald die Woche vorbei ist.",
   "Solde prévu de la semaine": "Erwarteter Wochensaldo",
