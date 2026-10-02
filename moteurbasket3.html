@@ -3181,10 +3181,12 @@
      colonne Action assez large pour "Modifier vos ordres" (il débordait
      et était coupé par le bord du tableau), un peu moins de vide entre
      l'adversaire et le lieu. */
-  .cal-col-date{width:112px;} .cal-col-round{width:84px;} .cal-col-result{width:108px;} .cal-col-action{width:196px;}
+  .cal-col-date{width:112px;} .cal-col-round{width:100px;} .cal-col-result{width:108px;} .cal-col-action{width:196px;}
   .cal-c-date{white-space:nowrap; padding-left:16px !important;}
   .cal-day{font-weight:600; color:var(--ink);}
   .cal-row[data-status="played"] .cal-day{color:var(--ink-dim);}
+  /* Étiquettes (J11, Amical, LP J1, Coupe 1/8…) centrées les unes sous les autres (retour utilisateur 2026-10-02). */
+  td.cal-c-round{text-align:center;}
   .cal-round{font-weight:700; color:var(--ink-dim); text-decoration:none; font-size:13px;}
   .cal-row.me .cal-round{color:var(--amber);}
   .cal-cup-badge{display:inline-block; white-space:nowrap; text-decoration:none; font-size:12px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(57,135,229,.15); color:#8fb9f0;}
