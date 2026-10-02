@@ -14,6 +14,7 @@
 // =====================================================================
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const Engine = require("../engine.js");
 const Calendar = require("./calendar.js");
 
@@ -72,6 +73,7 @@ function defaultSavePath() {
 let fetchImpl = (...args) => fetch(...args);
 function _setFetchImplForTests(fn) {
   fetchImpl = fn || ((...args) => fetch(...args));
+  clearRedisCache();
 }
 
 // Clés Redis FIXES (jamais dérivées de savePath, voir commentaire
@@ -166,7 +168,55 @@ function upstashConfigured() {
 // load() plus bas pour la distinction "pas encore de sauvegarde" vs "échec
 // de lecture transitoire", toutes deux actuellement traitées pareil côté
 // appelant, comme c'était déjà le cas pour un fichier local corrompu).
-async function redisGet(key) {
+// Volume transféré (incident 2026-10-02 : base Upstash suspendue, 15 Go
+// transférés pour 10 Go autorisés par mois, chaque requête relisant et
+// réécrivant un championnat entier de 0,4 à 1 Mo) :
+//   1. Compression : valeurs écrites en « gz1: » + gzip en base64 (environ
+//      7 fois plus petites) ; une ancienne valeur en JSON clair reste lue
+//      telle quelle.
+//   2. Mémoire : le serveur (une seule instance) garde la dernière valeur
+//      lue ou écrite de chaque clé pendant REDIS_CACHE_TTL_MS, dans la limite
+//      de REDIS_CACHE_MAX_BYTES (les plus anciennes sortent d'abord). Une
+//      écriture faite par un AUTRE programme sur la même base n'est vue
+//      qu'après expiration (10 min).
+const REDIS_COMPRESS_PREFIX = "gz1:";
+const REDIS_CACHE_TTL_MS = 10 * 60 * 1000;
+const REDIS_CACHE_MAX_BYTES = 120 * 1024 * 1024;
+const REDIS_CACHE_MAX_ENTRY = 8 * 1024 * 1024;
+const redisCache = new Map(); // key -> { value, at, size }
+let redisCacheBytes = 0;
+function clearRedisCache() { redisCache.clear(); redisCacheBytes = 0; }
+function redisCacheGet(key) {
+  const e = redisCache.get(key);
+  if (!e) return undefined;
+  if (Date.now() - e.at > REDIS_CACHE_TTL_MS) { redisCache.delete(key); redisCacheBytes -= e.size; return undefined; }
+  // Plus récemment utilisée : en fin de Map.
+  redisCache.delete(key); redisCache.set(key, e);
+  return e.value;
+}
+function redisCacheSet(key, value) {
+  const old = redisCache.get(key);
+  if (old) { redisCache.delete(key); redisCacheBytes -= old.size; }
+  const size = value == null ? 16 : value.length * 2;
+  if (size > REDIS_CACHE_MAX_ENTRY) return;
+  redisCache.set(key, { value, at: Date.now(), size });
+  redisCacheBytes += size;
+  for (const [k, e] of redisCache) {
+    if (redisCacheBytes <= REDIS_CACHE_MAX_BYTES) break;
+    redisCache.delete(k); redisCacheBytes -= e.size;
+  }
+}
+function redisEncode(value) {
+  return REDIS_COMPRESS_PREFIX + zlib.gzipSync(Buffer.from(String(value), "utf-8"), { level: 6 }).toString("base64");
+}
+function redisDecode(stored) {
+  if (typeof stored !== "string" || !stored.startsWith(REDIS_COMPRESS_PREFIX)) return stored;
+  return zlib.gunzipSync(Buffer.from(stored.slice(REDIS_COMPRESS_PREFIX.length), "base64")).toString("utf-8");
+}
+
+async function redisGet(key, opts = {}) {
+  const cached = opts.fresh ? undefined : redisCacheGet(key);
+  if (cached !== undefined) return cached;
   const url = `${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`;
   const res = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
@@ -175,20 +225,30 @@ async function redisGet(key) {
   const data = await res.json();
   // Réponse d'erreur d'Upstash (quota, jeton…) : échec, jamais « clé absente ».
   if (data && data.error) throw new Error(`Upstash GET ${key} : ${data.error}`);
-  return data && typeof data.result === "string" ? data.result : null;
+  const value = data && typeof data.result === "string" ? redisDecode(data.result) : null;
+  redisCacheSet(key, value);
+  return value;
 }
 
 // Écrit `value` (déjà sérialisée en JSON par l'appelant) pour `key`. Comme
 // redisGet, ne fait qu'échouer par exception — c'est save()/saveMultiLeague()
 // ci-dessous qui décide de l'avertir sans planter (voir leur commentaire).
+// La mémoire est mise à jour même si l'envoi échoue : le serveur continue
+// sur la dernière version connue.
 async function redisSet(key, value) {
+  // Rien n'a changé depuis la dernière lecture/écriture : pas d'envoi.
+  const e = redisCache.get(key);
+  if (e && e.value === value && Date.now() - e.at <= REDIS_CACHE_TTL_MS) return;
+  redisCacheSet(key, value);
   const url = `${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(key)}`;
   const res = await fetchImpl(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
-    body: value,
+    body: redisEncode(value),
   });
   if (!res.ok) throw new Error(`Upstash SET ${key} a échoué (HTTP ${res.status}).`);
+  const data = typeof res.json === "function" ? await Promise.resolve().then(() => res.json()).catch(() => null) : null;
+  if (data && data.error) throw new Error(`Upstash SET ${key} : ${data.error}`);
 }
 
 // ---------------------------------------------------------------------
@@ -640,7 +700,7 @@ async function storageHealth(savePath = defaultMultiLeaguePath()) {
   const t0 = Date.now();
   try {
     let raw;
-    if (upstashConfigured()) raw = await redisGet(where.redis);
+    if (upstashConfigured()) raw = await redisGet(where.redis, { fresh: true });
     else raw = fs.existsSync(where.file) ? fs.readFileSync(where.file, "utf-8") : null;
     let leagues = null;
     if (raw != null) leagues = (JSON.parse(raw).leagues || []).length;
@@ -650,7 +710,7 @@ async function storageHealth(savePath = defaultMultiLeaguePath()) {
   }
 }
 module.exports = {
-  storageHealth,
+  storageHealth, redisGet, redisSet, clearRedisCache, redisEncode, redisDecode,
   SAVE_VERSION, defaultSavePath, createNewCareer,
   serialize, deserialize, load, save, loadOrCreate,
   // Multi-manager (voir bloc dédié plus haut) :

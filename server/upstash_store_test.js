@@ -114,6 +114,7 @@ await withEnv({ UPSTASH_REDIS_REST_URL: "https://fake-upstash.example", UPSTASH_
     if (!setCall.url.startsWith("https://fake-upstash.example/set/")) throw new Error(`❌ L'URL d'écriture devrait être construite à partir de UPSTASH_REDIS_REST_URL, obtenu '${setCall.url}'.`);
     if (!setCall.url.includes(encodeURIComponent(store.REDIS_KEYS.league))) throw new Error("❌ L'URL d'écriture devrait porter la clé fixe 'pullup:league', jamais dérivée de savePath.");
 
+    store.clearRedisCache(); // relecture « après redémarrage » : sans la mémoire du serveur
     const loaded = await store.load(ignoredSavePath);
     if (!loaded) throw new Error("❌ load() devrait relire la sauvegarde qu'on vient d'écrire sur le faux Redis.");
     if (loaded.team.budget !== 13579) throw new Error(`❌ Le budget devrait survivre au round-trip Redis, obtenu ${loaded.team.budget}.`);
@@ -141,6 +142,7 @@ await withEnv({ UPSTASH_REDIS_REST_URL: "https://fake-upstash.example", UPSTASH_
     if (!fake.kv.has(store.REDIS_KEYS.multiLeague)) throw new Error(`❌ saveMultiLeague() aurait dû écrire sous la clé fixe '${store.REDIS_KEYS.multiLeague}'.`);
     if (fake.kv.has(store.REDIS_KEYS.league)) throw new Error("❌ saveMultiLeague() ne devrait JAMAIS toucher à la clé solo 'pullup:league'.");
 
+    store.clearRedisCache(); // relecture « après redémarrage » : sans la mémoire du serveur
     const reloaded = await store.loadMultiLeague(tmpSavePath());
     if (!reloaded) throw new Error("❌ loadMultiLeague() devrait relire la ligue qu'on vient d'écrire sur le faux Redis.");
     if (reloaded.league.teams.filter(t => t.isHuman).length !== 2) throw new Error("❌ Les 2 managers humains devraient survivre au round-trip Redis.");
@@ -169,6 +171,7 @@ await withEnv({ UPSTASH_REDIS_REST_URL: "https://fake-upstash.example", UPSTASH_
     if (fetchCalled) throw new Error("❌ save() n'aurait jamais dû appeler fetch sans les variables d'environnement Upstash.");
     if (!fs.existsSync(savePath)) throw new Error("❌ save() aurait dû écrire le fichier local, exactement comme avant ce chantier.");
 
+    store.clearRedisCache(); // relecture « après redémarrage » : sans la mémoire du serveur
     const loaded = await store.load(savePath);
     if (!loaded || loaded.team.budget !== 24680) throw new Error("❌ load() aurait dû relire le fichier local, exactement comme avant ce chantier.");
     if (fetchCalled) throw new Error("❌ load() n'aurait jamais dû appeler fetch sans les variables d'environnement Upstash.");
@@ -189,11 +192,13 @@ await withEnv({ UPSTASH_REDIS_REST_URL: "https://fake-upstash.example", UPSTASH_
   console.warn = (...args) => { warned = true; };
   store._setFetchImplForTests(async () => { throw new Error("panne réseau simulée"); });
   try {
+    store.clearRedisCache(); // relecture « après redémarrage » : sans la mémoire du serveur
     const loaded = await store.load(tmpSavePath());
     if (loaded !== null) throw new Error("❌ load() devrait renvoyer null quand la lecture Redis échoue, jamais planter.");
     if (!warned) throw new Error("❌ load() devrait journaliser un avertissement (console.warn) quand la lecture Redis échoue.");
 
     warned = false;
+    store.clearRedisCache(); // relecture « après redémarrage » : sans la mémoire du serveur
     const loadedMulti = await store.loadMultiLeague(tmpSavePath());
     if (loadedMulti !== null) throw new Error("❌ loadMultiLeague() devrait renvoyer null quand la lecture Redis échoue, jamais planter.");
     if (!warned) throw new Error("❌ loadMultiLeague() devrait journaliser un avertissement (console.warn) quand la lecture Redis échoue.");

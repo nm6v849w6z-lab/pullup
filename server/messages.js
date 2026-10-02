@@ -86,7 +86,7 @@ function normalizeData(data) {
 // l'autre (lecture → modification → écriture toujours en série).
 // ---------------------------------------------------------------------
 let fetchImpl = (...args) => fetch(...args);
-function _setFetchImplForTests(fn) { fetchImpl = fn || ((...args) => fetch(...args)); }
+function _setFetchImplForTests(fn) { fetchImpl = fn || ((...args) => fetch(...args)); require("./store.js")._setFetchImplForTests(fn); }
 
 function upstashConfigured() {
   return !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
@@ -99,12 +99,10 @@ function messagesPathFor(multiSavePath) {
 async function loadData(filePath) {
   if (upstashConfigured()) {
     try {
-      const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(redisKeyName())}`, {
-        headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await res.json();
-      return normalizeData(body && typeof body.result === "string" ? JSON.parse(body.result) : null);
+      // Même accès que le reste du stockage (compression, mémoire : voir
+      // server/store.js, incident du 2026-10-02).
+      const raw = await require("./store.js").redisGet(redisKeyName());
+      return normalizeData(typeof raw === "string" ? JSON.parse(raw) : null);
     } catch (e) {
       // Lecture impossible : on ne renvoie SURTOUT PAS des données vides qui
       // seraient ensuite réécrites par-dessus l'historique réel.
@@ -122,12 +120,8 @@ async function loadData(filePath) {
 async function saveData(filePath, data) {
   const raw = JSON.stringify(data);
   if (upstashConfigured()) {
-    const res = await fetchImpl(`${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(redisKeyName())}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
-      body: raw,
-    });
-    if (!res.ok) throw new Error(`Messagerie : écriture impossible (HTTP ${res.status}).`);
+    try { await require("./store.js").redisSet(redisKeyName(), raw); }
+    catch (e) { throw new Error(`Messagerie : écriture impossible (${e.message}).`); }
     return;
   }
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
