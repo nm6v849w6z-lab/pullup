@@ -156,6 +156,16 @@ async function waitFor(fn, label, tries = 60) {
     check(d.getElementById("topbarOrdersBtn").textContent === "Voir le direct", "direct de ligue privée : bouton du haut « Voir le direct »");
     check(!!d.querySelector(".hm-hero [data-lp-live]"), "direct de ligue privée : bouton « Voir le direct » sur l'accueil");
     w.eval("lpMyNextMatch().match.live = false; updateTopbar()");
+    // Ligue SPÉCIALE en plus (calendrier sur mesure) : affichée sous la
+    // ligue normale, et son match devient le prochain s'il passe avant.
+    w.eval(`(() => { const lp = lpMyLeague(); const opp = lpMyNextMatch().oppIdx; const at = lpMyNextMatch().dueAt - 3600000;
+      league.privateLeagues.push({ id: "spe", name: "Ligue spéciale", special: true, status: "running", size: 2, venue: "home", hour: 10, minute: 0,
+        creatorTeamIndex: myTeamIndex, teamIndices: [myTeamIndex, opp], members: [], myOrders: null,
+        rounds: [{ index: 0, dueAt: at, matches: [{ home: myTeamIndex, away: opp, played: false }] }] }); })()`);
+    check(w.eval("lpMyNextMatch().lp.id") === "spe", "ligue spéciale : son match, plus tôt, devient le prochain");
+    w.eval("TAB_HANDLERS.lp()");
+    check(d.querySelectorAll("#lpContent .lp-intro").length === 2 && /Ligue spéciale/.test(d.querySelector("#lpContent .lp-special").textContent), "page Ligues privées : ligue normale + ligue spéciale");
+    w.eval("league.privateLeagues = league.privateLeagues.filter(l => l.id !== 'spe'); updateTopbar()");
     w.eval("TAB_HANDLERS.calendrier()");
   }
 

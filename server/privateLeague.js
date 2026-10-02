@@ -176,9 +176,11 @@ function refFor(leagueId, league, idx, label = "") {
 }
 
 // La ligue privée ACTIVE (ouverte ou en cours) dont ce club est membre — un
-// club ne peut être que dans une seule à la fois, dans le monde entier.
+// club ne peut être que dans une seule à la fois, dans le monde entier. Les
+// ligues spéciales (createSpecialPrivateLeague) ne comptent pas : on peut en
+// jouer une EN PLUS de sa ligue privée normale.
 function activeFor(store, leagueId, idx) {
-  return ((store && store.list) || []).find(lp => isActive(lp) && memberSlot(lp, leagueId, idx) >= 0) || null;
+  return ((store && store.list) || []).find(lp => isActive(lp) && !lp.special && memberSlot(lp, leagueId, idx) >= 0) || null;
 }
 
 function findById(store, id) {
@@ -307,6 +309,57 @@ function startPrivateLeague(Engine, store, me, body, now) {
   }
   startPrivateLeagueNow(Engine, lp, now);
   return { ok: true, privateLeagueId: lp.id };
+}
+
+// Ligue privée SPÉCIALE (créée par l'administrateur, retour utilisateur
+// 2026-10-02 : « une ligue privée spéciale de 30 matchs avec 3 équipes,
+// matchs à 10h 12h 14h 16h 18h 20h sur 5 jours à partir de demain »).
+// `refs` : références des clubs (refFor), au moins 2. Un match par créneau :
+// les paires s'enchaînent en boucle, domicile et extérieur alternés à chaque
+// tour complet. Créneaux (heure de Paris) : `hours` de chaque jour, pendant
+// `days` jours à partir de `startDay` ({ year, month, day }). Lancée tout de
+// suite (status "running"), sans code à partager ; ne bloque pas la ligue
+// privée normale de ses membres (voir activeFor).
+function createSpecialPrivateLeague(Engine, store, refs, opts, now) {
+  if (!Array.isArray(refs) || refs.length < 2) return fail("Il faut au moins 2 clubs.");
+  const name = normalizeName(opts && opts.name);
+  if (!name) return fail(`Le nom de la ligue doit faire entre 2 et ${PRIVATE_LEAGUE_NAME_MAX} caractères.`);
+  const hours = (opts.hours || []).filter(h => Number.isInteger(h) && h >= 0 && h <= 23);
+  const days = Number(opts.days);
+  if (!hours.length || !(days >= 1 && days <= 14)) return fail("Créneaux invalides.");
+  const slots = [];
+  for (let d = 0; d < days; d++) {
+    const day = Calendar.addParisCalendarDays(opts.startDay, d);
+    hours.forEach(h => slots.push(Calendar.parisEpochForLocalTime(day.year, day.month, day.day, h, 0)));
+  }
+  slots.sort((a, b) => a - b);
+  if (slots[0] <= now) return fail("Le premier créneau est déjà passé.");
+  const pairs = [];
+  for (let i = 0; i < refs.length; i++) for (let j = i + 1; j < refs.length; j++) pairs.push([i, j]);
+  // Ordre des paires : pour 3 clubs, (0,1) (1,2) (0,2) — chacun joue 2
+  // créneaux sur 3, jamais 3 de suite.
+  const ordered = refs.length === 3 ? [[0, 1], [1, 2], [0, 2]] : pairs;
+  let code = randomCode();
+  while (store.list.some(lp => lp.code === code)) code = randomCode();
+  const lp = {
+    id: randomId(Engine), name, code, special: true,
+    creator: { leagueId: refs[0].leagueId, idx: refs[0].idx },
+    size: refs.length, venue: "home",
+    hour: hours[hours.length - 1], minute: 0,
+    status: "running",
+    createdAt: now, startedAt: now, finishedAt: null,
+    members: refs.map(r => ({ ...r })),
+    rounds: slots.map((dueAt, index) => {
+      const [a, b] = ordered[index % ordered.length];
+      const swap = Math.floor(index / ordered.length) % 2 === 1;
+      return {
+        index, dueAt,
+        matches: [{ home: swap ? b : a, away: swap ? a : b, played: false, playedAt: null, scoreHome: null, scoreAway: null, forfeit: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null }],
+      };
+    }),
+  };
+  store.list.push(lp);
+  return { ok: true, privateLeagueId: lp.id, rounds: lp.rounds.length, firstAt: slots[0], lastAt: slots[slots.length - 1] };
 }
 
 // --- Calendrier -------------------------------------------------------------
@@ -762,7 +815,7 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
     return {
       id: lp.id, name: lp.name, code: lp.code,
       creatorTeamIndex: creatorSlot >= 0 ? local[creatorSlot] : (lp.creator && lp.creator.leagueId === leagueId ? lp.creator.idx : -1),
-      size: lp.size, venue: lp.venue,
+      size: lp.size, venue: lp.venue, special: !!lp.special,
       ...(Number.isInteger(lp.hour) && Number.isInteger(lp.minute) ? { hour: lp.hour, minute: lp.minute } : {}),
       status: lp.status, createdAt: lp.createdAt, startedAt: lp.startedAt, finishedAt: lp.finishedAt,
       teamIndices: local.slice(),
@@ -866,7 +919,7 @@ module.exports = {
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS, PRIVATE_LEAGUE_GUEST_IDX, STORE_NAME,
   // Monde
   emptyStore, isValidStore, refFor, teamLook, activeFor, findById, memberSlot, sameRef,
-  createPrivateLeague, setPrivateLeagueOrders, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
+  createPrivateLeague, createSpecialPrivateLeague, setPrivateLeagueOrders, joinPrivateLeague, leavePrivateLeague, startPrivateLeague,
   catchUp, nextDeadline, refreshRefs, remapMoves, busyTimesByIdx, projectForViewer, localIndexMap,
   migrateLeague, migrateAndSave, loadStore, saveStore,
   // Communs

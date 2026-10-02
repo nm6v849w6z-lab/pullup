@@ -7608,6 +7608,7 @@
   #lpSection{--display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:14px;}
   #lpSection .pos{color:var(--ok);} #lpSection .neg{color:#f0a292;} #lpSection .dim{color:var(--ink-faint);}
   .lp-intro{margin-bottom:18px;}
+  .lp-special{margin-top:34px; padding-top:26px; border-top:1px solid var(--line);}
   .lp-kicker{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--amber);}
   .lp-name{font-family:var(--display); font-size:32px; font-weight:800; line-height:1; margin:6px 0 8px; letter-spacing:-.01em;}
   .lp-lead{color:var(--ink-dim); font-size:14px; line-height:1.5; margin:0; max-width:640px;}
@@ -51362,7 +51363,7 @@ function renderTacticEditorBar() {
     if (title) title.textContent = "Ordres de la ligue privée";
     const opts = lpOrdersSources(lp).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
     const saved = !!(lp && lp.myOrders);
-    bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Ligue privée</label><div class="fr-oe-vs"><span><b>${escapeHtml(lp ? lp.name : "")}</b><small>vendredi ${lp ? escapeHtml(lpTimeLabel(lp)) : ""}</small></span></div></div>` +
+    bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Ligue privée</label><div class="fr-oe-vs"><span><b>${escapeHtml(lp ? lp.name : "")}</b><small>${lp ? escapeHtml(lpWhenLabel(lp)) : ""}</small></span></div></div>` +
       `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${opts}</select></div>` +
       `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer les ordres</button>` +
         (saved ? `<button type="button" class="tq-btn" id="lpOrdersReset">Revenir aux ordres du club</button>` : "") +
@@ -52325,8 +52326,22 @@ function lpTimeLabel(lp) {
   return `${h}h${String(m).padStart(2, "0")}`;
 }
 
+// Ligue privée normale du club (une seule à la fois) ; les ligues SPÉCIALES
+// créées par l'administrateur (calendrier sur mesure, voir
+// createSpecialPrivateLeague côté serveur) se jouent en plus.
 function lpMyLeague() {
-  return (league.privateLeagues || []).find(lp => (lp.status === "open" || lp.status === "running") && lp.teamIndices.includes(myTeamIndex)) || null;
+  return (league.privateLeagues || []).find(lp => !lp.special && (lp.status === "open" || lp.status === "running") && lp.teamIndices.includes(myTeamIndex)) || null;
+}
+function lpMySpecialLeagues() {
+  return (league.privateLeagues || []).filter(lp => lp.special && lp.status === "running" && lp.teamIndices.includes(myTeamIndex));
+}
+// Jour et heure d'une ligue privée, pour les en-têtes.
+function lpWhenLabel(lp) {
+  if (lp && lp.special) {
+    const days = new Set((lp.rounds || []).map(r => formatCalendarDayFr(r.dueAt))).size;
+    return `${lp.rounds.length} matchs sur ${days} jour${days > 1 ? "s" : ""}`;
+  }
+  return `vendredi ${lpTimeLabel(lp)}`;
 }
 function lpMyFinishedLeagues() {
   return (league.privateLeagues || []).filter(lp => lp.status === "finished" && lp.teamIndices.includes(myTeamIndex));
@@ -52370,15 +52385,21 @@ function lpVenueLabel(venue) { return venue === "neutral" ? "Terrain neutre" : "
 //
 // Prochain match non joué de mon club dans ma ligue privée en cours.
 function lpMyNextMatch() {
-  const lp = lpMyLeague();
-  if (!lp || lp.status !== "running") return null;
-  for (const round of lp.rounds || []) {
-    const m = round.matches.find(x => !x.played && (x.home === myTeamIndex || x.away === myTeamIndex));
-    if (m) {
+  // Toutes les ligues privées en cours du club (normale + spéciales) : le
+  // match en direct d'abord, sinon le plus proche.
+  const lps = [lpMyLeague(), ...lpMySpecialLeagues()].filter(lp => lp && lp.status === "running");
+  let best = null;
+  lps.forEach(lp => {
+    for (const round of lp.rounds || []) {
+      const m = round.matches.find(x => !x.played && (x.home === myTeamIndex || x.away === myTeamIndex));
+      if (!m) continue;
       const isHome = m.home === myTeamIndex;
-      return { lp, round, match: m, dueAt: round.dueAt, isHome, oppIdx: isHome ? m.away : m.home, live: !!m.live };
+      const n = { lp, round, match: m, dueAt: round.dueAt, isHome, oppIdx: isHome ? m.away : m.home, live: !!m.live };
+      if (!best || (n.live && !best.live) || (n.live === best.live && n.dueAt < best.dueAt)) best = n;
+      break;
     }
-  }
+  });
+  if (best) return best;
   return null;
 }
 // Ce même match, mais seulement s'il passe AVANT le prochain match officiel
@@ -52532,6 +52553,7 @@ function renderLpSection() {
   if (!mine) html += lpHubHtml(premium);
   else if (mine.status === "open") html += lpLobbyHtml(mine);
   else html += lpLeagueHtml(mine);
+  lpMySpecialLeagues().forEach(sp => { html += `<div class="lp-special">${lpLeagueHtml(sp)}</div>`; });
   const finished = lpMyFinishedLeagues();
   if (finished.length) {
     html += `<div class="lp-finished"><div class="cal-card-kicker">Ligues terminées</div>` + finished.map(lp => {
@@ -52619,8 +52641,8 @@ function lpLeagueHtml(lp) {
   const table = lpStandings(lp);
   const playedRounds = lp.rounds.filter(r => r.matches.every(m => m.played)).length;
   let html = `<div class="lp-intro"><span class="lp-kicker">Ligue privée <span class="lp-tag lp-tag-muted">Hors compétition</span></span><h3 class="lp-name">${escapeHtml(lp.name)}</h3>` +
-    `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · vendredi ${lpTimeLabel(lp)} · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}` +
-    (lp.status === "finished" ? " · <b>terminée</b>" : lp.code ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p>` +
+    `<p class="lp-lead">${lp.teamIndices.length} équipes · ${lpVenueLabel(lp.venue)} · ${escapeHtml(lpWhenLabel(lp))}${lp.special ? "" : ` · créée par ${escapeHtml(lpTeamName(lp.creatorTeamIndex))}`}` +
+    (lp.status === "finished" ? " · <b>terminée</b>" : lp.code && !lp.special ? ` · code <span class="lp-code lp-code-sm">${escapeHtml(lp.code)}</span>` : "") + `</p>` +
     (lp.status !== "finished" ? `<p class="lp-orders-row"><button type="button" class="cal-next-btn lp-btn" data-lp-orders="${lp.id}">${lp.myOrders ? "Modifier mes ordres de ligue privée" : "Faire mes ordres de ligue privée"}</button><span class="lp-hint">${lp.myOrders ? "Vos ordres propres à la ligue privée sont enregistrés." : "Sans ordres propres, la ligue privée se joue avec les ordres actuels du club."}</span></p>` : "") + `</div>`;
   html += `<div class="cal-layout lp-layout"><div class="cal-main">`;
   // Classement
@@ -52642,7 +52664,9 @@ function lpLeagueHtml(lp) {
 }
 
 function lpNextCardHtml(lp) {
-  const next = lp.rounds.find(r => r.matches.some(m => !m.played));
+  // Ligue spéciale (un seul match par créneau) : la prochaine journée DU CLUB.
+  const next = (lp.special && lp.rounds.find(r => r.matches.some(m => !m.played && (m.home === myTeamIndex || m.away === myTeamIndex))))
+    || lp.rounds.find(r => r.matches.some(m => !m.played));
   if (!next) return `<div class="cal-card cal-next"><div class="cal-card-kicker">Ligue terminée</div><p class="cal-card-empty">Toutes les journées ont été jouées.</p></div>`;
   const m = next.matches.find(x => x.home === myTeamIndex || x.away === myTeamIndex);
   if (!m) return `<div class="cal-card cal-next"><div class="cal-card-kicker">Journée ${next.index + 1}</div><p class="cal-card-empty">Vous êtes exempt cette semaine.</p></div>`;

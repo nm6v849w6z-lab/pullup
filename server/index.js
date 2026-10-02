@@ -1553,6 +1553,52 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // division (≈42). Body : { dryRun?: true par défaut, leagueId? } —
       // dryRun renvoie le rapport sans rien écrire ; { "dryRun": false }
       // applique. Idempotent : un club déjà au niveau n'est plus touché.
+      // Ligue privée SPÉCIALE (retour utilisateur 2026-10-02) : body
+      // { name, teams: ["Gotham Knights", "BC Dia", …], hours?: [10,12,…],
+      //   days?: 5, startDate?: "AAAA-MM-JJ" (défaut : demain, heure de
+      //   Paris) }. Clubs cherchés par nom exact dans tout le monde.
+      if (route.pathname === "/api/admin/special-private-league" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const names = Array.isArray(body && body.teams) ? body.teams.map(n => String(n || "").trim()).filter(Boolean) : [];
+        if (names.length < 2 || new Set(names.map(n => n.toLowerCase())).size !== names.length) {
+          sendJson(res, 400, { ok: false, error: "'teams' : au moins 2 noms de clubs différents." }); return;
+        }
+        const world = await World.loadWorld(multiSavePath, now);
+        if (!world) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée n'existe encore." }); return; }
+        const refs = new Array(names.length).fill(null);
+        for (const entry of world.leagues) {
+          const lg = await World.loadLeague(world, entry.id, multiSavePath);
+          if (!lg) continue;
+          lg.teams.forEach((t, idx) => {
+            const k = names.findIndex(n => n.toLowerCase() === String(t.name || "").trim().toLowerCase());
+            if (k >= 0 && !refs[k]) refs[k] = PrivateLeague.refFor(entry.id, lg, idx, World.divisionLabel(entry.level, entry.group));
+          });
+        }
+        const missing = names.filter((n, k) => !refs[k]);
+        if (missing.length) { sendJson(res, 404, { ok: false, error: `Club(s) introuvable(s) : ${missing.join(", ")}.` }); return; }
+        let startDay;
+        const m = typeof (body && body.startDate) === "string" && /^(\d{4})-(\d{2})-(\d{2})$/.exec(body.startDate);
+        if (m) startDay = { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+        else startDay = Calendar.addParisCalendarDays(Calendar.parisLocalDateParts(now), 1);
+        const lpStore = await PrivateLeague.loadStore(multiSavePath);
+        if (!lpStore) { sendJson(res, 503, { ok: false, error: "Ligues privées momentanément illisibles, réessayez." }); return; }
+        const result = PrivateLeague.createSpecialPrivateLeague(Engine, lpStore, refs, {
+          name: body.name || "Ligue spéciale",
+          hours: Array.isArray(body.hours) && body.hours.length ? body.hours.map(Number) : [10, 12, 14, 16, 18, 20],
+          days: body.days != null ? Number(body.days) : 5,
+          startDay,
+        }, now);
+        if (!result.ok) { sendJson(res, 400, result); return; }
+        await PrivateLeague.saveStore(lpStore, multiSavePath);
+        // Premier coup d'envoi : rattrapage du monde à l'heure pile.
+        const cur = nextWorldDeadlineAt.get(multiSavePath);
+        if (cur == null || result.firstAt < cur) nextWorldDeadlineAt.set(multiSavePath, result.firstAt);
+        sendJson(res, 200, { ...result, teams: refs.map(r => ({ name: r.name, leagueId: r.leagueId, label: r.label })) });
+        return;
+      }
+
       if (route.pathname === "/api/admin/recalibrate-cpu" && req.method === "POST") {
         if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
         let body;
