@@ -52394,7 +52394,7 @@ function lpLeagueHtml(lp) {
       `<td class="r lg-hide-sm ${r.diff > 0 ? "pos" : r.diff < 0 ? "neg" : "dim"}">${r.diff > 0 ? "+" : ""}${r.diff}</td>` +
       `<td class="r lg-pts">${r.pts}</td><td class="r"><div class="lg-form">${form || `<span class="lg-f-empty">–</span>`}</div></td></tr>`;
   });
-  html += `</tbody></table></div><p class="lp-footnote">Les statistiques de ligue privée ne comptent ni dans les stats de carrière ni dans le classement des joueurs.</p></section>`;
+  html += `</tbody></table></div></section>`;
   html += lpCalendarHtml(lp);
   html += `</div><aside class="cal-side">${lpNextCardHtml(lp)}${lpRulesCardHtml()}</aside></div>`;
   return html;
