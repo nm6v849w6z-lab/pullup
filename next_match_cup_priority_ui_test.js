@@ -56,7 +56,10 @@ if (!champMatch) throw new Error("❌ (setup) l'équipe devrait avoir un match d
 const { server, savePath, multiSavePath, baseUrl } = await startTestServer(() => T0);
 await store.saveMultiLeague(league, multiSavePath);
 
-const dom = await openGame(html, `${baseUrl}?m=${managerToken}`);
+// Horloge du navigateur calée sur celle du serveur (T0) : sans ça, la page
+// prend la vraie date du jour, déjà après le tour de Coupe du 24 septembre,
+// et le verrou T − 5 min (ajouté le 2026-09-26) affiche « Ordres verrouillés ».
+const dom = await openGame(html, `${baseUrl}?m=${managerToken}`, w => { w.Date.now = () => T0; });
 const doc = dom.window.document;
 const win = dom.window;
 
