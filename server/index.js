@@ -446,7 +446,10 @@ async function resolvePlayerContext(req, legacySavePath, multiSavePath, now) {
   if (!world) {
     return { ok: false, status: 404, error: "Aucune ligue multi-manager n'existe encore (voir /api/admin/new-multi-league)." };
   }
-  const found = await World.findTeamByToken(world, token, multiSavePath);
+  const found = await World.findTeamByToken(world, token, multiSavePath, { reportUnavailable: true });
+  if (found && found.unavailable) {
+    return { ok: false, status: 404, error: "Championnat momentanément illisible, réessayez dans quelques minutes." };
+  }
   if (!found) {
     return { ok: false, status: 401, error: "Jeton de manager inconnu ou invalide." };
   }

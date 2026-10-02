@@ -63,6 +63,10 @@ function leaguesOfCountry(world, country) {
 // renvoie alors `null`. `dirty` : à sauvegarder (saveWorld).
 async function loadWorld(savePath, now = Date.now()) {
   let world = await store.loadWorldRaw(savePath);
+  // Lecture du registre en échec (stockage injoignable) : « momentanément
+  // indisponible » plutôt qu'un registre reconstruit qui écraserait les
+  // championnats des autres pays (incident 2026-10-02).
+  if (world === store.WORLD_READ_FAILED) return null;
   let dirty = false;
   if (!isValidWorld(world)) {
     const historic = await store.loadMultiLeague(savePath);
@@ -105,11 +109,16 @@ function useLeagueTimeZone(league) {
 
 // Retrouve le club d'un jeton manager : { league, teamIndex, leagueId } ou
 // null. Met à jour l'index `tokens` si besoin (sauvegarde le registre).
-async function findTeamByToken(world, token, savePath) {
+// opts.reportUnavailable : { unavailable: true } quand le championnat connu du
+// jeton est illisible (sinon null, comme un jeton inconnu).
+async function findTeamByToken(world, token, savePath, opts = {}) {
   if (!world || !token) return null;
   const known = world.tokens[token];
   if (known) {
     const league = await loadLeague(world, known, savePath);
+    // Championnat connu mais illisible (stockage injoignable) : indisponible,
+    // jamais « jeton inconnu » (le navigateur oublierait la connexion).
+    if (!league && opts.reportUnavailable) return { unavailable: true };
     const r = league && store.resolveManagerTeam(league, token);
     if (r) return { league, teamIndex: r.teamIndex, leagueId: known };
   }

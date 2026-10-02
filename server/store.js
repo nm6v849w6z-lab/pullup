@@ -126,10 +126,17 @@ async function loadWorldRaw(savePath = defaultMultiLeaguePath()) {
     if (!fs.existsSync(where.file)) return null;
     return JSON.parse(fs.readFileSync(where.file, "utf-8"));
   } catch (e) {
+    // Lecture ÉCHOUÉE (Redis injoignable, JSON abîmé…) ≠ registre absent :
+    // jamais null ici, sinon World.loadWorld reconstruirait un registre neuf
+    // et recréerait les 1res divisions des autres pays par-dessus les
+    // existantes (identifiants fixes, voir worldLeagueId) — perte de données.
     console.warn("Registre du monde illisible :", e.message);
-    return null;
+    return WORLD_READ_FAILED;
   }
 }
+// Valeur renvoyée par loadWorldRaw quand la lecture a échoué (à distinguer
+// d'un registre qui n'existe pas encore).
+const WORLD_READ_FAILED = Object.freeze({ readFailed: true });
 async function saveWorldRaw(world, savePath = defaultMultiLeaguePath()) {
   const where = worldStorage(savePath);
   const body = JSON.stringify(world);
@@ -166,6 +173,8 @@ async function redisGet(key) {
   });
   if (!res.ok) throw new Error(`Upstash GET ${key} a échoué (HTTP ${res.status}).`);
   const data = await res.json();
+  // Réponse d'erreur d'Upstash (quota, jeton…) : échec, jamais « clé absente ».
+  if (data && data.error) throw new Error(`Upstash GET ${key} : ${data.error}`);
   return data && typeof data.result === "string" ? data.result : null;
 }
 
@@ -630,7 +639,7 @@ module.exports = {
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
-  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
+  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, saveWorldAuxRaw,
   loadReplays, appendReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :
