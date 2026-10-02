@@ -5691,7 +5691,7 @@ window.HM_I18N_EL = {
   "Jour passé : plus modifiable": "Περασμένη ημέρα: δεν αλλάζει πια",
   "Jour de match officiel": "Ημέρα επίσημου αγώνα",
   "Prévu, d'après la semaine {0}": "Αναμενόμενο, με βάση την εβδομάδα {0}",
-  "≈ Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "≈ Αναμενόμενο ποσό με βάση την εβδομάδα {0}, καταβάλλεται στην ενημέρωση της Δευτέρας. Τα πραγματικά ποσά εμφανίζονται όταν τελειώσει η εβδομάδα.",
+  "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Αναμενόμενο ποσό με βάση την εβδομάδα {0}, καταβάλλεται στην ενημέρωση της Δευτέρας. Τα πραγματικά ποσά εμφανίζονται όταν τελειώσει η εβδομάδα.",
   "Solde prévu de la semaine": "Αναμενόμενο υπόλοιπο εβδομάδας",
   "Autocollants": "Αυτοκόλλητα",
   "Porte-clés": "Μπρελόκ",

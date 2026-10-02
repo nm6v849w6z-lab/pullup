@@ -5691,7 +5691,7 @@ window.HM_I18N_LT = {
   "Jour passé : plus modifiable": "Praėjusi diena: nebegalima keisti",
   "Jour de match officiel": "Oficialių rungtynių diena",
   "Prévu, d'après la semaine {0}": "Numatoma pagal {0} savaitę",
-  "≈ Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "≈ Numatoma suma pagal {0} savaitę, išmokama pirmadienio atnaujinimo metu. Tikri skaičiai pasirodys savaitei pasibaigus.",
+  "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Numatoma suma pagal {0} savaitę, išmokama pirmadienio atnaujinimo metu. Tikri skaičiai pasirodys savaitei pasibaigus.",
   "Solde prévu de la semaine": "Numatomas savaitės balansas",
   "Autocollants": "Lipdukai",
   "Porte-clés": "Raktų pakabukai",

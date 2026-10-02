@@ -5691,7 +5691,7 @@ window.HM_I18N_ES = {
   "Jour passé : plus modifiable": "Día pasado: ya no se puede cambiar",
   "Jour de match officiel": "Día de partido oficial",
   "Prévu, d'après la semaine {0}": "Previsto, según la semana {0}",
-  "≈ Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "≈ Importe previsto según la semana {0}, pagado en la actualización del lunes. Las cifras reales aparecen una vez terminada la semana.",
+  "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Importe previsto según la semana {0}, pagado en la actualización del lunes. Las cifras reales aparecen una vez terminada la semana.",
   "Solde prévu de la semaine": "Saldo previsto de la semana",
   "Autocollants": "Pegatinas",
   "Porte-clés": "Llaveros",

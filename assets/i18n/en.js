@@ -5716,7 +5716,7 @@ window.HM_I18N_EN = {
   "Jour passé : plus modifiable": "Past day: can no longer be changed",
   "Jour de match officiel": "Official match day",
   "Prévu, d'après la semaine {0}": "Expected, based on week {0}",
-  "≈ Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "≈ Expected amount based on week {0}, paid at the Monday update. The real figures appear once the week is over.",
+  "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "Expected amount based on week {0}, paid at the Monday update. The real figures appear once the week is over.",
   "Solde prévu de la semaine": "Expected balance for the week",
   "Autocollants": "Stickers",
   "Porte-clés": "Keyrings",

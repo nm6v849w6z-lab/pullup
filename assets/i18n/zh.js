@@ -5691,7 +5691,7 @@ window.HM_I18N_ZH = {
   "Jour passé : plus modifiable": "已过去的日子：无法再修改",
   "Jour de match officiel": "正式比赛日",
   "Prévu, d'après la semaine {0}": "预计，依据第{0}周",
-  "≈ Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "≈ 依据第{0}周的预计金额，在周一更新时结算。本周结束后显示实际数字。",
+  "Montant prévu d'après la semaine {0}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.": "依据第{0}周的预计金额，在周一更新时结算。本周结束后显示实际数字。",
   "Solde prévu de la semaine": "本周预计结余",
   "Autocollants": "贴纸",
   "Porte-clés": "钥匙扣",

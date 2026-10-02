@@ -5625,7 +5625,7 @@
   .eco-label{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); font-weight:600;}
   .wk-card{margin:18px 0;}
   .wk-row .v.zero{color:var(--ink-faint) !important;}
-  .wk-row .v.est{font-style:italic; opacity:.75;}
+  .wk-row .v.est{opacity:.75;}
   .wk-note{margin:10px 0 0; font-size:12px; color:var(--ink-dim);}
   .wk-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
   .wk-tabs{display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:var(--panel-2); border:1px solid var(--line); max-width:100%; overflow-x:auto;}
@@ -48623,7 +48623,7 @@ function ecoRenderLedger() {
   // Semaine en cours (retour utilisateur 2026-10-02) : les montants versés à
   // la mise à jour du lundi (salaires, droits TV, produits dérivés…) ne sont
   // pas encore tombés ; plutôt qu'un 0, on affiche le montant prévu d'après
-  // la semaine précédente (en italique, « ≈ »). Une fois la semaine passée,
+  // la semaine précédente (atténué). Une fois la semaine passée,
   // ce sont les vrais chiffres.
   const RECURRING = { tv: 1, sponsors: 1, merch: 1, shop: 1, tvstation: 1, wages: 1, staff: 1, academy: 1, other_out: 1 };
   const est = {};
@@ -48643,7 +48643,7 @@ function ecoRenderLedger() {
     const rows = cats.map(c => {
       const v = val(cur, c.key);
       const cls = est[c.key] ? " est" : v === 0 ? " zero" : "";
-      return `<div class="wk-row"><span class="l">${escapeHtml(c.label)}</span><b class="v${cls}"${est[c.key] ? ` title="Prévu, d'après la semaine ${week - 1}"` : ""}>${est[c.key] ? "≈ " : ""}${signed(v)}</b>${cmp ? `<span class="p">${signed(cmp[c.key] || 0)}</span>` : ""}</div>`;
+      return `<div class="wk-row"><span class="l">${escapeHtml(c.label)}</span><b class="v${cls}"${est[c.key] ? ` title="Prévu, d'après la semaine ${week - 1}"` : ""}>${signed(v)}</b>${cmp ? `<span class="p">${signed(cmp[c.key] || 0)}</span>` : ""}</div>`;
     }).join("");
     return `<div class="wk-col wk-${dir}"><div class="wk-colhead"><span>${dir === "in" ? "Recettes" : "Dépenses"}</span>${cmp ? `<span class="wk-cmp"><span>sem. ${ecoLedgerView === "prev" ? week - 2 : week - 1}</span></span>` : ""}</div>` +
       (rows || `<p class="wk-empty">${dir === "in" ? "Aucune recette." : "Aucune dépense."}</p>`) +
@@ -48653,8 +48653,8 @@ function ecoRenderLedger() {
   el.innerHTML = `<div class="wk-head"><span class="eco-label">Bilan</span>` +
     `<div class="wk-tabs" role="group" aria-label="Période du bilan">${views.map(([k, lab]) => `<button type="button" class="${k === ecoLedgerView ? "on" : ""}" data-eco-ledger="${k}" aria-pressed="${k === ecoLedgerView}">${escapeHtml(lab)}</button>`).join("")}</div></div>` +
     `<div class="wk-grid">${col("in")}${col("out")}</div>` +
-    (anyEst ? `<p class="wk-note">≈ Montant prévu d'après la semaine ${week - 1}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.</p>` : "") +
-    `<div class="wk-bal ${net >= 0 ? "pos" : "neg"}"><span>${ecoLedgerView === "season" ? "Solde de la saison" : ecoLedgerView === "week" ? (anyEst ? "Solde prévu de la semaine" : "Solde de la semaine (en cours)") : "Solde de la semaine"}</span><b>${anyEst ? "≈ " : ""}${signed(net)}</b></div>`;
+    (anyEst ? `<p class="wk-note">Montant prévu d'après la semaine ${week - 1}, versé à la mise à jour du lundi. Les vrais chiffres s'affichent une fois la semaine passée.</p>` : "") +
+    `<div class="wk-bal ${net >= 0 ? "pos" : "neg"}"><span>${ecoLedgerView === "season" ? "Solde de la saison" : ecoLedgerView === "week" ? (anyEst ? "Solde prévu de la semaine" : "Solde de la semaine (en cours)") : "Solde de la semaine"}</span><b>${signed(net)}</b></div>`;
 }
 
 function renderEconomieSection() {

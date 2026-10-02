@@ -33,7 +33,7 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   win.eval(`teamA.week = 4; teamA.recordTransaction("Billetterie vs C (3000 spect.)", 50000);`);
   win.eval("ecoRenderLedger()");
   const t4 = txt().replace(/\u202f|\u00a0/g, " ");
-  check(/Salaires des joueurs ?≈ −40 000/.test(t4) && /Sponsors ?≈ \+20 000/.test(t4) && /Solde prévu de la semaine ?≈ \+30 000/.test(t4) && /Montant prévu d'après la semaine 3/.test(t4), "semaine en cours : salaires et sponsors prévus (≈) au lieu de 0 : " + t4.slice(0, 400));
+  check(/Salaires des joueurs ?−40 000/.test(t4) && /Sponsors ?\+20 000/.test(t4) && /Solde prévu de la semaine ?\+30 000/.test(t4) && /Montant prévu d'après la semaine 3/.test(t4), "semaine en cours : salaires et sponsors prévus au lieu de 0 : " + t4.slice(0, 400));
   win.eval(`teamA.recordTransaction("Salaires des joueurs", -41000);`);
   win.eval("ecoRenderLedger()");
   check(/Salaires des joueurs ?−41 000/.test(txt().replace(/\u202f|\u00a0/g, " ")), "montant versé : vrai chiffre à la place du prévu");
