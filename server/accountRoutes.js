@@ -104,12 +104,14 @@ function discordConfigured() {
 // un code valable ; casse et espaces ignorés. Par défaut DEFAULT_INVITE_CODE ;
 // BASKET_INVITE_CODE le remplace (plusieurs codes séparés par des virgules),
 // et BASKET_INVITE_CODE=off rouvre les inscriptions à tous. La connexion
-// d'un compte existant n'est jamais concernée.
-const DEFAULT_INVITE_CODE = "BuzzerBeater";
+// d'un compte existant n'est jamais concernée. Depuis le 2026-10-02 (retour
+// utilisateur : « enlève le code d'invitation ») : inscriptions ouvertes par
+// défaut ; BASKET_INVITE_CODE peut toujours en exiger un.
+const DEFAULT_INVITE_CODE = "";
 function inviteCodes() {
   const raw = process.env.BASKET_INVITE_CODE;
   const value = raw == null || raw.trim() === "" ? DEFAULT_INVITE_CODE : raw;
-  if (/^(off|aucun|none|0)$/i.test(value.trim())) return [];
+  if (!value.trim() || /^(off|aucun|none|0)$/i.test(value.trim())) return [];
   return value.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
 }
 function inviteRequired() { return inviteCodes().length > 0; }

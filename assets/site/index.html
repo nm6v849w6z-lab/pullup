@@ -37,6 +37,8 @@
     --radius:14px;
   }
   *{box-sizing:border-box}
+  .beta-banner{background:#2a2110; border-bottom:1px solid #5a4318; color:#f6dcae; font-size:14px; line-height:1.5; padding:10px 0; text-align:center;}
+  .beta-banner b{color:#ffd28a;}
   html,body{margin:0}
   body{
     background:var(--bg); color:var(--ink);
@@ -210,6 +212,7 @@
   <symbol id="i-ball" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#f0a23c"/><g fill="none" stroke="#2a1a04" stroke-width="2.6"><circle cx="32" cy="32" r="28"/><path d="M4 32h56M32 4v56M12 12c9 8 9 32 0 40M52 12c-9 8-9 32 0 40"/></g></symbol>
 </svg>
 
+<div class="beta-banner" role="note"><div class="wrap" data-t-html="beta.banner">🚧 <b>Le site est actuellement en phase de test</b> et sera <b>réinitialisé à zéro fin novembre</b>, avant son lancement officiel. D’ici là, vous pouvez tout de même <b>découvrir le jeu, tester ses fonctionnalités et vous familiariser avec son fonctionnement</b>.</div></div>
 <header>
   <div class="wrap">
     <a class="brand" href="/bienvenue" aria-label="Hoop Manager"><img src="/assets/brand/logo-hoop-manager.png" alt="Hoop Manager"></a>
@@ -441,6 +444,7 @@
 
   var TEXTS = {
     en: {
+      "beta.banner": "🚧 <b>The site is currently in a testing phase</b> and will be <b>reset to zero at the end of November</b>, before its official launch. Until then, you can still <b>discover the game, try out its features and get familiar with how it works</b>.",
       "login.tab": "Log in", "signup.tab": "Create my club",
       "resume.text": "You're already logged in on this browser.", "resume.go": "Back to my club", "resume.logout": "Log out",
       "hero.kicker": "Online basketball management game",
@@ -507,6 +511,7 @@
       "err.invite-invalid": "This invitation code isn't valid."
     },
     it: {
+      "beta.banner": "🚧 <b>Il sito è attualmente in fase di test</b> e sarà <b>azzerato a fine novembre</b>, prima del lancio ufficiale. Nel frattempo puoi comunque <b>scoprire il gioco, provarne le funzionalità e familiarizzare con il suo funzionamento</b>.",
       "login.tab": "Accedi", "signup.tab": "Crea il mio club",
       "resume.text": "Hai già effettuato l'accesso su questo browser.", "resume.go": "Torna al mio club", "resume.logout": "Esci",
       "hero.kicker": "Gioco manageriale di basket online",
@@ -573,6 +578,7 @@
       "err.invite-invalid": "Questo codice d'invito non è valido."
     },
     es: {
+      "beta.banner": "🚧 <b>El sitio está actualmente en fase de pruebas</b> y se <b>reiniciará a cero a finales de noviembre</b>, antes de su lanzamiento oficial. Mientras tanto, puedes <b>descubrir el juego, probar sus funciones y familiarizarte con su funcionamiento</b>.",
       "login.tab": "Iniciar sesión", "signup.tab": "Crear mi club",
       "resume.text": "Ya has iniciado sesión en este navegador.", "resume.go": "Volver a mi club", "resume.logout": "Cerrar sesión",
       "hero.kicker": "Juego de gestión de baloncesto online",
@@ -639,6 +645,7 @@
       "err.invite-invalid": "Este código de invitación no es válido."
     },
     pt: {
+      "beta.banner": "🚧 <b>O site está atualmente em fase de testes</b> e será <b>reiniciado do zero no fim de novembro</b>, antes do lançamento oficial. Até lá, você já pode <b>descobrir o jogo, testar as funcionalidades e se familiarizar com o funcionamento</b>.",
       "login.tab": "Entrar", "signup.tab": "Criar meu clube",
       "resume.text": "Você já está conectado neste navegador.", "resume.go": "Voltar ao meu clube", "resume.logout": "Sair",
       "hero.kicker": "Jogo de gestão de basquete online",
@@ -705,6 +712,7 @@
       "err.invite-invalid": "Este código de convite não é válido."
     },
     de: {
+      "beta.banner": "🚧 <b>Die Seite befindet sich derzeit in der Testphase</b> und wird <b>Ende November komplett zurückgesetzt</b>, vor dem offiziellen Start. Bis dahin kannst du trotzdem <b>das Spiel entdecken, seine Funktionen testen und dich mit der Spielweise vertraut machen</b>.",
       "login.tab": "Anmelden", "signup.tab": "Meinen Verein gründen",
       "resume.text": "Du bist in diesem Browser bereits angemeldet.", "resume.go": "Zurück zu meinem Verein", "resume.logout": "Abmelden",
       "hero.kicker": "Online-Basketball-Managerspiel",
@@ -771,6 +779,7 @@
       "err.invite-invalid": "Dieser Einladungscode ist nicht gültig."
     },
     pl: {
+      "beta.banner": "🚧 <b>Strona jest obecnie w fazie testów</b> i zostanie <b>wyzerowana pod koniec listopada</b>, przed oficjalnym startem. Do tego czasu możesz <b>poznać grę, wypróbować jej funkcje i oswoić się z jej działaniem</b>.",
       "login.tab": "Zaloguj się", "signup.tab": "Załóż klub",
       "resume.text": "Jesteś już zalogowany w tej przeglądarce.", "resume.go": "Wróć do mojego klubu", "resume.logout": "Wyloguj się",
       "hero.kicker": "Menedżer koszykówki online",
@@ -837,6 +846,7 @@
       "err.invite-invalid": "Ten kod zaproszenia jest nieprawidłowy."
     },
     el: {
+      "beta.banner": "🚧 <b>Ο ιστότοπος βρίσκεται σε δοκιμαστική φάση</b> και θα <b>μηδενιστεί στα τέλη Νοεμβρίου</b>, πριν από την επίσημη κυκλοφορία. Μέχρι τότε μπορείς να <b>ανακαλύψεις το παιχνίδι, να δοκιμάσεις τις λειτουργίες του και να εξοικειωθείς με αυτό</b>.",
       "login.tab": "Σύνδεση", "signup.tab": "Δημιούργησε την ομάδα σου",
       "resume.text": "Είσαι ήδη συνδεδεμένος σε αυτόν τον browser.", "resume.go": "Επιστροφή στην ομάδα μου", "resume.logout": "Αποσύνδεση",
       "hero.kicker": "Online παιχνίδι μάνατζερ μπάσκετ",
@@ -903,6 +913,7 @@
       "err.invite-invalid": "Αυτός ο κωδικός πρόσκλησης δεν είναι έγκυρος."
     },
     lt: {
+      "beta.banner": "🚧 <b>Svetainė šiuo metu yra bandomajame etape</b> ir bus <b>visiškai atstatyta lapkričio pabaigoje</b>, prieš oficialų paleidimą. Iki tol vis tiek gali <b>susipažinti su žaidimu, išbandyti jo funkcijas ir perprasti, kaip jis veikia</b>.",
       "login.tab": "Prisijungti", "signup.tab": "Kurti savo klubą",
       "resume.text": "Šioje naršyklėje jau esi prisijungęs.", "resume.go": "Grįžti į savo klubą", "resume.logout": "Atsijungti",
       "hero.kicker": "Internetinis krepšinio vadybos žaidimas",
@@ -969,6 +980,7 @@
       "err.invite-invalid": "Šis pakvietimo kodas netinkamas."
     },
     zh: {
+      "beta.banner": "🚧 <b>本站目前处于测试阶段</b>，将在正式上线前于<b>11月底全部重置</b>。在此之前，你仍然可以<b>了解游戏、试用各项功能并熟悉玩法</b>。",
       "login.tab": "登录", "signup.tab": "创建我的俱乐部",
       "resume.text": "你已在此浏览器上登录。", "resume.go": "回到我的俱乐部", "resume.logout": "退出登录",
       "hero.kicker": "在线篮球经理游戏",
@@ -1035,6 +1047,7 @@
       "err.invite-invalid": "该邀请码无效。"
     },
     fr: {
+      "beta.banner": "🚧 <b>Le site est actuellement en phase de test</b> et sera <b>réinitialisé à zéro fin novembre</b>, avant son lancement officiel. D’ici là, vous pouvez tout de même <b>découvrir le jeu, tester ses fonctionnalités et vous familiariser avec son fonctionnement</b>.",
       "country.fr": "France", "country.us": "États-Unis", "country.it": "Italie", "country.de": "Allemagne", "country.ar": "Argentine", "country.be": "Belgique",
       "country.br": "Brésil", "country.ca": "Canada", "country.cn": "Chine", "country.es": "Espagne", "country.gr": "Grèce", "country.hk": "Hong Kong",
       "country.lt": "Lituanie", "country.pl": "Pologne", "country.pt": "Portugal", "country.ch": "Suisse", "country.tw": "Taïwan",

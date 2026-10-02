@@ -11,7 +11,7 @@ const store = require("./store.js");
 const AccountRoutes = require("./accountRoutes.js");
 const Accounts = require("./accounts.js");
 
-// Inscriptions sur invitation par défaut (DEFAULT_INVITE_CODE) : ouvertes
+// Inscriptions ouvertes par défaut depuis le 2026-10-02 ; « off » explicite
 // pour ces tests, sauf dans le bloc qui vérifie le code lui-même.
 process.env.BASKET_INVITE_CODE = "off";
 
@@ -397,11 +397,11 @@ async function main() {
       process.env.BASKET_INVITE_CODE = "off";
       const cfg2 = await request(server, "GET", "/api/account/config");
       assert.strictEqual(cfg2.body.inviteRequired, false);
-      // Sans variable : le code par défaut « BuzzerBeater ».
+      // Sans variable : inscriptions ouvertes (code retiré le 2026-10-02).
       delete process.env.BASKET_INVITE_CODE;
       const cfg3 = await request(server, "GET", "/api/account/config");
-      assert.strictEqual(cfg3.body.inviteRequired, true);
-      const def = await request(server, "POST", "/api/account/signup", { email: "inv3@x.fr", password: "motdepasse1", clubName: "Club Buzzer", inviteCode: "buzzerbeater" });
+      assert.strictEqual(cfg3.body.inviteRequired, false);
+      const def = await request(server, "POST", "/api/account/signup", { email: "inv3@x.fr", password: "motdepasse1", clubName: "Club Buzzer" });
       assert.strictEqual(def.body.status, "active", JSON.stringify(def.body));
     } finally { server.close(); process.env.BASKET_INVITE_CODE = "off"; }
   }

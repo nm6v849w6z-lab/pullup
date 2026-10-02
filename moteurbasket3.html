@@ -4418,6 +4418,9 @@
   .pr-tag{display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; background:rgba(47,191,159,.15); color:var(--ok); margin-left:4px;}
   .pr-tag.up{background:rgba(240,162,60,.15); color:var(--amber);}
   .pr-tag.down{background:rgba(226,105,79,.15); color:var(--danger);}
+  .beta-box{max-width:520px;}
+  .beta-text{margin:8px 0 16px; font-size:14.5px; line-height:1.55; color:var(--ink);}
+  .beta-actions{display:flex; justify-content:flex-end;}
   .eco-card--click{cursor:pointer; transition:border-color .15s;}
   .eco-card--click:hover{border-color:var(--amber);}
   .eco-more{font-size:12.5px; font-weight:700; color:var(--amber);}
@@ -55091,6 +55094,80 @@ document.getElementById("topbarBackBtn").addEventListener("click", (e) => {
   if (home) home.click();
 });
 
+// Avis « phase de test » (retour utilisateur 2026-10-02) : une fenêtre à la
+// connexion, une seule fois par navigateur, pour les clubs qui ont fini le
+// tutoriel (les nouveaux inscrits ont déjà vu le bandeau de /bienvenue).
+// Textes par langue ici (data-no-i18n) : le texte riche ne se découpe pas
+// bien en clés de traduction.
+const BETA_NOTICE_KEY = "hm-beta-notice-2026-11";
+const BETA_NOTICE = {
+  "fr": {
+    "title": "Phase de test",
+    "text": "🚧 <b>Le site est actuellement en phase de test</b> et sera <b>réinitialisé à zéro fin novembre</b>, avant son lancement officiel. D’ici là, vous pouvez tout de même <b>découvrir le jeu, tester ses fonctionnalités et vous familiariser avec son fonctionnement</b>.",
+    "ok": "J'ai compris"
+  },
+  "en": {
+    "title": "Testing phase",
+    "text": "🚧 <b>The site is currently in a testing phase</b> and will be <b>reset to zero at the end of November</b>, before its official launch. Until then, you can still <b>discover the game, try out its features and get familiar with how it works</b>.",
+    "ok": "Got it"
+  },
+  "it": {
+    "title": "Fase di test",
+    "text": "🚧 <b>Il sito è attualmente in fase di test</b> e sarà <b>azzerato a fine novembre</b>, prima del lancio ufficiale. Nel frattempo puoi comunque <b>scoprire il gioco, provarne le funzionalità e familiarizzare con il suo funzionamento</b>.",
+    "ok": "Ho capito"
+  },
+  "es": {
+    "title": "Fase de pruebas",
+    "text": "🚧 <b>El sitio está actualmente en fase de pruebas</b> y se <b>reiniciará a cero a finales de noviembre</b>, antes de su lanzamiento oficial. Mientras tanto, puedes <b>descubrir el juego, probar sus funciones y familiarizarte con su funcionamiento</b>.",
+    "ok": "Entendido"
+  },
+  "pt": {
+    "title": "Fase de testes",
+    "text": "🚧 <b>O site está atualmente em fase de testes</b> e será <b>reiniciado do zero no fim de novembro</b>, antes do lançamento oficial. Até lá, você já pode <b>descobrir o jogo, testar as funcionalidades e se familiarizar com o funcionamento</b>.",
+    "ok": "Entendi"
+  },
+  "de": {
+    "title": "Testphase",
+    "text": "🚧 <b>Die Seite befindet sich derzeit in der Testphase</b> und wird <b>Ende November komplett zurückgesetzt</b>, vor dem offiziellen Start. Bis dahin kannst du trotzdem <b>das Spiel entdecken, seine Funktionen testen und dich mit der Spielweise vertraut machen</b>.",
+    "ok": "Verstanden"
+  },
+  "pl": {
+    "title": "Faza testów",
+    "text": "🚧 <b>Strona jest obecnie w fazie testów</b> i zostanie <b>wyzerowana pod koniec listopada</b>, przed oficjalnym startem. Do tego czasu możesz <b>poznać grę, wypróbować jej funkcje i oswoić się z jej działaniem</b>.",
+    "ok": "Rozumiem"
+  },
+  "el": {
+    "title": "Δοκιμαστική φάση",
+    "text": "🚧 <b>Ο ιστότοπος βρίσκεται σε δοκιμαστική φάση</b> και θα <b>μηδενιστεί στα τέλη Νοεμβρίου</b>, πριν από την επίσημη κυκλοφορία. Μέχρι τότε μπορείς να <b>ανακαλύψεις το παιχνίδι, να δοκιμάσεις τις λειτουργίες του και να εξοικειωθείς με αυτό</b>.",
+    "ok": "Κατάλαβα"
+  },
+  "lt": {
+    "title": "Bandomasis etapas",
+    "text": "🚧 <b>Svetainė šiuo metu yra bandomajame etape</b> ir bus <b>visiškai atstatyta lapkričio pabaigoje</b>, prieš oficialų paleidimą. Iki tol vis tiek gali <b>susipažinti su žaidimu, išbandyti jo funkcijas ir perprasti, kaip jis veikia</b>.",
+    "ok": "Supratau"
+  },
+  "zh": {
+    "title": "测试阶段",
+    "text": "🚧 <b>本站目前处于测试阶段</b>，将在正式上线前于<b>11月底全部重置</b>。在此之前，你仍然可以<b>了解游戏、试用各项功能并熟悉玩法</b>。",
+    "ok": "我知道了"
+  }
+};
+function maybeShowBetaNotice() {
+  try { if (window.localStorage.getItem(BETA_NOTICE_KEY) === "1") return; } catch (e) { return; }
+  if (!managerToken || !teamA || !teamA.onboardingTourCompleted) return;
+  const lang = (window.hmI18n && window.hmI18n.lang) || "fr";
+  const t = BETA_NOTICE[lang] || BETA_NOTICE.fr;
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay";
+  overlay.id = "betaNoticeOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box pr-box beta-box" role="dialog" aria-modal="true" aria-labelledby="betaNoticeTitle" data-no-i18n>` +
+    `<h3 id="betaNoticeTitle">${escapeHtml(t.title)}</h3><p class="beta-text">${t.text}</p>` +
+    `<div class="beta-actions"><button type="button" class="tm-btn" data-beta-ok>${escapeHtml(t.ok)}</button></div></div>`;
+  document.body.appendChild(overlay);
+  const close = () => { try { window.localStorage.setItem(BETA_NOTICE_KEY, "1"); } catch (e) { /* rien */ } overlay.remove(); };
+  overlay.addEventListener("click", e => { if (e.target === overlay || e.target.closest("[data-beta-ok]")) close(); });
+}
+
 window.__gameReady = (async () => {
   await initGame();
   if (invalidManagerLink) {
@@ -55104,6 +55181,7 @@ window.__gameReady = (async () => {
   mkHandleAuctionsHash();
   mkUpdateBadge();
   hmAdsLoadScript(); // vraies pubs : seulement une fois le manager identifié (voir hmAds*)
+  maybeShowBetaNotice();
   fetch("/api/account/config").then(r => (r.ok ? r.json() : null)).then(cfg => {
     const link = document.getElementById("sidebarDiscordLink");
     if (!link || !cfg || !cfg.discordInvite) return;
