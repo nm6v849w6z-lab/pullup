@@ -19009,6 +19009,14 @@ function positionRatings(player) {
   return out;
 }
 
+// Note affichée d'un joueur (« Note » de sa fiche, comparateur, marché) :
+// celle de son meilleur poste, pas la moyenne brute des 28 caractéristiques
+// (retour utilisateur 2026-10-02 : « un joueur doit afficher la moyenne de
+// son meilleur poste, ici 68 et pas 52 »).
+function playerBestRating(player) {
+  return Math.round(Math.max(...Object.values(positionRatings(player))));
+}
+
 // Poste où la note est la plus haute. À égalité (à 0.001 près), le poste
 // de carte du joueur l'emporte, puis l'ordre de POSITIONS.
 function bestPosition(player) {
@@ -31357,15 +31365,15 @@ function renderPlayerCompareView() {
   // ENTIÈREMENT scouté (même règle que la fiche joueur — overall() mélange
   // les 29 caractéristiques, fuite d'info si affiché plus tôt).
   if (visA.fullyVisible && visB.fullyVisible) {
-    const overallA = Math.round(playerA.overall());
-    const overallB = Math.round(playerB.overall());
+    const overallA = playerBestRating(playerA);
+    const overallB = playerBestRating(playerB);
     html += compareProfileTileHtml("Évaluation globale", overallA, overallB,
       `${attrColorTier(overallA)}${overallA > overallB ? " win" : ""}`,
       `${attrColorTier(overallB)}${overallB > overallA ? " win" : ""}`);
   } else {
     html += compareProfileTileHtml("Évaluation globale",
-      visA.fullyVisible ? Math.round(playerA.overall()) : "?",
-      visB.fullyVisible ? Math.round(playerB.overall()) : "?", "locked", "locked");
+      visA.fullyVisible ? playerBestRating(playerA) : "?",
+      visB.fullyVisible ? playerBestRating(playerB) : "?", "locked", "locked");
   }
   // Potentiel : jamais montré pour un joueur qui n'est pas dans VOTRE
   // effectif (même règle que renderPlayerDetail, "Potentiel" n'apparaît que
@@ -32311,7 +32319,7 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   html += `<div class="pdp2-rating">`;
   if (fullyVisible) {
-    const overall = Math.round(player.overall());
+    const overall = playerBestRating(player);
     const circ = 2 * Math.PI * 48;
     const dash = (clamp(overall, 0, 100) / 100) * circ;
     html += `<div class="pdp2-ring" title="Note globale">` +
@@ -39307,7 +39315,7 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
           const o = document.createElement("option");
           o.value = x.id;
           const isReserve = !(team.lineup.backupPositions[x.id] || []).length;
-          o.textContent = `${x.name} (${POS_SHORT[x.position]}, ${Math.round(x.overall())})${isReserve ? " · sans rôle" : ""}`;
+          o.textContent = `${x.name} (${POS_SHORT[x.position]}, ${playerBestRating(x)})${isReserve ? " · sans rôle" : ""}`;
           add.appendChild(o);
         });
         add.addEventListener("change", () => {
@@ -46758,7 +46766,7 @@ function mkListingCardHtml(l, player, now) {
   const asked = typeof l.askedSalary === "number" ? l.askedSalary : askedSalary(player);
   const lastSeason = !fa && isLastContractSeason(player, league.contractSeason());
   const st = mkStatus(l);
-  const overall = Math.round(player.overall());
+  const overall = playerBestRating(player);
   const critKeys = mkCritActive().map(c => c.key);
   const minBid = minNextBidFor(l);
   const value = estimateMarketValue(player);
