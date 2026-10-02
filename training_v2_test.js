@@ -236,11 +236,13 @@ function withFixedRandom(fn) {
   const def = Object.keys(E.DEFENSES)[1];
   t2.collectiveTraining = "tactique";
   t2.trainedTactics = { category: "defense", value: def };
+  t2.players.forEach(p => { p.condition = 50; });
   t2.syncCollectiveTrainingLog(NOW);
   t2.markFriendlyDay(today, [t2.players[0].id]);
   const before = t2.tacticalKnowledge.defense[def];
   t2.syncCollectiveTrainingLog(NOW + D);
   assert(t2.tacticalKnowledge.defense[def] === before, "jour d'amical : pas de gain tactique pour l'équipe");
+  assert(t2.players[0].condition === 50 && t2.players[1].condition === 55, "jour d'amical : la tactique choisie devient une récupération (joueurs non retenus)");
   const t3 = makeTeam(1);
   t3.players.forEach(p => { p.condition = 50; });
   t3.collectiveTraining = "recuperation";

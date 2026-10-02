@@ -6806,12 +6806,15 @@ class Team {
         this.applyTrainingIntensityDay(e);
       }
       if (e.recoveryApplied) return;
-      const option = e.collectiveTraining;
+      let option = e.collectiveTraining;
       if (!COLLECTIVE_DAY_OPTIONS.includes(option)) return;
       const friendly = this.isFriendlyDay(e.dayIndex);
       // Jour d'amical (retour utilisateur 2026-10-01) : pas de tactique pour
-      // l'équipe, récupération/physique pour les joueurs non alignés.
-      if (friendly && option === "tactique") return;
+      // l'équipe, récupération/physique pour les joueurs non alignés. Une
+      // tactique choisie avant que l'amical soit programmé devient une
+      // récupération (retour utilisateur 2026-10-02 : la tactique doit être
+      // impossible ce jour-là), comme l'affiche l'Entraînement.
+      if (friendly && option === "tactique") option = "recuperation";
       e.recoveryApplied = true;
       const week = this.ensureCollectiveWeek();
       week.days[option] = (week.days[option] || 0) + 1;

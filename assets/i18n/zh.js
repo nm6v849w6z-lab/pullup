@@ -5688,6 +5688,8 @@ window.HM_I18N_ZH = {
   "Expérience": "经验",
   "Le mental progresse avec les minutes jouées": "心理属性随上场时间提升",
   "Sans minutes cette semaine": "本周未上场",
+  "Jour passé : plus modifiable": "已过去的日子：无法再修改",
+  "Jour de match officiel": "正式比赛日",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "本周上场时间（常规首发≈60分钟）。",
   "Bilan du lundi": "周一总结",
   "joueurs suivis": "跟进球员",

@@ -5688,6 +5688,8 @@ window.HM_I18N_PT = {
   "Expérience": "Experiência",
   "Le mental progresse avec les minutes jouées": "O mental evolui com os minutos jogados",
   "Sans minutes cette semaine": "Sem minutos esta semana",
+  "Jour passé : plus modifiable": "Dia passado: já não pode ser alterado",
+  "Jour de match officiel": "Dia de jogo oficial",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Minutos da semana atual (titular regular ≈ 60 min).",
   "Bilan du lundi": "Balanço de segunda-feira",
   "joueurs suivis": "jogadores acompanhados",

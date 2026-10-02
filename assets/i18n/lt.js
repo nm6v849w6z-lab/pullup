@@ -5688,6 +5688,8 @@ window.HM_I18N_LT = {
   "Expérience": "Patirtis",
   "Le mental progresse avec les minutes jouées": "Psichologija tobulėja su sužaistomis minutėmis",
   "Sans minutes cette semaine": "Šią savaitę be minučių",
+  "Jour passé : plus modifiable": "Praėjusi diena: nebegalima keisti",
+  "Jour de match officiel": "Oficialių rungtynių diena",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Šios savaitės minutės (nuolatinis startinio penketo žaidėjas ≈ 60 min).",
   "Bilan du lundi": "Pirmadienio ataskaita",
   "joueurs suivis": "žaidėjai plane",

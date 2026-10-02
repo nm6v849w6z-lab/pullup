@@ -5688,6 +5688,8 @@ window.HM_I18N_EL = {
   "Expérience": "Εμπειρία",
   "Le mental progresse avec les minutes jouées": "Τα πνευματικά βελτιώνονται με τα λεπτά συμμετοχής",
   "Sans minutes cette semaine": "Χωρίς λεπτά αυτή την εβδομάδα",
+  "Jour passé : plus modifiable": "Περασμένη ημέρα: δεν αλλάζει πια",
+  "Jour de match officiel": "Ημέρα επίσημου αγώνα",
   "Minutes de la semaine en cours (titulaire régulier ≈ 60 min).": "Λεπτά της τρέχουσας εβδομάδας (βασικός ≈ 60 λ.).",
   "Bilan du lundi": "Απολογισμός Δευτέρας",
   "joueurs suivis": "παίκτες σε πρόγραμμα",

@@ -5430,7 +5430,9 @@
   .tm-day.phy .t{color:#c49bff;}
   .tm-day.friendly{background:rgba(127,182,255,.08); border-color:rgba(127,182,255,.35);}
   .tm-day.friendly .t{color:#7fb6ff;}
-  .tm-day.past{opacity:.6;}
+  /* Jour passé : clairement éteint (retour utilisateur 2026-10-02, amicaux
+     passés pris pour des jours bloqués). */
+  .tm-day.past{opacity:.4; filter:saturate(.3);}
   .tm-day.today{outline:2px solid var(--ink-faint); outline-offset:1px;}
   .tm-day.sel{box-shadow:inset 0 0 0 1.5px var(--ok);}
   .tm-dayedit{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px;}
@@ -16487,12 +16489,15 @@ class Team {
         this.applyTrainingIntensityDay(e);
       }
       if (e.recoveryApplied) return;
-      const option = e.collectiveTraining;
+      let option = e.collectiveTraining;
       if (!COLLECTIVE_DAY_OPTIONS.includes(option)) return;
       const friendly = this.isFriendlyDay(e.dayIndex);
       // Jour d'amical (retour utilisateur 2026-10-01) : pas de tactique pour
-      // l'équipe, récupération/physique pour les joueurs non alignés.
-      if (friendly && option === "tactique") return;
+      // l'équipe, récupération/physique pour les joueurs non alignés. Une
+      // tactique choisie avant que l'amical soit programmé devient une
+      // récupération (retour utilisateur 2026-10-02 : la tactique doit être
+      // impossible ce jour-là), comme l'affiche l'Entraînement.
+      if (friendly && option === "tactique") option = "recuperation";
       e.recoveryApplied = true;
       const week = this.ensureCollectiveWeek();
       week.days[option] = (week.days[option] || 0) + 1;
@@ -41767,6 +41772,9 @@ function trainingWeekDays(now = Date.now()) {
       const oppIdx = friendly.homeIdx === myTeamIndex ? friendly.awayIdx : friendly.homeIdx;
       opponent = league.teams[oppIdx] ? league.teams[oppIdx].name : null;
     }
+    // Jour d'amical : la tactique est impossible, elle compte comme une
+    // récupération (même règle que Team.syncCollectiveTrainingLog).
+    if (!match && friendly && option === "tactique") option = "recuperation";
     days.push({ i, dayIndex, past: dayIndex < todayIndex, today: dayIndex === todayIndex, match: !!match, friendly: !match && !!friendly, opponent, option });
   }
   return days;
@@ -41802,7 +41810,8 @@ function renderCollectivePlan() {
     if (d.today) cls += " today";
     if (d.dayIndex === trainingSelectedDay) cls += " sel";
     const disabled = d.past || d.match;
-    return `<button type="button" class="${cls}" data-train-day="${d.dayIndex}"${disabled ? " disabled" : ""} aria-pressed="${d.dayIndex === trainingSelectedDay}">` +
+    const tip = d.past ? "Jour passé : plus modifiable" : d.match ? "Jour de match officiel" : "";
+    return `<button type="button" class="${cls}" data-train-day="${d.dayIndex}"${disabled ? " disabled" : ""}${tip ? ` title="${tip}"` : ""} aria-pressed="${d.dayIndex === trainingSelectedDay}">` +
       `<span class="d">${TRAINING_DAY_SHORT[d.i]}</span>${body}</button>`;
   }).join("") + `</div>`;
   const sel = days.find(d => d.dayIndex === trainingSelectedDay);
@@ -41816,7 +41825,8 @@ function renderCollectivePlan() {
     html += `<div><div class="tm-label">${TRAINING_DAY_LONG[sel.i]} · ${sel.friendly ? "jour d'amical" : "jour de repos"}</div>` +
       `<div class="tm-dayedit" role="group">` + opts.map(o => {
         const ui = COLLECTIVE_OPTION_UI[o.key];
-        const on = cfg.collectiveTraining === o.key && !(o.disabled);
+        const chosen = sel.friendly && cfg.collectiveTraining === "tactique" ? "recuperation" : cfg.collectiveTraining;
+        const on = chosen === o.key && !(o.disabled);
         return `<button type="button" data-day-option="${o.key}" class="${on ? "on" : ""}"${o.disabled ? " disabled" : ""} aria-pressed="${on}"><b>${ui.icon}<span>${ui.label}</span></b>${o.sub ? `<span>${o.sub}</span>` : ""}</button>`;
       }).join("") + `</div>` +
       (sel.friendly ? `<div class="tm-note" style="margin-top:8px">S'applique aux joueurs non retenus pour l'amical.</div>` : "") +
@@ -41824,14 +41834,14 @@ function renderCollectivePlan() {
     if (cfg.collectiveTraining === "tactique" && !sel.friendly) {
       html += `<div id="trainedTacticsPicker" class="trained-tactics-picker"></div>`;
     }
-    if (cfg.collectiveTraining === "recuperation") html += `<div id="recoveryFormGauge" class="recovery-form-gauge"></div>`;
+    if (cfg.collectiveTraining === "recuperation" || (sel.friendly && cfg.collectiveTraining === "tactique")) html += `<div id="recoveryFormGauge" class="recovery-form-gauge"></div>`;
   }
   html += trainingKnowledgeHtml(days);
   holder.innerHTML = html;
   if (sel) {
     const cfg = teamA.collectiveDayConfig(sel.dayIndex);
     if (cfg.collectiveTraining === "tactique" && !sel.friendly) renderTrainedTacticsPicker(sel);
-    if (cfg.collectiveTraining === "recuperation") renderRecoveryFormGauge();
+    if (cfg.collectiveTraining === "recuperation" || (sel.friendly && cfg.collectiveTraining === "tactique")) renderRecoveryFormGauge();
   }
 }
 // Jauges de connaissance tactique des options jouées (et de l'aspect
