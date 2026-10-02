@@ -87,7 +87,8 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   winA.eval(`tqEdit.proxy.defense = "Zone press";`);
   docA.getElementById("tqEditorSave").click();
   check(await winA.__lastFriendlyOrdersSave, "ordres de l'amical enregistrés");
-  await waitFor(() => !docA.getElementById("amicauxSection").classList.contains("hidden"), "retour à la page Matchs amicaux");
+  await waitFor(() => !docA.getElementById("calendrierSection").classList.contains("hidden"), "retour au Calendrier (comme les ordres officiels)");
+  winA.eval("TAB_HANDLERS.amicaux()");
   const savedOrders = winA.eval(`JSON.stringify(league.friendlies.find(f => f.id === '${fId}').orders[myTeamIndex])`);
   const so = JSON.parse(savedOrders);
   check(so.lineup.starters.Meneur === youth.id && so.defense === "Zone press", "ordres complets enregistrés sur l'amical (jeune titulaire, défense choisie)");

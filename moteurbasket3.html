@@ -51160,7 +51160,10 @@ function closeTacticEditor() {
   const wasLp = !!(tqEdit && tqEdit.kind === "lp");
   tqEdit = null;
   renderTacticEditorBar();
-  if (wasLp) TAB_HANDLERS.lp(); else if (wasFriendly) TAB_HANDLERS.amicaux(); else TAB_HANDLERS.tactiques();
+  // Ordres de ligue privée ou d'amical validés ou annulés : retour au
+  // Calendrier, comme les ordres du championnat et de la coupe (retour
+  // utilisateur 2026-10-02).
+  if (wasLp || wasFriendly) TAB_HANDLERS.calendrier(); else TAB_HANDLERS.tactiques();
 }
 
 // Ordres d'un match amical (retour utilisateur 2026-09-27 : "pour le match
