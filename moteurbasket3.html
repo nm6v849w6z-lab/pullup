@@ -41660,8 +41660,11 @@ function renderTrainingCoachCard() {
     return;
   }
   const spec = COACH_SPECIALTIES[tr.specialty];
-  holder.innerHTML = `<div class="tm-coach"><span class="tm-av coach" aria-hidden="true">N${tr.level}</span>` +
-    `<div><b>Entraîneur niveau ${tr.level}</b>` +
+  // Visage et nom de l'entraîneur, comme sur la page Staff (retour
+  // utilisateur 2026-10-02 : « la tête de l'entraîneur ne s'affiche pas »).
+  const ident = staffIdentity(staffMemberKey("coach", tr));
+  holder.innerHTML = `<div class="tm-coach">${staffAvatarHtml(ident, teamAvatarColors(teamA), 40)}` +
+    `<div><b><span data-no-i18n>${escapeHtml(ident.name)}</span> · Entraîneur ${staffStarsHtml(tr.level)}</b>` +
     `<small>${trainingSlotsForTrainer(tr)} places individuelles · rendement ${trainingFmtMult(trainerRateMultiplier(tr))} · plafond +${trainerCeilingBonus(tr)}</small></div>` +
     (spec ? `<span class="tm-badge teal">Spécialité ${escapeHtml(spec.label)}</span>` : "") + `</div>`;
 }
