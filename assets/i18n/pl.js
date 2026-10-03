@@ -2756,6 +2756,8 @@ window.HM_I18N_PL = {
   "moue": "grymas",
   "moy.": "śr.",
   "Moy.": "Śr.",
+  "GEN": "OG",
+  "Note du meilleur poste": "Ocena na najlepszej pozycji",
   "Moyenne": "Średnia",
   "Moyenne {0}": "Średnia {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Średnia z ostatnich {0} meczów u siebie",

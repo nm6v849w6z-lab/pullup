@@ -2756,6 +2756,8 @@ window.HM_I18N_PT = {
   "moue": "beicinho",
   "moy.": "méd.",
   "Moy.": "Méd.",
+  "GEN": "GER",
+  "Note du meilleur poste": "Nota da melhor posição",
   "Moyenne": "Média",
   "Moyenne {0}": "Média {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Média do(s) {0} último jogo em casa",

@@ -2756,6 +2756,8 @@ window.HM_I18N_ZH = {
   "moue": "撅嘴",
   "moy.": "均",
   "Moy.": "平均",
+  "GEN": "总评",
+  "Note du meilleur poste": "最佳位置评分",
   "Moyenne": "平均",
   "Moyenne {0}": "平均 {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "最近{0}场主场比赛的平均值",

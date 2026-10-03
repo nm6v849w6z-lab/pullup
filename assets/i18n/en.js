@@ -2754,6 +2754,8 @@ window.HM_I18N_EN = {
   "moue": "pout",
   "moy.": "avg.",
   "Moy.": "Avg.",
+  "GEN": "OVR",
+  "Note du meilleur poste": "Best-position rating",
   "Moyenne": "Average",
   "Moyenne {0}": "Average {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Average of the last{1} {0} home match{2}",

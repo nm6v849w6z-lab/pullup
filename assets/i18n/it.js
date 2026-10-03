@@ -2792,6 +2792,8 @@ window.HM_I18N_IT = {
   "moue": "broncio",
   "moy.": "media",
   "Moy.": "Media",
+  "GEN": "GEN",
+  "Note du meilleur poste": "Valutazione del ruolo migliore",
   "Moyenne": "Media",
   "Moyenne {0}": "Media {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Media delle ultime {0} partite in casa",

@@ -2756,6 +2756,8 @@ window.HM_I18N_EL = {
   "moue": "μούτρωμα",
   "moy.": "μ.ό.",
   "Moy.": "Μ.Ο.",
+  "GEN": "ΓΕΝ",
+  "Note du meilleur poste": "Βαθμός καλύτερης θέσης",
   "Moyenne": "Μέσος όρος",
   "Moyenne {0}": "Μέσος όρος {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Μέσος όρος των τελευταίων {0} εντός έδρας αγώνων",

@@ -2756,6 +2756,8 @@ window.HM_I18N_LT = {
   "moue": "surauktos lūpos",
   "moy.": "vid.",
   "Moy.": "Vid.",
+  "GEN": "BEND",
+  "Note du meilleur poste": "Geriausios pozicijos įvertinimas",
   "Moyenne": "Vidurkis",
   "Moyenne {0}": "Vidurkis {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Paskutinių {0} namų rungtynių vidurkis",

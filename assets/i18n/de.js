@@ -2756,6 +2756,8 @@ window.HM_I18N_DE = {
   "moue": "Schmollmund",
   "moy.": "Ø",
   "Moy.": "Ø",
+  "GEN": "GES",
+  "Note du meilleur poste": "Wertung der besten Position",
   "Moyenne": "Durchschnitt",
   "Moyenne {0}": "Durchschnitt {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Durchschnitt der letzten {0} Heimspiel",

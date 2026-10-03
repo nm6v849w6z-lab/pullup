@@ -45333,10 +45333,10 @@ const EFF_AVG_LABELS = { physicalAvg: "Physique", mentalAvg: "Mental" };
 function effAttrValue(p, key) {
   return (key === "physicalAvg" || key === "mentalAvg") ? rosterSortValue(p, key) : p.attrs[key];
 }
-// Colonne "Moy." : moyenne des 15 colonnes du sous-onglet Caractéristiques.
+// Colonne "GEN" (retour utilisateur 2026-10-03 : « on ne devrait afficher
+// la moyenne nulle part mais un GEN, la note du meilleur poste ») — ex-« Moy. ».
 function effAttrAverage(p) {
-  const keys = EFF_ATTR_GROUPS.flatMap(g => g.keys);
-  return keys.reduce((s, k) => s + effAttrValue(p, k), 0) / keys.length;
+  return playerBestRating(p);
 }
 
 function effChevronSvg() {
@@ -45511,7 +45511,7 @@ function renderEffectifSection() {
       EFF_ATTR_GROUPS.map(g => `<td colspan="${g.keys.length}" class="eff-family"><span>${escapeHtml(g.label)}</span></td>`).join("") + `</tr>`;
     html += "<tr>" + effHeaderCellHtml("name", "Nom", { cls: "eff-th-name" }) + effHeaderCellHtml("position", "Poste") +
       effHeaderCellHtml("potential", "Potentiel") +
-      effHeaderCellHtml("avg", "Moy.", { cls: "eff-th-avg", forceActive: avgActive && !rosterSortState.key, title: "Moyenne des 15 colonnes" }) +
+      effHeaderCellHtml("avg", "GEN", { cls: "eff-th-avg", forceActive: avgActive && !rosterSortState.key, title: "Note du meilleur poste" }) +
       EFF_ATTR_GROUPS.map((g, gi) => g.keys.map((k, ki) => effHeaderCellHtml(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
         cls: `eff-th-attr${ki === 0 && gi > 0 ? " eff-gstart" : ""}`,
         title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
@@ -45520,7 +45520,7 @@ function renderEffectifSection() {
     sorted.forEach(p => {
       html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}</span></td>` +
         `<td>${effPosBadgeHtml(p.position)}</td><td>${effPotentialHtml(p)}</td>` +
-        `<td class="eff-td-avg">${effAttrAverage(p).toFixed(1).replace(".", ",")}</td>`;
+        `<td class="eff-td-avg">${effAttrAverage(p)}</td>`;
       EFF_ATTR_GROUPS.forEach((g, gi) => g.keys.forEach((k, ki) => {
         const v = effAttrValue(p, k);
         const isBest = v === best[k];
@@ -49184,7 +49184,7 @@ function renderYouthRoster() {
       `<div class="ac-card-top">${acIdentityHtml(p)}<div class="ac-badges">${acPotentialBadgeHtml(p.potential, "Potentiel encore caché, seule la promotion en effectif pro le révèlera")}</div></div>` +
       // Avatars des jeunes (Premium) : voir showYouthLookModal.
       `<button type="button" class="ac-look-btn" data-youth-look="${p.id}">${p.look ? "Apparence personnalisée · modifier" : "Personnaliser l'apparence"}${teamIsPremium(teamA) ? "" : ` <span class="prm-tag">Premium</span>`}</button>` +
-      `<div class="ac-progress"><div class="row"><span>Moyenne générale</span><span><b>${playerBestRating(p)}</b></span></div>` +
+      `<div class="ac-progress"><div class="row"><span title="Note du meilleur poste">GEN</span><span><b>${playerBestRating(p)}</b></span></div>` +
       `<div class="track"><div class="fill" style="width:${Math.min(100, playerBestRating(p) * 2)}%"></div></div></div>` +
       acGroupsHtml(p) + acTraitsHtml(p) +
       (capped ? `<div class="ac-note">${capped} caractéristique${capped > 1 ? "s" : ""} déjà au plafond de 50 (débloqué à la promotion).</div>` : "") +

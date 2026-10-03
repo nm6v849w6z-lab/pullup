@@ -2756,6 +2756,8 @@ window.HM_I18N_ES = {
   "moue": "mueca",
   "moy.": "prom.",
   "Moy.": "Prom.",
+  "GEN": "GEN",
+  "Note du meilleur poste": "Nota de su mejor puesto",
   "Moyenne": "Promedio",
   "Moyenne {0}": "Promedio {0}",
   "Moyenne des {0} dernier{1} match{2} à domicile": "Promedio de los {0} último partido en casa",
