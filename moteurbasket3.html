@@ -14061,7 +14061,7 @@ const MAX_TEAM_TROPHIES = 30;
 // au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
-const SALARY_BASELINE_OVERALL = 7; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
+const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
 const SALARY_AT_BASELINE = 1500;    // salaire hebdo à ce niveau de référence (5 de coefficient)
 const SALARY_GROWTH_PER_POINT = 1.032; // +3.2%/point au-dessus/dessous de la référence
 const SALARY_MIN = 200; // plancher, même pour un très jeune/faible joueur (≈ joueur de complément BuzzerBeater)
@@ -15336,6 +15336,8 @@ function planKey(round, competition) {
 // 2026-09), voir CONNAISSANCE TACTIQUE ci-dessous.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12;
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
+// Une arrivée pèse moitié moins qu'un départ (retour utilisateur 2026-10-03).
+const CHEMISTRY_ARRIVAL_SHARE = 0.5;
 const CHEMISTRY_MIN = 40; // plancher de l'alchimie (voir engine.js)
 function chemistryRosterImportance(rank) {
   return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
@@ -21484,7 +21486,7 @@ class League {
     // Alchimie d'équipe (voir engine.js, miroir identique).
     const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
     seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
-    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
+    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * CHEMISTRY_ARRIVAL_SHARE * buyerImportance);
     listing.result = "sold";
     listing.finalPrice = amount;
   }

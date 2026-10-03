@@ -2230,7 +2230,7 @@ function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
   if (!buyer.isHuman) buyer.autoAssignLineup();
   const buyerImportance = chemistryRosterImportance(rosterRankOf(buyer.players, player.id));
   seller.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * sellerImportance);
-  buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * buyerImportance);
+  buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * CHEMISTRY_ARRIVAL_SHARE * buyerImportance);
   return { result: "sold", player };
 }
 
@@ -3497,9 +3497,9 @@ const MAX_TEAM_TROPHIES = 30;
 // au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
-// 7 depuis le passage au meilleur poste (2026-10-03, note de calcul +3 en
-// moyenne) : masse salariale globale inchangée.
-const SALARY_BASELINE_OVERALL = 7; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
+// Inchangé au passage au meilleur poste (2026-10-03) : salaires environ
+// 6 % plus hauts en moyenne, validé par l'utilisateur.
+const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
 const SALARY_AT_BASELINE = 1500;    // salaire hebdo à ce niveau de référence (5 de coefficient)
 const SALARY_GROWTH_PER_POINT = 1.032; // +3.2%/point au-dessus/dessous de la référence
 const SALARY_MIN = 200; // plancher, même pour un très jeune/faible joueur (≈ joueur de complément BuzzerBeater)
@@ -5119,7 +5119,9 @@ function planKey(round, competition) {
 // cohésion collective aide ou pénalise le groupe entier, pas un joueur en
 // particulier.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12; // "le 12 homme" (retour utilisateur, littéral)
-const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joueur de l'effectif
+const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
+// Une arrivée pèse moitié moins qu'un départ (retour utilisateur 2026-10-03).
+const CHEMISTRY_ARRIVAL_SHARE = 0.5; // malus max, pour le tout meilleur joueur de l'effectif
 
 // Leviers À LA HAUSSE (retour utilisateur 2026-09-26 : "faisons la vivre
 // davantage à la hausse, ça tire trop vers le bas là" — seuls les 5
@@ -13302,7 +13304,7 @@ class League {
     player.weeksAtLowMotivation = 0;
     this._applyTransferContract(listing, buyer, player, buyerSeason, now);
     if (buyer.isHuman) ensureJerseyNumbers(buyer); else buyer.autoAssignLineup();
-    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * chemistryRosterImportance(rosterRankOf(buyer.players, player.id)));
+    buyer.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * CHEMISTRY_ARRIVAL_SHARE * chemistryRosterImportance(rosterRankOf(buyer.players, player.id)));
     return { result: "sold", player };
   }
 
