@@ -2987,6 +2987,15 @@
   .pdp-contract-sale{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin:18px 0 16px; align-items:start;}
   .pdp-contract-sale.pdp2-side-cards{grid-template-columns:minmax(0,1fr); margin:0;}
   .pdp-contract-sale.pdp2-left-cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin:0;}
+  /* Colonnes Saison/Derniers matchs et Classements/Contrat/Vente : les
+     briques s'étirent pour que les deux colonnes finissent au même niveau
+     (retour 2026-10-03). */
+  .pdp2-row--games{align-items:stretch;}
+  .pdp2-row--games > .pdp2-side > *{flex:1 1 auto;}
+  .pdp2-row--games > .pdp2-side > .pdp2-ranks[hidden]{display:none;}
+  .pdp2-row--games .pdp2-side-cards{display:flex; flex-direction:column; gap:14px;}
+  .pdp2-row--games .pdp2-side-cards > .pdp-card{flex:1 1 auto;}
+  .pdp2-share-bottom .pdp2-share{flex-direction:row; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 12px; margin-top:0;}
   .pdp-contract-sale.pdp2-bottom-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); align-items:stretch; margin:0;}
   /* Partager : une seule ligne compacte (titre, bouton, état du lien). */
   .pdp-contract-sale > .pdp2-share-card{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px !important;}
@@ -32944,9 +32953,10 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `</div>`; // #pdpSaleCard
     // Personnalisation : seulement si quelque chose est réglable (Premium) —
     // sinon la brique prenait de la place pour rien (retour 2026-10-03).
-    const share = playerDetailForeign ? "" : `<div class="pdp-card pdp2-share-card"><h3>Partager</h3>${pdpShareHtml(player)}</div>`;
-    sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${playerContractCardHtml(team, player)}${html}${share}</div>`;
+    sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${playerContractCardHtml(team, player)}${html}</div>`;
     bottomCards = teamIsPremium(team) ? `<div class="pdp-contract-sale pdp2-bottom-cards">${playerPersonalizationCardHtml(team, player)}</div>` : "";
+    // Partager tout en bas, sans cadre (retour 2026-10-03).
+    if (!playerDetailForeign) bottomCards += `<div class="pdp2-share-bottom">${pdpShareHtml(player)}</div>`;
     html = mainHtml;
   }
   html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards).replace("<!--PDP_BOTTOM_CARDS-->", bottomCards);
