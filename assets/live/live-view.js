@@ -746,12 +746,16 @@ export function createLiveView(root, opts = {}) {
     // premier groupe est le cinq EN JEU, rangé par poste occupé ; ensuite
     // le banc, par poste puis temps de jeu. Hors direct (fin de match),
     // cinq de départ puis banc.
+    // Tri par rang numérique (posRank/slotRank, indépendant de la langue :
+    // les libellés courts sont traduits) ; repli sur les codes français.
     const POS_ORDER = ["M", "A", "AS", "AF", "P"];
-    const rank = x => { const i = POS_ORDER.indexOf(x); return i < 0 ? 9 : i; };
+    const rank = x => { if (typeof x === "number") return x; const i = POS_ORDER.indexOf(x); return i < 0 ? 9 : i; };
     const byPos = key => (a, b) => rank(key(a)) - rank(key(b)) || b.seconds - a.seconds;
+    const posKey = p => (p.posRank != null ? p.posRank : p.pos);
+    const slotKey = p => (p.slotRank != null ? p.slotRank : p.slot || posKey(p));
     const live = S.status === "live" || S.status === "halftime";
-    const first = live ? played.filter(p => p.onCourt).sort(byPos(p => p.slot || p.pos)) : played.filter(p => p.starter).sort(byPos(p => p.pos));
-    const bench = played.filter(p => !first.includes(p)).sort(byPos(p => p.pos));
+    const first = live ? played.filter(p => p.onCourt).sort(byPos(slotKey)) : played.filter(p => p.starter).sort(byPos(posKey));
+    const bench = played.filter(p => !first.includes(p)).sort(byPos(posKey));
     const COLS = 14;
     $("box").style.setProperty("--tc", COLOR(ti));
     $("box").innerHTML = `<thead><tr><th>Joueur</th><th>Min</th><th>Pts</th><th>Reb</th><th class="c2" title="Rebonds offensifs">RO</th><th>PD</th>

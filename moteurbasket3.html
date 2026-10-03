@@ -26010,6 +26010,7 @@ const OFF_TACTICS_LIST = Object.keys(OFFENSE_PROFILES);
 const DEF_LIST = Object.keys(DEFENSES);
 const RHYTHM_LIST = Object.keys(RHYTHMS);
 const POS_SHORT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
+const HM_LIVE_POS_RANK = { "Meneur": 0, "Arrière": 1, "Ailier shooteur": 2, "Ailier fort": 3, "Pivot": 4 };
 const ATTR_SHORT = {
   midRange: "MI-D", threePoint: "3PTS", inside: "INT", pass: "PASSE", rebound: "REB",
   block: "CTR", dribble: "DRIB", agility: "AGI", defOutside: "DEF EXT", defInside: "DEF INT",
@@ -41488,7 +41489,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261003-5";
+const HM_LIVE_ASSET_VERSION = "20261003-6";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -41858,6 +41859,10 @@ function hmLiveBuildState() {
         onCourt: !hmLive.final && !hmLive.match.pregame && !!(liveCourtState && liveCourtState[key].has(row.key)),
         // Poste occupé sur le terrain (tri des joueurs en jeu par poste).
         slot: (liveCourtSlot && liveCourtSlot[key].get(row.key)) ? POS_SHORT[liveCourtSlot[key].get(row.key)] || "" : null,
+        // Rangs de poste indépendants de la langue (le libellé court est
+        // traduit : PM/G/AP/AG/C en italien) — tri meneur → pivot.
+        posRank: HM_LIVE_POS_RANK[row.position] ?? 9,
+        slotRank: (liveCourtSlot && liveCourtSlot[key].get(row.key)) ? HM_LIVE_POS_RANK[liveCourtSlot[key].get(row.key)] ?? 9 : null,
         seconds,
         pts: row.pts, reb: row.reb, oreb: row.oreb || 0, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
         fg2m: row.fgm2, fg2a: row.fga2, fg3m: row.fgm3, fg3a: row.fga3, ftm: row.ftm, fta: row.fta,
