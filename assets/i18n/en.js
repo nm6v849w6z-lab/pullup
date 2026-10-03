@@ -5911,4 +5911,10 @@ window.HM_I18N_EN = {
   "Maîtrise du système": "Mastery of the system",
   "Système {0}": "System {0}",
   "Donner vos ordres": "Give your orders",
+  "Saison {0}": "Season {0}",
+  "Votre joueur": "Your player",
+  "· dernière": "· final",
+  "· aucune enchère": "· no bid",
+  "Salaire demandé": "Asking salary",
+  "Fin : {0}, {1} · {2}": "Ends: {0}, {1} · {2}",
 };

@@ -130,10 +130,8 @@ console.log(`\nCellules verrouillées sur la fiche complète d'un joueur EN VENT
 if (lockedOnPlayerPage !== 0) {
   throw new Error(`❌ BUG NON CORRIGÉ : les caractéristiques d'un joueur mis en vente devraient être déverrouillées sur sa fiche complète (comme sur le marché), obtenu ${lockedOnPlayerPage} cellules verrouillées.`);
 }
-const marketNoticeShown = doc.getElementById("playerDetailContent").textContent.includes("aux enchères sur le marché");
-console.log("Mention \"aux enchères sur le marché\" affichée sur la fiche :", marketNoticeShown);
-if (!marketNoticeShown) throw new Error("❌ La fiche joueur devrait expliquer pourquoi ses caractéristiques sont visibles (mise en vente).");
-console.log("✅ Les caractéristiques d'un joueur mis en vente sont bien déverrouillées sur sa fiche complète, avec une mention explicative.");
+// Phrase explicative retirée à la demande de l'utilisateur (2026-10-03).
+console.log("✅ Les caractéristiques d'un joueur mis en vente sont bien déverrouillées sur sa fiche complète.");
 
 await flush(dom);
 await dom.window.close();

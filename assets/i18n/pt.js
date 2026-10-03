@@ -5886,4 +5886,10 @@ window.HM_I18N_PT = {
   "Maîtrise du système": "Domínio do sistema",
   "Système {0}": "Sistema {0}",
   "Donner vos ordres": "Dar as suas ordens",
+  "Saison {0}": "Temporada {0}",
+  "Votre joueur": "O seu jogador",
+  "· dernière": "· última",
+  "· aucune enchère": "· sem lances",
+  "Salaire demandé": "Salário pedido",
+  "Fin : {0}, {1} · {2}": "Fim: {0}, {1} · {2}",
 };

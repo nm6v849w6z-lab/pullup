@@ -5886,4 +5886,10 @@ window.HM_I18N_PL = {
   "Maîtrise du système": "Opanowanie systemu",
   "Système {0}": "System {0}",
   "Donner vos ordres": "Wydaj polecenia",
+  "Saison {0}": "Sezon {0}",
+  "Votre joueur": "Twój zawodnik",
+  "· dernière": "· ostatni",
+  "· aucune enchère": "· brak ofert",
+  "Salaire demandé": "Żądana pensja",
+  "Fin : {0}, {1} · {2}": "Koniec: {0}, {1} · {2}",
 };

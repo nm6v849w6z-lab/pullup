@@ -5886,4 +5886,10 @@ window.HM_I18N_LT = {
   "Maîtrise du système": "Sistemos įvaldymas",
   "Système {0}": "Sistema {0}",
   "Donner vos ordres": "Duokite nurodymus",
+  "Saison {0}": "Sezonas {0}",
+  "Votre joueur": "Jūsų žaidėjas",
+  "· dernière": "· paskutinis",
+  "· aucune enchère": "· pasiūlymų nėra",
+  "Salaire demandé": "Prašomas atlyginimas",
+  "Fin : {0}, {1} · {2}": "Pabaiga: {0}, {1} · {2}",
 };

@@ -5886,4 +5886,10 @@ window.HM_I18N_ES = {
   "Maîtrise du système": "Dominio del sistema",
   "Système {0}": "Sistema {0}",
   "Donner vos ordres": "Dar tus órdenes",
+  "Saison {0}": "Temporada {0}",
+  "Votre joueur": "Tu jugador",
+  "· dernière": "· última",
+  "· aucune enchère": "· sin pujas",
+  "Salaire demandé": "Salario pedido",
+  "Fin : {0}, {1} · {2}": "Fin: {0}, {1} · {2}",
 };

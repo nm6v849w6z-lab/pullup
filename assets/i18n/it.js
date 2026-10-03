@@ -5949,4 +5949,10 @@ window.HM_I18N_IT = {
   "Maîtrise du système": "Padronanza del sistema",
   "Système {0}": "Sistema {0}",
   "Donner vos ordres": "Dai i tuoi ordini",
+  "Saison {0}": "Stagione {0}",
+  "Votre joueur": "Il tuo giocatore",
+  "· dernière": "· ultima",
+  "· aucune enchère": "· nessuna offerta",
+  "Salaire demandé": "Stipendio richiesto",
+  "Fin : {0}, {1} · {2}": "Fine: {0}, {1} · {2}",
 };

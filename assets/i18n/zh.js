@@ -5886,4 +5886,10 @@ window.HM_I18N_ZH = {
   "Maîtrise du système": "体系掌握度",
   "Système {0}": "体系 {0}",
   "Donner vos ordres": "下达指令",
+  "Saison {0}": "第 {0} 赛季",
+  "Votre joueur": "你的球员",
+  "· dernière": "· 最后一季",
+  "· aucune enchère": "· 暂无出价",
+  "Salaire demandé": "要求薪资",
+  "Fin : {0}, {1} · {2}": "结束：{0}，{1} · {2}",
 };

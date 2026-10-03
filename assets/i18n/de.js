@@ -5886,4 +5886,10 @@ window.HM_I18N_DE = {
   "Maîtrise du système": "Beherrschung des Systems",
   "Système {0}": "System {0}",
   "Donner vos ordres": "Anweisungen geben",
+  "Saison {0}": "Saison {0}",
+  "Votre joueur": "Dein Spieler",
+  "· dernière": "· letzte",
+  "· aucune enchère": "· kein Gebot",
+  "Salaire demandé": "Gehaltsforderung",
+  "Fin : {0}, {1} · {2}": "Ende: {0}, {1} · {2}",
 };

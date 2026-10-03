@@ -2467,6 +2467,46 @@
     .mk-alist.two{grid-auto-flow:row; grid-template-rows:none; grid-template-columns:1fr;}
   }
   @container mklist (max-width:980px){ .mk-attrs{grid-template-columns:1fr;} }
+  /* Carte compacte du marché (téléphone, maquette 2026-10-03). */
+  .mk-cmp{display:none;}
+  @container mklist (max-width:700px){
+    .mk-cmp{display:block; padding:12px 14px;}
+    .mk-lst:not(.is-expanded) .mk-lst-main, .mk-lst:not(.is-expanded) .mk-lst-foot, .mk-lst:not(.is-expanded) .mk-attrs{display:none;}
+    .mk-lst.is-expanded .mk-lst-id, .mk-lst.is-expanded .mk-lst-prof, .mk-lst.is-expanded .mk-deal-top{display:none;}
+    .mk-lst.is-expanded .mk-lst-deal{border-top:1px solid var(--line);}
+  }
+  .mk-cmp-hd{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:10px; align-items:center;}
+  .mk-cmp-av{width:44px; height:44px; border-radius:50%; overflow:hidden; background:var(--panel-2);}
+  .mk-cmp-av .player-avatar{width:44px !important; height:48px !important;}
+  .mk-cmp-nm{font-weight:800; font-size:15px; line-height:1.2;}
+  .mk-cmp-nm a, .mk-cmp-nm .player-link{color:var(--ink);}
+  .mk-cmp-sub{font-size:12px; color:var(--ink-dim); margin-top:3px;}
+  .mk-cmp-tag{display:inline-block; font-size:10px; font-weight:800; border-radius:5px; padding:1px 6px; border:1px solid rgba(240,162,60,.45); color:var(--amber); margin:4px 4px 0 0;}
+  .mk-cmp-tag.ok{border-color:rgba(51,180,161,.5); color:var(--ok);}
+  .mk-cmp-hd .mk-badge{margin-top:4px; font-size:10px;}
+  .mk-cmp-gen{text-align:center; border:2px solid var(--line); border-radius:12px; padding:4px 8px; min-width:50px;}
+  .mk-cmp-gen b{display:block; font-size:20px; line-height:1;}
+  .mk-cmp-gen small{font-size:9px; letter-spacing:.1em; color:var(--ink-dim); font-weight:700;}
+  .mk-cmp-facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:10px;}
+  .mk-cmp-f{background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:5px 4px; text-align:center; min-width:0;}
+  .mk-cmp-f small{display:block; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700;}
+  .mk-cmp-f b{font-size:13px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mk-cmp-f b.pos{color:var(--amber);}
+  .mk-cmp-f .potential-tier{color:var(--ink); font-size:inherit; font-weight:inherit; padding:0; background:none;}
+  .mk-cmp-sal{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-dim); margin-top:8px;}
+  .mk-cmp-sal b{color:var(--ink);}
+  .mk-cmp-gauges{margin:10px 0 8px; padding-top:9px; border-top:1px solid var(--line); display:grid; gap:6px;}
+  .mk-cmp-g{display:grid; grid-template-columns:72px minmax(0,1fr) 26px; gap:8px; align-items:center; font-size:12.5px; color:var(--ink-dim);}
+  .mk-cmp-g .mk-bar{display:block; width:auto; min-width:0;}
+  .mk-cmp-g b{text-align:right; font-weight:800;}
+  .mk-cmp-ft{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; border-top:1px solid var(--line); padding-top:9px;}
+  .mk-cmp-k{font-size:11px; color:var(--ink-dim);}
+  .mk-cmp-v{font-weight:800; font-size:15px;}
+  .mk-cmp-v span{font-size:12px; color:var(--ink-dim); font-weight:600;}
+  .mk-cmp-end{font-size:12px; color:var(--ink-dim);}
+  .mk-cmp-end.urgent{color:var(--danger);}
+  .mk-cmp-chev{background:none; border:0; color:var(--ink-dim); font-size:30px; line-height:1; padding:6px 4px 6px 14px; cursor:pointer; transition:transform .15s;}
+  .mk-lst.is-expanded .mk-cmp-chev{transform:rotate(90deg); color:var(--amber);}
   .mk-lst-id{display:flex; gap:20px; align-items:center; padding:22px 24px; min-width:0;}
   .mk-avatar{flex:0 0 auto; width:96px; height:96px; border-radius:18px; overflow:hidden; background:var(--panel-2); border:2px solid var(--line); display:flex; align-items:flex-end; justify-content:center;}
   .mk-id-text{display:flex; flex-direction:column; gap:10px; min-width:0;}
@@ -2808,7 +2848,21 @@
   .pdp2-btn--static{cursor:default; color:var(--amber); border-color:rgba(240,162,60,.45); font-size:13px;}
 
   .pdp2-row{display:grid; gap:18px;}
-  .pdp2-row--profile{grid-template-columns:420px minmax(0,1fr);}
+  .pdp2-row--profile{grid-template-columns:320px minmax(0,1fr);}
+  /* Caractéristiques à côté du radar (maquette 2026-10-03) : libellé +
+     valeur, sans mini-barre, pour lire les 28 sans les couper. */
+  .pdp2-row--profile .pdp2-bar{display:none;}
+  .pdp2-row--profile .pdp-attr-grid{gap:22px;}
+  .pdp2-row--profile .pdp2-attr-list.two{column-gap:22px;}
+  .pdp2-row--profile .pdp2-radar svg{max-width:100%; height:auto;}
+  .pdp2-infos{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-width:560px;}
+  .pdp2-info{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:7px 12px; min-width:0;}
+  .pdp2-info-k{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-weight:700;}
+  .pdp2-info-v{display:block; font-size:15px; font-weight:800; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp2-info-v small{font-size:12px; color:var(--ink-dim); font-weight:600;}
+  .pdp2-info-v .potential-tier{color:var(--ink); font-size:inherit; font-weight:inherit; padding:0; background:none;}
+  .pdp2-info-v .pdp2-info-warn{color:var(--amber);}
+  .pdp2-form--motiv .motivation-badge{background:none; padding:0; font-size:18px; font-weight:800;}
   .pdp2-row--games{grid-template-columns:minmax(0,1fr) 360px;}
   .pdp2-radar svg{display:block; width:100%; height:auto; max-height:320px;}
 
@@ -2962,6 +3016,15 @@
     .pdp2 .pdp-attr-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @media (max-width:720px){
+    /* Fiche joueur (maquette 2026-10-03) : tuiles d'infos sous l'avatar, sur
+       toute la largeur, en 3 colonnes. */
+    .pdp2-id{display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; column-gap:14px; row-gap:10px;}
+    .pdp2-id-text{display:contents;}
+    .pdp2-id-visual{grid-row:1 / span 2;}
+    .pdp2-id-top, .pdp2-name{grid-column:2;}
+    .pdp2-infos{grid-column:1 / -1; max-width:none; gap:6px;}
+    .pdp2-info{padding:6px 9px;}
+    .pdp2-info-v{font-size:14px; white-space:normal;}
     .pdp2-card{padding:16px;}
     .pdp2-hero{padding:18px 16px; gap:18px;}
     .pdp2-id{gap:14px;}
@@ -32529,28 +32592,26 @@ function renderPlayerDetail(teamIdx, playerId) {
         jerseySvgHtml(team.jerseyShape, team.jerseyColor, 96, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, player.number, team) + `</div>`
       : "") +
     `</div>` +
-    `<div class="pdp2-id-text">` +
-    `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}</div>` +
-    `<h3 class="pdp2-name">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>` +
-    `<div class="pdp2-chips">` +
-    (nationName(player.nationality) ? `<span class="pdp2-chip">${escapeHtml(nationName(player.nationality))}</span>` : "") +
-    `<span class="pdp2-chip">${player.age} ans</span>` +
-    `<span class="pdp2-chip">${player.height} cm</span>` +
-    `<span class="pdp2-chip">${escapeHtml(roleLabel)}</span>` +
-    // Contrat (demande du 2026-10-01) : information publique.
-    (typeof player.contractUntilSeason === "number"
-      ? `<span class="pdp2-chip pdp2-chip--contract">Contrat jusqu'à la saison ${player.contractUntilSeason}</span>` +
-        (isLastContractSeason(player, league.contractSeason()) ? `<span class="contract-end-badge" title="Dernière saison de son contrat">Dernière saison</span>` : "")
-      : "");
+    `<div class="pdp2-id-text">`;
+  // Refonte (maquette validée, retour utilisateur 2026-10-03) : poste, club
+  // et classement mondial sur une ligne, puis les infos en tuiles.
+  const wr = isOwnTeam ? worldRankForPlayer(league, teamIdx, player.id) : null;
+  html += `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}` +
+    (wr ? `<span class="pdp2-chip pdp2-chip--world" title="Classement parmi tous les joueurs de la ligue">${ordinalFr(wr.rank)} mondial · ${ordinalFr(wr.posRank)} ${escapeHtml(player.position)}</span>` : "") + `</div>` +
+    `<h3 class="pdp2-name" title="${escapeHtml(nationName(player.nationality) || "")}">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>`;
+  const tile = (label, value, cls = "") => `<div class="pdp2-info${cls ? " " + cls : ""}"><span class="pdp2-info-k">${label}</span><span class="pdp2-info-v">${value}</span></div>`;
+  const tiles = [tile("Âge", `${player.age} ans`), tile("Taille", `${player.height} cm`)];
   if (isOwnTeam) {
-    html += `<span class="pdp2-chip">Potentiel · <span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span></span>` +
-      `<span class="pdp2-chip">${formatMoney(player.salary)} / sem.</span>`;
-    // Classement mondial (retour communauté 2026-09 : "RB - Jean Bon -
-    // 54ème") : rang parmi tous les joueurs de la ligue, et au poste.
-    const wr = worldRankForPlayer(league, teamIdx, player.id);
-    if (wr) html += `<span class="pdp2-chip pdp2-chip--world" title="Classement parmi tous les joueurs de la ligue">${ordinalFr(wr.rank)} mondial · ${ordinalFr(wr.posRank)} ${escapeHtml(player.position)}</span>`;
+    tiles.push(tile("Potentiel", `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>`));
+    tiles.push(tile("Salaire", `${formatMoney(player.salary)} <small>/ sem.</small>`));
   }
-  html += `</div></div></div>`; // chips, id-text, id
+  if (typeof player.contractUntilSeason === "number") {
+    const last = isLastContractSeason(player, league.contractSeason());
+    tiles.push(tile("Contrat", `Saison ${player.contractUntilSeason}` + (last ? ` <small class="pdp2-info-warn" title="Dernière saison de son contrat">· dernière</small>` : ""), "pdp2-info--contract"));
+  }
+  tiles.push(tile("Rôle", escapeHtml(roleLabel)));
+  html += `<div class="pdp2-infos">${tiles.join("")}`;
+  html += `</div></div></div>`; // infos, id-text, id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
@@ -32559,7 +32620,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
     `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
     `</div>`;
-  if (isOwnTeam) html += `<div class="pdp2-kv"><span>Motivation</span>${motivationBadgeHtml(player)}</div>`;
+  if (isOwnTeam) html += `<div class="pdp2-form pdp2-form--motiv"><div class="pdp2-form-text"><span class="pdp2-form-lbl">Motivation</span>${motivationBadgeHtml(player)}</div></div>`;
   // Connaissance tactique individuelle (voir engine.js,
   // PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE) : sa maîtrise du système actuel.
   if (isOwnTeam && typeof team.playerSystemMastery === "function") {
@@ -32623,15 +32684,10 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // rating
   html += `</section>`; // hero
 
-  // == Profil (radar) | Saison ==
-  html += `<div class="pdp2-row pdp2-row--profile">`;
-  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profil</h3><span class="pdp2-meta">échelle 0–100</span></div>`;
-  html += fullyVisible
-    ? `<div class="pdp2-radar">${radarChartSvg(playerRadarCategories(player), { showValues: true })}</div>`
-    : `<p class="pdp-locked-note">Profil complet pas encore scouté.</p>`;
-  html += `</section>`;
-
-  html += `<section class="pdp2-card">`;
+  // == Profil (radar) | Caractéristiques (les 28 visibles d'un coup, retour
+  // utilisateur 2026-10-03), puis Saison + Derniers matchs | Profils de jeu ==
+  let seasonHtml = "";
+  seasonHtml += `<section class="pdp2-card">`;
   if (log.length) {
     const gp = log.length;
     const sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
@@ -32639,32 +32695,37 @@ function renderPlayerDetail(teamIdx, playerId) {
     const avg = k => (sum[k] / gp).toFixed(1);
     // Nombre de matchs déplacé à côté de "Minutes" (retour utilisateur,
     // 2026-09-25 : "mets 8 matchs à côté de Minutes 21.8").
-    html += `<div class="pdp2-head"><h3>Saison</h3></div>`;
-    html += `<div class="pdp2-tiles">` +
+    seasonHtml += `<div class="pdp2-head"><h3>Saison</h3></div>`;
+    seasonHtml += `<div class="pdp2-tiles">` +
       [["pts", "Points"], ["reb", "Rebonds"], ["ast", "Passes déc."], ["stl", "Interceptions"]]
         .map(([k, lbl]) => `<div class="pdp2-tile"><span class="pdp2-tile-num">${avg(k)}</span><span class="pdp2-tile-lbl">${lbl}</span></div>`).join("") +
       `</div>`;
     // Ligne Contres/Pertes/Fautes/Minutes remontée juste sous les tuiles,
     // barres de tir en dessous (retour utilisateur, 2026-09-25 : "inverser
     // les jauges tirs [...] avec contres, pertes, fautes, minutes").
-    html += `<div class="pdp2-foot">` +
+    seasonHtml += `<div class="pdp2-foot">` +
       [["blk", "Contres"], ["tov", "Pertes"], ["pf", "Fautes"], ["min", "Minutes"]]
         .map(([k, lbl]) => `<span>${lbl} <b>${avg(k)}</b></span>`).join("") +
       `<span class="pdp2-foot-gp"><b>${gp}</b> match${gp > 1 ? "s" : ""}</span>` +
       `</div>`;
-    html += `<div class="pdp2-shots">`;
+    seasonHtml += `<div class="pdp2-shots">`;
     [["Tir à 2 pts", sum.fgm2, sum.fga2], ["Tir à 3 pts", sum.fgm3, sum.fga3], ["Lancers francs", sum.ftm, sum.fta]].forEach(([lbl, made, att]) => {
       const pct = att > 0 ? Math.round((made / att) * 100) : null;
-      html += `<div class="pdp2-shot"><span class="pdp2-shot-lbl">${lbl}</span>` +
+      seasonHtml += `<div class="pdp2-shot"><span class="pdp2-shot-lbl">${lbl}</span>` +
         `<span class="pdp2-shot-track">${pct === null ? "" : `<span style="width:${pct}%;background:${radarTierColor(pct)}"></span>`}</span>` +
         `<span class="pdp2-shot-pct">${pct === null ? "–" : pct + "%"}</span><span class="pdp2-shot-made">${made}/${att}</span></div>`;
     });
-    html += `</div>`;
+    seasonHtml += `</div>`;
   } else {
-    html += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
+    seasonHtml += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
+  seasonHtml += `</section>`;
+  html += `<div class="pdp2-row pdp2-row--profile">`;
+  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profil</h3><span class="pdp2-meta">échelle 0–100</span></div>`;
+  html += fullyVisible
+    ? `<div class="pdp2-radar">${radarChartSvg(playerRadarCategories(player), { showValues: true })}</div>`
+    : `<p class="pdp-locked-note">Profil complet pas encore scouté.</p>`;
   html += `</section>`;
-  html += `</div>`; // row profile
 
   // == Caractéristiques ==
   const lastUps = pdpLastTrainingUps(team, player);
@@ -32707,8 +32768,10 @@ function renderPlayerDetail(teamIdx, playerId) {
       : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
   html += `</section>`;
 
+  html += `</div>`; // row profile
+
   // == Derniers matchs | Poste + Profils de jeu ==
-  html += `<div class="pdp2-row pdp2-row--games">`;
+  html += `<div class="pdp2-row pdp2-row--games"><div class="pdp2-side">` + seasonHtml;
   html += `<section class="pdp2-card">`;
   if (log.length) {
     const recent = [...log].sort((a, b) => b.round - a.round).slice(0, 5);
@@ -32757,14 +32820,10 @@ function renderPlayerDetail(teamIdx, playerId) {
   } else {
     html += `<div class="pdp2-head"><h3>Derniers matchs</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
-  html += `</section>`;
+  html += `</section></div>`; // derniers matchs, colonne saison
 
+  // Cadre « Poste » retiré (maquette 2026-10-03) : le poste est en en-tête.
   html += `<div class="pdp2-side">`;
-  // Poste : jamais gaté par le scoutisme (voir pdpCourtHtml, "Nom/poste/
-  // taille/salaire TOUJOURS affichés").
-  html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Poste</h3></div><div class="pdp2-posgrid">` +
-    POSITIONS.map(pos => `<span class="pdp2-poscell${pos === player.position ? " own" : ""}" title="${escapeHtml(pos)}">${POS_SHORT[pos]}</span>`).join("") +
-    `</div></section>`;
   html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profils de jeu</h3></div>`;
   // "mental" (dans TACTICAL_ATTRS) n'est plus une clé de ATTRS : on exige
   // que les 8 MENTAL_ATTRS soient tous révélés avant de le considérer
@@ -46027,7 +46086,7 @@ const marketUi = {
   // "all", "league" ou un code pays (retour utilisateur 2026-10-01).
   pos: "all", q: "", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
   deal: false, hideMine: false, origin: "all",
-  sort: "ends", mineTab: "all", open: new Set(), crit: [], critOpen: false, watched: false,
+  sort: "ends", mineTab: "all", open: new Set(), expanded: new Set(), crit: [], critOpen: false, watched: false,
   // Mode Staff (2026-10-01) : "players" | "staff", puis filtres du staff
   // (rôle, "rôle:spécialité", recherche, niveau 1-5, salaire, budget, fin
   // dans moins de 24 h, mes enchères), tri, confirmation de remplacement.
@@ -47077,7 +47136,32 @@ function mkListingCardHtml(l, player, now) {
   const attrs = MK_BLOCKS.map(b => `<div class="mk-ablock"><div class="mk-ahead"><h4>${b.label}</h4><span>moy. <b>${mkAvg(player, b.keys).toFixed(1)}</b></span></div>` +
     `<div class="mk-alist ${b.two ? "two" : ""}">${b.keys.map(k => `<div class="mk-arow market-attr-chip ${critKeys.includes(k) ? "match" : ""}"><span class="lbl">${escapeHtml(TRAINING_LABELS[k])}</span>${attrCellHtml(player.attrs[k])}</div>`).join("")}</div></div>`).join("");
   const urgent = l.closesAt - now < 3600000;
-  return `<article class="market-card mk-card mk-lst ${st === "lead" ? "is-lead" : st === "out" ? "is-out" : ""}" data-listing-id="${l.id}" id="marketCard_${l.id}">` +
+  // Carte compacte (téléphone, maquette validée 2026-10-03) : infos en
+  // tuiles, 5 jauges de groupe, enchère et fin ; la flèche déplie le bloc
+  // d'enchère habituel (affichée seulement sous 700 px, voir .mk-cmp).
+  const expanded = marketUi.expanded.has(l.id);
+  const cmpTag = fa ? `<span class="mk-cmp-tag">Agent libre</span>` : lastSeason ? `<span class="mk-cmp-tag">Fin de contrat</span>` : vc === "good" ? `<span class="mk-cmp-tag ok">${escapeHtml(vt)}</span>` : "";
+  const cmpWho = fa ? `Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span>` : (isMine ? "Votre joueur" : escapeHtml(seller ? seller.name : ""));
+  const cmpGauges = MK_GROUPS.map(g => {
+    const v = Math.round(mkAvg(player, g.keys));
+    return `<div class="mk-cmp-g"><span>${g.label}</span>${mkBarHtml(v)}<b style="color:${mkTierColor(v)}">${v}</b></div>`;
+  }).join("");
+  const cmpFact = (k, v, cls = "") => `<div class="mk-cmp-f"><small>${k}</small><b class="${cls}">${v}</b></div>`;
+  const compact = `<div class="mk-cmp">` +
+    `<div class="mk-cmp-hd"><div class="mk-cmp-av">${playerAvatarHtml(player, seller, 44)}</div><div class="mk-cmp-id">` +
+      `<div class="mk-cmp-nm">${nationFlagHtml(player.nationality, "nat-flag--name")}${fa && !l.foreign ? `<span data-no-i18n>${escapeHtml(player.name)}</span>` : playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
+      `<div class="mk-cmp-sub">${cmpWho}</div>${cmpTag}${badge}</div>` +
+      `<div class="mk-cmp-gen"><b>${overall}</b><small>GEN</small></div></div>` +
+    `<div class="mk-cmp-facts">${cmpFact("Poste", escapeHtml(POS_SHORT[player.position] || player.position), "pos")}${cmpFact("Âge", `${player.age} ans`)}${cmpFact("Taille", player.height ? `${player.height} cm` : "–")}${cmpFact("Potentiel", potentialCell)}</div>` +
+    `<div class="mk-cmp-sal"><span>Salaire demandé</span><b>${formatMoney(asked)} / sem.</b></div>` +
+    `<div class="mk-cmp-gauges">${cmpGauges}</div>` +
+    `<div class="mk-cmp-ft"><div><div class="mk-cmp-k">${fa ? (l.currentBid ? "Prime de signature actuelle" : "Prime de signature (départ)") : (l.currentBid ? "Enchère actuelle" : "Prix de départ")}</div>` +
+      `<div class="mk-cmp-v">${formatMoney(l.currentBid || l.startPrice)} <span>${bidderLinkHtml(l) ? `par ${bidderLinkHtml(l)}` : "· aucune enchère"}</span></div>` +
+      `<div class="mk-cmp-end${urgent ? " urgent" : ""}">Fin : ${escapeHtml(formatCalendarDayFr(l.closesAt))}, ${escapeHtml(formatCalendarTimeFr(l.closesAt))} · ${escapeHtml(mkTimeLeft(l.closesAt, now))}</div></div>` +
+      `<button type="button" class="mk-cmp-chev" data-mk-expand="${l.id}" aria-expanded="${expanded}" aria-label="${isMine ? "Détails de l'annonce" : "Enchérir"}">›</button></div>` +
+  `</div>`;
+  return `<article class="market-card mk-card mk-lst ${st === "lead" ? "is-lead" : st === "out" ? "is-out" : ""}${expanded ? " is-expanded" : ""}" data-listing-id="${l.id}" id="marketCard_${l.id}">` +
+    compact +
     `<div class="mk-lst-main">` +
       `<div class="mk-lst-id">` +
         `<div class="mk-avatar">${playerAvatarHtml(player, seller, 88)}</div>` +
@@ -47246,6 +47330,14 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   if (d.mkAuto) { mkSetAuto(Number(d.mkAuto), false); return; }
   if (d.mkAutoOff) { mkSetAuto(Number(d.mkAutoOff), true); return; }
   if (d.mkQuick) { const input = document.getElementById(`bid_${d.mkQuick}`); if (input) { input.value = d.v; input.focus(); } return; }
+  if (d.mkExpand) {
+    const id = Number(d.mkExpand);
+    if (marketUi.expanded.has(id)) marketUi.expanded.delete(id); else marketUi.expanded.add(id);
+    const card = t.closest(".mk-lst");
+    if (card) card.classList.toggle("is-expanded", marketUi.expanded.has(id));
+    t.setAttribute("aria-expanded", String(marketUi.expanded.has(id)));
+    return;
+  }
   if (d.mkToggle) {
     const id = Number(d.mkToggle);
     if (marketUi.open.has(id)) marketUi.open.delete(id); else marketUi.open.add(id);
