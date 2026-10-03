@@ -410,3 +410,19 @@ const KICKOFF = Date.UTC(2026, 8, 9, 19, 0, 0); // un mercredi 19h arbitraire
 }
 
 console.log("\n✅ Diffusion en direct (server/liveMatch.js) : rythme de jeu proportionnel aux secondes de jeu écoulées (jamais plus d'une seconde réelle par seconde de jeu), vraie mi-temps + pauses de quart-temps + temps morts, calendrier de diffusion déterministe (reprise fiable), forfait immédiat si effectif incomplet, finalisation avec le score déjà déterminé.");
+
+// --- Actions au même chrono (faute → lancers francs) : espacées pour être
+//     lisibles (retour utilisateur 2026-10-03), changements de joueurs non.
+{
+  const LM = require("./liveMatch.js");
+  const evs = [
+    { quarter: 1, clock: "05:00", type: "foul", text: "Faute" },
+    { quarter: 1, clock: "05:00", type: "freeThrow", text: "1/2 aux lancers francs" },
+    { quarter: 1, clock: "05:00", type: "substitution", text: "Changement" },
+    { quarter: 1, clock: "04:50", type: "shot", text: "Tir" },
+  ];
+  const { events } = LM.schedulePlayback(evs, 0);
+  if (events[1].airAt - events[0].airAt !== LM.SAME_CLOCK_GAP_MS) throw new Error("❌ faute → lancers francs : écart de lecture attendu");
+  if (events[2].airAt - events[1].airAt !== LM.MIN_EVENT_GAP_MS) throw new Error("❌ changement de joueur : plancher court attendu");
+  console.log("✅ Actions au même chrono espacées pour la lecture (changements exceptés).");
+}

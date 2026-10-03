@@ -95,6 +95,7 @@ function loadDict(file, name) {
   assert(d2.documentElement.getAttribute("lang") === "it", "italien : <html lang=it> dès le chargement");
   assert(await waitFor(() => w2.HM_I18N_IT && w2.hmI18n.t("Tableau de bord") === "Panoramica"), "dictionnaire italien chargé");
   assert(!w2.HM_I18N_EN, "en italien, le dictionnaire anglais n'est pas téléchargé");
+  assert(w2.hmI18n.t("Temps mort demandé par Nice après une série de 8-0.") === "Timeout chiamato da Nice dopo un parziale di 8-0.", "direct : temps mort avec série traduit");
   assert(w2.hmI18n.t("4e quart-temps") === "4º quarto" && w2.hmI18n.t("1er quart-temps") === "1º quarto", "quart-temps : vrai ordinal (" + w2.hmI18n.t("4e quart-temps") + ")");
   assert(w2.hmI18n.getLang() === "it" && w2.hmI18n.locale === "it-IT", "hmI18n : langue it, locale it-IT");
   await sleep(100);

@@ -75,6 +75,11 @@ const SECONDS_SCALE_MS = 1000; // 1 seconde de jeu = 1 seconde réelle (jamais p
 // quart-temps, faute suivie de ses lancers francs...) — sans ce plancher
 // elles s'enchaîneraient instantanément, illisibles dans le fil de texte.
 const MIN_EVENT_GAP_MS = 400;
+// Actions enchaînées au même chrono (faute → lancers francs → résultat,
+// panier + faute, tir contré → rebond…) : retour utilisateur 2026-10-03,
+// « elles s'affichent très vite l'une après l'autre » — on laisse le temps
+// de lire chaque ligne. Les changements de joueurs gardent le plancher court.
+const SAME_CLOCK_GAP_MS = 2200;
 
 function clockSecondsFromStr(clockStr) {
   const [m, s] = clockStr.split(":").map(Number);
@@ -143,7 +148,10 @@ function schedulePlayback(events, kickoffAt) {
       // Un temps mort n'ajoute pas de plancher : sa pause d'une minute
       // sépare déjà les deux actions qui l'entourent.
       if (ev.type === "timeout" && deltaSec === 0) return;
-      const gapMs = Math.max(MIN_EVENT_GAP_MS, deltaSec * SECONDS_SCALE_MS);
+      const floor = nextInQuarter && deltaSec === 0 && ev.type !== "timeout"
+        && nextInQuarter.type !== "substitution" && nextInQuarter.type !== "timeout"
+        ? SAME_CLOCK_GAP_MS : MIN_EVENT_GAP_MS;
+      const gapMs = Math.max(floor, deltaSec * SECONDS_SCALE_MS);
       cursor += gapMs;
     });
 
@@ -1007,7 +1015,7 @@ function liveMatchesLiteFor(league) {
 
 module.exports = {
   HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS,
-  SECONDS_SCALE_MS, MIN_EVENT_GAP_MS,
+  SECONDS_SCALE_MS, MIN_EVENT_GAP_MS, SAME_CLOCK_GAP_MS,
   archiveReplay, schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,
   liveMatchesLiteFor,
   // Coupe (voir le bloc dédié plus haut) :
