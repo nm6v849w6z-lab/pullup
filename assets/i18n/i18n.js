@@ -227,6 +227,13 @@
           return d;
         }
       }
+      // Quart-temps (« 4e quart-temps ») : le gabarit « {0}{1} quart-temps »
+      // recopiait le suffixe français (« 4e quarto ») → vrai ordinal.
+      if ((m = /^(\d+)(?:e|er) quart-temps$/.exec(core)) && typeof DICT["{0}{1} quart-temps"] === "string") {
+        var qt = DICT["{0}{1} quart-temps"];
+        var on = /^第/.test(ordinal(1)) && /第/.test(qt) ? m[1] : ordinal(+m[1]);
+        return qt.replace("{0}{1}", on);
+      }
       // Ordinaux et bilans : « 3e », « 1er », « 12V », « 4D »
       if ((m = /^(\d+)(?:e|er|re|ème|ère)$/.exec(core))) return ordinal(+m[1]);
       if ((m = /^J(\d+)( .*)?$/.exec(core))) return C.md(m[1]) + (m[2] ? " " + (translateCore(m[2].trim(), 1) || m[2].trim()) : "");
@@ -458,8 +465,7 @@
     // feuilles de style.
     try {
       var st = document.createElement("style");
-      st.textContent = '.scouting-ad-gray-block::after{content:"' + C.ad + '" !important;}' +
-        '.hm-live .tname.mine::after{content:"' + C.myClub + '" !important;}';
+      st.textContent = '.scouting-ad-gray-block::after{content:"' + C.ad + '" !important;}';
       (document.head || document.documentElement).appendChild(st);
     } catch (e) { /* rien */ }
 
