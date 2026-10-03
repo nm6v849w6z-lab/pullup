@@ -38992,28 +38992,13 @@ function renderLineupEditor(team, container, opts = {}) {
 
   // --- Colonne : bilan + effectif (convocation) ---
   const side = el("div", "compo-side");
-  const fmt = v => (v == null ? "–" : v.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-  const summary = el("div", "compo-summary");
-  summary.setAttribute("aria-label", "Bilan de la composition");
-  const stat = (label, value, cls) => {
-    const s = el("div", "cs-stat" + (cls ? " " + cls : ""));
-    s.append(el("span", "cs-value", value), el("span", "cs-label", label));
-    return s;
-  };
-  const stats = el("div", "cs-stats");
-  stats.append(
-    stat("Cinq majeur", fmt(model.startersAvg)),
-    stat("Banc", fmt(model.benchAvg)),
-    stat(model.warnCount > 1 ? "Alertes" : "Alerte", String(model.warnCount), model.warnCount ? "is-warn" : "is-ok"),
-  );
-  summary.appendChild(stats);
-  let sentence;
-  if (missing) sentence = "Il manque un titulaire : sans cinq complet, le match est perdu par forfait.";
-  else if (model.benchAvg != null && model.benchAvg > model.startersAvg) sentence = "Votre banc est plus fort que votre cinq majeur.";
-  else if (!model.warnCount) sentence = "Rien à signaler : chaque poste est tenu par un joueur de métier.";
-  else sentence = model.warnCount > 1 ? `${model.warnCount} points à vérifier sur le terrain.` : "Un point à vérifier sur le terrain.";
-  summary.appendChild(el("p", "cs-sentence", sentence));
-  side.appendChild(summary);
+  // Bilan (moyennes cinq majeur / banc, alertes) retiré (retour utilisateur
+  // 2026-10-03) ; seul le cas bloquant reste signalé : titulaire manquant.
+  if (missing) {
+    const summary = el("div", "compo-summary");
+    summary.appendChild(el("p", "cs-sentence", "Il manque un titulaire : sans cinq complet, le match est perdu par forfait."));
+    side.appendChild(summary);
+  }
 
   // --- Effectif (convocation) : liste compacte à côté du terrain, ou
   // tableau détaillé sur toute la largeur (retour d'un testeur 2026-09-30 :
