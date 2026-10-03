@@ -8924,7 +8924,6 @@
             <option value="ends">Trier par fin d'enchère</option>
             <option value="ovr">Trier par note</option>
             <option value="pot">Trier par potentiel</option>
-            <option value="deal">Trier par meilleure affaire</option>
             <option value="price">Trier par prix croissant</option>
             <option value="age">Trier par âge</option>
           </select>
@@ -8966,7 +8965,6 @@
           <div class="mk-frow">
             <div class="pc-picker mk-origin" id="marketOriginBox"></div>
             <button class="mk-pchip" id="marketCritBtn" type="button" aria-expanded="false" aria-controls="marketCritPanel"></button>
-            <button class="mk-pchip" id="marketDealBtn" type="button" aria-pressed="false">Bonnes affaires</button>
             <button class="mk-pchip" id="marketBudgetBtn" type="button" aria-pressed="false">Dans mon budget</button>
             <button class="mk-pchip" id="marketHideMineBtn" type="button" aria-pressed="false">Masquer mes annonces</button>
             <button class="mk-pchip" id="marketWatchedBtn" type="button" aria-pressed="false">★ Joueurs suivis</button>
@@ -9378,7 +9376,7 @@
       <div class="guide-entry" data-guide-id="marche" data-guide-group="Club et finances">
         <h3>Marché des transferts</h3>
         <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
-        <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, meilleure affaire, prix, âge). Chaque annonce affiche la note du joueur, ses points forts, une <b>valeur estimée</b> comparée au prix ("Bonne affaire", "Prix correct" ou "Au-dessus de sa valeur"), des montants d'enchère rapides, et un bouton <b>Comparer</b> avec votre effectif. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
+        <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, prix, âge). Chaque annonce affiche la note du joueur, ses points forts et un bouton <b>Comparer</b> avec votre effectif ; on négocie d'abord le contrat avec le joueur, puis on enchérit. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Suivi et alertes</b> (<button type="button" class="gd-link" data-guide-goto="premium">Premium</button>) : « Suivre » sur une annonce ajoute le joueur à votre liste de suivi (filtre « Joueurs suivis ») ; « Créer une alerte avec ces filtres » enregistre une recherche. Le fil d'actualité vous prévient quand un joueur suivi est mis en vente, quand son enchère se termine bientôt, et quand une nouvelle annonce correspond à une de vos alertes.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Marché mondial</b> : les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon championnat » ou le pays de votre choix, avec une recherche). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.</p>
       </div>
@@ -47985,7 +47983,7 @@ function mkListingCardHtml(l, player, now) {
   // tuiles, 5 jauges de groupe, enchère et fin ; la flèche déplie le bloc
   // d'enchère habituel (affichée seulement sous 700 px, voir .mk-cmp).
   const expanded = marketUi.expanded.has(l.id);
-  const cmpTag = fa ? `<span class="mk-cmp-tag">Agent libre</span>` : lastSeason ? `<span class="mk-cmp-tag">Fin de contrat</span>` : vc === "good" ? `<span class="mk-cmp-tag ok">${escapeHtml(vt)}</span>` : "";
+  const cmpTag = fa ? `<span class="mk-cmp-tag">Agent libre</span>` : lastSeason ? `<span class="mk-cmp-tag">Fin de contrat</span>` : "";
   const cmpWho = fa ? `Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span>` : (isMine ? "Votre joueur" : escapeHtml(seller ? seller.name : ""));
   const cmpGauges = MK_GROUPS.map(g => {
     const v = Math.round(mkAvg(player, g.keys));
@@ -48038,7 +48036,8 @@ function mkListingCardHtml(l, player, now) {
           `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>` +
         `</div>` +
         (badge ? `<div>${badge}</div>` : "") +
-        (fa ? `<div class="mk-value"><span class="mk-fa-note">Prime versée au joueur à la signature, départ à 1 €.</span></div>` : `<div class="mk-value"><span>Valeur estimée <b>${formatMoney(value)}</b></span><span class="mk-verdict ${vc}">${vt}</span></div>`) +
+        // Valeur estimée et « Bonne affaire » retirées (retour utilisateur 2026-10-03).
+        (fa ? `<div class="mk-value"><span class="mk-fa-note">Prime versée au joueur à la signature, départ à 1 €.</span></div>` : "") +
         `<div class="market-card-action">${action}</div>` +
       `</div>` +
     `</div>` +
@@ -56073,7 +56072,7 @@ const TOUR_STEPS = [
   { kind: "spotlight", topic: "Marché", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="marche"]', pos: "right",
     title: "Le marché des transferts",
     text: "Achetez des joueurs aux enchères ou mettez les vôtres en vente. Chaque enchère dure 1 jour réel, et les autres clubs peuvent surenchérir jusqu'au bout. Filtres par poste, âge, potentiel, prix et caractéristiques, suivi de vos enchères en haut de page.",
-    tip: "Chaque annonce compare le prix à une valeur estimée (Bonne affaire, Prix correct, Au-dessus de sa valeur). Avec le Premium, suivez des joueurs et créez des alertes : le fil d'actualité vous prévient.",
+    tip: "On négocie d'abord le contrat avec le joueur, puis on enchérit. Avec le Premium, suivez des joueurs et créez des alertes : le fil d'actualité vous prévient.",
     reward: TOUR_REWARD_BY_TOPIC["Marché"],
   },
   { kind: "spotlight", topic: "Staff", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="staff"]', pos: "right",
