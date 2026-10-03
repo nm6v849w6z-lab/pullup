@@ -2862,15 +2862,15 @@
   .pdp2-row--profile .pdp2-attr-list.two{column-gap:22px;}
   .pdp2-row--profile .pdp2-radar svg{max-width:100%; height:auto;}
   .pdp2-infos{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-width:560px;}
-  .pdp2-info{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:7px 12px; min-width:0;}
+  .pdp2-info{padding:2px 0; min-width:0;}
   .pdp2-info-k{display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-weight:700;}
-  .pdp2-info-v{display:block; font-size:15px; font-weight:800; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp2-info-v{display:block; font-size:16px; font-weight:800; margin-top:2px;}
   .pdp2-info-v small{font-size:12px; color:var(--ink-dim); font-weight:600;}
   .pdp2-info-v .potential-tier{color:var(--ink); font-size:inherit; font-weight:inherit; padding:0; background:none;}
   .pdp2-info-v .pdp2-info-warn{color:var(--amber);}
   .pdp2-form--motiv .motivation-badge{background:none; padding:0; font-size:18px; font-weight:800;}
   .pdp2-row--games{grid-template-columns:minmax(0,1fr) 360px;}
-  .pdp2-radar svg{display:block; width:100%; height:auto; max-height:320px;}
+  .pdp2-radar svg{display:block; width:100%; height:auto; max-height:420px;}
 
   .pdp2-tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .pdp2-tile{background:var(--bg); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:4px;}
@@ -2973,6 +2973,10 @@
   /* Bas de fiche resserré (retour utilisateur 2026-10-03 : « ça prend trop
      de place pour pas bcp d'info ») : cartes côte à côte, plus compactes. */
   .pdp-contract-sale{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin:18px 0 16px; align-items:start;}
+  .pdp-contract-sale.pdp2-side-cards{grid-template-columns:minmax(0,1fr); margin:0;}
+  .pdp-contract-sale.pdp2-left-cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin:0;}
+  .pdp2-share-card .pdp2-share{align-items:flex-start; margin-top:0;}
+  .pdp2-share-card .pdp2-share-state{justify-content:flex-start;}
   .pdp-contract-sale > .pdp-card{padding:14px 18px !important;}
   .pdp-contract-sale > .pdp-card h3{margin:0 0 8px;}
   .pdp-contract-sale .training-intro, .pdp-contract-sale .sub{margin:4px 0;}
@@ -3030,7 +3034,6 @@
     .pdp2-id-visual{grid-row:1 / span 2;}
     .pdp2-id-top, .pdp2-name{grid-column:2;}
     .pdp2-infos{grid-column:1 / -1; max-width:none; gap:6px;}
-    .pdp2-info{padding:6px 9px;}
     .pdp2-info-v{font-size:14px; white-space:normal;}
     .pdp2-card{padding:16px;}
     .pdp2-hero{padding:18px 16px; gap:18px;}
@@ -32263,7 +32266,10 @@ function radarTierColor(value) {
   return "#3ecf67";
 }
 function radarChartSvg(categories, opts = {}) {
-  const cx = 110, cy = 118, maxR = 90, labelR = 104;
+  // Fiche joueur (showValues) : radar plus grand, libellés sur deux lignes
+  // (nom puis valeur) pour garder des textes lisibles (retour 2026-10-03 :
+  // « grossis le pentagone, il ne prend pas assez de place »).
+  const cx = 110, cy = 118, maxR = opts.showValues ? 126 : 90, labelR = opts.showValues ? 141 : 104;
   const n = RADAR_AXES.length;
   const angleFor = i => (Math.PI * 2 * i) / n - Math.PI / 2;
   const pointAt = (i, r) => {
@@ -32294,7 +32300,7 @@ function radarChartSvg(categories, opts = {}) {
     return `M ${pts} Z`;
   };
   let svg = opts.showValues
-    ? `<svg viewBox="-128 -20 476 276" width="100%" height="auto" role="img" aria-label="Profil : ${RADAR_AXES.map(ax => `${ax.label.toLowerCase()} ${Math.round(categories[ax.key])}`).join(", ")}">`
+    ? `<svg viewBox="-106 -60 432 346" width="100%" height="auto" role="img" aria-label="Profil : ${RADAR_AXES.map(ax => `${ax.label.toLowerCase()} ${Math.round(categories[ax.key])}`).join(", ")}">`
     : `<svg viewBox="-42 -8 304 252" width="100%" height="auto">`;
   ringBands.forEach(({ outer, inner, color }) => {
     const d = inner > 0 ? `${ringPolygonPath(outer)} ${ringPolygonPath(inner)}` : ringPolygonPath(outer);
@@ -32313,9 +32319,18 @@ function radarChartSvg(categories, opts = {}) {
   RADAR_AXES.forEach((ax, i) => {
     const [x, y] = pointAt(i, labelR);
     const angle = angleFor(i);
-    const cosA = Math.cos(angle);
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
     const anchor = cosA > 0.15 ? "start" : cosA < -0.15 ? "end" : "middle";
-    svg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="${opts.showValues ? 17 : 9}" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}${opts.showValues ? ` <tspan font-weight="800" fill="var(--ink)" font-size="${opts.showValues ? 19 : 9}">${Math.round(categories[ax.key])}</tspan>` : ""}</text>`;
+    if (opts.showValues) {
+      // Deux lignes : en haut du radar elles finissent au point, en bas elles
+      // y commencent, sur les côtés elles l'encadrent.
+      const lineH = 19;
+      const y0 = sinA < -0.5 ? y - lineH - 2 : sinA > 0.5 ? y + 12 : y - 4;
+      svg += `<text x="${x.toFixed(1)}" y="${y0.toFixed(1)}" text-anchor="${anchor}" font-size="14" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}` +
+        `<tspan x="${x.toFixed(1)}" dy="${lineH}" font-size="19" font-weight="800" fill="var(--ink)">${Math.round(categories[ax.key])}</tspan></text>`;
+      return;
+    }
+    svg += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="9" font-weight="700" letter-spacing="0.03em" fill="var(--ink-faint)">${escapeHtml(ax.label)}</text>`;
   });
   svg += `</svg>`;
   return svg;
@@ -32632,7 +32647,15 @@ function renderPlayerDetail(teamIdx, playerId) {
     `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
     `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
     `</div>`;
-  if (isOwnTeam) html += `<div class="pdp2-form pdp2-form--motiv"><div class="pdp2-form-text"><span class="pdp2-form-lbl">Motivation</span>${motivationBadgeHtml(player)}</div></div>`;
+  if (isOwnTeam) {
+    // Petit visage comme l'icône de batterie de la Forme (retour 2026-10-03).
+    const mv = player.form;
+    const motivBox = mv >= 65 ? "ok" : mv >= 45 ? "mid" : "bad";
+    const mouth = mv >= 65 ? "M8 14.5c1 1.3 2.4 2 4 2s3-.7 4-2" : mv >= 45 ? "M8.5 15h7" : "M8 16.5c1-1.3 2.4-2 4-2s3 .7 4 2";
+    html += `<div class="pdp2-form pdp2-form--motiv pdp2-form--${motivBox}">` +
+      `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"></circle><path d="${mouth}"></path><line x1="9" y1="9.5" x2="9" y2="10"></line><line x1="15" y1="9.5" x2="15" y2="10"></line></svg>` +
+      `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Motivation</span>${motivationBadgeHtml(player)}</div></div>`;
+  }
   // Connaissance tactique individuelle (voir engine.js,
   // PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE) : sa maîtrise du système actuel.
   if (isOwnTeam && typeof team.playerSystemMastery === "function") {
@@ -32692,7 +32715,6 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   html += `</div>`; // actions
   // Permalien public (demande du 2026-10-01) : son propre joueur seulement.
-  if (isOwnTeam && !playerDetailForeign) html += pdpShareHtml(player);
   html += `</div>`; // rating
   html += `</section>`; // hero
 
@@ -32849,12 +32871,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   } else {
     html += `<div class="pdp2-head"><h3>Derniers matchs</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
-  html += `</section></div>`; // derniers matchs, colonne saison
+  html += `</section><!--PDP_LEFT_CARDS--></div>`; // derniers matchs, colonne saison
 
   // Cadre « Poste » retiré (maquette 2026-10-03) : le poste est en en-tête.
   // Classements du joueur (retour utilisateur 2026-10-03) : rempli après
   // coup par /api/world/player-ranks (voir loadPlayerRankings).
-  html += `<div class="pdp2-side"><section class="pdp2-card pdp2-ranks" id="pdpRanksCard" hidden></section>`;
+  html += `<div class="pdp2-side"><section class="pdp2-card pdp2-ranks" id="pdpRanksCard" hidden></section><!--PDP_SIDE_CARDS-->`;
   html += `</div>`; // side
   html += `</div>`; // row games
   if (isOwnTeam) html += playerProgressHtml(player);
@@ -32871,8 +32893,13 @@ function renderPlayerDetail(teamIdx, playerId) {
   // négocier) : aligné sur la carte Mise en vente ; Contrat avec
   // prolongation / augmentation : sur les deux rangées, la Personnalisation
   // s'étire jusqu'à son bas.
-  if (isOwnTeam) html += `<div class="pdp-contract-sale">`;
+  // Vente, contrat, personnalisation et partage dans la colonne de droite,
+  // sous les classements (retour utilisateur 2026-10-03 : « réorganise le
+  // bas, y a trop de vide »).
+  let sideCards = "", leftCards = "";
   if (isOwnTeam) {
+    const mainHtml = html;
+    html = "";
     html += `<div class="pdp-card" id="pdpSaleCard"><h3>Mise en vente</h3>`;
     if (!onMarket && league.contractSaleBlocked(player)) {
       html += `<p class="training-intro pdp-sale-blocked">${escapeHtml(CONTRACT_SALE_BLOCKED_MSG)}</p>`;
@@ -32895,9 +32922,15 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `</div>`; // #pdpSaleCard
     // Personnalisation : seulement si quelque chose est réglable (Premium) —
     // sinon la brique prenait de la place pour rien (retour 2026-10-03).
+    html += playerContractCardHtml(team, player);
+    leftCards = `<div class="pdp-contract-sale pdp2-left-cards">${html}</div>`;
+    html = "";
     if (teamIsPremium(team)) html += playerPersonalizationCardHtml(team, player);
-    html += playerContractCardHtml(team, player) + `</div>`; // .pdp-contract-sale
+    if (!playerDetailForeign) html += `<div class="pdp-card pdp2-share-card"><h3>Partager</h3>${pdpShareHtml(player)}</div>`;
+    sideCards = html ? `<div class="pdp-contract-sale pdp2-side-cards">${html}</div>` : "";
+    html = mainHtml;
   }
+  html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
   // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
   // remplacé par la fenêtre superposée "Voir toute la saison" ouverte
