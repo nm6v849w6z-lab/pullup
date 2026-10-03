@@ -2785,7 +2785,10 @@
   .pdp2-center{text-align:center;}
 
   .pdp2-hero{display:flex; gap:28px; align-items:stretch; padding:24px 28px;}
-  .pdp2-id{display:flex; gap:22px; align-items:center; flex:1 1 auto; min-width:0;}
+  .pdp2-id{display:flex; gap:22px; align-items:center; flex:1 1 auto; min-width:0; position:relative;}
+  .pdp2-id-share{position:absolute; top:0; right:0; max-width:260px;}
+  .pdp2-id-share .pdp2-share{flex-direction:column; align-items:flex-end; margin-top:0; width:auto; gap:4px;}
+  .pdp2-id-share .pdp2-share-state, .pdp2-id-share .pdp2-share-msg{font-size:12px; text-align:right; justify-content:flex-end;}
   .pdp2-avatar{flex:0 0 auto; width:112px; height:112px; border-radius:18px; overflow:hidden; background:var(--panel-2); border:2px solid var(--line); display:flex; align-items:flex-end; justify-content:center;}
   .pdp2-avatar svg, .pdp2-avatar img{display:block;}
   .pdp2-id-text{display:flex; flex-direction:column; gap:10px; min-width:0;}
@@ -3114,6 +3117,9 @@
     .pdp2-id-text{display:contents;}
     .pdp2-id-visual{grid-row:1 / span 2;}
     .pdp2-id-top, .pdp2-name{grid-column:2;}
+    .pdp2-id-share{position:static; grid-column:1 / -1; max-width:none;}
+    .pdp2-id-share .pdp2-share{align-items:flex-start;}
+    .pdp2-id-share .pdp2-share-state, .pdp2-id-share .pdp2-share-msg{text-align:left; justify-content:flex-start;}
     .pdp2-infos{grid-column:1 / -1; max-width:none; gap:6px;}
     .pdp2-info-v{font-size:14px; white-space:normal;}
     .pdp2-card{padding:16px;}
@@ -32992,7 +32998,10 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   tiles.push(tile("Rôle", escapeHtml(roleLabel)));
   html += `<div class="pdp2-infos">${tiles.join("")}`;
-  html += `</div></div></div>`; // infos, id-text, id
+  html += `</div></div>`; // infos, id-text
+  // « Partager » en haut à droite de l'en-tête (retour utilisateur 2026-10-03).
+  if (isOwnTeam && !playerDetailForeign) html += `<div class="pdp2-id-share">${pdpShareHtml(player)}</div>`;
+  html += `</div>`; // id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
   const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
@@ -33304,7 +33313,6 @@ function renderPlayerDetail(teamIdx, playerId) {
     sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${playerContractCardHtml(team, player)}${html}</div>`;
     bottomCards = teamIsPremium(team) ? playerPersonalizationCardHtml(team, player) : "";
     // Partager tout en bas, sans cadre (retour 2026-10-03).
-    if (!playerDetailForeign) shareBottom = `<div class="pdp2-share-bottom">${pdpShareHtml(player)}</div>`;
     html = mainHtml;
   }
   // Personnalisation (Premium), Historique du joueur et Blessures côte à
