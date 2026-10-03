@@ -1117,6 +1117,7 @@ const ACTION_ROUTES = {
   // Contrats (demande du 2026-10-01) : prolongation et augmentation.
   "/api/player/contract-extension": actions.offerContractExtension,
   "/api/player/raise-response": actions.respondToRaiseRequest,
+  "/api/player/release": actions.releasePlayer,
   "/api/club/set-jersey": actions.setTeamJersey,
   "/api/club/set-jersey-pattern": actions.setTeamJerseyPattern,
   "/api/club/set-jersey-two-tone": actions.setTeamJerseyTwoTone,

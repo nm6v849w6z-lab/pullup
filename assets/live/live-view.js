@@ -104,7 +104,7 @@ const TEMPLATE = `
         <div class="seg" data-seg="res"><button data-v="all" aria-pressed="true">Tous</button><button data-v="made">Réussis</button><button data-v="miss">Manqués</button></div>
       </div>
     </div>
-    <svg class="court" data-ref="court" viewBox="0 0 940 500" role="img" aria-label="Terrain avec les tirs"></svg>
+    <div class="court-wrap"><svg class="court" data-ref="court" viewBox="0 0 940 500" role="img" aria-label="Terrain avec les tirs"></svg><div class="shot-tip" data-ref="shotTip" role="tooltip"></div></div>
     <div class="legend">
       <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="#93A1B8"/></svg>Réussi</span>
       <span><svg width="14" height="14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="#93A1B8" stroke-width="2.5" stroke-linecap="round"/></svg>Manqué</span>
@@ -277,6 +277,29 @@ export function createLiveView(root, opts = {}) {
     lastScore = S.teams.map(t => t.score);
   }
 
+  // Infobulle de la carte des tirs : nom du tireur au survol (ou au toucher).
+  function showShotTip(e) {
+    const tipEl = $("shotTip");
+    if (!tipEl) return;
+    const g = e.target && e.target.closest ? e.target.closest(".marks g[data-tip]") : null;
+    if (!g || !g.dataset.tip) { tipEl.classList.remove("show"); return; }
+    const wrap = tipEl.parentElement.getBoundingClientRect(), r = g.getBoundingClientRect();
+    tipEl.textContent = g.dataset.tip;
+    const half = tipEl.offsetWidth / 2 + 4;
+    const x = Math.max(half, Math.min(wrap.width - half, r.left + r.width / 2 - wrap.left));
+    tipEl.style.left = `${x}px`;
+    tipEl.style.top = `${r.top - wrap.top}px`;
+    tipEl.classList.add("show");
+  }
+  {
+    const courtEl = $("court");
+    if (courtEl) {
+      courtEl.addEventListener("pointermove", showShotTip);
+      courtEl.addEventListener("click", showShotTip);
+      courtEl.addEventListener("pointerleave", () => { const t = $("shotTip"); if (t) t.classList.remove("show"); });
+    }
+  }
+
   function destroy() {
     clearTimeout(toastTimer);
     if (typeof window !== "undefined") {
@@ -391,8 +414,9 @@ export function createLiveView(root, opts = {}) {
       $("name" + t).classList.toggle("mine", !!T.mine);
       // Sponsor maillot (voir Team.sponsorContracts côté jeu) : une ligne
       // sous le nom, vide sans contrat.
-      $("sponsor" + t).textContent = T.sponsor ? `Maillot · ${T.sponsor}` : "";
-      $("sponsor" + t).classList.toggle("on", !!T.sponsor);
+      // Ligne « Maillot · sponsor » retirée (retour utilisateur 2026-10-03).
+      $("sponsor" + t).textContent = "";
+      $("sponsor" + t).classList.remove("on");
       $("score" + t).textContent = T.score;
       $("score" + t).classList.toggle("trail", S.teams[1 - t].score > T.score);
       $("fouls" + t).innerHTML = T.teamFouls >= BONUS ? `<span class="bonus">Fautes ${T.teamFouls} · bonus</span>` : `Fautes ${T.teamFouls}`;
@@ -452,7 +476,9 @@ export function createLiveView(root, opts = {}) {
       runEl.className = "run hot";
       runEl.style.setProperty("--rc", COLOR(run.team));
     } else {
-      runEl.innerHTML = d ? `${esc(S.teams[d > 0 ? 0 : 1].short)} ${S.status === "final" ? "l'emporte de" : "mène de"} <b>${Math.abs(d)}</b>` : "Égalité";
+      // « KRA mène de 4 » retiré (retour utilisateur 2026-10-03) : seule une
+      // série en cours reste annoncée.
+      runEl.innerHTML = "";
       runEl.className = "run";
     }
 
@@ -562,9 +588,11 @@ export function createLiveView(root, opts = {}) {
       const x = s.x * 10, y = s.y * 10, c = COLOR(s.team);
       const last = s.id === lastId ? " last" : "";
       // Survol : qui a tiré (retour utilisateur 2026-10-03).
-      const tip = `<title>${esc([s.shooter, s.made ? "✓" : "✗", s.clock != null ? `Q${s.quarter} ${fmtClock(s.clock)}` : ""].filter(Boolean).join(" · "))}</title>`;
-      if (s.made) g += `<g class="made${last}">${tip}<circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
-      else g += `<g class="miss${last}">${tip}<circle class="hit" cx="${x}" cy="${y}" r="9" fill="transparent"/><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
+      // (infobulle maison, voir showShotTip : le title natif tardait ou ne
+      // s'affichait pas, seul le curseur « ? » apparaissait).
+      const tip = ` data-tip="${esc([s.shooter, s.made ? "✓" : "✗", s.clock != null ? `Q${s.quarter} ${fmtClock(s.clock)}` : ""].filter(Boolean).join(" · "))}"`;
+      if (s.made) g += `<g class="made${last}"${tip}><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/><circle class="hit" cx="${x}" cy="${y}" r="13" fill="transparent"/></g>`;
+      else g += `<g class="miss${last}"${tip}><circle class="hit" cx="${x}" cy="${y}" r="13" fill="transparent"/><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
     }
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).

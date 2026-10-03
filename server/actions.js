@@ -1180,6 +1180,22 @@ function discussTransferRequest(team, teamIndex, league, body, now) {
   return { ok: true, success: result.success, formBefore: result.formBefore, formAfter: result.formAfter };
 }
 
+// Licenciement (retour utilisateur 2026-10-03) : 30 % du salaire restant dû,
+// le joueur devient agent libre (voir League.releasePlayer).
+function releasePlayer(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
+    return fail("playerId requis.");
+  }
+  const playerId = typeof body.playerId === "string" && /^-?\d+$/.test(body.playerId) ? Number(body.playerId) : body.playerId;
+  const result = league.releasePlayer(teamIndex, playerId, now);
+  if (!result.ok) {
+    return fail(result.reason === "budget"
+      ? `Budget insuffisant pour l'indemnité (${Math.round(result.fee).toLocaleString("fr-FR")} €).`
+      : "Joueur introuvable dans cet effectif.");
+  }
+  return { ok: true, fee: result.fee, playerName: result.playerName };
+}
+
 // Contrats (demande du 2026-10-01) : offre de prolongation pendant la
 // dernière saison du contrat { playerId, seasons, salary } (voir
 // Team.offerContractExtension) — tirage côté serveur.
@@ -1594,7 +1610,7 @@ module.exports = {
   // Demande de transfert (voir le grand commentaire au-dessus de
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
-  talkRetirement, offerContractExtension, respondToRaiseRequest,
+  talkRetirement, offerContractExtension, respondToRaiseRequest, releasePlayer,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   inductHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,

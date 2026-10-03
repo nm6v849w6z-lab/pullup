@@ -3657,6 +3657,18 @@ function normalizeContractSeasons(v, fallback = CONTRACT_DEFAULT_SEASONS) {
 
 // Saisons restantes du contrat d'un joueur (`season` = saison de contrat
 // courante, voir League.contractSeason), `null` sans contrat.
+// Licenciement (retour utilisateur 2026-10-03 : « il faut payer 30 %
+// d'indemnité sur le montant du salaire restant ») : salaire actuel × semaines
+// restantes du contrat (semaine en cours comprise, puis saisons suivantes
+// jusqu'à contractUntilSeason) × RELEASE_INDEMNITY_RATE.
+const RELEASE_INDEMNITY_RATE = 0.3;
+function releaseIndemnityFor(player, season, seasonWeek) {
+  if (!player || typeof player.contractUntilSeason !== "number") return 0;
+  const s = season || 1;
+  const thisSeason = Math.max(0, SEASON_LENGTH_WEEKS - Math.max(1, seasonWeek || 1) + 1);
+  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * SEASON_LENGTH_WEEKS;
+  return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
+}
 function contractSeasonsLeft(player, season) {
   if (!player || typeof player.contractUntilSeason !== "number") return null;
   return player.contractUntilSeason - (season || 1) + 1;
@@ -13364,8 +13376,22 @@ class League {
     return listing;
   }
 
+  // Licenciement d'un joueur par un club humain (retour utilisateur
+  // 2026-10-03) : indemnité payée (releaseIndemnityFor), puis le joueur part
+  // agent libre comme en fin de contrat.
+  releasePlayer(teamIdx, playerId, now = Date.now()) {
+    const team = this.teams[teamIdx];
+    const p = team && team.players.find(x => x.id === playerId);
+    if (!p) return { ok: false, reason: "not-found" };
+    const fee = releaseIndemnityFor(p, this.contractSeason(), this.seasonWeek());
+    if (team.isHuman && fee > (team.budget || 0)) return { ok: false, reason: "budget", fee };
+    if (fee) team.recordTransaction(`Indemnité de licenciement de ${p.name}`, -fee);
+    this._releaseToFreeAgency(team, teamIdx, p, now, { released: true, fee });
+    return { ok: true, fee, playerName: p.name };
+  }
+
   // Joueur qui quitte `team` en fin de contrat : agent libre mis aux enchères.
-  _releaseToFreeAgency(team, teamIdx, p, now) {
+  _releaseToFreeAgency(team, teamIdx, p, now, opts = null) {
     const i = team.players.findIndex(x => x.id === p.id);
     if (i === -1) return;
     team.players.splice(i, 1);
@@ -13392,8 +13418,10 @@ class League {
       removeByKey(team.feed, `contract_ext_${p.id}`);
       pushEntry(team.feed, {
         key: `contract_left_${p.id}`, category: "club", week: team.week, createdAt: now,
-        title: `${p.name} quitte le club libre`,
-        text: `Son contrat est arrivé à échéance sans prolongation : ${p.name} part libre et devient agent libre.`,
+        title: opts && opts.released ? `${p.name} licencié` : `${p.name} quitte le club libre`,
+        text: opts && opts.released
+          ? `${p.name} a été licencié (indemnité de ${Math.round(opts.fee || 0).toLocaleString("fr-FR")} €) et devient agent libre.`
+          : `Son contrat est arrivé à échéance sans prolongation : ${p.name} part libre et devient agent libre.`,
         action: { label: "Effectif", href: "/effectif" },
       });
     }
@@ -19161,6 +19189,7 @@ return {
   YOUTH_PROMOTION_CONTRACT_SEASONS, FREE_AGENT_AUCTION_DURATION_MS, FREE_AGENT_RETIRE_AGE, FREE_AGENT_SIGNING_LABEL, CPU_MIN_ROSTER_AFTER_CONTRACTS,
   contractHash, initialContractSeasonsFor, contractAgeFactor, contractMoraleFactor, askedSalary, contractOfferFloor,
   contractAcceptanceChance, contractOfferHint, normalizeContractSeasons, contractSeasonsLeft, isLastContractSeason, signNewContract,
+  RELEASE_INDEMNITY_RATE, releaseIndemnityFor,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   COURT_WOODS, normalizeCourtStyle, courtStyleFor, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,

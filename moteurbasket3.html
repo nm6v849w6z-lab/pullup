@@ -3054,6 +3054,19 @@
   .pdp-contract-head b{font-weight:800;}
   .pdp-contract-lines{margin-top:10px; display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink-dim);}
   .pdp-contract-lines b{color:var(--ink);}
+  .pdp-contract-sum{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
+  .pdp-contract-sum > div{background:var(--panel2, rgba(255,255,255,.03)); border:1px solid var(--line, rgba(255,255,255,.08)); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:3px;}
+  .pdp-contract-sum span{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+  .pdp-contract-sum b{font-size:17px; color:var(--ink);}
+  .pdp-contract-sum b small{font-size:12px; font-weight:500; color:var(--ink-dim);}
+  .pdp-contract-sum .contract-end-badge{align-self:flex-start; text-transform:none; letter-spacing:0;}
+  .pdp-release-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .pdp-release-btn{border-color:rgba(231,76,60,.45) !important; color:#ff8a7a !important;}
+  .pdp-release-confirm{margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(231,76,60,.45); background:rgba(231,76,60,.08); font-size:13px;}
+  .pdp-release-confirm p{margin:0 0 8px;}
+  .pdp-release-confirm .row{display:flex; gap:8px; flex-wrap:wrap;}
+  .pdp-release-confirm button.danger{background:#c0392b; color:#fff; border:0; border-radius:8px; padding:7px 12px; font-weight:700; cursor:pointer;}
+  .pdp-release-confirm button.danger:disabled{opacity:.5; cursor:not-allowed;}
   .pdp-contract-box{margin-top:14px; padding:14px; border-radius:12px; background:var(--bg); border:1px solid var(--line-soft);}
   .pdp-contract-box h4{margin:0 0 10px; font-size:14px; color:var(--ink);}
   .pdp-contract-form{display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 14px;}
@@ -7976,8 +7989,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-1">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-1">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-2">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-2">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -14397,6 +14410,21 @@ function normalizeContractSeasons(v, fallback = CONTRACT_DEFAULT_SEASONS) {
 
 // Saisons restantes du contrat d'un joueur (`season` = saison de contrat
 // courante, voir League.contractSeason), `null` sans contrat.
+// Licenciement (retour utilisateur 2026-10-03 : « il faut payer 30 %
+// d'indemnité sur le montant du salaire restant ») : salaire actuel × semaines
+// restantes du contrat (semaine en cours comprise, puis saisons suivantes
+// jusqu'à contractUntilSeason) × RELEASE_INDEMNITY_RATE.
+const RELEASE_INDEMNITY_RATE = 0.3;
+function releaseIndemnityFor(player, season, seasonWeek) {
+  if (!player || typeof player.contractUntilSeason !== "number") return 0;
+  const s = season || 1;
+  // 11 semaines par saison côté serveur (engine.js:SEASON_LENGTH_WEEKS ; la
+  // copie de ce fichier en compte encore 10) : même montant que celui débité.
+  const SEASON_W = 11;
+  const thisSeason = Math.max(0, SEASON_W - Math.max(1, seasonWeek || 1) + 1);
+  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * SEASON_W;
+  return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
+}
 function contractSeasonsLeft(player, season) {
   if (!player || typeof player.contractUntilSeason !== "number") return null;
   return player.contractUntilSeason - (season || 1) + 1;
@@ -33320,11 +33348,20 @@ function playerContractCardHtml(team, player) {
     return html;
   }
   const last = left <= 1;
-  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la fin de la saison <b>${player.contractUntilSeason}</b></span>` +
-    (last ? `<span class="contract-end-badge">Dernière saison</span>` : "") + `</div>`;
-  // « encore N saisons » et « Nouveau salaire signé » retirés (retour
-  // utilisateur 2026-10-03).
-  html += `<div class="pdp-contract-lines"><span>Salaire : <b>${formatMoney(player.salary)}</b> / sem., fixe jusqu'à la fin de la saison ${player.contractUntilSeason}</span></div>`;
+  // Synthèse (retour utilisateur 2026-10-03 : « synthétise tout ça ») :
+  // fin de contrat et salaire sur deux tuiles, puis « Licencier ».
+  html += `<div class="pdp-contract-sum">` +
+    `<div><span>Fin de contrat</span><b>Saison ${player.contractUntilSeason}</b>${last ? `<span class="contract-end-badge">Dernière saison</span>` : ""}</div>` +
+    `<div><span>Salaire</span><b>${formatMoney(player.salary)}<small> / sem.</small></b></div></div>`;
+  if (team === teamA) {
+    const fee = releaseIndemnityFor(player, season, league.seasonWeek());
+    html += pdpReleaseConfirmId === player.id
+      ? `<div class="pdp-release-confirm" role="alert"><p>Licencier <b>${escapeHtml(player.name)}</b> ? Indemnité : <b>${formatMoney(fee)}</b> (30 % du salaire restant dû). Il deviendra agent libre.</p>` +
+        `<div class="row"><button type="button" class="danger" data-pdp-release-confirm="${player.id}"${fee > teamA.budget ? " disabled" : ""}>Confirmer le licenciement</button>` +
+        `<button type="button" class="secondary" data-pdp-release-cancel="${player.id}">Annuler</button></div>` +
+        (fee > teamA.budget ? `<p class="sub gain-down">Budget insuffisant pour l'indemnité.</p>` : "") + `</div>`
+      : `<div class="pdp-release-row"><button type="button" class="secondary pdp-release-btn" data-pdp-release="${player.id}">Licencier le joueur</button><span class="sub">Indemnité : ${formatMoney(fee)}</span></div>`;
+  }
   if (player.raiseRequest) {
     html += `<div class="pdp-contract-box pdp-raise" id="pdpRaiseBox"><h4>Demande d'augmentation</h4>` +
       `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 1 semaine, il le prendra comme un refus.</p>` +
@@ -33458,6 +33495,31 @@ async function raiseResponseAction(playerId, accept, counter = null) {
 }
 
 let pdpLookDraft = null; // { playerId, look } en cours d'édition
+// Licenciement (retour utilisateur 2026-10-03) : joueur dont la
+// confirmation est affichée dans la carte Contrat.
+let pdpReleaseConfirmId = null;
+document.addEventListener("click", async e => {
+  const ask = e.target.closest("[data-pdp-release]");
+  const cancel = e.target.closest("[data-pdp-release-cancel]");
+  const go = e.target.closest("[data-pdp-release-confirm]");
+  if (!ask && !cancel && !go) return;
+  const ref = currentPlayerDetailRef;
+  if (!ref || ref.teamIdx !== myTeamIndex) return;
+  if (ask) { pdpReleaseConfirmId = Number(ask.dataset.pdpRelease); renderPlayerDetail(ref.teamIdx, ref.playerId); return; }
+  if (cancel) { pdpReleaseConfirmId = null; renderPlayerDetail(ref.teamIdx, ref.playerId); return; }
+  go.disabled = true;
+  const playerId = Number(go.dataset.pdpReleaseConfirm);
+  let data = null;
+  try {
+    const res = await fetchApi("/api/player/release", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId }) });
+    data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) { pdpContractFeedback((data && data.error) || "Licenciement impossible pour l'instant.", false); go.disabled = false; return; }
+  } catch (err) { pdpContractFeedback("Serveur indisponible, réessayez.", false); go.disabled = false; return; }
+  pdpReleaseConfirmId = null;
+  await refreshFromServerAndReenter();
+  TAB_HANDLERS.effectif();
+  if (typeof showToast === "function") showToast(`${data.playerName} licencié : indemnité de ${formatMoney(data.fee)}.`);
+});
 function playerPersonalizationCardHtml(team, player) {
   const premium = teamIsPremium(team);
   const custom = canCustomizePlayerLook(team, player);
@@ -41365,7 +41427,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261003-1";
+const HM_LIVE_ASSET_VERSION = "20261003-2";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {

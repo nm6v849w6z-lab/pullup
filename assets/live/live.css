@@ -49,8 +49,6 @@
 .hm-live .crest svg,.hm-live .crest img{width:100%;height:100%;display:block;object-fit:cover}
 .hm-live .crest-txt{font-weight:800;font-size:22px;color:#fff}
 .hm-live .tname{font-weight:800;font-size:28px;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
-.hm-live .tname.mine::after{content:"Mon club";display:inline-block;vertical-align:5px;margin-left:8px;font-size:10px;letter-spacing:1px;padding:3px 7px;border-radius:999px;background:#3A2508;color:#FFC06E}
-.hm-live .away .tname.mine::after{margin:0 8px 0 0;float:none}
 .hm-live .tshort{display:none;font-weight:800;font-size:16px;letter-spacing:.5px}
 .hm-live .tsponsor{display:none;margin-top:3px;font-size:12px;font-weight:700;letter-spacing:.3px;color:var(--amber,#f5a13a)}
 .hm-live .tsponsor.on{display:block}
@@ -74,7 +72,10 @@
 .hm-live .clock.final{font-size:38px;text-transform:uppercase}
 .hm-live .shotclock{display:none;margin:4px auto 0;min-width:34px;padding:2px 7px;border-radius:6px;background:#1b0d0d;border:1px solid rgba(255,90,70,.35);color:#ff6a4d;font-weight:800;font-size:15px;line-height:1.2;font-variant-numeric:tabular-nums;text-align:center;width:max-content}
 .hm-live .shotclock.on{display:block}
-.hm-live .marks g{cursor:help}
+.hm-live .marks g{cursor:pointer}
+.hm-live .court-wrap{position:relative}
+.hm-live .shot-tip{position:absolute;transform:translate(-50%,calc(-100% - 8px));pointer-events:none;opacity:0;transition:opacity .12s;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:600;white-space:nowrap;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.hm-live .shot-tip.show{opacity:1}
 .hm-live .shotclock.low{color:#fff;background:#c0392b}
 .hm-live .period{margin-top:8px;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
 
@@ -374,7 +375,6 @@ html[data-theme="light"] .hm-live .board-split{background:#f8f0e4}
 html[data-theme="light"] .hm-live .board-court{opacity:.26}
 html[data-theme="light"] .hm-live .court .floor-ad{fill:rgba(180,104,14,.32)}
 html[data-theme="light"] .hm-live .board-bottom{background:rgba(243,245,249,.85);border-top-color:#e3e8f0}
-html[data-theme="light"] .hm-live .tname.mine::after{background:#fdebd1;color:#8a4f00}
 html[data-theme="light"] .hm-live .chip{background:#eef2f7}
 html[data-theme="light"] .hm-live .chip.pts{color:#ffffff}
 html[data-theme="light"] .hm-live .chip.foul,html[data-theme="light"] .hm-live .chip.turnover{color:#8a4f00;background:#fdebd1}
