@@ -122,8 +122,9 @@ function teamsMapFor(league, teamIdxs) {
   return teams;
 }
 
-// Toutes les équipes du championnat : le classement liste aussi les équipes
-// exemptées de la journée (bye), qui doivent avoir un nom dans `teams`.
+// Toutes les équipes du championnat : le classement liste toutes les équipes,
+// y compris celles dont le match n'est pas diffusé en direct (à la mi-temps,
+// seuls les matchs en direct sont connus) — elles doivent avoir un nom.
 function allTeamIdxs(league) {
   return league.teams.map((t, i) => i).filter(i => league.teams[i]);
 }

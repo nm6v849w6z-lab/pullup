@@ -1,7 +1,7 @@
 // Retour utilisateur 2026-10-03 (« Pb là », classement en direct de la
-// mi-temps) : les équipes exemptées de la journée (bye) apparaissaient avec
-// leur id ("0", "8") au lieu de leur nom — `teams` ne contenait que les
-// équipes qui jouaient. Toutes les équipes du classement doivent être nommées.
+// mi-temps) : des équipes apparaissaient avec leur id ("0", "8") au lieu de
+// leur nom — à la mi-temps, `teams` ne contenait que les équipes des matchs
+// diffusés en direct. Toutes les équipes du classement doivent être nommées.
 const assert = require("assert");
 const Engine = require("../engine.js");
 const Adapter = require("./showsAdapter.js");
