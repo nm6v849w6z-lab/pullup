@@ -6759,6 +6759,7 @@
      Brooks chevauchait le poste) : le nom se raccourcit (…) si besoin. */
   :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player{display:flex; max-width:100%;}
   :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > *{flex:none;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .eff-listed-coin{margin-left:0;}
   :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .player-link{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .eff-pos{display:inline-flex; min-width:34px; justify-content:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; letter-spacing:.02em;}
   .eff-pos-m{background:var(--eff-pos-m-bg); color:var(--eff-pos-m);}
@@ -6818,14 +6819,14 @@
      collés, grands vides ailleurs). Somme = 100 %. */
   @media (min-width:1000px){
     #effectifSection table.eff-general, #teamDetailSection table.eff-general{table-layout:fixed; width:100%;}
-    #effectifSection table.eff-general :is(th.eff-th-name){width:19%;}
+    #effectifSection table.eff-general :is(th.eff-th-name){width:23%;}
     #effectifSection table.eff-general th.eff-th-position{width:7%;}
-    #effectifSection table.eff-general th.eff-th-potential{width:10%;}
+    #effectifSection table.eff-general th.eff-th-potential{width:9%;}
     #effectifSection table.eff-general th.eff-th-age{width:5%;}
-    #effectifSection table.eff-general th.eff-th-height{width:7%;}
-    #effectifSection table.eff-general th.eff-th-salary{width:9%;}
+    #effectifSection table.eff-general th.eff-th-height{width:6%;}
+    #effectifSection table.eff-general th.eff-th-salary{width:8%;}
     /* Contrat (demande du 2026-10-01). */
-    #effectifSection table.eff-general th.eff-th-contract{width:9%;}
+    #effectifSection table.eff-general th.eff-th-contract{width:8%;}
     #effectifSection table.eff-general th.eff-th-condition{width:11%;}
     #effectifSection table.eff-general th.eff-th-motivation{width:10%;}
     #effectifSection table.eff-general th.eff-th-evaluation{width:10%;}
