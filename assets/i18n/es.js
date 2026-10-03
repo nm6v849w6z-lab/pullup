@@ -5914,4 +5914,9 @@ window.HM_I18N_ES = {
   "En match": "En un partido",
   "Suivi des blessures — {0}": "Historial de lesiones — {0}",
   "Historique du joueur — {0}": "Historial del jugador — {0}",
+  "Note des joueurs (fiche joueur)": "Nota de los jugadores (ficha)",
+  "Moyenne (GEN)": "Media (GEN)",
+  "Total des caractéristiques (TC)": "Total de características (TC)",
+  "Fond.": "Fund.",
+  "Phys.": "Fís.",
 };

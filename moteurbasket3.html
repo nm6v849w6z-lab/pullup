@@ -2999,6 +2999,10 @@
   .pdp2-hist-last{margin:4px 0 2px; font-size:14px;}
   .pdp2-hist-last span{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; margin-bottom:2px;}
   .pdp2-hist-btn{margin-top:10px;}
+  .settings-theme.settings-rating{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .settings-theme.settings-rating button{justify-content:center; text-align:center;}
+  .pdp2-posratings.pdp2-tcratings{gap:14px; justify-content:center;}
+  .pdp2-tcratings .pdp2-posrating{min-width:52px; padding-left:6px; padding-right:6px;}
   .pdp2-hist-count{display:inline-block; min-width:20px; text-align:center; font-size:11px; border-radius:999px; padding:1px 7px; background:rgba(240,162,60,.16); color:var(--amber); margin-left:6px; vertical-align:2px;}
   .pdp2-hist-row{display:grid; grid-template-columns:88px minmax(0,1fr); gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px;}
   .pdp2-hist-row:first-child{border-top:0;}
@@ -32705,6 +32709,21 @@ document.addEventListener("click", (e) => {
   showPlayerHistoryModal(btn.dataset.phOpen);
 });
 
+// Affichage des notes (Paramètres > Affichage, retour utilisateur
+// 2026-10-03 : « chacun choisit ce qu'il préfère ») : "gen" (moyenne, note
+// au meilleur poste) ou "tc" (total des caractéristiques). Préférence de
+// l'appareil (localStorage).
+const RATING_MODE_KEY = "hm-rating-mode";
+function ratingDisplayMode() {
+  try { return localStorage.getItem(RATING_MODE_KEY) === "tc" ? "tc" : "gen"; } catch (e) { return "gen"; }
+}
+function setRatingDisplayMode(mode) {
+  try { localStorage.setItem(RATING_MODE_KEY, mode === "tc" ? "tc" : "gen"); } catch (e) { /* navigation privée */ }
+}
+function playerTotalCaracs(player, keys) {
+  return keys.reduce((sum, k) => sum + (Number(player.attrs && player.attrs[k]) || 0), 0);
+}
+
 function renderPlayerDetail(teamIdx, playerId) {
   if (playerDetailForeign && !playerDetailForeignActive) return withPlayerForeign(() => renderPlayerDetail(teamIdx, playerId));
   const nameHeader = document.getElementById("playerDetailName");
@@ -32899,7 +32918,25 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // pdp2-cond
 
   html += `<div class="pdp2-rating">`;
-  if (fullyVisible) {
+  if (fullyVisible && ratingDisplayMode() === "tc") {
+    // Option « Total des caractéristiques » (Paramètres > Affichage, retour
+    // utilisateur 2026-10-03) : TC de toutes les caractéristiques dans
+    // l'anneau, puis TC par catégorie à la place de la note par poste.
+    const tc = playerTotalCaracs(player, ATTRS);
+    const avg = tc / ATTRS.length;
+    const circ = 2 * Math.PI * 48;
+    const dash = (clamp(avg, 0, 100) / 100) * circ;
+    html += `<div class="pdp2-ring pdp2-ring--tc" title="Total des caractéristiques">` +
+      `<svg width="112" height="112" viewBox="0 0 116 116" aria-hidden="true">` +
+      `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--line)" stroke-width="9"></circle>` +
+      `<circle cx="58" cy="58" r="48" fill="none" stroke="${radarTierColor(avg)}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 58 58)"></circle>` +
+      `</svg>` +
+      `<div class="pdp2-ring-center"><span class="pdp-overall-num ${attrColorTier(avg)}">${tc}</span><span class="pdp2-ring-lbl">TC</span></div>` +
+      `</div>`;
+    html += `<div class="pdp2-posratings pdp2-tcratings" role="list" aria-label="Total des caractéristiques par catégorie">` +
+      [["Fond.", "Fondamentaux", FUNDAMENTAL_ATTRS], ["Phys.", "Physique", PHYSICAL_ATTRS], ["Mental", "Mental", MENTAL_ATTRS]].map(([short, label, keys]) =>
+        `<span class="pdp2-posrating" role="listitem" title="TC ${escapeHtml(label)}"><b>${playerTotalCaracs(player, keys)}</b><small>${escapeHtml(short)}</small></span>`).join("") + `</div>`;
+  } else if (fullyVisible) {
     const overall = playerBestRating(player);
     const circ = 2 * Math.PI * 48;
     const dash = (clamp(overall, 0, 100) / 100) * circ;
@@ -33027,7 +33064,9 @@ function renderPlayerDetail(teamIdx, playerId) {
     const fixedOrder = PDP_ATTR_ORDER[title] || attrs;
     const ordered = fixedOrder.filter(a => attrs.includes(a)).concat(attrs.filter(a => !fixedOrder.includes(a)));
     const meta = shown.length === attrs.length
-      ? `moy. <b>${(shown.reduce((s, a) => s + player.attrs[a], 0) / shown.length).toFixed(1)}</b>`
+      ? (ratingDisplayMode() === "tc"
+        ? `TC <b>${playerTotalCaracs(player, attrs)}</b>`
+        : `moy. <b>${(shown.reduce((s, a) => s + player.attrs[a], 0) / shown.length).toFixed(1)}</b>`)
       : `${shown.length}/${attrs.length} révélées`;
     const listStyle = wide ? ` style="grid-template-rows:repeat(${Math.ceil(attrs.length / 2)}, auto)"` : "";
     return `<div class="pdp-attr-block pdp2-attr-block${wide ? " wide" : ""}">` +
@@ -45251,6 +45290,11 @@ function showSettingsModal(tab) {
     `<div class="settings-theme" id="settingsThemeChoices">` +
     opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Appareil", "is-system") +
     `</div>` +
+    `<div class="settings-row-label" style="margin-top:16px;">Note des joueurs (fiche joueur)</div>` +
+    `<div class="settings-theme settings-rating" id="settingsRatingChoices">` +
+    `<button type="button" data-rating-choice="gen" aria-pressed="${ratingDisplayMode() === "gen"}">Moyenne (GEN)</button>` +
+    `<button type="button" data-rating-choice="tc" aria-pressed="${ratingDisplayMode() === "tc"}">Total des caractéristiques (TC)</button>` +
+    `</div>` +
     // Langue (retour utilisateur 2026-09-26). Libellés jamais traduits
     // (data-no-i18n). Changer recharge la page (voir hmI18n.setLang).
     `<div class="settings-row-label" style="margin-top:16px;">Langue</div>` +
@@ -45287,6 +45331,14 @@ function showSettingsModal(tab) {
         else { try { localStorage.setItem("hm-lang", chosen); } catch (err) { /* rien */ } location.reload(); }
       };
       window.__lastLangSave = hmSaveAccountLang(chosen).then(apply, apply);
+      return;
+    }
+    const rc = e.target.closest("[data-rating-choice]");
+    if (rc) {
+      setRatingDisplayMode(rc.dataset.ratingChoice);
+      overlay.querySelectorAll("[data-rating-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === rc)));
+      const ref = currentPlayerDetailRef;
+      if (ref && currentVisiblePageId() === "playerDetailSection") renderPlayerDetail(ref.teamIdx, ref.playerId);
       return;
     }
     const b = e.target.closest("[data-theme-choice]");

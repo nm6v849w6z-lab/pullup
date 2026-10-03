@@ -5914,4 +5914,9 @@ window.HM_I18N_LT = {
   "En match": "Rungtynėse",
   "Suivi des blessures — {0}": "Traumų istorija — {0}",
   "Historique du joueur — {0}": "Žaidėjo istorija — {0}",
+  "Note des joueurs (fiche joueur)": "Žaidėjų įvertis (kortelė)",
+  "Moyenne (GEN)": "Vidurkis (GEN)",
+  "Total des caractéristiques (TC)": "Savybių suma (TC)",
+  "Fond.": "Pagr.",
+  "Phys.": "Fiz.",
 };

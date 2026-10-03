@@ -5914,4 +5914,9 @@ window.HM_I18N_PL = {
   "En match": "W meczu",
   "Suivi des blessures — {0}": "Historia kontuzji — {0}",
   "Historique du joueur — {0}": "Historia zawodnika — {0}",
+  "Note des joueurs (fiche joueur)": "Ocena zawodników (karta)",
+  "Moyenne (GEN)": "Średnia (GEN)",
+  "Total des caractéristiques (TC)": "Suma cech (TC)",
+  "Fond.": "Podst.",
+  "Phys.": "Fiz.",
 };

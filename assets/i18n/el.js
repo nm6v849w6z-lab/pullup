@@ -5914,4 +5914,9 @@ window.HM_I18N_EL = {
   "En match": "Σε αγώνα",
   "Suivi des blessures — {0}": "Ιστορικό τραυματισμών — {0}",
   "Historique du joueur — {0}": "Ιστορικό παίκτη — {0}",
+  "Note des joueurs (fiche joueur)": "Βαθμός παικτών (καρτέλα)",
+  "Moyenne (GEN)": "Μέσος όρος (GEN)",
+  "Total des caractéristiques (TC)": "Σύνολο χαρακτηριστικών (TC)",
+  "Fond.": "Βασ.",
+  "Phys.": "Φυσ.",
 };

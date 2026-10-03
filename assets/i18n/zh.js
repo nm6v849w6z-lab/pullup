@@ -5914,4 +5914,9 @@ window.HM_I18N_ZH = {
   "En match": "比赛中",
   "Suivi des blessures — {0}": "伤病记录 — {0}",
   "Historique du joueur — {0}": "球员履历 — {0}",
+  "Note des joueurs (fiche joueur)": "球员评分（球员页）",
+  "Moyenne (GEN)": "平均（GEN）",
+  "Total des caractéristiques (TC)": "属性总和（TC）",
+  "Fond.": "基础",
+  "Phys.": "身体",
 };
