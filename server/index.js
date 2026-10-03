@@ -1585,9 +1585,30 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           salary: p.salary, contractUntilSeason: p.contractUntilSeason == null ? null : p.contractUntilSeason,
           injuryUntil: p.injuryUntil || null, attrs: { ...(p.attrs || {}) },
         });
+        // Diagnostic des ordres (bug « ordres perdus », 2026-10-03) : qui est
+        // titulaire selon chaque source — ordres du club, plans préparés,
+        // ordres de ligue privée, derniers matchs joués.
+        const nameOf = id => { const p = (team.players || []).concat(team.youthPlayers || []).find(x => String(x.id) === String(id)); return p ? p.name : (id == null ? null : `#${id}`); };
+        const fiveOf = lineup => (lineup && lineup.starters ? Object.fromEntries(Object.entries(lineup.starters).map(([pos, id]) => [pos, nameOf(id)])) : null);
+        const idx = hostLeague.teams.indexOf(team);
+        let lpOrders = [];
+        try {
+          const lpStore = await PrivateLeague.loadStore(multiSavePath);
+          for (const lp of (lpStore && lpStore.list) || []) {
+            const m = (lp.members || []).find(x => x && x.leagueId === hostLeague.leagueId && x.idx === idx);
+            if (m) lpOrders.push({ lp: lp.name, status: lp.status || null, starters: m.orders ? fiveOf(m.orders.lineup) : "ordres du club" });
+          }
+        } catch (e) { lpOrders = { error: e.message }; }
         sendJson(res, 200, {
           ok: true, teamName: team.name, leagueId: hostLeague.leagueId || null, isHuman: !!team.isHuman,
           lineup: team.lineup || null, players: (team.players || []).map(view), youthPlayers: (team.youthPlayers || []).map(view),
+          diagnostic: {
+            clubStarters: fiveOf(team.lineup),
+            ordresValidatedRound: team.ordresValidatedRound == null ? null : team.ordresValidatedRound,
+            plans: Object.entries(team.plannedTactics || {}).map(([key, plan]) => ({ key, starters: fiveOf(plan && plan.lineup) })),
+            lpOrders,
+            lastMatches: (team.ordersHistory || []).slice(0, 8).map(h => ({ competition: h.competition, round: h.round, at: h.at ? new Date(h.at).toISOString() : null, opponent: h.opponentName || null, score: h.scoreFor != null ? `${h.scoreFor}-${h.scoreAgainst}` : null, starters: fiveOf(h.orders && h.orders.lineup) })),
+          },
         });
         return;
       }

@@ -36,6 +36,10 @@ const ok = m => console.log("✅ " + m);
     }
     const after = JSON.stringify((await store.loadMultiLeague(multiSavePath)).league.teams.find(t => t.name === "Beta FC"));
     if (before !== after) throw new Error("❌ la lecture ne doit rien modifier");
+    const d = body.diagnostic;
+    if (!d || !d.clubStarters || Object.keys(d.clubStarters).length !== 5 || !Array.isArray(d.plans) || !Array.isArray(d.lastMatches) || !Array.isArray(d.lpOrders)) {
+      throw new Error(`❌ diagnostic des ordres attendu : ${JSON.stringify(d)}`);
+    }
     ok(`effectif complet de Beta FC (${body.players.length} joueurs, caractéristiques comprises), rien de modifié`);
     server.close();
     console.log("\n✅ admin_team_view_test.js : tout est vert");
