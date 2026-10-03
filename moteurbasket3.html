@@ -3012,6 +3012,13 @@
   .ph-filters label{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
   .ph-foot{margin-top:10px; font-size:13px;}
   .pdp-contract-sale.pdp2-bottom-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); align-items:stretch; margin:0;}
+  /* Trois briques alignées en haut ET en bas (retour 2026-10-03) : aucune
+     marge propre, la Personnalisation resserrée. */
+  .pdp-contract-sale.pdp2-bottom-cards > .pdp-card{margin:0 !important;}
+  .pdp2-bottom-cards #pdpPersoCard .pdp-perso-row{margin:4px 0 8px;}
+  .pdp2-bottom-cards #pdpPersoCard .pdp-perso-lbl{flex:0 0 auto; margin-right:4px;}
+  .pdp2-bottom-cards #pdpPersoCard .sub{margin:4px 0 0;}
+  .pdp2-bottom-cards #pdpPersoFeedback:empty{display:none;}
   /* Partager : une seule ligne compacte (titre, bouton, état du lien). */
   .pdp-contract-sale > .pdp2-share-card{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px !important;}
   .pdp-contract-sale > .pdp2-share-card h3{margin:0;}
