@@ -7974,8 +7974,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261001-2">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261001-2">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-1">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-1">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -19150,6 +19150,7 @@ class Team {
       p.resetForMatch(now, this.conditionRecoveryPerDay());
       // Titulaire du match (liseré jaune des feuilles de match, voir engine.js).
       p.isStarterThisMatch = false;
+      p.matchStartPosition = null;
       p.matchChemistryFactor = chemistryFactor;
       // Club humain : chaque joueur joue avec SA maîtrise du système.
       p.matchTacticalKnowledgeFactor = this.isHuman ? this.playerTacticalKnowledgeFactor(p) : tacticalKnowledgeFactor;
@@ -19163,7 +19164,7 @@ class Team {
       if (p && p.matchInjuryLocked) {
         p = this.backupsForSlot(pos)[0] || null;
       }
-      if (p) { p.onCourt = true; p.matchPosition = pos; p.isStarterThisMatch = true; }
+      if (p) { p.onCourt = true; p.matchPosition = pos; p.isStarterThisMatch = true; p.matchStartPosition = pos; }
     });
   }
 
@@ -25920,6 +25921,9 @@ class MatchEngine {
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         // Titulaire (liseré jaune sur les feuilles de match, 2026-10-03).
         starter: !!p.isStarterThisMatch,
+        // Poste de départ du titulaire (direct : qui est sur le terrain, à
+        // quel poste, dès le coup d'envoi — retour utilisateur 2026-10-03).
+        ...(p.isStarterThisMatch && p.matchStartPosition ? { startPos: p.matchStartPosition } : null),
         ...p.stats,
       }));
   }
@@ -26471,6 +26475,16 @@ function secondsToClockStr(totalSec) {
 // utilisateur : "on ne sait pas qui a la balle" / "mettre un point pour dire
 // qui a la balle".
 function setPossessionDot(team) {
+  // Vue live : même possession que l'ancien tableau de score (l'équipe qui a
+  // le ballon jusqu'à la prochaine action, voir tickLiveClock), au lieu de
+  // celle de la DERNIÈRE action (l'équipe qui vient de marquer restait
+  // affichée en attaque).
+  try {
+    if (hmLive) {
+      const idx = team === "A" || team === "B" ? hmLiveIdx(team) : null;
+      if (hmLive.tickPossession !== idx) { hmLive.tickPossession = idx; hmLiveSchedule(); }
+    }
+  } catch (e) { /* hmLive pas encore déclaré */ }
   const dotA = document.getElementById("possDotA");
   const dotB = document.getElementById("possDotB");
   if (dotA) dotA.classList.toggle("off", team !== "A");
@@ -26575,7 +26589,15 @@ function updateLiveClockTick() {
     // changé de main, ex. une perte de balle immédiate) : il annonce le
     // résultat de la possession EN COURS depuis `prev`, donc l'équipe qui a
     // la balle jusqu'à ce qu'il arrive.
-    setPossessionDot((next && next.possession) || prev.possession || null);
+    // Un changement de joueur, un temps mort… n'ont pas de possession : on
+    // prend la prochaine action du quart qui en porte une (retour
+    // utilisateur 2026-10-03 : indicateur décalé par rapport au fil).
+    let nextPoss = null;
+    for (let i = prevIdx + 1; i < liveTickEvents.length; i++) {
+      if (liveTickEvents[i].quarter !== prev.quarter) break;
+      if (liveTickEvents[i].possession) { nextPoss = liveTickEvents[i].possession; break; }
+    }
+    setPossessionDot(nextPoss || prev.possession || null);
   } else {
     // Dernier événement diffusé du quart (ou du match) : plus rien à
     // interpoler tant que l'événement suivant (autre quart, pause, fin de
@@ -40507,7 +40529,7 @@ function liveRowKey(teamKeyAB, name, id) {
 function newLiveBoxScoreRow(name, position, key = name, playerId = null) {
   return {
     name, position, key, playerId,
-    pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
+    pts: 0, reb: 0, oreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
     fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
     // Minutes jouées déjà "fermées" (intervalles terminés par une sortie du
     // terrain), en SECONDES — voir liveMinutesFor pour la conversion et
@@ -40566,9 +40588,94 @@ function liveBoxScoreRow(teamKeyAB, name, id = null) {
   return row;
 }
 
+// Cinq de départ RÉELLEMENT aligné par le moteur pour ce direct (retour
+// utilisateur 2026-10-03 : plus de 5 joueurs « sur le terrain », un joueur
+// à 23 pts en 4 min, totaux faux). Le direct partait de team.lineup côté
+// navigateur, qui peut différer du cinq joué (compo modifiée depuis le coup
+// d'envoi, titulaire blessé remplacé par le moteur…) : les changements du
+// moteur ne retrouvaient alors pas le sortant. Sources, dans l'ordre :
+//   1. boxScoreA/B du direct (`starter` + `startPos`, moteur depuis le
+//      2026-10-03) ;
+//   2. les événements du match : tout joueur qui agit (ou sort) avant
+//      d'être entré en jeu était titulaire ;
+//   3. team.lineup (avant-match, rien d'autre de connu).
+// Renvoie Map(id → poste de départ).
+function liveMatchStartersFor(liveMatch, key, team) {
+  const out = new Map();
+  const lineup = (team && team.lineup && team.lineup.starters) || {};
+  const rows = liveMatch && (key === "A" ? liveMatch.boxScoreA : liveMatch.boxScoreB);
+  if (Array.isArray(rows) && rows.some(r => r && r.starter)) {
+    rows.filter(r => r && r.starter && r.id != null).forEach(r => out.set(r.id, r.startPos || POSITIONS.find(pos => lineup[pos] === r.id) || r.position));
+    if (out.size) return out;
+  }
+  const events = (liveMatch && Array.isArray(liveMatch.events)) ? liveMatch.events : [];
+  const opp = oppOfLiveTeam(key);
+  const found = [], entered = new Set();
+  const seen = id => { if (id != null && !entered.has(id) && !found.includes(id)) found.push(id); };
+  for (const ev of events) {
+    if (found.length >= 5) break;
+    if (ev.team !== "A" && ev.team !== "B") continue;
+    const mine = ev.team === key, theirs = ev.team === opp;
+    switch (ev.type) {
+      case "shot":
+        if (mine) { seen(ev.shooterId); seen(ev.assisterId); }
+        if (theirs) { seen(ev.blockerId); seen(ev.defenderId); }
+        break;
+      case "rebound":
+        if (mine) seen(ev.rebounderId);
+        if ((ev.offensive ? ev.team : oppOfLiveTeam(ev.team)) === key) seen(ev.shooterId);
+        break;
+      case "freeThrow": if (mine) seen(ev.shooterId); break;
+      case "turnover":
+        if (mine) seen(ev.playerId);
+        if (theirs) seen(ev.stealerId);
+        break;
+      case "foul": case "unsportsmanlikeFoul": if (mine) seen(ev.defenderId); break;
+      case "substitution":
+        if (mine) { seen(ev.playerId); if (ev.replacementId != null) entered.add(ev.replacementId); }
+        break;
+      case "shortHanded": if (mine) seen(ev.playerId); break;
+      default: break;
+    }
+  }
+  if (!found.length) {
+    POSITIONS.forEach(pos => { if (lineup[pos] != null) out.set(lineup[pos], pos); });
+    return out;
+  }
+  // Postes : celui de la compo si le joueur y est titulaire, sinon un poste
+  // de la compo resté libre (son poste naturel en priorité).
+  const free = POSITIONS.filter(pos => !found.includes(lineup[pos]));
+  found.forEach(id => {
+    const pos = POSITIONS.find(x => lineup[x] === id);
+    if (pos) out.set(id, pos);
+  });
+  found.filter(id => !out.has(id)).forEach(id => {
+    const pObj = team && team.players && team.players.find(x => x.id === id);
+    const natural = pObj && pObj.position;
+    const i = free.indexOf(natural);
+    const pos = i >= 0 ? free.splice(i, 1)[0] : (free.shift() || natural || "");
+    out.set(id, pos);
+  });
+  // Moins de 5 joueurs vus (direct très court, ancien format) : on complète
+  // avec la compo.
+  POSITIONS.forEach(pos => {
+    if (out.size >= 5) return;
+    const id = lineup[pos];
+    if (id != null && !out.has(id) && ![...out.values()].includes(pos)) out.set(id, pos);
+  });
+  return out;
+}
+
+// Titulaires du direct en cours (voir liveMatchStartersFor) et poste occupé
+// par chaque joueur sur le terrain (le remplaçant hérite du poste du
+// sortant, comme dans le moteur, voir MatchEngine.substituteIfNeeded).
+let liveStarters = { A: new Map(), B: new Map() };
+let liveCourtSlot = { A: new Map(), B: new Map() };
+
 function resetLiveBoxScore() {
   liveBoxScore = { A: new Map(), B: new Map() };
   liveCourtState = { A: new Map(), B: new Map() };
+  liveCourtSlot = { A: new Map(), B: new Map() };
   liveBoxScoreNowElapsed = 0;
   liveBoxScoreLastBlocked = null;
   liveBoxScoreActiveTeam = "A";
@@ -40579,11 +40686,17 @@ function resetLiveBoxScore() {
   // mais pas encore entré, lui, obtient une ligne mais aucun intervalle
   // ouvert (ne comptera aucune minute tant qu'il n'entre pas réellement).
   [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
+    const starters = liveMatchStartersFor(currentLiveMatch && !currentLiveMatch.pregame ? currentLiveMatch : null, key, team);
+    liveStarters[key] = starters;
     matchdayRosterPlayers(team).forEach(p => {
-      liveBoxScore[key].set("#" + p.id, newLiveBoxScoreRow(p.name, startingPositionFor(team, p), "#" + p.id, p.id));
-      if (team.lineup && Object.values(team.lineup.starters || {}).includes(p.id)) {
-        liveCourtState[key].set("#" + p.id, 0);
-      }
+      liveBoxScore[key].set("#" + p.id, newLiveBoxScoreRow(p.name, starters.get(p.id) || startingPositionFor(team, p), "#" + p.id, p.id));
+    });
+    starters.forEach((pos, id) => {
+      const pObj = team && team.players && team.players.find(x => x.id === id);
+      const row = liveBoxScoreRow(key, pObj ? pObj.name : "", id);
+      if (pos) row.position = pos;
+      liveCourtState[key].set(row.key, 0);
+      liveCourtSlot[key].set(row.key, pos || row.position);
     });
   });
   document.querySelectorAll(".live-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.liveTeam === "A"));
@@ -40632,7 +40745,12 @@ function applyLiveBoxScoreEvent(ev) {
       break;
     }
     case "rebound": {
-      if (ev.rebounder) liveBoxScoreRow(ev.team, ev.rebounder, ev.rebounderId).reb++;
+      if (ev.rebounder) {
+        const rr = liveBoxScoreRow(ev.team, ev.rebounder, ev.rebounderId);
+        rr.reb++;
+        // Rebonds offensifs (retour utilisateur 2026-10-03).
+        if (ev.offensive) rr.oreb++;
+      }
       // Un tir manqué sans contre ni faute n'existe QUE sous la forme de cet
       // événement : la tentative du tireur (équipe en attaque) est comptée ici.
       const shooterTeam = ev.offensive ? ev.team : oppOfLiveTeam(ev.team);
@@ -40673,12 +40791,20 @@ function applyLiveBoxScoreEvent(ev) {
     // moteur (`onCourt` n'est mis à jour QUE là, jamais avant, voir le
     // commentaire de substituteIfNeeded).
     case "substitution": {
+      // Le remplaçant prend le poste du sortant (comme dans le moteur).
+      const outKey = ev.player ? liveRowKey(ev.team, ev.player, ev.playerId) : null;
+      const slot = outKey && liveCourtSlot ? liveCourtSlot[ev.team].get(outKey) : null;
       if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed, ev.playerId);
-      if (ev.replacement) openCourtInterval(ev.team, ev.replacement, liveBoxScoreNowElapsed, ev.replacementId);
+      if (outKey && liveCourtSlot) liveCourtSlot[ev.team].delete(outKey);
+      if (ev.replacement) {
+        openCourtInterval(ev.team, ev.replacement, liveBoxScoreNowElapsed, ev.replacementId);
+        if (slot && liveCourtSlot) liveCourtSlot[ev.team].set(liveRowKey(ev.team, ev.replacement, ev.replacementId), slot);
+      }
       break;
     }
     case "shortHanded": {
       if (ev.player) closeCourtInterval(ev.team, ev.player, liveBoxScoreNowElapsed, ev.playerId);
+      if (ev.player && liveCourtSlot) liveCourtSlot[ev.team].delete(liveRowKey(ev.team, ev.player, ev.playerId));
       break;
     }
     default:
@@ -40699,7 +40825,7 @@ function applyLiveBoxScoreEvent(ev) {
 // relayé par l'utilisateur, 2026-09-24 — voir le grand commentaire plus
 // haut au-dessus de `let liveBoxScore`).
 const LIVE_BOXSCORE_COLS = [
-  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
+  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["oreb", "RO"], ["ast", "PD"], ["stl", "INT"],
   ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
 ];
 
@@ -40742,7 +40868,7 @@ function renderLiveBoxScore() {
     // stockées sur la ligne elle-même : un joueur encore sur le terrain doit
     // voir ses minutes progresser même sans nouvelle statistique à lui (voir
     // le "default: renderLiveBoxScore()" de applyLiveBoxScoreEvent).
-    .map(row => ({ ...row, min: liveMinutesFor(liveBoxScoreActiveTeam, row.key) }))
+    .map(row => ({ ...row, min: liveMinutesFor(liveBoxScoreActiveTeam, row.key), starter: row.playerId != null && liveStarters[liveBoxScoreActiveTeam].has(row.playerId) }))
     // Trié par minutes jouées d'abord désormais (même convention que
     // boxscoreRowsFromMatchLog, la feuille FINALE, `b.min - a.min`) —
     // logique maintenant que TOUTE la feuille de match est affichée (voir
@@ -41213,7 +41339,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261001-2";
+const HM_LIVE_ASSET_VERSION = "20261003-1";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -41380,7 +41506,8 @@ function hmLiveOnEvent(ev) {
       else if (ev.type === "rebound") shooterIdx = ev.offensive ? t : 1 - t;
       if (shooterIdx !== null) {
         const p = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt || hmLive.seq));
-        hmLive.shots.push({ id: hmLive.seq, team: shooterIdx, quarter, made, zone, x: p.x, y: p.y });
+        // Tireur (survol de la carte des tirs, retour utilisateur 2026-10-03).
+        hmLive.shots.push({ id: hmLive.seq, team: shooterIdx, quarter, clock, made, zone, x: p.x, y: p.y, shooter: ev.shooter || null });
       }
     }
     hmLiveSchedule();
@@ -41414,7 +41541,8 @@ function hmLiveOnTick() {
   if (!hmLive || !hmLive.view) return;
   const clockEl = document.getElementById("clockDisplay");
   const half = hmLiveHalftime();
-  const key = (clockEl ? clockEl.textContent : "") + "|" + (half ? half.resumeIn : "");
+  const shotEl = document.getElementById("shotClockDisplay");
+  const key = (clockEl ? clockEl.textContent : "") + "|" + (half ? half.resumeIn : "") + "|" + (shotEl && !shotEl.classList.contains("off") ? shotEl.textContent : "");
   if (key !== hmLive.tickKey) { hmLive.tickKey = key; hmLiveSchedule(); }
 }
 
@@ -41566,7 +41694,7 @@ function hmLiveBuildState() {
   const clockEl = document.getElementById("clockDisplay");
   const teams = keys.map((key, t) => {
     const team = key === "A" ? teamA : teamB;
-    const starterIds = new Set(Object.values((team && team.lineup && team.lineup.starters) || {}).filter(Boolean));
+    const starterIds = new Set(liveStarters[key] && liveStarters[key].size ? liveStarters[key].keys() : Object.values((team && team.lineup && team.lineup.starters) || {}).filter(Boolean));
     const rows = liveBoxScore ? [...liveBoxScore[key].values()] : [];
     const teamIdx = hmLiveTeamIdx(team);
     const players = rows.map(row => {
@@ -41579,8 +41707,10 @@ function hmLiveBuildState() {
         link: pObj && teamIdx !== null ? { team: teamIdx, id: pObj.id } : null,
         starter: !!(pObj && starterIds.has(pObj.id)),
         onCourt: !hmLive.final && !hmLive.match.pregame && !!(liveCourtState && liveCourtState[key].has(row.key)),
+        // Poste occupé sur le terrain (tri des joueurs en jeu par poste).
+        slot: (liveCourtSlot && liveCourtSlot[key].get(row.key)) ? POS_SHORT[liveCourtSlot[key].get(row.key)] || "" : null,
         seconds,
-        pts: row.pts, reb: row.reb, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
+        pts: row.pts, reb: row.reb, oreb: row.oreb || 0, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
         fg2m: row.fgm2, fg2a: row.fga2, fg3m: row.fgm3, fg3a: row.fga3, ftm: row.ftm, fta: row.fta,
       };
     });
@@ -41604,7 +41734,15 @@ function hmLiveBuildState() {
     kickoffIn: hmLive.match.pregame ? Math.max(0, Math.ceil((hmLive.match.kickoffAt - Date.now()) / 1000)) : null,
     quarter: hmLive.quarter,
     clock: hmLive.final ? 0 : (clockEl ? clockSecondsFromStr(clockEl.textContent) : QUARTER_SECONDS),
-    possession: hmLive.possession,
+    // Chrono des 24 secondes : même valeur que l'ancien tableau de score
+    // (voir updateLiveClockTick), masqué hors jeu.
+    shotClock: (() => {
+      const b = document.getElementById("shotClockDisplay");
+      if (hmLive.final || !b || b.classList.contains("off")) return null;
+      const v = parseInt(b.textContent, 10);
+      return Number.isFinite(v) ? v : null;
+    })(),
+    possession: hmLive.final ? null : (hmLive.tickPossession !== undefined && hmLive.tickPossession !== null ? hmLive.tickPossession : hmLive.possession),
     halftimeResumeIn: half ? half.resumeIn : null,
     meta: dress.meta,
     courtLogo: dress.courtLogo,
@@ -41623,7 +41761,7 @@ function hmLiveBuildState() {
 // provenance des lignes (buildBoxScore côté moteur pendant un match en
 // direct, ou reconstituées depuis Player.matchLog pour un match déjà joué).
 const BOXSCORE_COLS = [
-  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["ast", "PD"], ["stl", "INT"],
+  ["min", "MIN"], ["pts", "PTS"], ["reb", "REB"], ["oreb", "RO"], ["ast", "PD"], ["stl", "INT"],
   ["blk", "CTR"], ["tov", "PDB"], ["pf", "FTS"],
 ];
 // Signe explicite pour le +/- (retour utilisateur : colonne "+/-" au sens
@@ -41650,7 +41788,7 @@ function boxscoreTableHtml(rows, mvpRow) {
   // évaluation en avant, +/- coloré, nom figé à gauche au défilement
   // horizontal. Le MVP n'a plus de "★ " dans le texte : l'étoile est
   // dessinée en CSS (.boxscore-mvp-row .bx-name::after).
-  const HEAD_TITLES = { MIN: "Minutes", PTS: "Points", REB: "Rebonds", PD: "Passes décisives", INT: "Interceptions", CTR: "Contres", PDB: "Pertes de balle", FTS: "Fautes" };
+  const HEAD_TITLES = { MIN: "Minutes", PTS: "Points", REB: "Rebonds", RO: "Rebonds offensifs", PD: "Passes décisives", INT: "Interceptions", CTR: "Contres", PDB: "Pertes de balle", FTS: "Fautes" };
   const SEP_BEFORE = new Set(["pts", "stl"]);
   const pct = (m, a) => a ? `${Math.round(100 * m / a)}%` : "–";
   const num = (v, extra) => `<td class="${[v ? "" : "bx-zero", extra || ""].filter(Boolean).join(" ")}">${v}</td>`;
@@ -41824,7 +41962,7 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
         // son commentaire, retrouver le VRAI Player pour son avatar.
         id: p.id,
         name: p.name, position: p.position, min: entry.min,
-        pts: entry.pts, reb: entry.reb, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
+        pts: entry.pts, reb: entry.reb, oreb: entry.oreb || 0, ast: entry.ast, stl: entry.stl, blk: entry.blk, tov: entry.tov, pf: entry.pf,
         fgm2: entry.fgm2, fga2: entry.fga2, fgm3: entry.fgm3, fga3: entry.fga3, ftm: entry.ftm, fta: entry.fta,
         // +/- (voir MatchEngine.applyPlusMinusForPoints/recordMatchStatsForTeam
         // côté moteur). `|| 0` pour tout matchLog persisté avant cette

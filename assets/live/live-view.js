@@ -62,6 +62,7 @@ const TEMPLATE = `
     </div>`).join("")}
     <div class="center" style="order:3">
       <div class="clock" data-ref="clock">10:00</div>
+      <div class="shotclock" data-ref="shotclock" title="Chrono des 24 secondes"></div>
       <div class="period" data-ref="period"></div>
     </div>
   </div>
@@ -403,6 +404,12 @@ export function createLiveView(root, opts = {}) {
     $("sides").innerHTML = `<b style="color:var(--c0)">${esc(A.short)}</b> attaque à droite, <b style="color:var(--c1)">${esc(B.short)}</b> à gauche`;
     $("clock").textContent = done ? "Final" : fmtClock(S.clock);
     $("clock").classList.toggle("final", done);
+    // Chrono des 24 secondes (retour utilisateur 2026-10-03), seulement
+    // pendant le jeu.
+    const sc = S.status === "live" && typeof S.shotClock === "number" ? S.shotClock : null;
+    $("shotclock").textContent = sc === null ? "" : String(sc);
+    $("shotclock").classList.toggle("on", sc !== null);
+    $("shotclock").classList.toggle("low", sc !== null && sc <= 5);
     const diff = A.score - B.score;
     $("period").textContent = done ? (diff ? `Victoire ${de(S.teams[diff > 0 ? 0 : 1].name)}` : "Égalité")
       : pregame ? (S.kickoffIn > 0 ? `Coup d'envoi dans ${fmtClock(S.kickoffIn)}` : "Coup d'envoi imminent")
@@ -488,7 +495,7 @@ export function createLiveView(root, opts = {}) {
   // Signature des stats (sans les avatars) : la feuille et les tuiles ne
   // sont redessinées que si un chiffre a bougé (l'horloge rafraîchit la vue
   // chaque seconde, les avatars SVG coûtent cher à réinjecter).
-  const sig = T => T.players.map(p => [p.id, p.onCourt ? 1 : 0, Math.floor(p.seconds / 60), p.pts, p.reb, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
+  const sig = T => T.players.map(p => [p.id, p.onCourt ? 1 : 0, p.slot || "", S.status, Math.floor(p.seconds / 60), p.pts, p.reb, p.oreb || 0, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
   let leadersKey = null, boxKey = null;
 
   function renderLeaders() {
@@ -554,8 +561,10 @@ export function createLiveView(root, opts = {}) {
     for (const s of list) {
       const x = s.x * 10, y = s.y * 10, c = COLOR(s.team);
       const last = s.id === lastId ? " last" : "";
-      if (s.made) g += `<g class="made${last}"><circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
-      else g += `<g class="miss${last}"><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
+      // Survol : qui a tiré (retour utilisateur 2026-10-03).
+      const tip = `<title>${esc([s.shooter, s.made ? "✓" : "✗", s.clock != null ? `Q${s.quarter} ${fmtClock(s.clock)}` : ""].filter(Boolean).join(" · "))}</title>`;
+      if (s.made) g += `<g class="made${last}">${tip}<circle class="dot" cx="${x}" cy="${y}" r="8" fill="${c}"/></g>`;
+      else g += `<g class="miss${last}">${tip}<circle class="hit" cx="${x}" cy="${y}" r="9" fill="transparent"/><path d="M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12" stroke="${c}"/></g>`;
     }
     // Logo du club qui reçoit au rond central (S.courtLogo : SVG fourni par
     // le jeu, dessiné pour un cercle de 104 unités centré en 470,250).
@@ -654,7 +663,7 @@ export function createLiveView(root, opts = {}) {
   }
 
   const totals = T => {
-    const o = { pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, ftm: 0, fta: 0 };
+    const o = { pts: 0, reb: 0, oreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, ftm: 0, fta: 0 };
     T.players.forEach(p => { for (const k in o) o[k] += p[k] || 0; });
     return o;
   };
@@ -695,20 +704,33 @@ export function createLiveView(root, opts = {}) {
     const lead = { pts: best("pts"), reb: best("reb"), ast: best("ast") };
     const lc = (p, k) => (p[k] === lead[k] ? "lead" : "");
     const evalCls = v => (v >= 10 ? "ev-good" : v < 0 ? "ev-bad" : "");
-    const row = p => { const r = rating(p); return `<tr class="${p.onCourt ? "is-on" : ""}">
-      <td><div class="pcell">${avatar(p, "sm")}<div class="pmain">${pname(p, "pn")}<div class="psub">${p.pos ? `<span class="pos">${esc(p.pos)}</span>` : ""}${p.onCourt ? `<span class="oncourt" title="Sur le terrain"><span>Sur le terrain</span></span>` : ""}${p.pf >= FOUL_OUT ? `<span class="out">Exclu</span>` : ""}</div></div></div></td>
-      <td>${Math.floor(p.seconds / 60)}</td><td class="${lc(p, "pts")}">${p.pts}</td><td class="${lc(p, "reb")}">${p.reb}</td><td class="${lc(p, "ast")}">${p.ast}</td>
+    // Titulaires : liseré jaune, comme sur les feuilles de match (retour
+    // utilisateur 2026-10-03).
+    const row = p => { const r = rating(p); const pos = p.onCourt && p.slot ? p.slot : p.pos; return `<tr class="${[p.onCourt ? "is-on" : "", p.starter ? "is-starter" : ""].filter(Boolean).join(" ")}">
+      <td><div class="pcell">${avatar(p, "sm")}<div class="pmain">${pname(p, "pn")}<div class="psub">${pos ? `<span class="pos">${esc(pos)}</span>` : ""}${p.pf >= FOUL_OUT ? `<span class="out">Exclu</span>` : ""}</div></div></div></td>
+      <td>${Math.floor(p.seconds / 60)}</td><td class="${lc(p, "pts")}">${p.pts}</td><td class="${lc(p, "reb")}">${p.reb}</td><td class="c2">${p.oreb || 0}</td><td class="${lc(p, "ast")}">${p.ast}</td>
       <td class="c2">${p.stl}</td><td class="c2">${p.blk}</td><td class="c2">${p.tov}</td><td class="${p.pf >= FOUL_OUT - 1 ? "f4" : ""}">${p.pf}</td>
       <td class="c3">${p.fg2m}/${p.fg2a}</td><td class="c3">${p.fg3m}/${p.fg3a}</td><td>${p.ftm}/${p.fta}</td><td class="${evalCls(r)}">${r}</td></tr>`; };
     const t = totals(T);
-    const starters = played.filter(p => p.starter), bench = played.filter(p => !p.starter);
+    // Ordre des postes (retour utilisateur 2026-10-03 : « trier les joueurs
+    // par poste, au moins ceux sur le terrain ») : pendant le match, le
+    // premier groupe est le cinq EN JEU, rangé par poste occupé ; ensuite
+    // le banc, par poste puis temps de jeu. Hors direct (fin de match),
+    // cinq de départ puis banc.
+    const POS_ORDER = ["M", "A", "AS", "AF", "P"];
+    const rank = x => { const i = POS_ORDER.indexOf(x); return i < 0 ? 9 : i; };
+    const byPos = key => (a, b) => rank(key(a)) - rank(key(b)) || b.seconds - a.seconds;
+    const live = S.status === "live" || S.status === "halftime";
+    const first = live ? played.filter(p => p.onCourt).sort(byPos(p => p.slot || p.pos)) : played.filter(p => p.starter).sort(byPos(p => p.pos));
+    const bench = played.filter(p => !first.includes(p)).sort(byPos(p => p.pos));
+    const COLS = 14;
     $("box").style.setProperty("--tc", COLOR(ti));
-    $("box").innerHTML = `<thead><tr><th>Joueur</th><th>Min</th><th>Pts</th><th>Reb</th><th>PD</th>
+    $("box").innerHTML = `<thead><tr><th>Joueur</th><th>Min</th><th>Pts</th><th>Reb</th><th class="c2" title="Rebonds offensifs">RO</th><th>PD</th>
         <th class="c2">Int</th><th class="c2">Ctr</th><th class="c2">Pdb</th><th>Fte</th><th class="c3">2 pts</th><th class="c3">3 pts</th><th>LF</th><th>Éval</th></tr></thead>
       <tbody>
-        ${starters.length ? `<tr class="grp"><td colspan="13">Cinq de départ</td></tr>${starters.map(row).join("")}` : ""}
-        ${bench.length ? `<tr class="grp"><td colspan="13">Banc</td></tr>${bench.map(row).join("")}` : ""}
-        <tr class="total"><td>Total</td><td></td><td>${t.pts}</td><td>${t.reb}</td><td>${t.ast}</td>
+        ${first.length ? `<tr class="grp"><td colspan="${COLS}">${live ? "Sur le terrain" : "Cinq de départ"}</td></tr>${first.map(row).join("")}` : ""}
+        ${bench.length ? `<tr class="grp"><td colspan="${COLS}">Banc</td></tr>${bench.map(row).join("")}` : ""}
+        <tr class="total"><td>Total</td><td></td><td>${t.pts}</td><td>${t.reb}</td><td class="c2">${t.oreb}</td><td>${t.ast}</td>
           <td class="c2">${t.stl}</td><td class="c2">${t.blk}</td><td class="c2">${t.tov}</td><td>${t.pf}</td>
           <td class="c3">${t.fg2m}/${t.fg2a}<span class="pct">${pct(t.fg2m, t.fg2a)}</span></td>
           <td class="c3">${t.fg3m}/${t.fg3a}<span class="pct">${pct(t.fg3m, t.fg3a)}</span></td>

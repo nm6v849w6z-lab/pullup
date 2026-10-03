@@ -4948,6 +4948,7 @@ class Player {
     // min/match, moyenne top 5 passes à 3.3 pd/match, cible 5.7-7.4 cassée -
     // voir minutes_check.js/assist_calib2.js en scratchpad).
     this.isStarterThisMatch = false;
+    this.matchStartPosition = null;
     this.firstRestThreshold = rand(20, 50);
     this.restThreshold = rand(75, 90);
     this.hasHadFirstRest = false;
@@ -9551,6 +9552,7 @@ class Team {
         // lieu d'avancer seulement le premier changement des titulaires,
         // voir le grand commentaire dans Player.resetForMatch).
         p.isStarterThisMatch = true;
+        p.matchStartPosition = pos;
       }
     });
   }
@@ -19087,6 +19089,9 @@ class MatchEngine {
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         // Titulaire (liseré jaune sur les feuilles de match, 2026-10-03).
         starter: !!p.isStarterThisMatch,
+        // Poste de départ du titulaire (direct : qui est sur le terrain, à
+        // quel poste, dès le coup d'envoi — retour utilisateur 2026-10-03).
+        ...(p.isStarterThisMatch && p.matchStartPosition ? { startPos: p.matchStartPosition } : null),
         ...p.stats,
       }));
   }
