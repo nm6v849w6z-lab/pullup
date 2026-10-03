@@ -655,7 +655,7 @@
        la colonne Effectif ; les remplaçants défilent dans leur carte. */
     height:640px; align-self:start; grid-template-rows:repeat(3, minmax(0, 1fr));
   }
-  .compo-court > .cp-card{align-self:start; max-height:100%; min-height:0; overflow:hidden;}
+  .compo-court > .cp-card{align-self:start; max-height:100%; min-height:0; overflow-y:auto; scrollbar-width:thin;}
   .compo-court > .cp-card > .cp-bench{flex:1 1 auto; min-height:0;}
   .compo-court-lines{position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--compo-court-line); stroke-width:1.5; vector-effect:non-scaling-stroke; pointer-events:none;}
   .compo-court-lines .compo-paint{fill:var(--compo-paint);}
@@ -3328,6 +3328,9 @@
   #prepSection.tq-editing:not(.tq-match-orders) .ordres-match-card{display:none !important;}
   #prepSection.tq-match-orders .ordres-match-card .omc-match{display:none;}
   #prepSection.tq-match-orders .ordres-match-card{grid-template-columns:minmax(0, 1fr);}
+  /* Jauges côte à côte (retour utilisateur 2026-10-03). */
+  #prepSection.tq-match-orders .omc-gauges{flex-direction:row; flex-wrap:wrap; gap:18px 32px; border:0; padding:0;}
+  #prepSection.tq-match-orders .omc-gauges .roster-chemistry-gauge-wrap{flex:1 1 260px;}
   #prepSection.tq-editing :is(#ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresSaveBar, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
   .tq-editor-field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:200px;}
   .tq-editor-field label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
@@ -38787,11 +38790,8 @@ function compositionModel(team) {
       const here = compoRatingAt(starter, pos), there = compoRatingAt(starter, best);
       if (best !== pos && there - here >= COMPO_OFF_POSITION_GAP) list.push({ kind: "warn", offPosition: true, text: `Hors poste : ${here} ici, ${there} en ${POS_SHORT[best]}` });
     }
-    backups.forEach(p => {
-      (rolesOf.get(p.id) || []).filter(r => r.pos !== pos).forEach(r => {
-        list.push({ kind: "warn", multi: true, text: `${compoShortName(p)} est aussi ${compoRoleLabel(r.rank).toLowerCase()} au poste ${POS_SHORT[r.pos]}` });
-      });
-    });
+    // « X est aussi remplaçant au poste Y » retiré (retour utilisateur
+    // 2026-10-03) : il prenait la place du réserviste dans la carte.
     if (starter) {
       const best = backups.filter(p => convoked.has(p.id)).sort((a, b) => positionRating(b, pos) - positionRating(a, pos))[0];
       if (best && compoRatingAt(best, pos) > compoRatingAt(starter, pos)) {

@@ -182,13 +182,14 @@ const multiName = win.eval(`(() => {
   renderOrdresGrid();
   return p.name;
 })()`);
-const alertEls = [...doc.querySelectorAll("#ordresCardCinq .cp-warn.multi")];
-console.log("Alertes multi-postes :", alertEls.map(a => a.textContent).join(" | "));
-const lastName = win.eval("compoShortName")({ name: multiName });
-if (alertEls.length !== 2 || !alertEls.every(a => a.textContent.includes(lastName))) throw new Error("❌ Une pastille par poste concerné devrait nommer le remplaçant listé à plusieurs postes.");
+// Pastille « X est aussi remplaçant au poste Y » retirée (retour
+// utilisateur 2026-10-03 : elle cachait le réserviste) ; la ligne du joueur
+// reste surlignée sur ses deux postes.
+if (doc.querySelector("#ordresCardCinq .cp-warn.multi")) throw new Error("❌ Plus de pastille « est aussi remplaçant » attendue.");
+void multiName;
 const multiChips = [...doc.querySelectorAll("#ordresCardCinq .cp-sub.multi")];
 if (multiChips.length !== 2) throw new Error(`❌ Ce remplaçant devrait être surligné sur ses 2 postes, obtenu ${multiChips.length}.`);
-console.log("✅ Alerte 'listé à plusieurs postes' affichée et puces surlignées.");
+console.log("✅ Remplaçant listé à plusieurs postes : pas de pastille, puces surlignées.");
 
 // 7) Validation -> "Ordres validés"
 await win.eval("validateOrdres()");
