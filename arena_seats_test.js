@@ -90,5 +90,17 @@ console.log("✅ Action serveur /api/arena/build-seats.");
   } finally {
     server.close();
   }
+  // Salle d'avant le choix des gradins (2 550 loges VIP pour un plafond de
+  // 2 500, retour utilisateur 2026-10-03) : les autres gradins restent
+  // constructibles.
+  {
+    const E = require("./engine.js");
+    const t = E.generateTeam("Ancienne salle");
+    t.budget = 1e8;
+    t.seats = { ...t.currentSeats(), loge: E.SEAT_CATEGORY_MAX_SEATS.loge + 50 };
+    const r = t.buildSeats({ gradins: 1000 });
+    if (!r.ok) throw new Error("❌ Loges VIP au-dessus du plafond : les gradins populaires devraient rester constructibles.");
+    console.log("✅ Loges VIP au-dessus du plafond (ancienne salle) : les autres gradins restent constructibles.");
+  }
   console.log("\n🏁 Tous les tests de l'agrandissement libre de la salle sont passés.");
 })().catch(e => { console.error(e); process.exit(1); });

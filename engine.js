@@ -7497,7 +7497,10 @@ class Team {
     let added = 0;
     for (const c of SEAT_CATEGORIES) {
       const n = Math.max(0, Math.floor(Number(add && add[c.key]) || 0));
-      if (cur[c.key] + n > SEAT_CATEGORY_MAX_SEATS[c.key]) return { ok: false, reason: "cap", category: c.key };
+      // Plafond vérifié seulement pour un type de gradin qu'on agrandit :
+      // une salle d'avant le choix des gradins peut dépasser un plafond
+      // (2 550 loges VIP pour 2 500) sans bloquer les autres types.
+      if (n > 0 && cur[c.key] + n > SEAT_CATEGORY_MAX_SEATS[c.key]) return { ok: false, reason: "cap", category: c.key };
       clean[c.key] = n;
       added += n;
     }
