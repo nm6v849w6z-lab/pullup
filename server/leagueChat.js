@@ -70,6 +70,12 @@ const presence = new Map();
 function touchPresence(token, now) {
   if (token) presence.set(Messages.participantKey(token), now);
 }
+// Nombre total de managers connectés (barre du haut, « N en ligne »).
+function onlineCount(now) {
+  let n = 0;
+  for (const at of presence.values()) if (now - at < ONLINE_WINDOW_MS) n++;
+  return n;
+}
 function isOnline(key, now) {
   const at = presence.get(key);
   return typeof at === "number" && now - at < ONLINE_WINDOW_MS;
@@ -445,6 +451,6 @@ function createService(savePath, opts = {}) {
 }
 
 module.exports = {
-  createService, syncSystem, systemText, touchPresence, _resetForTests,
+  createService, syncSystem, systemText, touchPresence, onlineCount, _resetForTests,
   MAX_TEXT_LENGTH, MIN_INTERVAL_MS, REACTIONS, MAX_USER_MESSAGES, MAX_SYSTEM_MESSAGES, ONLINE_WINDOW_MS,
 };

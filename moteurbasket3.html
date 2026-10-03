@@ -2080,6 +2080,12 @@
   .topbar-budget b{font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap;}
   .topbar-budget b.neg{color:var(--danger);}
   .topbar-budget:empty{display:none;}
+  .topbar-online{display:flex; flex-direction:column; align-items:flex-end; gap:2px; padding:0 14px 0 0; margin-right:2px; border-right:1px solid var(--line-soft); text-align:right;}
+  .topbar-online small{font-size:11px; color:var(--ink-dim);}
+  .topbar-online b{font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap;}
+  .topbar-online b::before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; vertical-align:1px; box-shadow:0 0 6px rgba(34,197,94,.7);}
+  .topbar-online:empty{display:none;}
+  @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-online{display:none;} }
   @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-budget{display:none;} }
   .topbar-meta{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--ink-dim); text-align:right;}
   .topbar-meta .topbar-next-opp{font-weight:700; color:var(--ink);}
@@ -8203,6 +8209,9 @@
         </button>
         <!-- Argent disponible (retour utilisateur 2026-09-30), ordinateur
              uniquement (voir .topbar-budget, updateTopbarBudget). -->
+        <!-- Managers connectés (retour utilisateur 2026-10-03), voir
+             refreshTopbarOnline. -->
+        <span class="topbar-online" id="topbarOnline" title="Managers connectés (5 dernières minutes)"></span>
         <button type="button" class="topbar-budget" id="topbarBudget" data-tab="economie" title="Économie"></button>
         <div class="topbar-meta" id="topbarMetaWrap">
           <span class="topbar-next-opp" id="topbarNextOpponent"></span>
@@ -28431,8 +28440,21 @@ function updateTopbarBudget() {
   el.innerHTML = `<small>Budget</small><b class="${available < 0 ? "neg" : ""}">${formatMoney(available)}</b>`;
   el.title = reserved > 0 ? `Budget ${formatMoney(teamA.budget)} dont ${formatMoney(reserved)} réservés sur vos enchères en tête` : "Économie";
 }
+// Nombre de managers connectés (GET /api/online, mémoire serveur, fenêtre de
+// 5 min) — rafraîchi chaque minute, page visible uniquement.
+let topbarOnlineTimer = null;
+function refreshTopbarOnline() {
+  const el = document.getElementById("topbarOnline");
+  if (!el || typeof managerToken === "undefined" || !managerToken) return;
+  if (!topbarOnlineTimer) topbarOnlineTimer = setInterval(() => { if (!document.hidden) refreshTopbarOnline(); }, 60000);
+  fetchApi("/api/online").then(r => (r && r.ok ? r.json() : null)).then(d => {
+    if (!d || typeof d.online !== "number") return;
+    el.innerHTML = `<small>En ligne</small><b>${d.online}</b>`;
+  }).catch(() => null);
+}
 function updateTopbar() {
   updateTopbarBudget();
+  if (!topbarOnlineTimer) refreshTopbarOnline();
   const nameEl = document.getElementById("topbarClubName");
   // Nom du club cliquable (voir teamLinkHtml/showTeamDetail, retour
   // utilisateur, 2026-09 : "rends cliquable le nom de sa propre équipe [...]
@@ -50415,8 +50437,13 @@ function renderYouthRoster() {
       `<div class="ac-card-top">${acIdentityHtml(p)}<div class="ac-badges">${acPotentialBadgeHtml(p.potential, "Potentiel encore caché, seule la promotion en effectif pro le révèlera")}</div></div>` +
       // Avatars des jeunes (Premium) : voir showYouthLookModal.
       `<button type="button" class="ac-look-btn" data-youth-look="${p.id}">${p.look ? "Apparence personnalisée · modifier" : "Personnaliser l'apparence"}${teamIsPremium(teamA) ? "" : ` <span class="prm-tag">Premium</span>`}</button>` +
-      `<div class="ac-progress"><div class="row"><span title="Note du meilleur poste">GEN</span><span><b>${playerBestRating(p)}</b></span></div>` +
-      `<div class="track"><div class="fill" style="width:${Math.min(100, playerBestRating(p) * 2)}%"></div></div></div>` +
+      // GEN ou TC selon Paramètres > Affichage (retour utilisateur
+      // 2026-10-03) ; jauge TC rapportée au plafond académie (50 par carac).
+      (ratingDisplayMode() === "tc"
+        ? `<div class="ac-progress"><div class="row"><span title="Total des caractéristiques">TC</span><span><b>${playerTotalCaracs(p, ATTRS)}</b></span></div>` +
+          `<div class="track"><div class="fill" style="width:${Math.min(100, playerTotalCaracs(p, ATTRS) / (ATTRS.length * 50) * 100)}%"></div></div></div>`
+        : `<div class="ac-progress"><div class="row"><span title="Note du meilleur poste">GEN</span><span><b>${playerBestRating(p)}</b></span></div>` +
+          `<div class="track"><div class="fill" style="width:${Math.min(100, playerBestRating(p) * 2)}%"></div></div></div>`) +
       acGroupsHtml(p) + acTraitsHtml(p) +
       (capped ? `<div class="ac-note">${capped} caractéristique${capped > 1 ? "s" : ""} déjà au plafond de 50 (débloqué à la promotion).</div>` : "") +
       note + acAllAttrsHtml(p) + `</div>`;

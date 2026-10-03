@@ -1914,6 +1914,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Managers connectés (barre du haut) : uniquement un nombre, aucune
+      // donnée personnelle. La présence vient des requêtes authentifiées
+      // (resolvePlayerContext) : un jeton non vérifié ne compte jamais.
+      if (route.pathname === "/api/online" && req.method === "GET") {
+        sendJson(res, 200, { online: Math.max(1, LeagueChat.onlineCount(now)) });
+        return;
+      }
       if (route.pathname === "/api/state" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
