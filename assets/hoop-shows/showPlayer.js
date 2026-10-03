@@ -141,7 +141,7 @@
   // couleurs de maillot, écussons, noms en capitales, badge « Mon club ».
   function board(seg, D, o) {
     const side = (t, cls) => '<div class="hs-bteam ' + cls + '">' + D.crest(t.id, 66, t.name) +
-      '<div class="hs-binfo"><div class="hs-bname">' + esc(t.name) + (t.isMine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</div>' +
+      '<div class="hs-binfo"><div class="hs-bname">' + esc(t.name) + '</div>' +
       (o.meta ? '<div class="hs-bmeta">' + o.meta(t) + '</div>' : '') + '</div></div>';
     const lead = seg.home.score === seg.away.score ? null : seg.home.score > seg.away.score ? 'home' : 'away';
     const score = (t, which) => o.noScore ? '' : '<div class="hs-bscore' + (lead && lead !== which ? ' hs-trail' : '') + '">' + esc(t.score) + '</div>';
@@ -318,7 +318,7 @@
     const D = ctx.D;
     const revealed = st.elapsed >= (seg.revealAfter || 0) || st.revealAll;
     const list = (t) => t.players.map((p) => '<li>' + D.avatar(p.id, p.name, 34) + '<span class="hs-pos">' + esc(p.pos) + '</span><b>' + esc(p.name) + '</b><span class="hs-ppg">' + esc(p.ppg) + '</span></li>').join('');
-    const block = (t, cls, hide) => '<div class="hs-card hs-lineup ' + cls + '"><div class="hs-row-between"><span class="hs-lu-team">' + D.crest(t.id, 36, t.name) + '<b>' + esc(t.name) + '</b>' + (t.isMine ? '<span class="hs-mine-badge">Mon club</span>' : '') + '</span><span class="hs-small">pts / match</span></div>' +
+    const block = (t, cls, hide) => '<div class="hs-card hs-lineup ' + cls + '"><div class="hs-row-between"><span class="hs-lu-team">' + D.crest(t.id, 36, t.name) + '<b>' + esc(t.name) + '</b></span><span class="hs-small">pts / match</span></div>' +
       (hide ? '<div class="hs-reveal"><b data-hs-reveal>' + Math.max(1, Math.ceil((seg.revealAfter || 0) - st.elapsed)) + '</b><span class="hs-small">Révélation de la compo adverse…</span></div>' : '<ul>' + list(t) + '</ul>') + '</div>';
     // La compo de MON équipe est visible tout de suite, celle de l'adversaire est « révélée ».
     const hideHome = !revealed && !seg.home.isMine, hideAway = !revealed && !seg.away.isMine;

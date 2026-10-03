@@ -154,8 +154,20 @@ function withoutPronostics(show, lpName) {
 // `lpView` : la ligue privée telle que la voit ce manager à cet instant
 // (PrivateLeague.sanitizePrivateLeaguesForViewer : matchs encore en direct
 // sans score), pour un classement sans spoiler.
+// Vue du manager : `members` y est la liste des clubs avec leur index LOCAL
+// (pas des places), le classement se calcule donc sur `teamIndices` (retour
+// utilisateur 2026-10-03 : classement de la mi-temps faux en ligue privée —
+// places 0, 1, 2… au lieu des clubs, aucune victoire comptée).
 function lpStandingsInput(lpView) {
-  return require("./privateLeague.js").privateLeagueStandings(lpView).map(r => ({ teamId: String(r.idx), w: r.wins, l: r.losses }));
+  const view = { ...lpView, members: undefined };
+  return require("./privateLeague.js").privateLeagueStandings(view).map(r => ({ teamId: String(r.idx), w: r.wins, l: r.losses }));
+}
+// Tous les clubs de la ligue privée (noms du classement), pas seulement
+// ceux qui jouent cette journée.
+function lpAllTeamIdxs(league, lpView, extra) {
+  const set = new Set(extra);
+  (lpView.teamIndices || []).forEach(i => { if (i >= 0 && league.teams[i]) set.add(i); });
+  return Array.from(set);
 }
 
 function getLpPrematchShow(league, lpView, roundIndex, teamIdx, now) {
@@ -172,7 +184,7 @@ function getLpPrematchShow(league, lpView, roundIndex, teamIdx, now) {
   teamIdxs.forEach(idx => { form[String(idx)] = Adapter.formFor(league, idx, 5); });
   const input = {
     day: roundIndex + 1, leagueId: "lp-" + lpView.id, myTeamId: String(teamIdx),
-    teams: Adapter.teamsMapFor(league, Array.from(teamIdxs)),
+    teams: Adapter.teamsMapFor(league, lpAllTeamIdxs(league, lpView, teamIdxs)),
     players: Adapter.playersMapFor(league, [fx.home, fx.away]),
     standings: lpStandingsInput(lpView),
     fixtures: fixtures.map(f => ({ id: Adapter.matchId("lp" + roundIndex, f.home, f.away), homeId: String(f.home), awayId: String(f.away) })),
@@ -198,7 +210,7 @@ function getLpHalftimeShow(league, lpView, roundIndex, teamIdx, entries, now) {
   });
   const input = {
     day: roundIndex + 1, leagueId: "lp-" + lpView.id, myTeamId: String(teamIdx),
-    teams: Adapter.teamsMapFor(league, Array.from(teamIdxs)),
+    teams: Adapter.teamsMapFor(league, lpAllTeamIdxs(league, lpView, teamIdxs)),
     players: Adapter.playersMapFor(league, Array.from(teamIdxs)),
     matches, standings: lpStandingsInput(lpView), resumeAt,
   };
@@ -343,7 +355,7 @@ function grantSeasonPrizeSync(league, now = Date.now()) {
 }
 
 module.exports = {
-  getLpPrematchShow, getLpHalftimeShow,
+  getLpPrematchShow, getLpHalftimeShow, lpStandingsInput,
   LINEUP_LOCK_BEFORE_KICKOFF_MS, SEASON_PRIZE_PREMIUM_MS,
   lineupLocked, prematchWindowOpen, currentSeasonKey,
   getPrematchShow, getHalftimeShow,

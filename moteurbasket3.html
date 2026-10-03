@@ -7964,7 +7964,7 @@
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
      assets/hoop-shows/ (voir server/index.js pour le service statique). -->
-<link rel="stylesheet" href="assets/hoop-shows/showPlayer.css">
+<link rel="stylesheet" href="assets/hoop-shows/showPlayer.css?v=20261003-1">
 <!-- `defer` (retour d'un test automatisé, 2026-09 : régression massive de
      la suite *_test.js) : SANS defer, ce <script src> externe est
      "parser-blocking" (spec HTML) — le premier de toute cette page. Il
@@ -7983,7 +7983,7 @@
      inline) — HoopShowPlayer n'est de toute façon utilisé qu'au clic sur
      un bouton (openHoopShow), donc son chargement différé ne change rien
      en pratique. -->
-<script src="assets/hoop-shows/showPlayer.js" defer></script>
+<script src="assets/hoop-shows/showPlayer.js?v=20261003-1" defer></script>
 <!-- Couche mobile (voir le commentaire PWA plus haut) : APRÈS la grande
      feuille de style, pour que ses règles @media(max-width:768px) l'emportent
      à spécificité égale ; defer pour la même raison que showPlayer.js. -->

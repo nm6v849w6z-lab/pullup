@@ -78,7 +78,8 @@ function mountAt(show, i) {
   const { html } = mountAt(halftime, i);
   if (!html.includes(`data-test="crest-${seg.home.id}"`) || !html.includes(`data-test="crest-${seg.away.id}"`)) fail("écussons des deux clubs attendus dans le bandeau.");
   if (!html.includes("hs-board")) fail("bandeau façon « Prochain match » attendu.");
-  if (!/Mon club/.test(html)) fail("badge « Mon club » attendu.");
+  // Badge « Mon club » retiré (retour utilisateur 2026-10-03).
+  if (/Mon club/.test(html)) fail("plus de badge « Mon club » attendu.");
   if (seg.bestPlayer && !html.includes(`data-test="av-${seg.bestPlayer.id}"`)) fail("avatar du meilleur joueur attendu.");
   // Deux maillots identiques (#000000) : l'extérieur passe en maillot extérieur, le noir est éclairci.
   if (!/--hs-stripe1:#ffffff/.test(html)) fail("même couleur de maillot : l'équipe à l'extérieur doit passer en maillot extérieur.");
