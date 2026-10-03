@@ -3325,7 +3325,10 @@
      mêmes cartes que les Ordres, sans ce qui dépend d'un match précis. */
   .tq-editor-bar{display:none;}
   #prepSection.tq-editing .tq-editor-bar{display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; background:var(--panel); border:1px solid var(--amber); border-radius:12px; padding:16px 18px; margin:0 0 18px;}
-  #prepSection.tq-editing :is(.ordres-match-card, #ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresSaveBar, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
+  #prepSection.tq-editing:not(.tq-match-orders) .ordres-match-card{display:none !important;}
+  #prepSection.tq-match-orders .ordres-match-card .omc-match{display:none;}
+  #prepSection.tq-match-orders .ordres-match-card{grid-template-columns:minmax(0, 1fr);}
+  #prepSection.tq-editing :is(#ordresPresetsBar, .oab-right, #ordresValidateFeedback, #ordresLockNote, #ordresSaveBar, #ordresCardAdversaires, [data-ordres-jump="ordresCardAdversaires"]){display:none !important;}
   .tq-editor-field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:200px;}
   .tq-editor-field label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);}
   .tq-editor-field select{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 10px; font:inherit; font-size:14px;}
@@ -28904,6 +28907,9 @@ function renderOrdresGrid() {
   // mêmes cartes que les Ordres, sur un brouillon (tqEdit.proxy).
   const prepSectionEl = document.getElementById("prepSection");
   if (prepSectionEl) prepSectionEl.classList.toggle("tq-editing", !!tqEdit);
+  // Ordres d'un vrai match (ligue privée, amical) : les jauges Alchimie /
+  // Connaissance tactique restent visibles (retour utilisateur 2026-10-03).
+  if (prepSectionEl) prepSectionEl.classList.toggle("tq-match-orders", !!(tqEdit && (tqEdit.kind === "lp" || tqEdit.kind === "friendly")));
   renderTacticEditorBar();
   if (tqEdit) {
     ordresBaseline = null;
