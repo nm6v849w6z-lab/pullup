@@ -2987,6 +2987,7 @@
   .pdp-contract-sale{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin:18px 0 16px; align-items:start;}
   .pdp-contract-sale.pdp2-side-cards{grid-template-columns:minmax(0,1fr); margin:0;}
   .pdp-contract-sale.pdp2-left-cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin:0;}
+  .pdp-contract-sale.pdp2-bottom-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); align-items:stretch; margin:0;}
   /* Partager : une seule ligne compacte (titre, bouton, état du lien). */
   .pdp-contract-sale > .pdp2-share-card{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px !important;}
   .pdp-contract-sale > .pdp2-share-card h3{margin:0;}
@@ -32896,6 +32897,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // side
   html += `</div>`; // row games
   if (isOwnTeam) html += playerProgressHtml(player);
+  html += `<!--PDP_BOTTOM_CARDS-->`;
   html += playerCareerHtml(player);
   html += `</div>`; // pdp2
 
@@ -32912,7 +32914,11 @@ function renderPlayerDetail(teamIdx, playerId) {
   // Vente, contrat, personnalisation et partage dans la colonne de droite,
   // sous les classements (retour utilisateur 2026-10-03 : « réorganise le
   // bas, y a trop de vide »).
-  let sideCards = "", leftCards = "";
+  // Réorganisation (retour 2026-10-03 : « réorganise le bas, c'est pas très
+  // beau ») : Contrat puis Mise en vente sous les Classements (colonne de
+  // droite, équilibrée avec Saison + Derniers matchs), puis Partager ;
+  // Personnalisation (Premium) en pleine largeur tout en bas.
+  let sideCards = "", leftCards = "", bottomCards = "";
   if (isOwnTeam) {
     const mainHtml = html;
     html = "";
@@ -32938,15 +32944,12 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `</div>`; // #pdpSaleCard
     // Personnalisation : seulement si quelque chose est réglable (Premium) —
     // sinon la brique prenait de la place pour rien (retour 2026-10-03).
-    html += playerContractCardHtml(team, player);
-    leftCards = `<div class="pdp-contract-sale pdp2-left-cards">${html}</div>`;
-    html = "";
-    if (teamIsPremium(team)) html += playerPersonalizationCardHtml(team, player);
-    if (!playerDetailForeign) html += `<div class="pdp-card pdp2-share-card"><h3>Partager</h3>${pdpShareHtml(player)}</div>`;
-    sideCards = html ? `<div class="pdp-contract-sale pdp2-side-cards">${html}</div>` : "";
+    const share = playerDetailForeign ? "" : `<div class="pdp-card pdp2-share-card"><h3>Partager</h3>${pdpShareHtml(player)}</div>`;
+    sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${playerContractCardHtml(team, player)}${html}${share}</div>`;
+    bottomCards = teamIsPremium(team) ? `<div class="pdp-contract-sale pdp2-bottom-cards">${playerPersonalizationCardHtml(team, player)}</div>` : "";
     html = mainHtml;
   }
-  html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards);
+  html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards).replace("<!--PDP_BOTTOM_CARDS-->", bottomCards);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
   // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
   // remplacé par la fenêtre superposée "Voir toute la saison" ouverte
