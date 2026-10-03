@@ -28962,7 +28962,20 @@ function isRegularSeasonDerby(oppIdx, competition, round, barrage) {
 function rivalryLineHtml(opp, cls, derby = false) {
   if (!opp || typeof teamA === "undefined" || !teamA) return "";
   const badge = derby ? `<span class="rivalry-derby">Derby</span>` : "";
-  const r = rivalryBetween(teamA, opp);
+  let r = rivalryBetween(teamA, opp);
+  // Matchs joués avant le suivi des rivalités (29/09) ou quand l'adversaire
+  // était encore un club de l'IA : bilan reconstitué depuis les résultats
+  // du championnat (retour utilisateur 2026-10-03 : « pas la première
+  // confrontation »).
+  if (!r && league && Array.isArray(league.results)) {
+    const oppIdx = league.teams.indexOf(opp);
+    const games = oppIdx >= 0 ? league.results.filter(x => (x.home === myTeamIndex && x.away === oppIdx) || (x.away === myTeamIndex && x.home === oppIdx)) : [];
+    if (games.length) {
+      const rows = games.map(x => { const home = x.home === myTeamIndex; return { pf: home ? x.scoreHome : x.scoreAway, pa: home ? x.scoreAway : x.scoreHome, round: x.round }; })
+        .sort((a, b) => b.round - a.round);
+      r = { w: rows.filter(x => x.pf > x.pa).length, l: rows.filter(x => x.pf < x.pa).length, recent: rows };
+    }
+  }
   if (!r) {
     if (opp.isHuman) return `<div class="${cls} rivalry-line">${badge}<span class="rivalry-new">Première confrontation entre managers</span></div>`;
     return derby ? `<div class="${cls} rivalry-line">${badge}<span>Votre rival du championnat</span></div>` : "";
@@ -52822,7 +52835,13 @@ function renderMedicalSection() {
   if (!holder) return;
   const players = team.players || [];
   const recovery = p => (team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
-  const injured = players.filter(p => isCurrentlyInjured(p, now)).sort((a, b) => a.injuryUntil - b.injuryUntil);
+  const injuredPros = players.filter(p => isCurrentlyInjured(p, now));
+  // Jeunes du centre de formation blessés (retour utilisateur 2026-10-03 :
+  // « les jeunes n'apparaissent pas dans le centre médical ») : dans
+  // l'infirmerie et le compteur, pas dans « Disponibles » (pros seulement).
+  const injuredYouth = (team.youthPlayers || []).filter(p => isCurrentlyInjured(p, now));
+  const isYouth = p => injuredYouth.includes(p);
+  const injured = injuredPros.concat(injuredYouth).sort((a, b) => a.injuryUntil - b.injuryUntil);
   const fit = players.filter(p => !isCurrentlyInjured(p, now))
     .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
     .sort((a, b) => b.r.mult - a.r.mult || a.p.name.localeCompare(b.p.name));
@@ -52853,8 +52872,11 @@ function renderMedicalSection() {
     html += tableOpen("Infirmerie", `${injured.length} blessé${injured.length > 1 ? "s" : ""}`, "roster");
     injured.forEach(p => {
       const days = injuryDaysRemaining(p, now);
+      const cell = isYouth(p)
+        ? `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(p.name)}</b><span class="sub">${pos(p)} <span>· centre de formation</span></span></div></div>`
+        : medicalPlayerCellHtml(p, team, pos(p));
       html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
-        `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
+        `<td class="med-c-player">${cell}</td>` +
         `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
         `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
     });
@@ -52913,7 +52935,7 @@ function renderMedicalSection() {
       `<div class="cal-kpi"><div class="cal-kpi-label">À risque</div><div class="cal-kpi-value${atRisk.length ? " is-neg" : ""}" id="medicalHighRiskCount">${atRisk.length}</div></div>` +
       `<div class="cal-kpi"><div class="cal-kpi-label">Saison</div><div class="cal-kpi-value" id="medicalSeasonCount">${seasonLog.length}</div></div>` +
     `</div>` +
-    `<div class="cal-split"><div><span>Jours d'indisponibilité</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injured.length}/${players.length}</b></div></div>` +
+    `<div class="cal-split"><div><span>Jours d'indisponibilité</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injuredPros.length}/${players.length}</b></div></div>` +
     (nextBack ? `<div class="med-next-back"><span>Prochain retour</span><b>${escapeHtml(nextBack.name)} · ${escapeHtml(formatCalendarDayFr(nextBack.injuryUntil))}</b></div>`
       : `<div class="med-next-back"><span>Tout l'effectif est disponible.</span></div>`) +
     `</div>`;
