@@ -33463,12 +33463,9 @@ function playerPersonalizationCardHtml(team, player) {
   // Aperçu du maillot floqué et infos (retour 2026-10-03 : « remplis plus
   // la brique »).
   if (!custom) {
-    const homegrown = !!player.homegrownClub;
     html += `<div class="pdp-perso-sum"><div class="pdp-perso-jersey">` +
       jerseySvgHtml(team.jerseyShape, team.jerseyColor, 64, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, Number.isInteger(player.number) ? player.number : null, team) + `</div>` +
-      `<div class="pdp-perso-facts"><div><span>Maillot</span><b>${Number.isInteger(player.number) ? `n° ${player.number}` : "Sans numéro"}</b></div>` +
-      `<div><span>Formation</span><b>${homegrown ? "Formé dans un autre club" : "Recruté à l'extérieur"}</b></div>` +
-      `<div><span>Apparence</span><b>${player.look ? "Personnalisée" : "D'origine"}</b></div></div></div>`;
+      `<div class="pdp-perso-facts"><div><span>Maillot</span><b>${Number.isInteger(player.number) ? `n° ${player.number}` : "Sans numéro"}</b></div></div></div>`;
   }
   // Numéro
   html += `<div class="pdp-perso-row"><span class="pdp-perso-lbl">Numéro de maillot</span>`;
@@ -33497,8 +33494,6 @@ function playerPersonalizationCardHtml(team, player) {
       ? `<div class="pdp-perso-actions"><button type="button" class="secondary" data-pdp-look-save="${player.id}">Enregistrer l'apparence</button>` +
         (player.look ? ` <button type="button" class="linkish" data-pdp-look-reset="${player.id}">Revenir au visage d'origine</button>` : "") + `</div>`
       : `<p class="sub">Formé au club : avec Premium, choisissez sa coiffure, sa barbe et son bandeau.</p>`;
-  } else {
-    html += `<p class="sub">Apparence personnalisable pour les joueurs formés à votre académie.</p>`;
   }
   html += `<div id="pdpPersoFeedback" class="sub" role="status"></div></div>`;
   return html;
