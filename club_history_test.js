@@ -197,7 +197,9 @@ function playWholeSeason(league, now) {
   link.click();
   check(!doc.getElementById("playerDetailSection").classList.contains("hidden"), "clic sur un joueur → fiche joueur");
   const chip = doc.querySelector(".pdp2-chip--world");
-  check(chip && /mondial/.test(chip.textContent), `puce « mondial » sur la fiche joueur (${chip && chip.textContent})`);
+  // Sans Planète Hoop : rang par note GEN dans le championnat (le vrai rang
+  // mondial vient de /api/world/player-ranks, voir server/player_ranks_test.js).
+  check(chip && /du championnat · \d+e /.test(chip.textContent), `puce de classement sur la fiche joueur (${chip && chip.textContent})`);
   dom.window.close(); server.close();
   console.log("\n✅ club_history_test.js : tout est vert");
 })().catch(e => { console.error(e); process.exit(1); });

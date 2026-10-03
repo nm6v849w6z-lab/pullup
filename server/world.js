@@ -938,6 +938,106 @@ function countryStats(world, country, leagues, now = Date.now()) {
   return { country, managers, activeManagers, clubs, leagueCount: entries.length, divisions, leaders, bests, seasonNumber: (first && first.seasonNumber) || 1 };
 }
 
+// Classements du joueur (retour utilisateur 2026-10-03, façon BuzzerBeater
+// « Classé #2 en CO / 48min ») : moyennes de championnat ramenées à 40
+// minutes (durée d'un match ici), comparées dans son championnat, sa
+// division, son pays et le monde. Le registre garde, par pays, les valeurs
+// triées de tous les joueurs éligibles (au moins RANK_MIN_GAMES matchs et
+// RANK_MIN_MINUTES minutes), rafraîchies avec les statistiques du pays.
+const RANK_STATS = ["pts", "reb", "ast", "stl", "blk"];
+const RANK_MIN_GAMES = 3;
+const RANK_MIN_MINUTES = 60;
+function playerPer40(p) {
+  const log = (p.matchLog || []).filter(m => (m.competition || "championship") === "championship");
+  if (log.length < RANK_MIN_GAMES) return null;
+  let minutes = 0;
+  const sum = {};
+  RANK_STATS.forEach(k => { sum[k] = 0; });
+  log.forEach(m => { minutes += m.min || 0; RANK_STATS.forEach(k => { sum[k] += m[k] || 0; }); });
+  if (minutes < RANK_MIN_MINUTES) return null;
+  const out = { games: log.length, minutes };
+  RANK_STATS.forEach(k => { out[k] = Math.round((sum[k] * 40 / minutes) * 10) / 10; });
+  return out;
+}
+function playerGen(p) {
+  const ratings = Engine.positionRatings(p);
+  const pos = Engine.bestPosition(p);
+  return { rating: Math.round(Math.max(...Object.values(ratings))), pos };
+}
+function emptyRankLists() {
+  return Object.fromEntries(RANK_STATS.map(k => [k, []]));
+}
+function countryRankDistribution(world, country, leagues) {
+  // gen / genPos : notes GEN (meilleur poste) de tous les joueurs du pays,
+  // pour le rang mondial de la fiche joueur.
+  const dist = { leagues: {}, divisions: {}, country: emptyRankLists(), gen: [], genPos: {} };
+  leaguesOfCountry(world, country).forEach(e => {
+    const lg = leagues.get(e.id);
+    if (!lg) return;
+    const L = dist.leagues[e.id] = emptyRankLists();
+    const D = dist.divisions[e.level] = dist.divisions[e.level] || emptyRankLists();
+    lg.teams.forEach(t => (t && t.players || []).forEach(p => {
+      const g = playerGen(p);
+      dist.gen.push(g.rating);
+      (dist.genPos[g.pos] = dist.genPos[g.pos] || []).push(g.rating);
+      const v = playerPer40(p);
+      if (!v) return;
+      RANK_STATS.forEach(k => { L[k].push(v[k]); D[k].push(v[k]); dist.country[k].push(v[k]); });
+    }));
+  });
+  const sortAll = o => Object.values(o).forEach(arr => arr.sort((a, b) => b - a));
+  Object.values(dist.leagues).forEach(sortAll);
+  Object.values(dist.divisions).forEach(sortAll);
+  sortAll(dist.country);
+  dist.gen.sort((a, b) => b - a);
+  sortAll(dist.genPos);
+  return dist;
+}
+// Nombre de valeurs strictement supérieures à `v` dans `arr` (trié décroissant).
+function countAbove(arr, v) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] > v) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+// Classements d'un joueur de `league` (entrée `entry` du registre) : null
+// s'il n'est pas encore éligible. `of` = nombre de joueurs classés.
+function playerRankings(world, entry, league, teamIdx, playerId) {
+  const team = league.teams[teamIdx];
+  const p = team && (team.players || []).find(x => x.id === playerId);
+  if (!p) return null;
+  const all = world.rankDist || {};
+  // Rang mondial par note GEN, à son meilleur poste.
+  let gen = null;
+  const countries = Object.values(all).filter(d => Array.isArray(d.gen));
+  if (countries.length) {
+    const g = playerGen(p);
+    const rankOf = lists => ({ rank: lists.reduce((n, a) => n + countAbove(a, g.rating), 0) + 1, of: lists.reduce((n, a) => n + a.length, 0) });
+    gen = { rating: g.rating, world: rankOf(countries.map(d => d.gen)), position: { pos: g.pos, ...rankOf(countries.map(d => (d.genPos || {})[g.pos] || [])) } };
+  }
+  const values = playerPer40(p);
+  if (!values) return { eligible: false, minGames: RANK_MIN_GAMES, minMinutes: RANK_MIN_MINUTES, gen };
+  const mine = all[entry.country] || null;
+  const scope = (key, label, lists) => {
+    if (!lists) return null;
+    const ranks = {};
+    RANK_STATS.forEach(k => {
+      const arr = lists.map(l => (l && l[k]) || []);
+      const above = arr.reduce((n, a) => n + countAbove(a, values[k]), 0);
+      const size = arr.reduce((n, a) => n + a.length, 0);
+      ranks[k] = { rank: above + 1, of: Math.max(size, above + 1) };
+    });
+    return { key, label, ranks };
+  };
+  const countryName = (Engine.WORLD_COUNTRIES[entry.country] || {}).name || entry.country;
+  const scopes = [
+    scope("league", `${countryName} ${divisionLabel(entry.level, entry.group)}`, mine && mine.leagues[entry.id] ? [mine.leagues[entry.id]] : null),
+    scope("division", `${countryName} ${Engine.divisionInfo(entry.level).name}`, mine && mine.divisions[entry.level] ? [mine.divisions[entry.level]] : null),
+    scope("country", countryName, mine ? [mine.country] : null),
+    scope("world", "Monde", Object.keys(all).length ? Object.values(all).map(d => d.country) : null),
+  ].filter(Boolean);
+  return { eligible: true, values, scopes, gen };
+}
+
 // Met à jour résumés + statistiques du pays dans le registre.
 function refreshCountrySummaries(world, country, leagues, now = Date.now()) {
   world.summaries = world.summaries || {};
@@ -947,6 +1047,8 @@ function refreshCountrySummaries(world, country, leagues, now = Date.now()) {
     if (lg) world.summaries[e.id] = leagueSummary(e, lg);
   });
   world.countryStats[country] = countryStats(world, country, leagues, now);
+  world.rankDist = world.rankDist || {};
+  world.rankDist[country] = countryRankDistribution(world, country, leagues);
 }
 
 // Palmarès du pays : champion de Division I et Coupe nationale, avec leurs
@@ -1124,7 +1226,7 @@ module.exports = {
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
   leaguesOfCountry, nextSlot, createLeague, assignClub, isClubNameTakenInWorld, isManagerPseudoTakenInWorld,
-  isOpenCountry, publicCountries,
+  isOpenCountry, publicCountries, playerRankings, playerPer40, countryRankDistribution, RANK_STATS,
   NationalCup, WorldMarket, WorldFriendlies, PrivateLeague, divisionLabel, divisionLabelOf,
   countryOverview, countryTitles,
   INACTIVE_RELEASE_DAYS, releaseClubToCpu, releaseInactiveManagers, reclaimClub, syncCalendarTo, leagueSummary, countryStats, refreshCountrySummaries, recordCountryHonours, searchWorld, clubRoster, normalizeSearch, parseDivisionQuery, computeCountryMoves, applyCountryMoves, catchUpWorld, relegationOrder,

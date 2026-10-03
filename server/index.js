@@ -1726,6 +1726,17 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             overview: World.countryOverview(world, country, { myCountry }) });
           return;
         }
+        // Classements du joueur (retour utilisateur 2026-10-03) : son
+        // championnat, sa division, son pays et le monde, ramenés à 40 min.
+        if (route.pathname === "/api/world/player-ranks") {
+          const id = q.get("league") || ctx.leagueId;
+          const entry = world.leagues.find(e => e.id === id);
+          const lg = !entry ? null : id === ctx.leagueId ? ctx.league : await World.loadLeague(world, id, multiSavePath);
+          const out = lg ? World.playerRankings(world, entry, lg, Number(q.get("team")), Number(q.get("id"))) : null;
+          if (!out) { sendJson(res, 404, { ok: false, error: "Joueur introuvable." }); return; }
+          sendJson(res, 200, { ok: true, ...out });
+          return;
+        }
         if (route.pathname === "/api/world/managers") {
           // Classement mondial des managers (World.managerRanking). Son propre
           // championnat est relu à l'instant (les résumés ont jusqu'à 10 min).
