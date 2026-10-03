@@ -650,7 +650,13 @@
     grid-template-areas:". . pg pg . ." "sg sg . . sf sf" "pf pf . . c c";
     gap:20px 14px; align-content:space-between; padding:22px 20px 26px; border-radius:14px;
     background:var(--compo-court-bg); min-height:560px; min-width:0;
+    /* Hauteur FIXE (retour utilisateur 2026-10-03 : « le terrain ne doit pas
+       s'allonger en fonction des remplaçants ») : plus étiré à la hauteur de
+       la colonne Effectif ; les remplaçants défilent dans leur carte. */
+    height:640px; align-self:start; grid-template-rows:repeat(3, minmax(0, 1fr));
   }
+  .compo-court > .cp-card{align-self:start; max-height:100%; min-height:0; overflow:hidden;}
+  .compo-court > .cp-card > .cp-bench{flex:1 1 auto; min-height:0;}
   .compo-court-lines{position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--compo-court-line); stroke-width:1.5; vector-effect:non-scaling-stroke; pointer-events:none;}
   .compo-court-lines .compo-paint{fill:var(--compo-paint);}
 
@@ -683,7 +689,7 @@
   .cp-cond.cond-mid{color:var(--amber);}
   .cp-cond.cond-low, .cp-cond.cond-critical{color:var(--danger); font-weight:700;}
   .cp-ovr{font-size:20px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1;}
-  .cp-bench{display:flex; flex-direction:column; gap:1px; padding-top:8px; border-top:1px solid var(--line-soft);}
+  .cp-bench{display:flex; flex-direction:column; gap:1px; padding-top:8px; border-top:1px solid var(--line-soft); overflow-y:auto; scrollbar-width:thin;}
   .cp-sub{display:grid; grid-template-columns:38px minmax(0, 1fr) auto 8px 22px 18px; align-items:center; gap:6px; min-height:26px; font-size:13px;}
   .cp-role{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);}
   .cp-sub-name{min-width:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -764,7 +770,7 @@
   .compo-roster .compo-roster-head .ordres-card-aside{margin-left:0;}
   /* Vue Détails : le terrain et le bilan côte à côte, le tableau dessous. */
   .compo-layout.is-details{grid-template-columns:minmax(0, 1fr) 300px;}
-  .compo-layout.is-details .compo-court{min-height:500px;}
+  .compo-layout.is-details .compo-court{min-height:500px; height:600px;}
   .compo-roster.is-details{margin-top:4px;}
   .compo-details{display:flex; flex-direction:column; gap:10px; min-width:0; max-width:100%;}
   #prepSection .lineup-editor, #prepSection .compo-card, .compo-roster.is-details{min-width:0; max-width:100%;}
@@ -810,7 +816,7 @@
      de terrain, bilan puis effectif en dessous, sans défilement latéral. */
   @media(max-width:700px){
     #prepSection .compo-card{padding:16px 12px;}
-    .compo-court{grid-template-columns:minmax(0, 1fr); grid-template-areas:"pg" "sg" "sf" "pf" "c"; gap:10px; padding:10px; min-height:0;}
+    .compo-court{grid-template-columns:minmax(0, 1fr); grid-template-areas:"pg" "sg" "sf" "pf" "c"; gap:10px; padding:10px; min-height:0; height:auto; grid-template-rows:none;}
     .compo-court-lines{display:none;}
     .compo-side{grid-template-columns:minmax(0, 1fr);}
     .cp-name{font-size:15.5px;}
