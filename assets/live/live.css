@@ -387,3 +387,11 @@ html[data-theme="light"] .hm-live .mini-in{background:rgba(255,255,255,.95);bord
 html[data-theme="light"] .hm-live .mcrest{background:#dbe2ec}
 html[data-theme="light"] .hm-live .toast{box-shadow:0 10px 30px rgba(20,32,51,.18)}
 html[data-theme="light"] .hm-live dialog::backdrop{background:rgba(20,32,51,.45)}
+
+.hm-live .tactics{margin-top:14px}
+.hm-live .tactics .klbl{margin-bottom:6px}
+.hm-live table.tac{border-collapse:collapse;width:100%;max-width:560px;font-size:13.5px}
+.hm-live table.tac th,.hm-live table.tac td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.hm-live table.tac thead th{font-size:12px;font-weight:800}
+.hm-live table.tac tbody th{font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;width:96px}
+.hm-live table.tac td{font-weight:600}

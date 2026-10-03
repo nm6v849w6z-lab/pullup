@@ -936,6 +936,9 @@ function viewLiveMatchForTeam(league, teamIndex) {
       forfeit: entry.forfeit, finalScore: entry.finalScore,
       events: entry.events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
       boxScoreA: entry.boxScoreA, boxScoreB: entry.boxScoreB,
+      // Tactiques des deux équipes (repère domicile/extérieur), affichées
+      // sous la feuille de match du direct (retour utilisateur 2026-10-03).
+      tacticsUsed: entry.tacticsUsed || null,
       // Graine du match (voir computeLiveMatchForTeams) : le navigateur s'en
       // sert pour savoir que les temps morts viennent du moteur.
       seed: entry.seed,
@@ -976,6 +979,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
     forfeit: entry.forfeit, finalScore: entry.finalScore,
     events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
     boxScoreA: entry.boxScoreB, boxScoreB: entry.boxScoreA,
+    tacticsUsed: entry.tacticsUsed || null,
     seed: entry.seed,
   };
 }

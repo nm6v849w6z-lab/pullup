@@ -541,6 +541,8 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
     res.scoreAway = result.finalScore.B;
     res.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
     res.seed = result.seed;
+    // Tactiques des deux équipes, sous la feuille de match (retour 2026-10-03).
+    res.tacticsUsed = tacticsUsed;
     res.boxScoreHome = compactBoxScore(result.boxScoreA, youthIds);
     res.boxScoreAway = compactBoxScore(result.boxScoreB, youthIds);
     // Fatigue (forme physique) exactement comme un match officiel, puis

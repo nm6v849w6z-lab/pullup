@@ -3871,6 +3871,11 @@
   .mk-stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--amber);}
   .mk-stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
   .mk-stf-replace{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; color:var(--ink-dim);}
+  .mbx-tactics-table{width:100%; border-collapse:collapse; font-size:14px;}
+  .mbx-tactics-table th, .mbx-tactics-table td{padding:8px 10px; border-bottom:1px solid var(--line, rgba(255,255,255,.08)); text-align:left;}
+  .mbx-tactics-table thead th{font-size:12px; color:var(--ink-dim); font-weight:700;}
+  .mbx-tactics-table tbody th{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; width:110px;}
+  .mbx-tactics-table td{color:var(--ink); font-weight:600;}
   .market-card-bid .mk-stf-replace{margin-top:12px; padding-top:10px; border-top:1px solid var(--line, rgba(255,255,255,.08)); display:grid; grid-template-columns:auto 1fr; column-gap:8px; row-gap:4px; align-items:center;}
   .market-card-bid .mk-stf-replace > :last-child{grid-column:2;}
   .mk-stf-confirm{display:flex; flex-direction:column; gap:10px; padding:12px 14px; border-radius:12px; border:1px solid rgba(240,162,60,.55); background:rgba(240,162,60,.08);}
@@ -7989,8 +7994,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-2">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-2">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-3">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-3">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -41430,7 +41435,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261003-2";
+const HM_LIVE_ASSET_VERSION = "20261003-3";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -41816,6 +41821,9 @@ function hmLiveBuildState() {
       color: dress.colors[t],
       logo: dress.logos[t],
       mine: key === "A",
+      // Tactiques jouées (sous la feuille de match du direct, retour
+      // utilisateur 2026-10-03) : t = 0 domicile, 1 extérieur.
+      tactics: (m.tacticsUsed && m.tacticsUsed[t === 0 ? "home" : "away"]) || null,
       players,
     };
   });
@@ -42078,6 +42086,30 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
 // on prend donc simplement la première trouvée, peu importe le joueur.
 // `null` si aucune entrée ne la porte (match jamais joué, ou persisté avant
 // ce correctif) : boxscoreQuarterScoresHtml gère ce cas en n'affichant rien.
+// Tactiques jouées par une équipe sur un match (matchLog, voir
+// Engine.tacticsSnapshotFor : priorité offensive n° 1, défense, rythme).
+function matchTacticsFromTeam(team, round, competition) {
+  for (const p of (team && team.players) || []) {
+    const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+    if (entry && entry.tacticsUsed) return entry.tacticsUsed;
+  }
+  return null;
+}
+// Bloc « Tactiques » sous la feuille de match (retour utilisateur
+// 2026-10-03 : « ajoute la tactique choisie pour les deux équipes :
+// attaque, défense et vitesse », « sous le box score ») — sans les
+// réglages fins (close-out, agressivité…).
+function matchTacticsHtml(tactics, nameHome, nameAway) {
+  const h = tactics && tactics.home, a = tactics && tactics.away;
+  if (!h && !a) return "";
+  const cell = (t, k) => escapeHtml((t && t[k]) || "–");
+  const rows = [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]];
+  return `<div class="mbx-block mbx-tactics"><div class="mbx-block-title">Tactiques</div>` +
+    `<table class="mbx-tactics-table"><thead><tr><th></th><th>${escapeHtml(nameHome)}</th><th>${escapeHtml(nameAway)}</th></tr></thead><tbody>` +
+    rows.map(([label, k]) => `<tr><th>${label}</th><td>${cell(h, k)}</td><td>${cell(a, k)}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
 function matchQuarterScoresFromTeam(team, round, competition) {
   for (const p of team.players) {
     const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
@@ -42223,6 +42255,7 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
+  ctx.tactics = { home: matchTacticsFromTeam(homeTeam, round, competition), away: matchTacticsFromTeam(awayTeam, round, competition) };
   // Premium « Revoir le direct » : tout match diffusé de son championnat
   // (retour utilisateur 2026-10-01 : « il faudrait pouvoir revoir les matchs
   // de tout le monde même en championnat, coupe, po ») — au moins un club
@@ -42380,6 +42413,7 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
     `<button type="button" class="bs-tab" data-team="B">${escapeHtml(awayTeam.name)}</button>` +
     `</div>` +
     `<div id="matchBoxscoreHolder"></div></div>` +
+    matchTacticsHtml(ctx.tactics, homeTeam.name, awayTeam.name) +
     `<button type="button" class="upgrade-confirm-cancel-btn mbx-close-btn" id="matchBoxscoreCloseBtn">Fermer</button>` +
     `</div></div>`;
   document.body.appendChild(overlay);
@@ -54041,6 +54075,7 @@ function showPrivateLeagueBoxscore(lp, roundIndex, homeIdx, awayIdx) {
     noteHtml: `<div class="lp-mbx-note">${m.forfeit ? "Match décidé par forfait (cinq de départ incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement, les finances ni les stats de carrière."}</div>`,
     // Direct gardé avec le match (voir /api/private-league/live) : à revoir.
     replay: typeof m.liveUntil === "number" && !m.forfeit ? { lp: lp.id, round: roundIndex, home: homeIdx, away: awayIdx } : null,
+    tactics: m.tacticsUsed || null,
   };
   openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx);
 }
@@ -54447,6 +54482,7 @@ function showFriendlyBoxscore(id) {
     kicker: "Match amical",
     whenText: `${formatCalendarDayFr(f.at)} · ${formatCalendarTimeFr(f.at)}`,
     scoreHome: f.result.scoreHome, scoreAway: f.result.scoreAway,
+    tactics: f.result.tacticsUsed || null,
     // Pas de note explicative sous la feuille de match (retour utilisateur
     // 2026-09-29 : "enleve ça sur le boxscore des amicaux").
   });

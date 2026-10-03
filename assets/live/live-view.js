@@ -141,6 +141,7 @@ const TEMPLATE = `
   </div>
   <table class="box" data-ref="box"></table>
   <div class="dnp" data-ref="dnp"></div>
+  <div class="tactics" data-ref="tactics"></div>
 </section>
 `;
 
@@ -521,7 +522,7 @@ export function createLiveView(root, opts = {}) {
   // Signature des stats (sans les avatars) : la feuille et les tuiles ne
   // sont redessinées que si un chiffre a bougé (l'horloge rafraîchit la vue
   // chaque seconde, les avatars SVG coûtent cher à réinjecter).
-  const sig = T => T.players.map(p => [p.id, p.onCourt ? 1 : 0, p.slot || "", S.status, Math.floor(p.seconds / 60), p.pts, p.reb, p.oreb || 0, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
+  const sig = T => T.players.map(p => [p.id, p.onCourt ? 1 : 0, p.slot || "", S.status, JSON.stringify(T.tactics || null), Math.floor(p.seconds / 60), p.pts, p.reb, p.oreb || 0, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
   let leadersKey = null, boxKey = null;
 
   function renderLeaders() {
@@ -765,6 +766,14 @@ export function createLiveView(root, opts = {}) {
           <td>${t.ftm}/${t.fta}<span class="pct">${pct(t.ftm, t.fta)}</span></td>
           <td>${played.reduce((s, p) => s + rating(p), 0)}</td></tr>
       </tbody>`;
+    // Tactiques des deux équipes sous la feuille de match (retour
+    // utilisateur 2026-10-03) : attaque, défense, rythme.
+    const tac = S.teams.map(x => x.tactics || null);
+    $("tactics").innerHTML = tac.some(Boolean)
+      ? `<div class="klbl">Tactiques</div><table class="tac"><thead><tr><th></th><th style="color:var(--c0)">${esc(S.teams[0].short)}</th><th style="color:var(--c1)">${esc(S.teams[1].short)}</th></tr></thead><tbody>` +
+        [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]].map(([l, k]) => `<tr><th>${l}</th><td>${esc((tac[0] && tac[0][k]) || "–")}</td><td>${esc((tac[1] && tac[1][k]) || "–")}</td></tr>`).join("") +
+        `</tbody></table>`
+      : "";
     const dnp = T.players.filter(p => !played.includes(p));
     $("dnp").innerHTML = dnp.length ? `<span class="klbl">Pas encore entrés</span> ` + dnp.map(p => esc(p.name)).join(", ") + "." : "";
   }

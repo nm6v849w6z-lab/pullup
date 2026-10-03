@@ -501,8 +501,12 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
   match.playedAt = now;
   delete match.frozen;
   if (homeOk && awayOk) {
+    // Tactiques des deux équipes (direct et feuille de match, retour
+    // utilisateur 2026-10-03), figées avant la simulation.
+    const tacticsUsed = { home: Engine.tacticsSnapshotFor(home), away: Engine.tacticsSnapshotFor(away) };
     const engine = new Engine.MatchEngine(home, away, { homeAdvantage: lp.venue === "home" });
     const result = engine.simulate(now);
+    match.tacticsUsed = tacticsUsed;
     match.scoreHome = result.finalScore.A;
     match.scoreAway = result.finalScore.B;
     match.forfeit = null;
@@ -518,14 +522,14 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
         round: roundIndex, kickoffAt, homeIdx: match.home, awayIdx: match.away, competition: "lp",
         privateLeague: { id: lp.id, name: lp.name, round: roundIndex, venue: lp.venue },
         forfeit: false, finalScore: { home: match.scoreHome, away: match.scoreAway },
-        quarterScores: match.quarterScores, seed: result.seed,
+        quarterScores: match.quarterScores, seed: result.seed, tacticsUsed,
         events: pb.events, pauses: pb.pauses, totalDurationMs: pb.totalDurationMs,
         boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
       });
     }
     return;
   }
-  match.quarterScores = null; match.boxScoreHome = null; match.boxScoreAway = null;
+  match.quarterScores = null; match.boxScoreHome = null; match.boxScoreAway = null; match.tacticsUsed = null;
   if (!homeOk && !awayOk) { match.forfeit = "both"; match.scoreHome = 0; match.scoreAway = 0; return; }
   if (!homeOk) { match.forfeit = "home"; match.scoreHome = 0; match.scoreAway = Engine.FORFEIT_SCORE; return; }
   match.forfeit = "away"; match.scoreHome = Engine.FORFEIT_SCORE; match.scoreAway = 0;
@@ -830,7 +834,7 @@ function privateLeagueStandings(lp) {
 // l'heure de fin suffisent au navigateur pour proposer « Voir le direct ».
 function hideLive(m, now) {
   if (!(m.played && typeof m.liveUntil === "number" && m.liveUntil > now)) return m;
-  return { ...m, played: false, live: true, scoreHome: null, scoreAway: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, forfeit: null };
+  return { ...m, played: false, live: true, scoreHome: null, scoreAway: null, quarterScores: null, boxScoreHome: null, boxScoreAway: null, forfeit: null, tacticsUsed: null };
 }
 
 // Ligues privées « monde » d'un manager, dans le repère de sa ligue :
