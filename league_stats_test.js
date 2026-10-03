@@ -19,7 +19,7 @@ const { server, savePath, baseUrl } = await startTestServer();
 // ---------------------------------------------------------------------
 const dom1 = await openGame(html, baseUrl);
 const doc1 = dom1.window.document;
-doc1.getElementById("regenBtn").click(); // "📊 Classement"
+[...doc1.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click(); // "📊 Classement"
 const panelBefore = doc1.getElementById("standingsSection").textContent;
 console.log("Panneau de stats avant tout match (extrait) :", panelBefore.replace(/\s+/g, " ").slice(0, 200));
 if (!panelBefore.includes("Aucune journée de championnat jouée")) {
@@ -42,7 +42,7 @@ const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
 doc2.getElementById("catchupContinueBtn").click(); // referme le récapitulatif d'absence
-doc2.getElementById("regenBtn").click(); // "📊 Classement"
+[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click(); // "📊 Classement"
 
 // Refonte de la page Ligue (2026-09-25, maquette "ligue-apercu.html") : le
 // MVP de la journée est une carte .lg-mvp dans la colonne de droite
@@ -160,7 +160,7 @@ if (doc2.getElementById("teamDetailSection").classList.contains("hidden") || win
 }
 console.log("✅ Cliquer sur un code d'équipe ouvre bien sa fiche équipe.");
 win2.eval("hideTeamDetail();");
-doc2.getElementById("regenBtn").click();
+[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click();
 
 // "Classement complet" : top 20 puis "Réduire", indépendamment par carte.
 const totalPlayers = win2.eval("league.teams.reduce((s, t) => s + t.players.length, 0)");

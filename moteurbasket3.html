@@ -8257,9 +8257,8 @@
     </section>
     <p class="ordres-lock-note hidden" id="ordresLockNote"></p>
     <div class="prep-grid" id="prepGrid"></div>
-    <div class="actions" id="prepActions">
-      <button class="secondary" id="regenBtn">Classement</button>
-    </div>
+    <!-- Bouton « Classement » retiré des Ordres (retour utilisateur 2026-10-03) :
+         la page Ligue reste accessible par le menu. -->
     <p class="lock-warning" id="lockWarning"></p>
     <!-- Barre d'enregistrement collée en bas (vue composition, 2026-09-30) :
          état des ordres (#ordresStatus, voir renderOrdresStatus), retour du
@@ -56106,7 +56105,7 @@ function goToOrdresTab(round, competition) {
   }
 }
 
-document.getElementById("regenBtn").addEventListener("click", showStandings);
+
 document.getElementById("ordresValidateBtn").addEventListener("click", validateOrdres);
 document.getElementById("ordresRevertBtn").addEventListener("click", revertOrdres);
 // Onglets + hauteur du topbar de la barre d'action Ordres (voir renderOrdresStatus).

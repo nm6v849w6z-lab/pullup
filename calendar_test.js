@@ -26,7 +26,7 @@ if (dom1.window.eval("currentMatch.round") !== 0) {
 }
 
 // --- Classement consultable avant le premier match : tout le monde à 0 ---
-doc1.getElementById("regenBtn").click(); // "📊 Classement"
+[...doc1.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click(); // "📊 Classement"
 const standingsVisible = !doc1.getElementById("standingsSection").classList.contains("hidden");
 const prepHiddenNow = doc1.getElementById("prepSection").classList.contains("hidden");
 console.log(`${standingsVisible && prepHiddenNow ? "✅" : "❌"} Écran de classement accessible depuis la préparation.`);

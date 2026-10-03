@@ -151,7 +151,7 @@ const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
 const win2 = dom2.window;
 doc2.getElementById("catchupContinueBtn").click();
-doc2.getElementById("regenBtn").click(); // "📊 Classement" -> onglet Ligue
+[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue").click(); // "📊 Classement" -> onglet Ligue
 
 const mvpLink = doc2.querySelector("#standingsContent .lg-mvp .player-link");
 if (!mvpLink) throw new Error("❌ (setup) le MVP de la dernière journée devrait être un lien joueur cliquable.");
