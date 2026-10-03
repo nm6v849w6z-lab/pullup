@@ -5287,6 +5287,12 @@ const TACTIC_PRESETS_MAX = 6;
 const TACTIC_PRESETS_FREE_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
 // Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
+// Joueur esseulé (retour utilisateur 2026-10-03) : part de tirs au-delà de
+// laquelle la part d'un seul joueur est comprimée de moitié, et défense
+// resserrée au-delà de ISOLATED_GAP_FREE points d'écart avec ses coéquipiers.
+const ISOLATED_SHARE_CAP = 0.30;
+const ISOLATED_GAP_FREE = 20;
+const ISOLATED_GAP_PENALTY = 0.25;
 const ORDERS_HISTORY_MAX = 20;
 const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
 // Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
@@ -18271,9 +18277,24 @@ class MatchEngine {
     // choix du tireur ni dans la simulation. Neutre (×1) hors zone
     // intérieure.
     const penetrationBonus = zone === "inside" ? p => 1 + p.eff("penetration") / 200 : () => 1;
-    const shooter = weightedPick(onCourtOff, p =>
+    // Joueur esseulé (retour utilisateur 2026-10-03 : 52 points d'un arrière
+    // à 55 de GEN entouré de joueurs à 35-45) : la part de tirs d'un seul
+    // joueur au-delà de ISOLATED_SHARE_CAP est comprimée de moitié — il
+    // reste le premier tireur, mais ses coéquipiers touchent le ballon.
+    const shotWeights = onCourtOff.map(p =>
       Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult * boxDeny : 1)
     );
+    const shotWeightSum = shotWeights.reduce((s, w) => s + w, 0);
+    if (shotWeightSum > 0) {
+      const top = shotWeights.indexOf(Math.max(...shotWeights));
+      const share = shotWeights[top] / shotWeightSum;
+      if (share > ISOLATED_SHARE_CAP && share < 1) {
+        const target = ISOLATED_SHARE_CAP + (share - ISOLATED_SHARE_CAP) * 0.5;
+        const others = shotWeightSum - shotWeights[top];
+        shotWeights[top] = others * target / (1 - target);
+      }
+    }
+    const shooter = weightedPick(onCourtOff, p => shotWeights[onCourtOff.indexOf(p)]);
     const defender = this.matchupDefender(defTeam, shooter, zone);
 
     // Vision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
@@ -18430,7 +18451,13 @@ class MatchEngine {
       ? (screen.rollOpennessMod || 0) * prWeight
       : (screen.shooterOpennessMod || 0) * prWeight;
 
-    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus + rand(-12, 12);
+    // Défense resserrée sur le joueur esseulé (même retour) : plus il domine
+    // ses coéquipiers dans la zone de tir, plus l'aide défensive se
+    // concentre sur lui (au-delà de ISOLATED_GAP_FREE points d'écart).
+    const mates = onCourtOff.filter(p => p.id !== shooter.id);
+    const matesAvg = mates.length ? mates.reduce((s, p) => s + p.eff(statForZone), 0) / mates.length : shooter.eff(statForZone);
+    const isolatedPenalty = Math.max(0, shooter.eff(statForZone) - matesAvg - ISOLATED_GAP_FREE) * ISOLATED_GAP_PENALTY;
+    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus - isolatedPenalty + rand(-12, 12);
     let quality, qualityMod;
     if (openness > 8) { quality = "ouvert"; qualityMod = 0.08; }
     else if (openness > -10) { quality = "contesté"; qualityMod = 0; }
