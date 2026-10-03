@@ -561,8 +561,11 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   let nextDeadlineAt = null;
   // Ligues privées « monde » (server/privateLeague.js) : `null` si la
   // lecture a échoué — rien n'y est alors ni joué ni réécrit ce passage-ci.
-  const lpStore = await PrivateLeague.loadStore(savePath);
+  let lpStore = await PrivateLeague.loadStore(savePath);
   let lpDirty = false;
+  // Montées/descentes appliquées ce passage-ci (voir la relecture des
+  // ligues privées plus bas).
+  const lpMoves = [];
   const labelOfId = id => { const e = world.leagues.find(x => x.id === id); return e ? divisionLabel(e.level, e.group) : ""; };
   // Toutes les ligues restent en main jusqu'à la fin (transferts du marché
   // mondial entre deux championnats) ; seules celles qui ont changé sont
@@ -674,6 +677,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
       applyCountryMoves(world, state.moves || [], leagues);
       // Ligues privées : les membres suivent leur club dans sa nouvelle division.
       if (lpStore && PrivateLeague.remapMoves(lpStore, state.moves || [])) lpDirty = true;
+      lpMoves.push(...(state.moves || []));
       let next = null;
       for (const lg of all) { next = lg.startNextSeason(ecoAt); }
       state.moves = [];
@@ -729,6 +733,15 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   // Ligues privées « monde » : journées dues, résultats annoncés, membres
   // rafraîchis (nom, division, logo), directs rangés par ligue privée.
   if (lpStore) {
+    // Relecture juste avant de jouer (retour Diablue 2026-10-03 : ordres de
+    // ligue privée ignorés) : le chargement de toutes les ligues ci-dessus
+    // peut prendre du temps, des ordres (ou une inscription) enregistrés
+    // entre-temps seraient sinon ignorés au coup d'envoi, puis écrasés par
+    // la sauvegarde de cette copie périmée.
+    // Pas de relecture un jour de montées/descentes : l'échange de places
+    // (remapMoves) n'est pas rejouable sans risque de l'annuler.
+    const fresh = lpMoves.length ? null : await PrivateLeague.loadStore(savePath);
+    if (fresh) lpStore = fresh;
     const out = {};
     if (PrivateLeague.catchUp(Engine, lpStore, allLeagues, now, out)) lpDirty = true;
     if (PrivateLeague.refreshRefs(lpStore, allLeagues, labelOfId)) lpDirty = true;

@@ -148,7 +148,23 @@ const ok = m => console.log("✅ " + m);
   assert.ok(!(await api("/api/save", boston)).body.myOfficialDays.includes(dayKey), "le vendredi ne compte pas comme jour de match à Boston");
   ok("le vendredi de ligue privée ne bloque ni l'entraînement ni les amicaux");
   clock.now = kickoff + 60 * 1000;
+  // Course (retour Diablue 2026-10-03 : ordres de ligue privée ignorés) :
+  // le rattrapage lit les ligues privées AVANT les ordres de Boston (copie
+  // sans ordres), les ordres arrivent pendant qu'il charge les championnats.
+  // Il doit relire avant de jouer.
+  const realLoadStore = PL.loadStore;
+  let lpLoads = 0;
+  PL.loadStore = async (...a) => {
+    const st = await realLoadStore(...a);
+    if (lpLoads++ === 0 && st) {
+      const stale = JSON.parse(JSON.stringify(st));
+      stale.list.forEach(l => l.members.forEach(m => { delete m.orders; }));
+      return stale;
+    }
+    return st;
+  };
   const evs = await World.catchUpWorld(multiSavePath, clock.now);
+  PL.loadStore = realLoadStore;
   assert.ok(evs.some(e => e.type === "private-league-round" && e.privateLeagueId === lpId && e.round === 0));
   raw = await store.loadWorldAuxStrict("privateleagues", multiSavePath);
   wlp = raw.list.find(l => l.id === lpId);
