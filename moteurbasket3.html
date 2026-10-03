@@ -14061,7 +14061,7 @@ const MAX_TEAM_TROPHIES = 30;
 // au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
-const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
+const SALARY_BASELINE_OVERALL = 7; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
 const SALARY_AT_BASELINE = 1500;    // salaire hebdo à ce niveau de référence (5 de coefficient)
 const SALARY_GROWTH_PER_POINT = 1.032; // +3.2%/point au-dessus/dessous de la référence
 const SALARY_MIN = 200; // plancher, même pour un très jeune/faible joueur (≈ joueur de complément BuzzerBeater)
@@ -15336,6 +15336,7 @@ function planKey(round, competition) {
 // 2026-09), voir CONNAISSANCE TACTIQUE ci-dessous.
 const CHEMISTRY_ROSTER_CHANGE_MAX_RANK = 12;
 const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
+const CHEMISTRY_MIN = 40; // plancher de l'alchimie (voir engine.js)
 function chemistryRosterImportance(rank) {
   return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
 }
@@ -16437,7 +16438,7 @@ class Team {
 
   // Voir engine.js, miroir identique (alchimie d'équipe).
   applyChemistryDelta(delta) {
-    this.chemistry = clamp(this.chemistry + delta, 0, 100);
+    this.chemistry = clamp(this.chemistry + delta, CHEMISTRY_MIN, 100);
   }
 
   chemistryFactor() {
@@ -17582,7 +17583,7 @@ class Team {
     if (this.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     const [player] = this.youthPlayers.splice(idx, 1);
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
-    player.salary = salaryForOverall(player.overall());
+    player.salary = salaryForOverall(levelCoefficientFor(player.attrs, player.position).coefficient);
     if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
@@ -19148,9 +19149,11 @@ function peakBonusFor(attrs, position) {
 // (bestPosition). Appelé uniquement à la création et à l'intersaison
 // (Team.recalculateSalaries) : un changement de poste en cours de saison ne
 // touche jamais au salaire.
+// Salaire calculé sur le MEILLEUR poste (copie miroir de engine.js).
 function levelCoefficientFor(attrs, cardPosition) {
   const position = POSITIONS.includes(cardPosition) ? cardPosition : bestPosition({ attrs });
-  const coefficient = weightedRatingForPosition(attrs, position) + peakBonusFor(attrs, position);
+  const best = bestPosition({ attrs });
+  const coefficient = positionRating(attrs, best) + peakBonusFor(attrs, best);
   return { position, coefficient };
 }
 
@@ -19271,7 +19274,7 @@ function generateRetirementReplacement(team, position) {
   }
   p.potential = clamp(Math.round(p.overall() + rand(4, 12)), 1, 99);
   p.position = bestPosition(p) || position;
-  if (typeof salaryForOverall === "function") p.salary = salaryForOverall(p.overall());
+  if (typeof salaryForOverall === "function") p.salary = salaryForOverall(levelCoefficientFor(p.attrs, p.position).coefficient);
   return p;
 }
 
@@ -24015,7 +24018,7 @@ function teamFromSave(data) {
   team.pendingDivisionMove = data.pendingDivisionMove && typeof data.pendingDivisionMove === "object" ? { ...data.pendingDivisionMove } : null;
   team.lastSeasonBonusSeasonId = typeof data.lastSeasonBonusSeasonId === "string" ? data.lastSeasonBonusSeasonId : null;
   // Alchimie d'équipe (voir engine.js, miroir identique).
-  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
+  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, CHEMISTRY_MIN, 100);
   // Connaissance tactique (voir engine.js, miroir identique) : PAR OPTION
   // depuis cette révision, migration depuis l'ancien format scalaire (une
   // sauvegarde d'avant cette révision) en ne reprenant que les options
@@ -49179,8 +49182,8 @@ function renderYouthRoster() {
       `<div class="ac-card-top">${acIdentityHtml(p)}<div class="ac-badges">${acPotentialBadgeHtml(p.potential, "Potentiel encore caché, seule la promotion en effectif pro le révèlera")}</div></div>` +
       // Avatars des jeunes (Premium) : voir showYouthLookModal.
       `<button type="button" class="ac-look-btn" data-youth-look="${p.id}">${p.look ? "Apparence personnalisée · modifier" : "Personnaliser l'apparence"}${teamIsPremium(teamA) ? "" : ` <span class="prm-tag">Premium</span>`}</button>` +
-      `<div class="ac-progress"><div class="row"><span>Moyenne générale</span><span><b>${avg}</b></span></div>` +
-      `<div class="track"><div class="fill" style="width:${Math.min(100, avg * 2)}%"></div></div></div>` +
+      `<div class="ac-progress"><div class="row"><span>Moyenne générale</span><span><b>${playerBestRating(p)}</b></span></div>` +
+      `<div class="track"><div class="fill" style="width:${Math.min(100, playerBestRating(p) * 2)}%"></div></div></div>` +
       acGroupsHtml(p) + acTraitsHtml(p) +
       (capped ? `<div class="ac-note">${capped} caractéristique${capped > 1 ? "s" : ""} déjà au plafond de 50 (débloqué à la promotion).</div>` : "") +
       note + acAllAttrsHtml(p) + `</div>`;

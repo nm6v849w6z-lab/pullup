@@ -3497,7 +3497,9 @@ const MAX_TEAM_TROPHIES = 30;
 // au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
-const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
+// 7 depuis le passage au meilleur poste (2026-10-03, note de calcul +3 en
+// moyenne) : masse salariale globale inchangée.
+const SALARY_BASELINE_OVERALL = 7; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
 const SALARY_AT_BASELINE = 1500;    // salaire hebdo à ce niveau de référence (5 de coefficient)
 const SALARY_GROWTH_PER_POINT = 1.032; // +3.2%/point au-dessus/dessous de la référence
 const SALARY_MIN = 200; // plancher, même pour un très jeune/faible joueur (≈ joueur de complément BuzzerBeater)
@@ -5132,6 +5134,10 @@ const CHEMISTRY_ROSTER_CHANGE_BASE = 8; // malus max, pour le tout meilleur joue
 // plus la cohésion ? ») : le simple fait de jouer ensemble ne vaut plus que
 // +0,5, le RÉSULTAT devient le principal moteur (voir CHEMISTRY_WIN_GAIN…
 // et Team.applyChemistryResult).
+// Plancher de l'alchimie (retour utilisateur 2026-10-03 : « j'ai recruté
+// quelques joueurs et je suis maintenant à 3, c'est un peu hard ») : une
+// équipe ne descend jamais sous 40.
+const CHEMISTRY_MIN = 40;
 const CHEMISTRY_MATCH_TOGETHER_GAIN = 0.5; // par match joué
 const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au match précédent
 // Résultat du match (officiel, jamais un amical) : victoire +2 (+3 à partir
@@ -6632,7 +6638,7 @@ class Team {
   // 3 leviers qui l'appellent) : point d'entrée UNIQUE pour modifier
   // Team.chemistry, pour qu'aucun appelant ne puisse oublier le clamp.
   applyChemistryDelta(delta) {
-    this.chemistry = clamp(this.chemistry + delta, 0, 100);
+    this.chemistry = clamp(this.chemistry + delta, CHEMISTRY_MIN, 100);
   }
 
   // Multiplicateur de performance lié à l'alchimie (voir Player.eff()/
@@ -7973,7 +7979,7 @@ class Team {
     if (this.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     const [player] = this.youthPlayers.splice(idx, 1);
     this.pendingYouthDecisions = (this.pendingYouthDecisions || []).filter(id => id !== playerId);
-    player.salary = salaryForOverall(player.overall());
+    player.salary = salaryForOverall(levelCoefficientFor(player.attrs, player.position).coefficient);
     if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
@@ -9753,9 +9759,14 @@ function peakBonusFor(attrs, position) {
 // (bestPosition). Appelé uniquement à la création et à l'intersaison
 // (Team.recalculateSalaries) : un changement de poste en cours de saison ne
 // touche jamais au salaire.
+// Salaire calculé sur le MEILLEUR poste (retour utilisateur 2026-10-03 :
+// « le salaire doit être calculé sur base du meilleur poste », comme la note
+// affichée) : la plus haute des notes par poste (positionRating) + bonus de
+// pic de ce poste. `position` reste le poste de carte (ou le meilleur).
 function levelCoefficientFor(attrs, cardPosition) {
   const position = POSITIONS.includes(cardPosition) ? cardPosition : bestPosition({ attrs });
-  const coefficient = weightedRatingForPosition(attrs, position) + peakBonusFor(attrs, position);
+  const best = bestPosition({ attrs });
+  const coefficient = positionRating(attrs, best) + peakBonusFor(attrs, best);
   return { position, coefficient };
 }
 
@@ -9881,7 +9892,7 @@ function generateRetirementReplacement(team, position) {
   }
   p.potential = clamp(Math.round(p.overall() + rand(4, 12)), 1, 99);
   p.position = bestPosition(p) || position;
-  if (typeof salaryForOverall === "function") p.salary = salaryForOverall(p.overall());
+  if (typeof salaryForOverall === "function") p.salary = salaryForOverall(levelCoefficientFor(p.attrs, p.position).coefficient);
   return p;
 }
 
@@ -16576,7 +16587,7 @@ function teamFromSave(data) {
   // Alchimie d'équipe (voir serializeTeam ci-dessus). Absent (sauvegarde
   // d'avant cette fonctionnalité) : on garde la valeur déjà posée par le
   // constructeur (chemistry neutre à 50).
-  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, 0, 100);
+  if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, CHEMISTRY_MIN, 100);
   if (typeof data.lastStartersKey === "string") team.lastStartersKey = data.lastStartersKey;
   if (Number.isFinite(data.chemistryResultStreak)) team.chemistryResultStreak = Math.trunc(data.chemistryResultStreak);
   // Connaissance tactique (voir serializeTeam ci-dessus) : PAR OPTION depuis

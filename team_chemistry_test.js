@@ -268,8 +268,8 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
   team.chemistry = 100;
   team.applyChemistryDelta(50); // ne doit jamais dépasser 100
   if (team.chemistry !== 100) throw new Error("❌ chemistry ne devrait jamais dépasser 100.");
-  team.applyChemistryDelta(-500); // ne doit jamais descendre sous 0
-  if (team.chemistry !== 0) throw new Error("❌ chemistry ne devrait jamais descendre sous 0.");
+  team.applyChemistryDelta(-500); // ne doit jamais descendre sous le plancher (40, retour 2026-10-03)
+  if (team.chemistry !== 40) throw new Error("❌ chemistry ne devrait jamais descendre sous 40.");
 
   if (chemistryLabel(90) !== "Alchimie parfaite") throw new Error("❌ Libellé attendu pour 90 : Alchimie parfaite.");
   if (chemistryLabel(10) !== "Vestiaire fracturé") throw new Error("❌ Libellé attendu pour 10 : Vestiaire fracturé.");
@@ -285,13 +285,13 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 (function testSerializationRoundTrip() {
   const team = generateStartingRoster("Roundtrip Chemistry");
   generateLeague(team, 1, T0);
-  team.chemistry = 37;
+  team.chemistry = 57;
 
   const saved = serializeTeam(team);
-  if (saved.chemistry !== 37) throw new Error("❌ serializeTeam devrait persister chemistry.");
+  if (saved.chemistry !== 57) throw new Error("❌ serializeTeam devrait persister chemistry.");
 
   const reloaded = teamFromSave(saved);
-  if (reloaded.chemistry !== 37) throw new Error("❌ teamFromSave devrait restaurer chemistry.");
+  if (reloaded.chemistry !== 57) throw new Error("❌ teamFromSave devrait restaurer chemistry.");
   console.log("✅ chemistry survit à l'identique à un round-trip serializeTeam/teamFromSave.");
 })();
 
