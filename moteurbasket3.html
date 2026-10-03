@@ -48999,9 +48999,9 @@ function acAvg(p, keys) {
 }
 // Moyennes Fondamentaux / Physique / Mental (mêmes familles que l'Effectif).
 function acGroupsHtml(p) {
-  const groups = [["Technique", FUNDAMENTAL_ATTRS], ["Physique", PHYSICAL_ATTRS], ["Mental", MENTAL_ATTRS]];
+  const groups = [["Fondamentaux", FUNDAMENTAL_ATTRS], ["Physique", PHYSICAL_ATTRS], ["Mental", MENTAL_ATTRS]];
   return `<div class="ac-groups">` + groups.map(([label, keys]) =>
-    `<div class="ac-group"><div class="k" title="Moyenne ${label === "Technique" ? "des fondamentaux" : label.toLowerCase()}">${label}</div>${attrCellHtml(acAvg(p, keys))}</div>`).join("") + `</div>`;
+    `<div class="ac-group"><div class="k" title="Moyenne ${label === "Fondamentaux" ? "des fondamentaux" : label.toLowerCase()}">${label}</div>${attrCellHtml(acAvg(p, keys))}</div>`).join("") + `</div>`;
 }
 // 3 points forts / 2 points faibles, toutes caractéristiques confondues.
 function acTraitsHtml(p) {
