@@ -5982,4 +5982,5 @@ window.HM_I18N_IT = {
   "Total des caractéristiques (TC)": "Totale caratteristiche (TC)",
   "Fond.": "Fond.",
   "Phys.": "Fis.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Valutazione giocatori (scheda) · salvata sull'account",
 };

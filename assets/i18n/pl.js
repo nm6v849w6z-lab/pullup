@@ -5919,4 +5919,5 @@ window.HM_I18N_PL = {
   "Total des caractéristiques (TC)": "Suma cech (TC)",
   "Fond.": "Podst.",
   "Phys.": "Fiz.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Ocena zawodników (karta) · zapisana na koncie",
 };

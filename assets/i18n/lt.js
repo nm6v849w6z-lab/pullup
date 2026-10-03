@@ -5919,4 +5919,5 @@ window.HM_I18N_LT = {
   "Total des caractéristiques (TC)": "Savybių suma (TC)",
   "Fond.": "Pagr.",
   "Phys.": "Fiz.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Žaidėjų įvertis (kortelė) · išsaugota paskyroje",
 };

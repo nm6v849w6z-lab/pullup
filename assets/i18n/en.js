@@ -5944,4 +5944,5 @@ window.HM_I18N_EN = {
   "Total des caractéristiques (TC)": "Total of attributes (TC)",
   "Fond.": "Fund.",
   "Phys.": "Phys.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Player rating (player page) · saved to your account",
 };

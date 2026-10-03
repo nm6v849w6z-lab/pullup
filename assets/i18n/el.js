@@ -5919,4 +5919,5 @@ window.HM_I18N_EL = {
   "Total des caractéristiques (TC)": "Σύνολο χαρακτηριστικών (TC)",
   "Fond.": "Βασ.",
   "Phys.": "Φυσ.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Βαθμός παικτών (καρτέλα) · αποθηκεύεται στον λογαριασμό",
 };

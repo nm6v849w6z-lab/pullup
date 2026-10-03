@@ -5919,4 +5919,5 @@ window.HM_I18N_DE = {
   "Total des caractéristiques (TC)": "Summe der Attribute (TC)",
   "Fond.": "Grund.",
   "Phys.": "Phys.",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "Spielerwertung (Spielerseite) · im Konto gespeichert",
 };

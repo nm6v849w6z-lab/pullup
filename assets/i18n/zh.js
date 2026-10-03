@@ -5919,4 +5919,5 @@ window.HM_I18N_ZH = {
   "Total des caractéristiques (TC)": "属性总和（TC）",
   "Fond.": "基础",
   "Phys.": "身体",
+  "Note des joueurs (fiche joueur) · enregistrée sur le compte": "球员评分（球员页） · 保存在账户中",
 };
