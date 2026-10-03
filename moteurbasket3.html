@@ -44315,7 +44315,9 @@ function dashRenderNextMatch(data) {
     ${m.rivalryHtml || ""}
     <div class="hm-hero__actions">
       ${m.privateLeague
-        ? `${m.lpLiveBtn || (m.lpLocked
+        // Direct en cours : seul « Voir le direct », centré (retour
+        // utilisateur 2026-10-03 : pas de « Scouter » pendant le live).
+        ? m.lpLiveBtn ? m.lpLiveBtn : `${(m.lpLocked
           // Verrou à T − 5 min (retour utilisateur 2026-10-03 : « le match est
           // dans moins de 5 min et les ordres ne sont pas bloqués »).
           ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">Ordres verrouillés</button>`
