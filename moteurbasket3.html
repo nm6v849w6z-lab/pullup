@@ -10001,7 +10001,8 @@ function youthProspectLabel(potential) {
 // finale des play-offs (voir server/autoSim.js:catchUpWeeklyRhythm et
 // l'option `seasonEnd` de Team.trainWeek) ; ce nombre reste la règle des
 // autres calendriers (carrière solo, calendrier classique).
-const SEASON_LENGTH_WEEKS = 10;
+// Aligné sur engine.js (9 semaines de championnat + 2 de play-offs).
+const SEASON_LENGTH_WEEKS = 11;
 
 // Vitesse de progression hebdomadaire selon l'âge (les jeunes apprennent vite).
 // Calibré (2026-09) pour qu'un prospect à fort potentiel, bien placé et bien
@@ -14415,14 +14416,16 @@ function normalizeContractSeasons(v, fallback = CONTRACT_DEFAULT_SEASONS) {
 // restantes du contrat (semaine en cours comprise, puis saisons suivantes
 // jusqu'à contractUntilSeason) × RELEASE_INDEMNITY_RATE.
 const RELEASE_INDEMNITY_RATE = 0.3;
+// Semaines de salaire par saison (retour utilisateur 2026-10-03 : « 9
+// semaines de saison régulière, 2 semaines de PO et 1 semaine
+// d'intersaison ») — différent de SEASON_LENGTH_WEEKS (11, sans
+// l'intersaison), qui règle le calendrier.
+const RELEASE_WEEKS_PER_SEASON = 12;
 function releaseIndemnityFor(player, season, seasonWeek) {
   if (!player || typeof player.contractUntilSeason !== "number") return 0;
   const s = season || 1;
-  // 11 semaines par saison côté serveur (engine.js:SEASON_LENGTH_WEEKS ; la
-  // copie de ce fichier en compte encore 10) : même montant que celui débité.
-  const SEASON_W = 11;
-  const thisSeason = Math.max(0, SEASON_W - Math.max(1, seasonWeek || 1) + 1);
-  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * SEASON_W;
+  const thisSeason = Math.max(0, RELEASE_WEEKS_PER_SEASON - Math.max(1, seasonWeek || 1) + 1);
+  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * RELEASE_WEEKS_PER_SEASON;
   return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
 }
 function contractSeasonsLeft(player, season) {

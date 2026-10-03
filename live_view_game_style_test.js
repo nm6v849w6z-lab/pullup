@@ -90,6 +90,7 @@ function state(status) {
   view.update(state("final"));
   assert($("[data-ref=kicker]").textContent.startsWith("Match terminé"), "fin de match : bandeau « Match terminé »");
   assert($("[data-ref=period]").textContent === "Victoire de Rennes", "fin de match : vainqueur annoncé");
-  assert($("[data-ref=run]").textContent.includes("l'emporte de"), "fin de match : écart final");
+  // « X mène de N » / « l'emporte de N » retirés (retour utilisateur 2026-10-03).
+  assert(!/mène de|l'emporte de/.test($("[data-ref=run]").textContent), "fin de match : plus de texte d'écart");
   console.log("\nTous les tests de la vue live (esprit du jeu) passent.");
 })().catch(e => { console.error(e); process.exit(1); });

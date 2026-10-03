@@ -3662,11 +3662,16 @@ function normalizeContractSeasons(v, fallback = CONTRACT_DEFAULT_SEASONS) {
 // restantes du contrat (semaine en cours comprise, puis saisons suivantes
 // jusqu'à contractUntilSeason) × RELEASE_INDEMNITY_RATE.
 const RELEASE_INDEMNITY_RATE = 0.3;
+// Semaines de salaire par saison (retour utilisateur 2026-10-03 : « 9
+// semaines de saison régulière, 2 semaines de PO et 1 semaine
+// d'intersaison ») — différent de SEASON_LENGTH_WEEKS (11, sans
+// l'intersaison), qui règle le calendrier.
+const RELEASE_WEEKS_PER_SEASON = 12;
 function releaseIndemnityFor(player, season, seasonWeek) {
   if (!player || typeof player.contractUntilSeason !== "number") return 0;
   const s = season || 1;
-  const thisSeason = Math.max(0, SEASON_LENGTH_WEEKS - Math.max(1, seasonWeek || 1) + 1);
-  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * SEASON_LENGTH_WEEKS;
+  const thisSeason = Math.max(0, RELEASE_WEEKS_PER_SEASON - Math.max(1, seasonWeek || 1) + 1);
+  const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * RELEASE_WEEKS_PER_SEASON;
   return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
 }
 function contractSeasonsLeft(player, season) {

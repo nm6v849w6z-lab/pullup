@@ -10,7 +10,7 @@ const ok = m => console.log("✅ " + m);
 (async () => {
   // Calcul : 30 % × salaire × semaines restantes.
   const p = { salary: 1000, contractUntilSeason: 3 };
-  assert.strictEqual(E.releaseIndemnityFor(p, 1, 5), Math.round(1000 * ((E.SEASON_LENGTH_WEEKS || 11) - 5 + 1 + 2 * (E.SEASON_LENGTH_WEEKS || 11)) * 0.3));
+  assert.strictEqual(E.releaseIndemnityFor(p, 1, 5), Math.round(1000 * (12 - 5 + 1 + 2 * 12) * 0.3));
   assert.strictEqual(E.releaseIndemnityFor({ salary: 1000 }, 1, 5), 0);
   ok("indemnité = 30 % du salaire restant dû");
 

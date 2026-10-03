@@ -70,7 +70,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   await tick();
   const card = doc.querySelector("#pdpContractCard");
   if (!card) fail("carte « Contrat » absente.");
-  if (!new RegExp(`Contrat jusqu'à la fin de la saison ${season}`).test(card.textContent) || !/Dernière saison/.test(card.textContent)) fail(`ligne de contrat : ${card.textContent}`);
+  if (!new RegExp(`Fin de contrat\\s*Saison ${season}`).test(card.textContent) || !/Dernière saison/.test(card.textContent)) fail(`ligne de contrat : ${card.textContent}`);
   const sel = doc.querySelector("#pdpExtSeasons");
   const inp = doc.querySelector("#pdpExtSalary");
   if (!sel || sel.options.length !== 5 || sel.value !== "3") fail("durée : 1 à 5 saisons, 3 par défaut.");
@@ -90,7 +90,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   if (!await until(() => /accepte/.test((doc.querySelector("#pdpContractFeedback") || {}).textContent || ""))) fail(`retour de l'offre : ${(doc.querySelector("#pdpContractFeedback") || {}).textContent}`);
   const saved = (await store.loadMultiLeague(multiSavePath)).league.teams[idx].players.find(p => p.id === last.id);
   if (saved.contractUntilSeason !== season + 4 || saved.nextSalary !== asked) fail(`prolongation non enregistrée : ${saved.contractUntilSeason} / ${saved.nextSalary}`);
-  if (!new RegExp(`Contrat jusqu'à la fin de la saison ${season + 4}`).test(doc.querySelector("#pdpContractCard").textContent)) fail("carte non mise à jour.");
+  if (!new RegExp(`Fin de contrat\\s*Saison ${season + 4}`).test(doc.querySelector("#pdpContractCard").textContent)) fail("carte non mise à jour.");
   ok("Fiche joueur : carte Contrat, offre de prolongation (1 à 5 saisons, salaire demandé -10 %), indice, vente bloquée, accord enregistré par le serveur");
 
   // 3) Demande d'augmentation : Accepter.
