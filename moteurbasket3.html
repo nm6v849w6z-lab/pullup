@@ -8861,6 +8861,9 @@
           <input type="text" class="topbar-search-input" id="compareSearchInput" placeholder="Rechercher le 2e joueur (nom)…" autocomplete="off" aria-label="Rechercher le 2e joueur">
           <div class="topbar-search-results hidden" id="compareSearchResults"></div>
         </div>
+        <!-- Menu déroulant (retour utilisateur 2026-10-03) : mon effectif +
+             mes jeunes, sans devoir chercher par nom. -->
+        <select id="compareMineSelect" class="tq-input" style="max-width:420px; margin-top:10px; width:100%;" aria-label="Choisir dans mon effectif ou mon académie"></select>
       </div>
       <div id="playerCompareContent"></div>
       <div class="actions">
@@ -31680,6 +31683,7 @@ function showPlayerComparePicker(teamIdxA, idA) {
   input.value = "";
   document.getElementById("compareSearchResults").innerHTML = "";
   document.getElementById("compareSearchResults").classList.add("hidden");
+  fillCompareMineSelect();
   picker.classList.remove("hidden");
   showPage("playerCompareSection");
   input.focus();
@@ -31737,6 +31741,33 @@ function renderCompareSearchResults(rawQuery) {
   box.classList.remove("hidden");
 }
 
+// Joueur d'un club pour le comparateur : effectif pro, puis académie (mon
+// club uniquement, les jeunes des autres ne sont jamais chargés).
+function comparePlayerOf(teamIdx, playerId) {
+  const t = league.teams[teamIdx];
+  if (!t) return null;
+  return t.players.find(p => p.id === playerId) || (teamIdx === myTeamIndex ? (t.youthPlayers || []).find(p => p.id === playerId) : null) || null;
+}
+// Menu déroulant : mon effectif (par poste) puis mes jeunes de l'académie.
+function fillCompareMineSelect() {
+  const sel = document.getElementById("compareMineSelect");
+  if (!sel || !teamA) return;
+  const a = playerCompareState.a;
+  const skip = p => a && a.teamIdx === myTeamIndex && a.playerId === p.id;
+  const order = { "Meneur": 0, "Arrière": 1, "Ailier shooteur": 2, "Ailier fort": 3, "Pivot": 4 };
+  const opt = p => `<option value="${p.id}">${escapeHtml(p.name)} · ${POS_SHORT[p.position] || ""} · ${p.age} ans</option>`;
+  const pros = teamA.players.filter(p => !skip(p)).sort((x, y) => (order[x.position] ?? 9) - (order[y.position] ?? 9) || y.overall() - x.overall());
+  const youth = (teamA.youthPlayers || []).filter(p => !skip(p));
+  sel.innerHTML = `<option value="">Ou choisir dans mon club…</option>` +
+    (pros.length ? `<optgroup label="Mon effectif">${pros.map(opt).join("")}</optgroup>` : "") +
+    (youth.length ? `<optgroup label="Mes jeunes (académie)">${youth.map(opt).join("")}</optgroup>` : "");
+  sel.value = "";
+}
+document.getElementById("compareMineSelect").addEventListener("change", (e) => {
+  if (!e.target.value) return;
+  playerCompareState.b = { teamIdx: myTeamIndex, playerId: Number(e.target.value) };
+  renderPlayerCompareView();
+});
 document.getElementById("compareSearchInput").addEventListener("input", (e) => renderCompareSearchResults(e.target.value));
 document.getElementById("compareSearchResults").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-compare-player-team][data-compare-player-id]");
@@ -31856,8 +31887,8 @@ function renderPlayerCompareView() {
 
   const teamObjA = league.teams[a.teamIdx];
   const teamObjB = league.teams[b.teamIdx];
-  const playerA = teamObjA && teamObjA.players.find(p => p.id === a.playerId);
-  const playerB = teamObjB && teamObjB.players.find(p => p.id === b.playerId);
+  const playerA = teamObjA && comparePlayerOf(a.teamIdx, a.playerId);
+  const playerB = teamObjB && comparePlayerOf(b.teamIdx, b.playerId);
   if (!playerA || !playerB) {
     picker.classList.add("hidden");
     holder.innerHTML = "<p class='training-empty'>Un des deux joueurs n'est plus disponible (vendu ou transféré depuis).</p>";
@@ -56142,6 +56173,12 @@ const TOUR_STEPS = [
     title: "Constituez votre staff",
     text: "Entraîneur, entraîneur adjoint, analyste vidéo, recruteur, médecin, kiné : chacun a 5 niveaux, avec un coût et un effet croissants. L'analyste vidéo révèle par exemple certaines caractéristiques cachées des joueurs adverses avant un match, et le kiné réduit le risque de blessure.",
     tip: "L'entraîneur adjoint (un par club) a une spécialité (tir, meneurs, intérieurs ou défense) : chaque semaine, tous vos joueurs non blessés progressent un peu dessus, même sans jouer.",
+  },
+  // Enchères du staff expliquées (retour utilisateur 2026-10-03).
+  { kind: "spotlight", topic: "Staff", page: "dashboard", target: '.tab-btn.sidebar-link[data-tab="staff"]', pos: "right",
+    title: "Recruter au marché du staff",
+    text: "Le staff se recrute aux enchères, dans l'onglet Marché, rubrique Staff. Chaque candidat (niveau 1 à 5) reste en vente 1 jour réel et les autres clubs peuvent surenchérir jusqu'au bout. Votre mise n'est pas un paiement unique : c'est le salaire hebdomadaire de départ du membre du staff, qui augmente ensuite un peu chaque semaine.",
+    tip: "Gagner une enchère remplace votre membre du staff actuel au même poste, sans indemnité. Le montant de vos enchères en tête est réservé sur votre budget jusqu'à la fin de la vente.",
     reward: TOUR_REWARD_BY_TOPIC["Staff"],
   },
 

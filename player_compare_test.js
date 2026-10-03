@@ -69,6 +69,22 @@ function expectedTierClass(value) {
   }
   console.log("✅ Cliquer \"Comparer\" ouvre bien la page dédiée avec le sélecteur du 2e joueur, joueur A déjà fixé.");
 
+  // --- Menu déroulant : mon effectif (+ mes jeunes), sans le joueur A.
+  const mineSel = doc.getElementById("compareMineSelect");
+  const mineOpts = [...mineSel.querySelectorAll("optgroup option")];
+  if (!mineSel.querySelector('optgroup[label="Mon effectif"]') || mineOpts.length < 5) throw new Error("❌ Le menu déroulant devrait lister mon effectif.");
+  if (mineOpts.some(o => Number(o.value) === playerA.id)) throw new Error("❌ Le joueur A ne devrait pas être dans le menu déroulant.");
+  const youthGroup = mineSel.querySelector('optgroup[label="Mes jeunes (académie)"]');
+  if (youthGroup) {
+    mineSel.value = youthGroup.querySelector("option").value;
+    mineSel.dispatchEvent(new win.Event("change", { bubbles: true }));
+    if (!doc.getElementById("playerCompareContent").querySelector(".compare-heads")) throw new Error("❌ Choisir un jeune devrait afficher la comparaison.");
+    // Retour au sélecteur pour la suite du test.
+    doc.getElementById("playerCompareContent").innerHTML = "";
+    picker.classList.remove("hidden");
+  }
+  console.log(`✅ Menu déroulant : mon effectif${youthGroup ? " + mes jeunes (comparaison OK)" : ""}, sans le joueur A.`);
+
   // --- Recherche + sélection du 2e joueur (réutilise normalizeSearchText).
   const input = doc.getElementById("compareSearchInput");
   input.value = playerB.name.slice(0, 4);
