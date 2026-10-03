@@ -5883,4 +5883,6 @@ window.HM_I18N_LT = {
   "Remplacement en cours": "Vyksta pakeitimas",
   "Dépassés": "Pralenkti",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Privačios lygos laikinai nepasiekiamos, bandyk dar kartą po kelių minučių.",
+  "Maîtrise du système": "Sistemos įvaldymas",
+  "Système {0}": "Sistema {0}",
 };

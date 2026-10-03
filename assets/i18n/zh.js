@@ -5883,4 +5883,6 @@ window.HM_I18N_ZH = {
   "Remplacement en cours": "替换进行中",
   "Dépassés": "被超越",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "私人联赛暂时无法使用，请几分钟后再试。",
+  "Maîtrise du système": "体系掌握度",
+  "Système {0}": "体系 {0}",
 };

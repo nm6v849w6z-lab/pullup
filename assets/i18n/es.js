@@ -5883,4 +5883,6 @@ window.HM_I18N_ES = {
   "Remplacement en cours": "Sustitución en curso",
   "Dépassés": "Superadas",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Ligas privadas no disponibles por el momento, inténtalo de nuevo en unos minutos.",
+  "Maîtrise du système": "Dominio del sistema",
+  "Système {0}": "Sistema {0}",
 };

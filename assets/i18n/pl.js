@@ -5883,4 +5883,6 @@ window.HM_I18N_PL = {
   "Remplacement en cours": "Trwa zastępstwo",
   "Dépassés": "Przebite",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Ligi prywatne są chwilowo niedostępne, spróbuj ponownie za kilka minut.",
+  "Maîtrise du système": "Opanowanie systemu",
+  "Système {0}": "System {0}",
 };

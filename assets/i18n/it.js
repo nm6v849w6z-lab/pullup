@@ -5946,4 +5946,6 @@ window.HM_I18N_IT = {
   "Remplacement en cours": "Sostituzione in corso",
   "Dépassés": "Superate",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Leghe private momentaneamente non disponibili, riprova tra qualche minuto.",
+  "Maîtrise du système": "Padronanza del sistema",
+  "Système {0}": "Sistema {0}",
 };

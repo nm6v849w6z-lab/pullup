@@ -5883,4 +5883,6 @@ window.HM_I18N_DE = {
   "Remplacement en cours": "Nachfolger in Aussicht",
   "Dépassés": "Überboten",
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Private Ligen sind vorübergehend nicht verfügbar, versuche es in ein paar Minuten erneut.",
+  "Maîtrise du système": "Beherrschung des Systems",
+  "Système {0}": "System {0}",
 };

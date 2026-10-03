@@ -39,6 +39,16 @@ const {
 } = E;
 
 const T0 = Date.UTC(2026, 8, 21);
+
+// Ce fichier vérifie la mécanique COLLECTIVE (Team.tacticalKnowledge), que
+// gardent les clubs IA depuis la connaissance individuelle des clubs humains
+// (retour utilisateur 2026-10-03, voir individual_tactical_knowledge_test.js) :
+// les équipes de test restent donc des clubs IA, même après generateLeague.
+function cpuRoster(name) {
+  const t = generateStartingRoster(name);
+  Object.defineProperty(t, "isHuman", { get: () => false, set: () => {}, configurable: true });
+  return t;
+}
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------
@@ -60,7 +70,7 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
     throw new Error("❌ Le gain ne devrait jamais dépasser le plafond, même très loin dans la série.");
   }
 
-  const home = generateStartingRoster("Gain Curve");
+  const home = cpuRoster("Gain Curve");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   const values = [];
@@ -90,7 +100,7 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
   if (TACTICAL_KNOWLEDGE_LOSS_MAX >= TACTICAL_KNOWLEDGE_GAIN_MAX) {
     throw new Error("❌ La perte max par match doit rester inférieure au gain max (oublier ne doit pas aller plus vite qu'apprendre).");
   }
-  const home = generateStartingRoster("Loss Curve");
+  const home = cpuRoster("Loss Curve");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   recordMatchStatsForTeam(home, 0, "championship", T0); // H2H streak=1 -> 56
@@ -153,7 +163,7 @@ function referenceTrajectory(matches) {
 }
 
 (function testPerOptionIndependence() {
-  const home = generateStartingRoster("Per Option Independence");
+  const home = cpuRoster("Per Option Independence");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
 
@@ -208,7 +218,7 @@ function referenceTrajectory(matches) {
 //    l'option était jouée.)
 // ---------------------------------------------------------------------
 (function testTacticDayGainByLevel() {
-  const home = generateStartingRoster("Training Bonus Live Only");
+  const home = cpuRoster("Training Bonus Live Only");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   recordMatchStatsForTeam(home, 0, "championship", T0); // streak=1 -> +6
@@ -264,7 +274,7 @@ function referenceTrajectory(matches) {
 //    gratuit (aucune perte), mais réinitialise quand même l'élan de gain.
 // ---------------------------------------------------------------------
 (function testReturnAfterMultiMatchAbsenceRampsLikeFreshLearning() {
-  const home = generateStartingRoster("Return After Absence");
+  const home = cpuRoster("Return After Absence");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   // Joue Homme à homme 4 matchs de suite : haute maîtrise (plafond de gain atteint).
@@ -307,7 +317,7 @@ function referenceTrajectory(matches) {
 })();
 
 (function testSingleMatchDetourIsFreeButResetsGainMomentum() {
-  const home = generateStartingRoster("Single Match Detour");
+  const home = cpuRoster("Single Match Detour");
   generateLeague(home, 1, T0);
   home.defense = "Homme à homme";
   // 3 matchs de suite : streak=3 côté gain, prêt pour +12 au prochain match consécutif.
@@ -340,7 +350,7 @@ function referenceTrajectory(matches) {
 //    ensemble).
 // ---------------------------------------------------------------------
 (function testTacticalKnowledgeAffectsPerformance() {
-  const team = generateStartingRoster("Perf Test");
+  const team = cpuRoster("Perf Test");
   generateLeague(team, 1, T0);
   const p = team.players[0];
   p.form = 70; p.fatigue = 0; p.condition = 100; p.pendingMatchBoost = 0;
@@ -382,8 +392,8 @@ function referenceTrajectory(matches) {
 //    matchTacticalKnowledgeFactor sur tous les joueurs, sans planter.
 // ---------------------------------------------------------------------
 (function testMatchEngineIntegration() {
-  const home = generateStartingRoster("Home MC Test");
-  const away = generateStartingRoster("Away MC Test");
+  const home = cpuRoster("Home MC Test");
+  const away = cpuRoster("Away MC Test");
   home.offensivePriorities.forEach(pr => { home.tacticalKnowledge.offense[pr] = 85; });
   home.tacticalKnowledge.defense[home.defense] = 85;
   home.tacticalKnowledge.rhythm[home.rhythm] = 85;
@@ -406,7 +416,7 @@ function referenceTrajectory(matches) {
 //    négatives (absence en cours).
 // ---------------------------------------------------------------------
 (function testSerializationRoundTrip() {
-  const team = generateStartingRoster("Roundtrip Tactical Knowledge");
+  const team = cpuRoster("Roundtrip Tactical Knowledge");
   generateLeague(team, 1, T0);
   team.tacticalKnowledge.offense["Équilibrée"] = 63;
   team.tacticalKnowledge.defense["Zone press"] = 28;
@@ -468,7 +478,7 @@ function referenceTrajectory(matches) {
 //    neutres par défaut (50) sur les 18 options, jamais une erreur.
 // ---------------------------------------------------------------------
 (function testBackwardCompatibilityMissingTacticalKnowledge() {
-  const team = generateStartingRoster("Old Save No Tactical Knowledge");
+  const team = cpuRoster("Old Save No Tactical Knowledge");
   generateLeague(team, 1, T0);
   const saved = serializeTeam(team);
   delete saved.tacticalKnowledge;
@@ -497,7 +507,7 @@ function referenceTrajectory(matches) {
 //     inventée pour les 15 autres options.
 // ---------------------------------------------------------------------
 (function testBackwardCompatibilityOldScalarFormat() {
-  const team = generateStartingRoster("Old Scalar Format");
+  const team = cpuRoster("Old Scalar Format");
   generateLeague(team, 1, T0);
   team.defense = "Zone press";
   team.rhythm = "Lent";

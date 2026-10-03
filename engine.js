@@ -2219,6 +2219,9 @@ function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
     }, { clubName: seller.name });
   }
   buyer.players.push(player);
+  // Recrue : connaissance tactique individuelle remise à 40 (voir
+  // PLAYER_TACTICAL_KNOWLEDGE_RECRUIT).
+  resetPlayerTacticalKnowledge(player);
   // Voir TRANSFER_NEW_CLUB_MOTIVATION_FLOOR : un vrai changement de club
   // relève la motivation jusqu'à ce plancher, referme toute demande de
   // transfert active.
@@ -5295,6 +5298,52 @@ function tacticalKnowledgeLossForStreak(awayStreak) {
 // version de cette fonctionnalité ("l'entrainement augmente la
 // connaissance tactique", littéralement).
 const TACTICAL_KNOWLEDGE_DAILY_GAIN = 4;
+// CONNAISSANCE TACTIQUE INDIVIDUELLE (retour utilisateur 2026-10-03 :
+// "J'ai changé 80% de l'équipe et ça n'a pas bougé", "il faudrait que la
+// connaissance tactique soit au niveau individuel", solution B retenue) :
+// pour un club humain, chaque joueur a SA maîtrise de chacune des 18 options
+// (Player.tacticalKnowledge, même forme que Team.tacticalKnowledge). Une
+// recrue arrive à PLAYER_TACTICAL_KNOWLEDGE_RECRUIT partout ; un match
+// officiel fait gagner +3, +4, +5 puis +6 au plus (série de l'option, voir
+// playerTacticalKnowledgeGainForStreak) au prorata des minutes jouées
+// (plein gain dès TACTICAL_FULL_GAIN_SECONDS) ; le jour « Tactique » profite
+// à tout l'effectif. Team.tacticalKnowledge devient la jauge d'équipe :
+// moyenne pondérée par les minutes prévues au prochain match (voir
+// Team.recomputeTacticalKnowledge). Les clubs IA gardent la connaissance
+// collective d'avant. La ligue privée n'y touche pas.
+const PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE = 3;
+const PLAYER_TACTICAL_KNOWLEDGE_GAIN_STEP = 1;
+const PLAYER_TACTICAL_KNOWLEDGE_GAIN_MAX = 6;
+const PLAYER_TACTICAL_KNOWLEDGE_RECRUIT = 40;
+const TACTICAL_FULL_GAIN_SECONDS = 30 * 60;
+function playerTacticalKnowledgeGainForStreak(playStreak) {
+  if (playStreak <= 0) return 0;
+  return Math.min(PLAYER_TACTICAL_KNOWLEDGE_GAIN_MAX, PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE + (playStreak - 1) * PLAYER_TACTICAL_KNOWLEDGE_GAIN_STEP);
+}
+// Copie d'une maîtrise par option (forme defaultTacticalKnowledgeShape),
+// valeurs manquantes à `fallback`.
+function copyTacticalKnowledge(src, fallback = PLAYER_TACTICAL_KNOWLEDGE_RECRUIT) {
+  const out = defaultTacticalKnowledgeShape(fallback);
+  ["offense", "defense", "rhythm"].forEach(cat => {
+    const s = src && src[cat];
+    if (!s || typeof s !== "object") return;
+    Object.keys(out[cat]).forEach(key => {
+      if (typeof s[key] === "number" && Number.isFinite(s[key])) out[cat][key] = clamp(s[key], TACTICAL_KNOWLEDGE_FLOOR, 100);
+    });
+  });
+  return out;
+}
+// Maîtrise moyenne (0-100) d'une tactique (priorités offensives, défense,
+// rythme) selon une maîtrise par option.
+function tacticalKnowledgeAverage(k, priorities, defense, rhythm) {
+  const off = (priorities || []).map(p => (k.offense || {})[p] ?? 50);
+  const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
+  return (offAvg + ((k.defense || {})[defense] ?? 50) + ((k.rhythm || {})[rhythm] ?? 50)) / 3;
+}
+// Recrue : maîtrise remise à PLAYER_TACTICAL_KNOWLEDGE_RECRUIT partout.
+function resetPlayerTacticalKnowledge(p) {
+  if (p) p.tacticalKnowledge = defaultTacticalKnowledgeShape(PLAYER_TACTICAL_KNOWLEDGE_RECRUIT);
+}
 // Amical : poids d'une minute jouée selon le rôle du joueur (voir
 // Team.gainTacticalKnowledgeFromFriendly).
 const FRIENDLY_TACTICAL_ROLE_WEIGHTS = { starter: 1, rotation: 0.5, reserve: 0 };
@@ -6822,7 +6871,33 @@ class Team {
   // accumulés inchangés (réservés au prochain match officiel).
   // `secondsByPlayerId` : secondes jouées dans l'amical par joueur (pros et
   // jeunes). Renvoie la part retenue (0 à 1).
-  gainTacticalKnowledgeFromFriendly(secondsByPlayerId) {
+  gainTacticalKnowledgeFromFriendly(secondsByPlayerId, youthPlayers = null) {
+    // Club humain : chaque joueur (jeunes compris) apprend selon SES minutes
+    // (voir PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE).
+    if (this.isHuman) {
+      const pool = [...(this.players || []), ...(youthPlayers || this.youthPlayers || [])];
+      let gained = 0;
+      Object.entries(secondsByPlayerId || {}).forEach(([id, secs]) => {
+        if (!(secs > 0)) return;
+        const p = pool.find(pl => String(pl.id) === String(id));
+        if (!p) return;
+        const isPro = (this.players || []).includes(p);
+        const k = isPro ? this.ensurePlayerTacticalKnowledge(p) : (p.tacticalKnowledge = copyTacticalKnowledge(p.tacticalKnowledge));
+        const share = Math.min(1, secs / TACTICAL_FULL_GAIN_SECONDS);
+        const apply = (cat, key) => {
+          if (!(key in k[cat])) return;
+          const streak = ((this.tacticalKnowledgeStreaks || {})[cat] || {})[key] || 0;
+          const gain = playerTacticalKnowledgeGainForStreak(streak > 0 ? streak + 1 : 1) * share;
+          k[cat][key] = clamp(Math.round((k[cat][key] + gain) * 10) / 10, 0, 100);
+        };
+        new Set(this.offensivePriorities || []).forEach(o => apply("offense", o));
+        apply("defense", this.defense);
+        apply("rhythm", this.rhythm);
+        gained++;
+      });
+      this.recomputeTacticalKnowledge();
+      return gained > 0 ? 1 : 0;
+    }
     let total = 0, weighted = 0;
     const backups = (this.lineup && this.lineup.backupPositions) || {};
     Object.entries(secondsByPlayerId || {}).forEach(([id, secs]) => {
@@ -6924,8 +6999,20 @@ class Team {
     const knowledge = this.tacticalKnowledge && this.tacticalKnowledge[target.category];
     if (!knowledge || !(target.value in knowledge)) return;
     const before = knowledge[target.value];
-    const after = clamp(Math.round((before + tacticDailyGainForLevel(before)) * 10) / 10, 0, 100);
-    knowledge[target.value] = after;
+    let after;
+    if (this.isHuman && (this.players || []).length) {
+      // Connaissance individuelle : tout l'effectif présent travaille
+      // l'aspect, chacun selon SON niveau.
+      this.players.forEach(p => {
+        const k = this.ensurePlayerTacticalKnowledge(p)[target.category];
+        k[target.value] = clamp(Math.round((k[target.value] + tacticDailyGainForLevel(k[target.value])) * 10) / 10, 0, 100);
+      });
+      this.recomputeTacticalKnowledge();
+      after = knowledge[target.value];
+    } else {
+      after = clamp(Math.round((before + tacticDailyGainForLevel(before)) * 10) / 10, 0, 100);
+      knowledge[target.value] = after;
+    }
     const week = this.ensureCollectiveWeek();
     const key = `${target.category}:${target.value}`;
     if (!week.tactics[key]) week.tactics[key] = { category: target.category, value: target.value, before, after };
@@ -7026,6 +7113,14 @@ class Team {
     // préparation en avance sur une option pas encore en live n'accélère
     // rien tant que l'ordre live n'a pas changé, le crédit reste en
     // attente).
+    // Club humain : connaissance individuelle (voir
+    // PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE), gain au prorata des minutes
+    // jouées CE match, perte des options délaissées pour tout l'effectif.
+    const individual = this.isHuman && (this.players || []).length > 0;
+    const roster = individual ? this.players.map(p => ({ k: this.ensurePlayerTacticalKnowledge(p), share: Math.min(1, (p.secondsPlayed || 0) / TACTICAL_FULL_GAIN_SECONDS) })) : [];
+    const lose = (knowledge, key, loss) => {
+      knowledge[key] = Math.max(Math.min(knowledge[key], TACTICAL_KNOWLEDGE_FLOOR), clamp(knowledge[key] - loss, TACTICAL_KNOWLEDGE_FLOOR, 100));
+    };
     const updateOne = (cat, key, played) => {
       const streaks = this.tacticalKnowledgeStreaks[cat];
       const knowledge = this.tacticalKnowledge[cat];
@@ -7033,18 +7128,25 @@ class Team {
       if (played) {
         const streak = prevStreak > 0 ? prevStreak + 1 : 1;
         streaks[key] = streak;
-        const gain = tacticalKnowledgeGainForStreak(streak);
-        knowledge[key] = clamp(knowledge[key] + gain, 0, 100);
+        if (individual) {
+          const gain = playerTacticalKnowledgeGainForStreak(streak);
+          roster.forEach(r => { if (r.share > 0) r.k[cat][key] = clamp(Math.round((r.k[cat][key] + gain * r.share) * 10) / 10, 0, 100); });
+        } else {
+          const gain = tacticalKnowledgeGainForStreak(streak);
+          knowledge[key] = clamp(knowledge[key] + gain, 0, 100);
+        }
       } else {
         const streak = prevStreak < 0 ? prevStreak - 1 : -1;
         streaks[key] = streak;
         const loss = tacticalKnowledgeLossForStreak(-streak);
-        knowledge[key] = Math.max(Math.min(knowledge[key], TACTICAL_KNOWLEDGE_FLOOR), clamp(knowledge[key] - loss, TACTICAL_KNOWLEDGE_FLOOR, 100));
+        if (individual) roster.forEach(r => lose(r.k[cat], key, loss));
+        else lose(knowledge, key, loss);
       }
     };
     Object.keys(OFFENSE_PROFILES).forEach(p => updateOne("offense", p, playedOffense.has(p)));
     Object.keys(DEFENSES).forEach(d => updateOne("defense", d, d === this.defense));
     Object.keys(RHYTHMS).forEach(r => updateOne("rhythm", r, r === this.rhythm));
+    if (individual) this.recomputeTacticalKnowledge();
 
     // Ce match consomme tout le crédit accumulé dans collectiveTrainingLog
     // (voir daysTrainedForTarget ci-dessus) : nouveau cycle à partir de
@@ -7141,10 +7243,66 @@ class Team {
   tacticPresetKnowledge(slot) {
     const p = (this.tacticPresets || [])[slot];
     if (!p) return null;
-    const k = this.tacticalKnowledge;
-    const off = (p.orders.offensivePriorities || []).map(x => k.offense[x] ?? 50);
-    const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
-    return Math.round((offAvg + (k.defense[p.orders.defense] ?? 50) + (k.rhythm[p.orders.rhythm] ?? 50)) / 3);
+    return Math.round(tacticalKnowledgeAverage(this.tacticalKnowledge, p.orders.offensivePriorities, p.orders.defense, p.orders.rhythm));
+  }
+
+  // Maîtrise individuelle d'un joueur de l'effectif (voir
+  // PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE) : créée au besoin depuis la jauge
+  // d'équipe (joueur d'avant la connaissance individuelle : rien ne bouge
+  // au déploiement). Une recrue est remise à 40 par
+  // resetPlayerTacticalKnowledge au moment de son arrivée.
+  ensurePlayerTacticalKnowledge(p) {
+    if (!p.tacticalKnowledge || typeof p.tacticalKnowledge !== "object" || !p.tacticalKnowledge.offense) {
+      p.tacticalKnowledge = copyTacticalKnowledge(this.tacticalKnowledge, 50);
+    }
+    return p.tacticalKnowledge;
+  }
+  // Lecture seule (pas de création) : sa maîtrise, sinon la jauge d'équipe.
+  playerTacticalKnowledgeOf(p) {
+    return (this.isHuman && p && p.tacticalKnowledge && p.tacticalKnowledge.offense) ? p.tacticalKnowledge : this.tacticalKnowledge;
+  }
+  // Maîtrise (0-100) d'un joueur pour la tactique ACTUELLE du club.
+  playerSystemMastery(p) {
+    return tacticalKnowledgeAverage(this.playerTacticalKnowledgeOf(p), this.offensivePriorities, this.defense, this.rhythm);
+  }
+  // Minutes prévues au prochain match par joueur : minutes réglées du poste,
+  // sinon la répartition proposée (defaultSlotMinutes) ; 0 hors convocation.
+  plannedMinutesByPlayer() {
+    const out = {};
+    if (!this.lineup || !this.lineup.starters) return out;
+    POSITIONS.forEach(pos => {
+      const mins = (this.lineup.minutes && this.lineup.minutes[pos]) || this.defaultSlotMinutes(pos);
+      Object.entries(mins).forEach(([id, m]) => { out[id] = (out[id] || 0) + (Number(m) || 0); });
+    });
+    if (Array.isArray(this.lineup.convoked)) {
+      const convoked = new Set(this.lineup.convoked.map(String));
+      Object.keys(out).forEach(id => { if (!convoked.has(String(id))) out[id] = 0; });
+    }
+    return out;
+  }
+  // Jauge d'équipe (Team.tacticalKnowledge) d'un club humain : moyenne des
+  // maîtrises individuelles pondérée par les minutes prévues au prochain
+  // match (effectif entier à parts égales si aucune minute n'est prévue).
+  recomputeTacticalKnowledge() {
+    if (!this.isHuman || !(this.players || []).length) return this.tacticalKnowledge;
+    const planned = this.plannedMinutesByPlayer();
+    let weights = this.players.map(p => planned[String(p.id)] || 0);
+    if (!weights.some(w => w > 0)) weights = this.players.map(() => 1);
+    const total = weights.reduce((a, b) => a + b, 0);
+    const ks = this.players.map(p => this.ensurePlayerTacticalKnowledge(p));
+    ["offense", "defense", "rhythm"].forEach(cat => {
+      Object.keys(this.tacticalKnowledge[cat]).forEach(key => {
+        let sum = 0;
+        ks.forEach((k, i) => { sum += (k[cat][key] ?? 50) * weights[i]; });
+        this.tacticalKnowledge[cat][key] = Math.round((sum / total) * 10) / 10;
+      });
+    });
+    return this.tacticalKnowledge;
+  }
+
+  // Multiplicateur individuel en match : sa propre maîtrise du système.
+  playerTacticalKnowledgeFactor(p) {
+    return 0.92 + (this.playerSystemMastery(p) / 100) * 0.16;
   }
 
   tacticalKnowledgeFactor() {
@@ -7996,6 +8154,8 @@ class Team {
     if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
+    // Jeune promu : garde ce qu'il a appris en amical, 40 ailleurs.
+    player.tacticalKnowledge = copyTacticalKnowledge(player.tacticalKnowledge);
     this.players.push(player);
     ensureJerseyNumbers(this);
     // Palmarès du club (voir this.academyGraduates au constructeur) : cette
@@ -9309,6 +9469,7 @@ class Team {
     const chemistryFactor = this.chemistryFactor();
     // Connaissance tactique (voir Team.tacticalKnowledgeFactor plus haut) :
     // même snapshot d'ÉQUIPE, SÉPARÉ de chemistryFactor ci-dessus.
+    if (this.isHuman) this.recomputeTacticalKnowledge();
     const tacticalKnowledgeFactor = this.tacticalKnowledgeFactor();
     // Récupération de forme physique (retour utilisateur, 2026-09, voir
     // Team.conditionRecoveryPerDay/collectiveTraining) : taux du club ;
@@ -9317,7 +9478,8 @@ class Team {
     this.players.forEach(p => {
       p.resetForMatch(now, this.conditionRecoveryPerDay());
       p.matchChemistryFactor = chemistryFactor;
-      p.matchTacticalKnowledgeFactor = tacticalKnowledgeFactor;
+      // Club humain : chaque joueur joue avec SA maîtrise du système.
+      p.matchTacticalKnowledgeFactor = this.isHuman ? this.playerTacticalKnowledgeFactor(p) : tacticalKnowledgeFactor;
     });
     // Convocation (voir Team.convokedIds) : seuls les convoqués peuvent jouer.
     const convokedNow = new Set(this.convokedIds());
@@ -11693,7 +11855,9 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
   // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
-  if (team.updateTacticalKnowledge) team.updateTacticalKnowledge(now);
+  // Amical : la coquille porte les VRAIS joueurs, leur connaissance est
+  // gérée à part (Team.gainTacticalKnowledgeFromFriendly sur le vrai club).
+  if (team.updateTacticalKnowledge && competition !== "friendly") team.updateTacticalKnowledge(now);
   // Alchimie : jouer ensemble soude le groupe (voir updateChemistryAfterMatch).
   if (team.updateChemistryAfterMatch) team.updateChemistryAfterMatch();
   team.players.forEach(p => {
@@ -12459,6 +12623,7 @@ class League {
           const pos = POSITIONS.find(ps => !team.players.some(x => x.position === ps)) || POSITIONS[team.players.length % POSITIONS.length];
           const rookie = generateRookiePlayer(pos);
           rookie.age = 19;
+          resetPlayerTacticalKnowledge(rookie);
           team.players.push(rookie);
           if (team.feed) {
             pushEntry(team.feed, {
@@ -13229,6 +13394,7 @@ class League {
           const rookie = generateRookiePlayer(pos);
           rookie.age = 19;
           signNewContract(rookie, 2, season + 1, rookie.salary);
+          resetPlayerTacticalKnowledge(rookie);
           team.players.push(rookie);
         }
       }
@@ -13311,6 +13477,7 @@ class League {
     const [player] = this.freeAgents.splice(i, 1);
     if (buyer.isHuman && amount > 0) buyer.recordTransaction(`${FREE_AGENT_SIGNING_LABEL} : ${player.name}`, -amount);
     buyer.players.push(player);
+    resetPlayerTacticalKnowledge(player);
     if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
     player.weeksAtLowMotivation = 0;
     this._applyTransferContract(listing, buyer, player, buyerSeason, now);
@@ -15628,6 +15795,8 @@ function serializePlayerRecord(p) {
     // naturelle hebdomadaire (Player.trainWeek) viserait un plafond redéfini
     // au hasard à chaque chargement de la sauvegarde.
     physicalPotential: { ...p.physicalPotential }, mentalPotential: { ...p.mentalPotential },
+    // Connaissance tactique individuelle (voir PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE).
+    ...(p.tacticalKnowledge && p.tacticalKnowledge.offense ? { tacticalKnowledge: copyTacticalKnowledge(p.tacticalKnowledge) } : {}),
     // `effectivePosition` (voir Player.constructor/levelCoefficientFor) :
     // DOIT être sauvegardé au même rythme que `salary` juste au-dessus
     // (retour utilisateur, 2026-09 : "le poste est fixé en début de saison
@@ -16201,6 +16370,7 @@ function playerFromSave(pdata) {
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
   p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
+  if (pdata.tacticalKnowledge && typeof pdata.tacticalKnowledge === "object" && pdata.tacticalKnowledge.offense) p.tacticalKnowledge = copyTacticalKnowledge(pdata.tacticalKnowledge);
   // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
   // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
   // manquent alors totalement dans pdata.attrs, ce qui rendrait overall() (et
@@ -18992,6 +19162,8 @@ return {
   TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
+  PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE, PLAYER_TACTICAL_KNOWLEDGE_GAIN_STEP, PLAYER_TACTICAL_KNOWLEDGE_GAIN_MAX, PLAYER_TACTICAL_KNOWLEDGE_RECRUIT, TACTICAL_FULL_GAIN_SECONDS,
+  playerTacticalKnowledgeGainForStreak, copyTacticalKnowledge, tacticalKnowledgeAverage, resetPlayerTacticalKnowledge,
   CLUB_FACILITIES, facilityInfo,
   POSITION_STRONG_ATTRS,
   SALARY_BASELINE_OVERALL, SALARY_AT_BASELINE, SALARY_GROWTH_PER_POINT, SALARY_MIN, salaryForOverall,

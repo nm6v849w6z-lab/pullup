@@ -326,8 +326,11 @@ function paris(ms) {
   const wedGain = Math.round(E.tacticDailyGainForLevel(beforeWed) * 10) / 10;
   if (Math.abs((afterWed - beforeWed) - Math.min(wedGain, 100 - beforeWed)) > 1e-6) throw new Error(`❌ Le mercredi (repos) doit être crédité : gain ${afterWed - beforeWed}, attendu ${wedGain}.`);
   const before = afterWed;
-  const expectedGain = E.tacticalKnowledgeGainForStreak(1);
+  // Club humain : connaissance individuelle (retour utilisateur
+  // 2026-10-03), gain d'un match complet pour chaque joueur.
+  const expectedGain = E.playerTacticalKnowledgeGainForStreak(1);
   team.tacticalKnowledgeStreaks.defense[target.value] = 0;
+  team.players.forEach(p => { p.secondsPlayed = E.TACTICAL_FULL_GAIN_SECONDS; });
   team.updateTacticalKnowledge(Date.UTC(2026, 9, 1, 18));
   const gain = team.tacticalKnowledge.defense[target.value] - before;
   if (Math.abs(gain - Math.min(expectedGain, 100 - before)) > 1e-9) throw new Error(`❌ Le match n'ajoute que sa série : gain ${gain}, attendu ${expectedGain}.`);
@@ -436,40 +439,26 @@ function paris(ms) {
 })();
 
 // ---------------------------------------------------------------------
-// 13) Connaissance tactique en amical (retour utilisateur, 2026-09-27) :
-//     gain d'un match × part des minutes pondérées par le rôle (Titulaire 1,
-//     rotation 0,5, réserviste/jeune 0) ; jamais de perte ni de séries.
+// 13) Connaissance tactique en amical : depuis la connaissance individuelle
+//     (retour utilisateur 2026-10-03), chaque joueur apprend selon SES
+//     minutes (plein gain dès 30 min) ; jamais de perte ni de séries.
 // ---------------------------------------------------------------------
-(function testFriendlyTacticalGainByRole() {
+(function testFriendlyTacticalGainPerPlayer() {
   const lg = E.generateMultiManagerLeague(["A"], 1, Date.UTC(2026, 8, 27, 9), C.dailyAnchoredCalendarConfig());
   const team = lg.teams.find(t => t.isHuman);
-  const starters = Object.values(team.lineup.starters).filter(id => id != null);
-  const rotation = team.players.map(p => p.id).filter(id => !starters.includes(id) && (team.lineup.backupPositions[id] || []).length);
-  const reserve = team.players.map(p => p.id).find(id => !starters.includes(id) && !(team.lineup.backupPositions[id] || []).length);
-  if (starters.length !== 5 || !rotation.length) throw new Error("❌ (setup) compo attendue avec 5 titulaires et des remplaçants.");
   const def = team.defense;
-  const base = E.tacticalKnowledgeGainForStreak(1);
-  const run = (secs) => {
-    team.tacticalKnowledge.defense[def] = 50;
-    team.tacticalKnowledgeStreaks.defense[def] = 0;
-    const other = Object.keys(E.DEFENSES).find(d => d !== def);
-    team.tacticalKnowledge.defense[other] = 50;
-    const share = team.gainTacticalKnowledgeFromFriendly(secs);
-    if (team.tacticalKnowledge.defense[other] !== 50) throw new Error("❌ Un amical ne doit jamais faire perdre de maîtrise.");
-    if (team.tacticalKnowledgeStreaks.defense[def] !== 0) throw new Error("❌ Un amical ne doit pas toucher aux séries.");
-    return { share, gain: team.tacticalKnowledge.defense[def] - 50 };
-  };
-  let r = run(Object.fromEntries(starters.map(id => [id, 40 * 60])));
-  if (r.share !== 1 || Math.abs(r.gain - base) > 0.05) throw new Error(`❌ Cinq titulaires 40 min : gain d'un match attendu (${base}), obtenu ${r.gain}.`);
-  const mixed = Object.fromEntries(starters.map(id => [id, 30 * 60]));
-  mixed[rotation[0]] = 50 * 60;
-  r = run(mixed);
-  if (Math.abs(r.share - 0.875) > 1e-9) throw new Error(`❌ 150 min titulaires + 50 min rotation : part 87,5 % attendue, obtenu ${r.share}.`);
-  r = run({ [reserve]: 100 * 60, youth1: 100 * 60 });
-  if (r.share !== 0 || r.gain !== 0) throw new Error("❌ Réservistes et jeunes seulement : aucun gain.");
+  const other = Object.keys(E.DEFENSES).find(d => d !== def);
+  team.players.forEach(p => { p.tacticalKnowledge = E.defaultTacticalKnowledgeShape(50); });
+  const [a, b, c] = team.players;
+  team.gainTacticalKnowledgeFromFriendly({ [a.id]: 40 * 60, [b.id]: 15 * 60 });
+  const base = E.playerTacticalKnowledgeGainForStreak(1);
+  const v = p => p.tacticalKnowledge.defense[def];
+  if (v(a) !== 50 + base || v(b) !== 50 + base / 2 || v(c) !== 50) throw new Error(`❌ Amical : gain au prorata des minutes attendu, obtenu ${v(a)} / ${v(b)} / ${v(c)}.`);
+  if (team.players.some(p => p.tacticalKnowledge.defense[other] !== 50)) throw new Error("❌ Un amical ne doit jamais faire perdre de maîtrise.");
+  if (team.tacticalKnowledgeStreaks.defense[def] !== 0) throw new Error("❌ Un amical ne doit pas toucher aux séries.");
   const fsrc = fs.readFileSync(path.join(__dirname, "friendlies.js"), "utf-8");
   if (!fsrc.includes("t.gainTacticalKnowledgeFromFriendly(secs)")) throw new Error("❌ server/friendlies.js doit appliquer le gain tactique sur les vrais clubs.");
-  console.log("✅ Amical : gain tactique × part des minutes pondérées par le rôle (100 % / 87,5 % / 0 %), sans perte.");
+  console.log("✅ Amical : chaque joueur gagne selon ses minutes (+3 / +1,5 / 0), sans perte.");
 })();
 
 console.log("\n🏁 Tous les tests du rythme hebdomadaire sont passés.");
