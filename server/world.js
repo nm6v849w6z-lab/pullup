@@ -87,6 +87,19 @@ async function loadWorld(savePath, now = Date.now()) {
   return world;
 }
 
+// Salaire de chaque joueur recalculé sur son meilleur poste (voir
+// Engine.levelCoefficientFor). Les prolongations déjà signées (nextSalary)
+// restent telles quelles pour la saison suivante.
+function applyBestPositionSalaries(lg) {
+  let n = 0;
+  (lg.teams || []).forEach(t => (t.players || []).forEach(p => {
+    if (!p || !p.attrs) return;
+    const s = Engine.salaryForOverall(Engine.levelCoefficientFor(p.attrs, p.position).coefficient);
+    if (s !== p.salary) { p.salary = s; n++; }
+  }));
+  return n;
+}
+
 async function saveWorld(world, savePath) {
   await store.saveWorldRaw(world, savePath);
 }
@@ -556,15 +569,22 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   // réécrites (empreinte de la sérialisation au chargement).
   const allLeagues = new Map();
   const fingerprints = new Map();
+  // Recalcul unique des salaires au MEILLEUR poste (demande utilisateur
+  // 2026-10-03 : « applique le recalcul salarial ») : tous les joueurs de
+  // tous les clubs, contrats en cours compris, une seule fois pour le monde
+  // (world.salaryBestPositionAt), seulement si toutes les ligues sont lues.
+  const recalcSalaries = !world.salaryBestPositionAt;
+  let allRead = true;
   for (const country of countryCodes()) {
     const entries = leaguesOfCountry(world, country);
     const leagues = new Map();
     for (const e of entries) {
       const lg = await loadLeague(world, e.id, savePath);
-      if (!lg) continue;
+      if (!lg) { allRead = false; continue; }
       leagues.set(e.id, lg);
       allLeagues.set(e.id, lg);
       fingerprints.set(e.id, leagueFingerprint(lg));
+      if (recalcSalaries) applyBestPositionSalaries(lg);
     }
     // Anciennes ligues privées (League.privateLeagues) rangées au niveau du
     // monde, puis vendredis de ligue privée posés sur chaque ligue (jours de
@@ -744,6 +764,7 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
     saved++;
   }
   events.savedLeagues = saved;
+  if (recalcSalaries && allRead) { world.salaryBestPositionAt = now; worldDirty = true; }
   if (worldDirty) await saveWorld(world, savePath);
   events.nextDeadlineAt = nextDeadlineAt;
   return events;
@@ -1098,7 +1119,7 @@ function publicCountries() {
 }
 
 module.exports = {
-  managerRanking, MANAGER_RANKING_TOP, MAX_HUMANS_PER_LEAGUE,
+  applyBestPositionSalaries, managerRanking, MANAGER_RANKING_TOP, MAX_HUMANS_PER_LEAGUE,
   divisionMovesFor,
   WORLD_VERSION, DEFAULT_COUNTRY,
   loadWorld, saveWorld, loadLeague, useLeagueTimeZone, findTeamByToken,
