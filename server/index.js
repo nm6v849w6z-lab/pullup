@@ -227,9 +227,9 @@ function mobileManifest(token) {
     background_color: "#0d131d",
     theme_color: "#0f1728",
     icons: [
-      { src: "/assets/mobile/icon-192.png?v=3", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/assets/mobile/icon-maskable-512.png?v=3", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/assets/mobile/icon-192.png?v=4", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-512.png?v=4", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/assets/mobile/icon-maskable-512.png?v=4", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
@@ -1329,6 +1329,17 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // Safari et d'autres navigateurs le demandent d'office et gardent
       // l'ancien en cache tant que cette adresse ne répond rien. On y sert le
       // favicon jaune (PNG, accepté par tous les navigateurs actuels).
+      // Icônes cherchées d'office à la racine par Safari / iOS (retour
+      // 2026-10-03 : « j'ai toujours l'ancien logo orange foncé ») : sans
+      // réponse, Safari garde l'ancienne icône en cache. Nouvelle icône jaune.
+      if ((route.pathname === "/apple-touch-icon.png" || route.pathname === "/apple-touch-icon-precomposed.png") && req.method === "GET") {
+        fs.readFile(path.join(ASSETS_DIR, "mobile", "apple-touch-icon.png"), (err, data) => {
+          if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
+          res.writeHead(200, { "Content-Type": "image/png", "Content-Length": data.length, "Cache-Control": "public, max-age=86400" });
+          res.end(data);
+        });
+        return;
+      }
       if (route.pathname === "/favicon.ico" && req.method === "GET") {
         fs.readFile(path.join(ASSETS_DIR, "mobile", "favicon-32.png"), (err, data) => {
           if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
