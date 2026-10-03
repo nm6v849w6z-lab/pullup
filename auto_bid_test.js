@@ -51,7 +51,8 @@ const inc = n => Engine.minNextBidFor({ currentBid: n, startPrice: 0 });
     // Budget : le plafond effectif suit le budget du moment.
     const l3 = lg.listPlayerForSale(7, lg.teams[7].players[0].id, 1000, now);
     lg.setAutoBid("transferListings", l3.id, 0, 50000, now);
-    lg.teams[0].budget = 8000;
+    // Enchères déjà en tête ailleurs (l, l2) réservées : 8 000 de marge réelle.
+    lg.teams[0].budget = 8000 + lg.reservedBidsFor(0, l3.id);
     lg.placeBid(l3.id, 1, 6000, now + 1);
     assert.strictEqual(l3.currentBidderIdx, 0, "relance dans le budget"); assert.ok(l3.currentBid <= 8000);
     lg.placeBid(l3.id, 1, 9000, now + 2);

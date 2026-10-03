@@ -2601,6 +2601,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       if (actionFn) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        // Enchères en tête réservées : non dépensables (Team.spendableBudget).
+        if (ctx.league && typeof ctx.league.syncReservedBids === "function") ctx.league.syncReservedBids();
 
         let body = req.__parsedBody;
         if (body === undefined) {

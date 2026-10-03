@@ -806,8 +806,8 @@ function bidOnCoachListing(team, teamIndex, league, body, now) {
 function upgradeArena(team, teamIndex, league, body, now) {
   const next = team.nextArenaLevel();
   if (!next) return fail("Salle déjà au niveau maximum.");
-  if (team.budget < next.upgradeCost) {
-    return fail(`Budget insuffisant pour agrandir la salle (coût ${next.upgradeCost}, budget actuel ${team.budget}).`);
+  if (team.spendableBudget() < next.upgradeCost) {
+    return fail(`Budget insuffisant pour agrandir la salle (coût ${next.upgradeCost}, budget disponible ${Math.round(team.spendableBudget())}, enchères en cours déduites).`);
   }
   // team.upgradeArena() referifie les mêmes conditions et effectue la MÊME
   // mutation (recordTransaction + arenaLevel) que le code navigateur
@@ -823,7 +823,7 @@ function buildArenaSeats(team, teamIndex, league, body, now) {
   if (!body || typeof body.add !== "object" || !body.add) return fail("add requis ({ gradins, tribune, loge }).");
   const res = team.buildSeats(body.add);
   if (!res.ok) {
-    const msg = { empty: "Aucune place à construire.", cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant." };
+    const msg = { empty: "Aucune place à construire.", cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées)." };
     return fail(msg[res.reason] || "Construction refusée.");
   }
   return { ok: true, seats: team.currentSeats(), budget: team.budget, cost: res.cost };
@@ -857,8 +857,8 @@ function setTicketPrices(team, teamIndex, league, body) {
 function upgradeFanShop(team, teamIndex, league, body, now) {
   const next = team.nextFanShopLevel();
   if (!next) return fail("Boutique des supporters déjà au niveau maximum.");
-  if (team.budget < next.cost) {
-    return fail(`Budget insuffisant pour la boutique des supporters (coût ${next.cost}, budget actuel ${team.budget}).`);
+  if (team.spendableBudget() < next.cost) {
+    return fail(`Budget insuffisant pour la boutique des supporters (coût ${next.cost}, budget disponible ${Math.round(team.spendableBudget())}, enchères en cours déduites).`);
   }
   const applied = team.upgradeFanShop();
   if (!applied) return fail("Achat de la boutique des supporters refusé.");
@@ -1018,8 +1018,8 @@ function fireAssistantCoach(team, teamIndex, league, body, now) {
 function upgradeTrainingCenter(team, teamIndex, league, body, now) {
   const next = team.nextTrainingCenterLevel();
   if (!next) return fail("Centre de formation déjà au niveau maximum.");
-  if (team.budget < next.upgradeCost) {
-    return fail(`Budget insuffisant pour le Centre de formation (coût ${next.upgradeCost}, budget actuel ${team.budget}).`);
+  if (team.spendableBudget() < next.upgradeCost) {
+    return fail(`Budget insuffisant pour le Centre de formation (coût ${next.upgradeCost}, budget disponible ${Math.round(team.spendableBudget())}, enchères en cours déduites).`);
   }
   const applied = team.upgradeTrainingCenter();
   if (!applied) return fail("Agrandissement du Centre de formation refusé.");
@@ -1038,8 +1038,8 @@ function upgradeFacility(team, teamIndex, league, body, now) {
   if (!cfg) return fail("Infrastructure inconnue.");
   const next = team.nextFacilityLevel(key);
   if (!next) return fail(`${cfg.name} déjà au niveau maximum.`);
-  if (team.budget < next.cost) {
-    return fail(`Budget insuffisant pour ${cfg.name} (coût ${next.cost}, budget actuel ${team.budget}).`);
+  if (team.spendableBudget() < next.cost) {
+    return fail(`Budget insuffisant pour ${cfg.name} (coût ${next.cost}, budget disponible ${Math.round(team.spendableBudget())}, enchères en cours déduites).`);
   }
   const applied = team.upgradeFacility(key);
   if (!applied) return fail(`Achat de ${cfg.name} refusé.`);

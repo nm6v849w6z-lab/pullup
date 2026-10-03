@@ -7491,6 +7491,14 @@ class Team {
   // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
   // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
   // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
+  // Budget dépensable (retour utilisateur 2026-10-03 : « j'ai enchéri mais
+  // l'argent n'est pas bloqué, j'ai pu agrandir ma salle et je suis en
+  // négatif ») : budget moins les enchères où le club est en tête
+  // (reservedForBids, posé par League.syncReservedBids, jamais sauvegardé).
+  spendableBudget() {
+    return (this.budget || 0) - (this.reservedForBids || 0);
+  }
+
   buildSeats(add) {
     const cur = this.currentSeats();
     const clean = {};
@@ -7506,7 +7514,7 @@ class Team {
     }
     if (!added) return { ok: false, reason: "empty" };
     const cost = seatBuildCost(clean);
-    if (this.budget < cost) return { ok: false, reason: "insufficient-budget", cost };
+    if (this.spendableBudget() < cost) return { ok: false, reason: "insufficient-budget", cost };
     this.recordTransaction(`Agrandissement de la salle (+${added.toLocaleString("fr-FR")} places)`, -cost);
     SEAT_CATEGORIES.forEach(c => { cur[c.key] += clean[c.key]; });
     this.seats = cur;
@@ -7522,7 +7530,7 @@ class Team {
   // l'agrandissement a eu lieu.
   upgradeArena() {
     const next = this.nextArenaLevel();
-    if (!next || this.budget < next.upgradeCost) return false;
+    if (!next || this.spendableBudget() < next.upgradeCost) return false;
     this.recordTransaction(`Agrandissement de la salle (${next.name})`, -next.upgradeCost);
     this.arenaLevel = next.level;
     return true;
@@ -7538,7 +7546,7 @@ class Team {
   // l'agrandissement a eu lieu.
   upgradeTrainingCenter() {
     const next = this.nextTrainingCenterLevel();
-    if (!next || this.budget < next.upgradeCost) return false;
+    if (!next || this.spendableBudget() < next.upgradeCost) return false;
     this.recordTransaction(`Centre de formation : ${next.name}`, -next.upgradeCost);
     this.trainingCenterLevel = next.level;
     return true;
@@ -7639,7 +7647,7 @@ class Team {
   // que le club la possède.
   upgradeFanShop() {
     const next = this.nextFanShopLevel();
-    if (!next || this.budget < next.cost) return false;
+    if (!next || this.spendableBudget() < next.cost) return false;
     this.recordTransaction(`Boutique des supporters : ${next.name}`, -next.cost);
     this.fanShopLevel = next.level;
     return true;
@@ -7659,7 +7667,7 @@ class Team {
     const cfg = CLUB_FACILITIES[key];
     if (!cfg) return false;
     const next = this.nextFacilityLevel(key);
-    if (!next || this.budget < next.cost) return false;
+    if (!next || this.spendableBudget() < next.cost) return false;
     this.recordTransaction(`${cfg.name} : ${next.name}`, -next.cost);
     if (!this.facilityLevels) this.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };
     this.facilityLevels[key] = next.level;
@@ -13435,7 +13443,7 @@ class League {
     const team = this.teams[a.bidderIdx];
     if (!team) return null;
     if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE || this._isFormerClub(listing, team, a.bidderIdx))) return null;
-    return team.isHuman ? Math.min(a.max, Math.floor(team.budget)) : a.max;
+    return team.isHuman ? Math.min(a.max, Math.floor(team.budget - (kind === "player" ? this.reservedBidsFor(a.bidderIdx, listing.id) : 0))) : a.max;
   }
 
   _recordAutoBid(listing, kind, a, amount, now) {
@@ -13510,7 +13518,7 @@ class League {
     if (kind === "player" && this._isFormerClub(listing, team, foreign ? null : bidderIdx)) return { ok: false, reason: "former-club" };
     const minMax = leaderKey === key ? (listing.currentBid || 0) : minNextBidFor(listing);
     if (max < minMax) return { ok: false, reason: "too-low", minBid: minMax };
-    if (team.isHuman && max > team.budget) return { ok: false, reason: "insufficient-budget" };
+    if (team.isHuman && max > team.budget - (kind === "player" && !foreign ? this.reservedBidsFor(bidderIdx, listing.id) : 0)) return { ok: false, reason: "insufficient-budget" };
     const entry = { bidderIdx: idx, max: Math.round(max), at: now };
     if (ref) entry.bidderRef = ref;
     listing.autoBids = others.concat([entry]);
@@ -13523,6 +13531,17 @@ class League {
   // `seasons` : durée du contrat (1 à 5 saisons) choisie avec l'enchère,
   // signée au salaire demandé si l'enchère est remportée (demande du
   // 2026-10-01) ; absente = CONTRACT_DEFAULT_SEASONS.
+  // Somme des enchères (joueurs, agents libres) où le club `teamIdx` est en
+  // tête, hors annonce `exceptId` : argent réservé, non dépensable ailleurs.
+  reservedBidsFor(teamIdx, exceptId = null) {
+    return (this.transferListings || []).reduce((s, l) => s + (
+      l.status === "open" && l.currentBidderIdx === teamIdx && !l.currentBidderRef && l.id !== exceptId ? (l.currentBid || 0) : 0), 0);
+  }
+  // Pose la réserve sur chaque club (Team.spendableBudget).
+  syncReservedBids() {
+    (this.teams || []).forEach((t, idx) => { if (t) t.reservedForBids = this.reservedBidsFor(idx); });
+  }
+
   placeBid(listingId, bidderIdx, amount, now, seasons = null) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
@@ -13539,7 +13558,7 @@ class League {
     // plus seulement l'index 0) est bloquée par son budget réel. Voir
     // refreshMarket pour la logique d'enchère CPU (valeur marchande estimée,
     // pas un vrai budget).
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -13863,7 +13882,7 @@ class League {
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
     // Comme placeBid : seul le budget d'une équipe humaine est réel/suivi.
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -14049,7 +14068,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -14199,7 +14218,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -14354,7 +14373,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -14483,7 +14502,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;

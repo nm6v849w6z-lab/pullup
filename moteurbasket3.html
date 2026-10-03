@@ -17117,6 +17117,18 @@ class Team {
   // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
   // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
   // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
+  // Budget dépensable (retour utilisateur 2026-10-03 : « j'ai enchéri mais
+  // l'argent n'est pas bloqué, j'ai pu agrandir ma salle et je suis en
+  // négatif ») : budget moins les enchères où le club est en tête
+  // (reservedForBids, posé par League.syncReservedBids, jamais sauvegardé).
+  spendableBudget() {
+    // Navigateur : réserve recalculée à chaque appel depuis la ligue chargée.
+    const lg = typeof league !== "undefined" ? league : null;
+    const idx = lg && Array.isArray(lg.teams) ? lg.teams.indexOf(this) : -1;
+    const reserved = idx >= 0 && typeof lg.reservedBidsFor === "function" ? lg.reservedBidsFor(idx) : (this.reservedForBids || 0);
+    return (this.budget || 0) - reserved;
+  }
+
   buildSeats(add) {
     const cur = this.currentSeats();
     const clean = {};
@@ -17132,7 +17144,7 @@ class Team {
     }
     if (!added) return { ok: false, reason: "empty" };
     const cost = seatBuildCost(clean);
-    if (this.budget < cost) return { ok: false, reason: "insufficient-budget", cost };
+    if (this.spendableBudget() < cost) return { ok: false, reason: "insufficient-budget", cost };
     this.recordTransaction(`Agrandissement de la salle (+${added.toLocaleString("fr-FR")} places)`, -cost);
     SEAT_CATEGORIES.forEach(c => { cur[c.key] += clean[c.key]; });
     this.seats = cur;
@@ -17148,7 +17160,7 @@ class Team {
   // l'agrandissement a eu lieu.
   upgradeArena() {
     const next = this.nextArenaLevel();
-    if (!next || this.budget < next.upgradeCost) return false;
+    if (!next || this.spendableBudget() < next.upgradeCost) return false;
     this.recordTransaction(`Agrandissement de la salle (${next.name})`, -next.upgradeCost);
     this.arenaLevel = next.level;
     return true;
@@ -17164,7 +17176,7 @@ class Team {
   // l'agrandissement a eu lieu.
   upgradeTrainingCenter() {
     const next = this.nextTrainingCenterLevel();
-    if (!next || this.budget < next.upgradeCost) return false;
+    if (!next || this.spendableBudget() < next.upgradeCost) return false;
     this.recordTransaction(`Centre de formation : ${next.name}`, -next.upgradeCost);
     this.trainingCenterLevel = next.level;
     return true;
@@ -17254,7 +17266,7 @@ class Team {
   // que le club la possède.
   upgradeFanShop() {
     const next = this.nextFanShopLevel();
-    if (!next || this.budget < next.cost) return false;
+    if (!next || this.spendableBudget() < next.cost) return false;
     this.recordTransaction(`Boutique des supporters : ${next.name}`, -next.cost);
     this.fanShopLevel = next.level;
     return true;
@@ -17274,7 +17286,7 @@ class Team {
     const cfg = CLUB_FACILITIES[key];
     if (!cfg) return false;
     const next = this.nextFacilityLevel(key);
-    if (!next || this.budget < next.cost) return false;
+    if (!next || this.spendableBudget() < next.cost) return false;
     this.recordTransaction(`${cfg.name} : ${next.name}`, -next.cost);
     if (!this.facilityLevels) this.facilityLevels = { tvStation: 0, gym: 0, wellness: 0 };
     this.facilityLevels[key] = next.level;
@@ -21302,7 +21314,7 @@ class League {
     const team = this.teams[a.bidderIdx];
     if (!team) return null;
     if (kind === "player" && (a.bidderIdx === listing.sellerIdx || team.players.length >= MAX_ROSTER_SIZE || this._isFormerClub(listing, team, a.bidderIdx))) return null;
-    return team.isHuman ? Math.min(a.max, Math.floor(team.budget)) : a.max;
+    return team.isHuman ? Math.min(a.max, Math.floor(team.budget - (kind === "player" ? this.reservedBidsFor(a.bidderIdx, listing.id) : 0))) : a.max;
   }
 
   _recordAutoBid(listing, kind, a, amount, now) {
@@ -21375,7 +21387,7 @@ class League {
     if (kind === "player" && team.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     const minMax = leaderKey === key ? (listing.currentBid || 0) : minNextBidFor(listing);
     if (max < minMax) return { ok: false, reason: "too-low", minBid: minMax };
-    if (team.isHuman && max > team.budget) return { ok: false, reason: "insufficient-budget" };
+    if (team.isHuman && max > team.budget - (kind === "player" && !foreign ? this.reservedBidsFor(bidderIdx, listing.id) : 0)) return { ok: false, reason: "insufficient-budget" };
     const entry = { bidderIdx: idx, max: Math.round(max), at: now };
     if (ref) entry.bidderRef = ref;
     listing.autoBids = others.concat([entry]);
@@ -21385,6 +21397,17 @@ class League {
   }
 
   // `seasons` : durée de contrat choisie avec l'enchère (voir engine.js).
+  // Somme des enchères (joueurs, agents libres) où le club `teamIdx` est en
+  // tête, hors annonce `exceptId` : argent réservé, non dépensable ailleurs.
+  reservedBidsFor(teamIdx, exceptId = null) {
+    return (this.transferListings || []).reduce((s, l) => s + (
+      l.status === "open" && l.currentBidderIdx === teamIdx && !l.currentBidderRef && l.id !== exceptId ? (l.currentBid || 0) : 0), 0);
+  }
+  // Pose la réserve sur chaque club (Team.spendableBudget).
+  syncReservedBids() {
+    (this.teams || []).forEach((t, idx) => { if (t) t.reservedForBids = this.reservedBidsFor(idx); });
+  }
+
   placeBid(listingId, bidderIdx, amount, now, seasons = null) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
@@ -21402,7 +21425,7 @@ class League {
     // plus seulement l'index 0) est bloquée par son budget réel. Voir
     // refreshMarket pour la logique d'enchère CPU (valeur marchande estimée,
     // pas un vrai budget).
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -21720,7 +21743,7 @@ class League {
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
     // Comme placeBid : seul le budget d'une équipe humaine est réel/suivi.
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -21907,7 +21930,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -22058,7 +22081,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -22214,7 +22237,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -22343,7 +22366,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
-    if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
+    if (bidder.isHuman && amount > bidder.budget - this.reservedBidsFor(bidderIdx, listingId)) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
     listing.currentBid = rounded;
     listing.currentBidderIdx = bidderIdx;
@@ -45839,9 +45862,9 @@ function mkUpdateBadge() {
   badge.classList.toggle("hidden", !n);
   badge.setAttribute("aria-label", n ? `${n} enchère${n > 1 ? "s" : ""} dépassée${n > 1 ? "s" : ""}` : "");
 }
-// Somme des enchères où l'on est en tête (hors `exceptId`). Indicatif : le
-// moteur ne réserve pas ces montants (placeBid ne compare qu'au budget
-// réel), mais c'est ce que coûterait le fait de toutes les remporter.
+// Somme des enchères où l'on est en tête (hors `exceptId`) : réservée,
+// le moteur la déduit du budget dépensable (League.reservedBidsFor,
+// Team.spendableBudget) : enchères, salle et infrastructures.
 function mkCommitted(exceptId) {
   return mkOpenListings().filter(l => l.currentBidderIdx === myTeamIndex && l.id !== exceptId)
     .reduce((s, l) => s + (l.currentBid || 0), 0);
@@ -49440,9 +49463,12 @@ function closeUpgradeConfirm() {
 
 function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel, effectBefore, effectAfter, cost, onConfirm }) {
   closeUpgradeConfirm();
-  const affordable = teamA.budget >= cost;
-  const missing = cost - teamA.budget;
-  const balanceAfter = teamA.budget - cost;
+  // Enchères où l'on est en tête déduites (Team.spendableBudget).
+  const spendable = teamA.spendableBudget();
+  const reserved = teamA.budget - spendable;
+  const affordable = spendable >= cost;
+  const missing = cost - spendable;
+  const balanceAfter = spendable - cost;
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay";
   overlay.id = "upgradeConfirmOverlay";
@@ -49455,6 +49481,7 @@ function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel,
     `<div class="upgrade-confirm-row"><span>Après achat</span><b>${escapeHtml(afterLabel)}</b></div>` +
     effectRow +
     `<div class="upgrade-confirm-row"><span>Coût</span><b>${formatMoney(cost)}</b></div>` +
+    (reserved > 0 ? `<div class="upgrade-confirm-row"><span>Réservé pour vos enchères</span><b>−${formatMoney(reserved)}</b></div>` : "") +
     `<div class="upgrade-confirm-row"><span>Solde après achat</span><b class="${affordable ? "" : "insufficient"}">${formatMoney(balanceAfter)}</b></div>` +
     (!affordable ? `<div class="upgrade-confirm-warning">Il manque ${formatMoney(missing)}.</div>` : "") +
     `<div class="upgrade-confirm-actions">` +
@@ -49465,7 +49492,7 @@ function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel,
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeUpgradeConfirm(); });
   document.getElementById("upgradeConfirmCancel").addEventListener("click", closeUpgradeConfirm);
   document.getElementById("upgradeConfirmValidate").addEventListener("click", () => {
-    if (teamA.budget < cost) return;
+    if (teamA.spendableBudget() < cost) return;
     closeUpgradeConfirm();
     onConfirm();
   });
@@ -50290,9 +50317,10 @@ function renderArenaBuild(feedback) {
   const summary = added
     ? SEAT_CATEGORIES.filter(c => arenaBuildDraft[c.key]).map(c => `+${fmt(arenaBuildDraft[c.key])} en ${c.name}`).join(", ")
     : "";
-  const tooExpensive = cost > teamA.budget;
+  const spendable = teamA.spendableBudget();
+  const tooExpensive = cost > spendable;
   html += `<div class="sl-build-foot"><div>${summary ? `<small>${escapeHtml(summary)}</small>` : ""}` +
-    `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} €</b> <span class="sl-build-budget">· budget ${fmt(teamA.budget)} €</span></div>` +
+    `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} €</b> <span class="sl-build-budget">· disponible ${fmt(spendable)} €${spendable < teamA.budget ? " (enchères en cours déduites)" : ""}</span></div>` +
     `<button type="button" class="stf-bid-btn" id="arenaBuildBtn"${!added || tooExpensive ? " disabled" : ""}>Construire</button></div>` +
     `<div id="arenaBuildFeedback" role="status">${feedback || ""}</div>`;
   holder.innerHTML = html;
@@ -50325,7 +50353,7 @@ document.addEventListener("click", (e) => {
       renderSalleSection();
       renderArenaBuild(`<span class="sl-up">+${res.added.toLocaleString("fr-FR")} places construites (${formatMoney(res.cost)}).</span>`);
     } else {
-      const msg = { cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant.", empty: "Aucune place à construire." };
+      const msg = { cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées).", empty: "Aucune place à construire." };
       renderArenaBuild(`<span class="sl-down">${msg[res.reason] || "Construction refusée."}</span>`);
     }
   }
