@@ -31679,7 +31679,9 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
   saveMyTeam();
   if (ok) syncMarketListToServer(id, price);
   renderPlayerDetail(myTeamIndex, id);
-  playerDetailMarketFeedback(message, ok);
+  // Succès : pas de message sur la fiche (retour utilisateur 2026-10-03),
+  // la fiche montre déjà l'annonce ; seul un échec est signalé.
+  if (!ok) playerDetailMarketFeedback(message, ok);
 });
 
 // Écouteur délégué UNIQUE (sur tout le document) plutôt qu'un par
