@@ -2219,6 +2219,7 @@ function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
     }, { clubName: seller.name });
   }
   buyer.players.push(player);
+  recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: seller.name, to: buyer.name, fee: amount || 0 });
   // Recrue : connaissance tactique individuelle remise à 40 (voir
   // PLAYER_TACTICAL_KNOWLEDGE_RECRUIT).
   resetPlayerTacticalKnowledge(player);
@@ -5340,6 +5341,32 @@ function tacticalKnowledgeAverage(k, priorities, defense, rhythm) {
   const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
   return (offAvg + ((k.defense || {})[defense] ?? 50) + ((k.rhythm || {})[rhythm] ?? 50)) / 3;
 }
+// Historique du joueur et suivi des blessures (retour utilisateur
+// 2026-10-03, façon BuzzerBeater) : journaux PORTÉS PAR LE JOUEUR (ils le
+// suivent d'un club à l'autre, sauvegardés avec lui).
+//  - Player.historyLog : transferts, signatures d'agent libre, promotion de
+//    l'académie, gros matchs (voir BIG_GAME_THRESHOLDS) — du plus récent au
+//    plus ancien ;
+//  - Player.injuryHistory : une entrée par blessure (date, type, durée,
+//    retour, contexte, niveau du médecin).
+const PLAYER_HISTORY_LOG_MAX = 60;
+const PLAYER_INJURY_HISTORY_MAX = 40;
+const BIG_GAME_THRESHOLDS = { pts: 25, reb: 14, ast: 10, stl: 6, blk: 6 };
+function teamSeasonNo(team) {
+  return ((team && team.seasonHistory) || []).length + 1;
+}
+function recordPlayerEvent(p, ev) {
+  if (!p || !ev) return;
+  if (!Array.isArray(p.historyLog)) p.historyLog = [];
+  p.historyLog.unshift(ev);
+  if (p.historyLog.length > PLAYER_HISTORY_LOG_MAX) p.historyLog.length = PLAYER_HISTORY_LOG_MAX;
+}
+function recordPlayerInjury(p, ev) {
+  if (!p || !ev) return;
+  if (!Array.isArray(p.injuryHistory)) p.injuryHistory = [];
+  p.injuryHistory.unshift(ev);
+  if (p.injuryHistory.length > PLAYER_INJURY_HISTORY_MAX) p.injuryHistory.length = PLAYER_INJURY_HISTORY_MAX;
+}
 // Recrue : maîtrise remise à PLAYER_TACTICAL_KNOWLEDGE_RECRUIT partout.
 function resetPlayerTacticalKnowledge(p) {
   if (p) p.tacticalKnowledge = defaultTacticalKnowledgeShape(PLAYER_TACTICAL_KNOWLEDGE_RECRUIT);
@@ -8032,6 +8059,16 @@ class Team {
   // suit la même convention que seasonPlayerTotalsForTeam
   // (seasonHistory.length + 1) pour filtrer « la saison en cours ».
   recordInjury(entry) {
+    // Suivi des blessures porté par le joueur (pros et jeunes de l'académie).
+    const injured = entry && ((this.players || []).find(p => p.id === entry.playerId) || (this.youthPlayers || []).find(p => p.id === entry.playerId));
+    if (injured) {
+      recordPlayerInjury(injured, {
+        at: entry.at || Date.now(), season: teamSeasonNo(this), type: entry.injuryType || "Blessure", days: entry.days || null,
+        until: typeof injured.injuryUntil === "number" ? injured.injuryUntil : null, club: this.name,
+        opponent: entry.opponentName || null, training: !!entry.training, friendly: !!entry.friendly,
+        doctor: this.doctor ? this.doctor.level : 0,
+      });
+    }
     if (!Array.isArray(this.injuryLog)) this.injuryLog = [];
     this.injuryLog.unshift({ seasonNo: (this.seasonHistory || []).length + 1, week: this.week, ...entry });
     if (this.injuryLog.length > INJURY_LOG_MAX) this.injuryLog.length = INJURY_LOG_MAX;
@@ -8154,6 +8191,7 @@ class Team {
     if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
+    recordPlayerEvent(player, { type: "promotion", at: Date.now(), season: teamSeasonNo(this), to: this.name });
     // Jeune promu : garde ce qu'il a appris en amical, 40 ailleurs.
     player.tacticalKnowledge = copyTacticalKnowledge(player.tacticalKnowledge);
     this.players.push(player);
@@ -11884,6 +11922,11 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
       // match "boosté" par élection au MVP, jamais plus.
       if (p.pendingMatchBoost) p.pendingMatchBoost = 0;
       if (!Array.isArray(p.matchLog)) p.matchLog = [];
+      // Gros match (historique du joueur, voir BIG_GAME_THRESHOLDS).
+      Object.entries(BIG_GAME_THRESHOLDS).forEach(([k, min]) => {
+        const v = (p.stats && p.stats[k]) || 0;
+        if (v >= min) recordPlayerEvent(p, { type: "game", stat: k, value: v, competition, round, team: team.name, at: now, season: teamSeasonNo(team) });
+      });
       p.matchLog.push({
         // `week` = team.week AU MOMENT de ce match (avant tout trainWeek()
         // suivant qui l'incrémenterait) — même sémantique que
@@ -13477,6 +13520,7 @@ class League {
     const [player] = this.freeAgents.splice(i, 1);
     if (buyer.isHuman && amount > 0) buyer.recordTransaction(`${FREE_AGENT_SIGNING_LABEL} : ${player.name}`, -amount);
     buyer.players.push(player);
+    recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: listing.formerTeamName || null, to: buyer.name, fee: amount, freeAgent: true });
     resetPlayerTacticalKnowledge(player);
     if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
     player.weeksAtLowMotivation = 0;
@@ -13499,6 +13543,7 @@ class League {
     if (player.age >= FREE_AGENT_RETIRE_AGE || !cpu) return "retired";
     signNewContract(player, 1 + Math.floor(rand01() * 2), this.contractSeason(), askedSalary(player));
     cpu.t.players.push(player);
+    recordPlayerEvent(player, { type: "transfer", at: now, season: teamSeasonNo(cpu.t), from: listing.formerTeamName || null, to: cpu.t.name, fee: 0, freeAgent: true });
     cpu.t.autoAssignLineup();
     this.logTransferNews({ id: listing.id, at: now, playerName: player.name, playerId: player.id, buyerIdx: cpu.idx, buyerName: cpu.t.name, buyerAi: true, sellerIdx: null, sellerName: null, fee: 0, freeAgent: true });
     return "cpu-signed";
@@ -15885,6 +15930,8 @@ function serializePlayerRecord(p) {
     // semaine, note, ...caractéristiques dans l'ordre d'ATTRS], voir
     // pushPlayerHistory. Suit le joueur d'un club à l'autre.
     weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],
+    ...(Array.isArray(p.historyLog) && p.historyLog.length ? { historyLog: p.historyLog.map(e => ({ ...e })) } : {}),
+    ...(Array.isArray(p.injuryHistory) && p.injuryHistory.length ? { injuryHistory: p.injuryHistory.map(e => ({ ...e })) } : {}),
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -16512,6 +16559,8 @@ function playerFromSave(pdata) {
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
   p.weeklyHistory = Array.isArray(pdata.weeklyHistory) ? pdata.weeklyHistory.filter(e => Array.isArray(e)).map(e => e.slice()) : [];
+  p.historyLog = Array.isArray(pdata.historyLog) ? pdata.historyLog.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
+  p.injuryHistory = Array.isArray(pdata.injuryHistory) ? pdata.injuryHistory.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));

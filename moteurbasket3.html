@@ -2996,6 +2996,21 @@
   .pdp2-row--games .pdp2-side-cards{display:flex; flex-direction:column; gap:14px;}
   .pdp2-row--games .pdp2-side-cards > .pdp-card{flex:1 1 auto;}
   .pdp2-share-bottom .pdp2-share{flex-direction:row; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 12px; margin-top:0;}
+  .pdp2-hist-last{margin:4px 0 2px; font-size:14px;}
+  .pdp2-hist-last span{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; margin-bottom:2px;}
+  .pdp2-hist-btn{margin-top:10px;}
+  .pdp2-inj-count{display:inline-block; min-width:20px; text-align:center; font-size:11px; border-radius:999px; padding:1px 7px; background:rgba(226,105,79,.16); color:var(--danger); margin-left:6px; vertical-align:2px;}
+  .pdp2-inj-list{display:flex; flex-direction:column;}
+  .pdp2-inj-row{display:grid; grid-template-columns:88px minmax(0,1fr) auto; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .pdp2-inj-row:first-child{border-top:0;}
+  .pdp2-inj-date{color:var(--ink-dim);} .pdp2-inj-type{font-weight:700;} .pdp2-inj-days{color:var(--ink-dim);}
+  .pdp2-inj-more{margin-top:6px; font-size:12.5px;}
+  .ph-box{max-width:860px; width:calc(100% - 32px);}
+  .ph-table-wrap{max-height:60vh; overflow:auto;}
+  .ph-table td{vertical-align:top;}
+  .ph-filters{display:flex; flex-wrap:wrap; gap:8px 16px; margin:4px 0 12px; font-size:13.5px; color:var(--ink-dim);}
+  .ph-filters label{display:inline-flex; align-items:center; gap:6px; cursor:pointer;}
+  .ph-foot{margin-top:10px; font-size:13px;}
   .pdp-contract-sale.pdp2-bottom-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); align-items:stretch; margin:0;}
   /* Partager : une seule ligne compacte (titre, bouton, état du lien). */
   .pdp-contract-sale > .pdp2-share-card{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px !important;}
@@ -15592,6 +15607,32 @@ function tacticalKnowledgeAverage(k, priorities, defense, rhythm) {
   const offAvg = off.length ? off.reduce((a, b) => a + b, 0) / off.length : 50;
   return (offAvg + ((k.defense || {})[defense] ?? 50) + ((k.rhythm || {})[rhythm] ?? 50)) / 3;
 }
+// Historique du joueur et suivi des blessures (retour utilisateur
+// 2026-10-03, façon BuzzerBeater) : journaux PORTÉS PAR LE JOUEUR (ils le
+// suivent d'un club à l'autre, sauvegardés avec lui).
+//  - Player.historyLog : transferts, signatures d'agent libre, promotion de
+//    l'académie, gros matchs (voir BIG_GAME_THRESHOLDS) — du plus récent au
+//    plus ancien ;
+//  - Player.injuryHistory : une entrée par blessure (date, type, durée,
+//    retour, contexte, niveau du médecin).
+const PLAYER_HISTORY_LOG_MAX = 60;
+const PLAYER_INJURY_HISTORY_MAX = 40;
+const BIG_GAME_THRESHOLDS = { pts: 25, reb: 14, ast: 10, stl: 6, blk: 6 };
+function teamSeasonNo(team) {
+  return ((team && team.seasonHistory) || []).length + 1;
+}
+function recordPlayerEvent(p, ev) {
+  if (!p || !ev) return;
+  if (!Array.isArray(p.historyLog)) p.historyLog = [];
+  p.historyLog.unshift(ev);
+  if (p.historyLog.length > PLAYER_HISTORY_LOG_MAX) p.historyLog.length = PLAYER_HISTORY_LOG_MAX;
+}
+function recordPlayerInjury(p, ev) {
+  if (!p || !ev) return;
+  if (!Array.isArray(p.injuryHistory)) p.injuryHistory = [];
+  p.injuryHistory.unshift(ev);
+  if (p.injuryHistory.length > PLAYER_INJURY_HISTORY_MAX) p.injuryHistory.length = PLAYER_INJURY_HISTORY_MAX;
+}
 // Recrue : maîtrise remise à PLAYER_TACTICAL_KNOWLEDGE_RECRUIT partout.
 function resetPlayerTacticalKnowledge(p) {
   if (p) p.tacticalKnowledge = defaultTacticalKnowledgeShape(PLAYER_TACTICAL_KNOWLEDGE_RECRUIT);
@@ -17776,6 +17817,16 @@ class Team {
   // suit la même convention que seasonPlayerTotalsForTeam
   // (seasonHistory.length + 1) pour filtrer « la saison en cours ».
   recordInjury(entry) {
+    // Suivi des blessures porté par le joueur (pros et jeunes de l'académie).
+    const injured = entry && ((this.players || []).find(p => p.id === entry.playerId) || (this.youthPlayers || []).find(p => p.id === entry.playerId));
+    if (injured) {
+      recordPlayerInjury(injured, {
+        at: entry.at || Date.now(), season: teamSeasonNo(this), type: entry.injuryType || "Blessure", days: entry.days || null,
+        until: typeof injured.injuryUntil === "number" ? injured.injuryUntil : null, club: this.name,
+        opponent: entry.opponentName || null, training: !!entry.training, friendly: !!entry.friendly,
+        doctor: this.doctor ? this.doctor.level : 0,
+      });
+    }
     if (!Array.isArray(this.injuryLog)) this.injuryLog = [];
     this.injuryLog.unshift({ seasonNo: (this.seasonHistory || []).length + 1, week: this.week, ...entry });
     if (this.injuryLog.length > INJURY_LOG_MAX) this.injuryLog.length = INJURY_LOG_MAX;
@@ -17896,6 +17947,7 @@ class Team {
     if (typeof season === "number") player.contractUntilSeason = season + YOUTH_PROMOTION_CONTRACT_SEASONS - 1;
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
+    recordPlayerEvent(player, { type: "promotion", at: Date.now(), season: teamSeasonNo(this), to: this.name });
     // Jeune promu : garde ce qu'il a appris en amical, 40 ailleurs.
     player.tacticalKnowledge = copyTacticalKnowledge(player.tacticalKnowledge);
     this.players.push(player);
@@ -21801,6 +21853,7 @@ class League {
       }, { clubName: seller.name });
     }
     buyer.players.push(player);
+    recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: seller.name, to: buyer.name, fee: amount || 0 });
     resetPlayerTacticalKnowledge(player);
     // Voir engine.js, miroir identique, grand commentaire au-dessus de
     // TRANSFER_NEW_CLUB_MOTIVATION_FLOOR.
@@ -23538,6 +23591,8 @@ function serializePlayerRecord(p) {
     // semaine, note, ...caractéristiques dans l'ordre d'ATTRS], voir
     // pushPlayerHistory. Suit le joueur d'un club à l'autre.
     weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],
+    ...(Array.isArray(p.historyLog) && p.historyLog.length ? { historyLog: p.historyLog.map(e => ({ ...e })) } : {}),
+    ...(Array.isArray(p.injuryHistory) && p.injuryHistory.length ? { injuryHistory: p.injuryHistory.map(e => ({ ...e })) } : {}),
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
     retirementWeeks: p.retirementWeeks || 0,
@@ -24104,6 +24159,8 @@ function playerFromSave(pdata) {
   p.careerSeasons = Array.isArray(pdata.careerSeasons) ? pdata.careerSeasons.map(c => ({ ...c })) : [];
   p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
   p.weeklyHistory = Array.isArray(pdata.weeklyHistory) ? pdata.weeklyHistory.filter(e => Array.isArray(e)).map(e => e.slice()) : [];
+  p.historyLog = Array.isArray(pdata.historyLog) ? pdata.historyLog.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
+  p.injuryHistory = Array.isArray(pdata.injuryHistory) ? pdata.injuryHistory.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
@@ -32497,6 +32554,134 @@ document.addEventListener("click", (e) => {
   showPlayerSeasonStatsModal(Number(btn.dataset.teamIdx), Number(btn.dataset.playerId));
 });
 
+// ---------------------------------------------------------------------
+// Historique du joueur et suivi des blessures (retour utilisateur
+// 2026-10-03 : « une petite brique avec un bouton historique du joueur » et
+// « une brique avec l'historique des blessures, si beaucoup de blessures on
+// peut l'ouvrir en grand ») : Player.historyLog / injuryHistory (voir
+// recordPlayerEvent/recordPlayerInjury côté moteur) + distinctions de fin
+// de saison (Player.awards) + carnet du club pour les blessures d'avant.
+// ---------------------------------------------------------------------
+const PH_TYPE_LABELS = { transfer: "Transferts", promotion: "Formation", game: "Gros matchs", award: "Distinctions" };
+const PH_TYPE_COUNT = { transfer: ["transfert", "transferts"], promotion: ["formation", "formations"], game: ["gros match", "gros matchs"], award: ["distinction", "distinctions"] };
+const PH_STAT_TEXT = { pts: "A marqué {0} points", reb: "A pris {0} rebonds", ast: "A délivré {0} passes décisives", stl: "A intercepté {0} ballons", blk: "A réussi {0} contres" };
+const PH_STAT_LABEL = { pts: "Points", reb: "Rebonds", ast: "Passes", stl: "Interceptions", blk: "Contres" };
+const PH_COMP_TEXT = { championship: "en championnat", cup: "en coupe", playoffs: "en play-offs", friendly: "en match amical" };
+function phDate(at) {
+  if (typeof at !== "number") return "–";
+  try { return new Date(at).toLocaleDateString("fr-FR"); } catch (e) { return "–"; }
+}
+function playerHistoryEvents(player) {
+  const out = (player.historyLog || []).map(e => ({ ...e }));
+  (player.awards || []).forEach(a => out.push({ type: "award", at: typeof a.at === "number" ? a.at : null, season: a.seasonNumber, label: a.label, team: a.teamName, division: a.divisionLabel }));
+  return out.sort((a, b) => (b.season || 0) - (a.season || 0) || (b.at || 0) - (a.at || 0));
+}
+function phEventLabel(e) {
+  if (e.type === "game") return PH_STAT_LABEL[e.stat] || "Match";
+  if (e.type === "transfer") return e.freeAgent ? "Signature" : "Transfert";
+  if (e.type === "promotion") return "Formation";
+  if (e.type === "award") return "Distinction";
+  return "Événement";
+}
+function phEventDetails(e) {
+  if (e.type === "game") {
+    const round = e.competition === "championship" && typeof e.round === "number" && e.round >= 0 ? ` (J${e.round + 1})` : "";
+    return `${escapeHtml((PH_STAT_TEXT[e.stat] || "{0}").replace("{0}", e.value))} ${PH_COMP_TEXT[e.competition] || "en match officiel"}${round} avec ${escapeHtml(e.team || "")}`;
+  }
+  if (e.type === "transfer") {
+    if (e.freeAgent) return `Signé par ${escapeHtml(e.to || "?")} comme agent libre${e.from ? ` (ex-${escapeHtml(e.from)})` : ""}${e.fee ? `, prime de ${formatMoney(e.fee)}` : ""}`;
+    return `Acheté par ${escapeHtml(e.to || "?")} à ${escapeHtml(e.from || "?")} pour ${formatMoney(e.fee || 0)}`;
+  }
+  if (e.type === "promotion") return `Promu de l'académie en équipe pro de ${escapeHtml(e.to || "")}`;
+  if (e.type === "award") return `${escapeHtml(e.label || "")}${e.team ? ` avec ${escapeHtml(e.team)}` : ""}${e.division ? ` (${escapeHtml(e.division)})` : ""}`;
+  return "";
+}
+// Blessures : journal du joueur + carnet du club (blessures d'avant le
+// journal, même joueur), sans doublon.
+function playerInjuryEntries(player, team) {
+  const out = (player.injuryHistory || []).map(e => ({ ...e }));
+  const seen = new Set(out.map(e => `${e.at}|${e.type}`));
+  ((team && team.injuryLog) || []).forEach(e => {
+    if (e.playerId !== player.id || seen.has(`${e.at}|${e.injuryType}`)) return;
+    out.push({ at: e.at, season: e.seasonNo, type: e.injuryType || "Blessure", days: e.days || null,
+      until: typeof e.at === "number" && e.days ? e.at + e.days * CONDITION_DAY_MS : null, opponent: e.opponentName || null, training: !!e.training, friendly: !!e.friendly, doctor: null, club: team.name });
+  });
+  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+function phInjuryContext(e) {
+  if (e.training) return "À l'entraînement";
+  if (e.friendly) return e.opponent ? `Amical contre ${escapeHtml(e.opponent)}` : "En match amical";
+  return e.opponent ? `Contre ${escapeHtml(e.opponent)}` : "En match";
+}
+function playerHistoryCardHtml(player) {
+  const ev = playerHistoryEvents(player);
+  const last = ev[0];
+  const counts = Object.keys(PH_TYPE_LABELS).map(t => [t, ev.filter(e => e.type === t).length]).filter(([, n]) => n > 0);
+  return `<div class="pdp-card pdp2-hist-card"><h3>Historique du joueur</h3>` +
+    (last
+      ? `<p class="pdp2-hist-last"><span>${escapeHtml(phEventLabel(last))} · ${escapeHtml(phDate(last.at) !== "–" ? phDate(last.at) : `Saison ${last.season || "?"}`)}</span>${phEventDetails(last)}</p>` +
+        `<p class="sub">${counts.map(([t, n]) => `${n} ${PH_TYPE_COUNT[t][n > 1 ? 1 : 0]}`).join(" · ")}</p>`
+      : `<p class="sub">Aucun événement marquant pour l'instant.</p>`) +
+    `<button type="button" class="secondary pdp2-hist-btn" data-ph-open="history"${ev.length ? "" : " disabled"}>Voir l'historique</button></div>`;
+}
+const PH_INJURY_PREVIEW = 3;
+function playerInjuryCardHtml(player, team) {
+  const list = playerInjuryEntries(player, team);
+  const rows = list.slice(0, PH_INJURY_PREVIEW).map(e =>
+    `<div class="pdp2-inj-row"><span class="pdp2-inj-date">${escapeHtml(phDate(e.at))}</span><span class="pdp2-inj-type">${escapeHtml(e.type)}</span><span class="pdp2-inj-days">${e.days ? `${e.days} j` : "–"}</span></div>`).join("");
+  return `<div class="pdp-card pdp2-inj-card"><h3>Blessures${list.length ? ` <span class="pdp2-inj-count">${list.length}</span>` : ""}</h3>` +
+    (list.length ? `<div class="pdp2-inj-list">${rows}</div>` : `<p class="sub">Aucune blessure.</p>`) +
+    (list.length > PH_INJURY_PREVIEW ? `<button type="button" class="secondary pdp2-hist-btn" data-ph-open="injuries">Tout voir (${list.length})</button>` : "") +
+    (list.length && list.length <= PH_INJURY_PREVIEW ? `<button type="button" class="linkish pdp2-inj-more" data-ph-open="injuries">Détails</button>` : "") + `</div>`;
+}
+function closePlayerHistoryModal() {
+  const o = document.getElementById("playerHistoryOverlay");
+  if (o) o.remove();
+}
+function showPlayerHistoryModal(kind) {
+  closePlayerHistoryModal();
+  const ref = currentPlayerDetailRef;
+  const team = ref && league.teams[ref.teamIdx];
+  const player = team && team.players.find(p => p.id === ref.playerId);
+  if (!player) return;
+  let body;
+  if (kind === "injuries") {
+    const list = playerInjuryEntries(player, team);
+    body = `<h3>Suivi des blessures — ${escapeHtml(player.name)}</h3>` +
+      `<div class="ph-table-wrap"><table class="pdp-games ph-table"><thead><tr><th class="num">#</th><th>Blessure</th><th>Date</th><th>Retour</th><th class="num">Durée</th><th class="num">Médecin</th><th>Contexte</th></tr></thead><tbody>` +
+      list.map((e, i) => `<tr><td class="num">${list.length - i}</td><td class="strong">${escapeHtml(e.type)}</td><td>${escapeHtml(phDate(e.at))}</td><td>${escapeHtml(phDate(e.until))}</td>` +
+        `<td class="num">${e.days ? `${e.days} j` : "–"}</td><td class="num">${e.doctor ? `niv. ${e.doctor}` : e.doctor === 0 ? "aucun" : "–"}</td><td>${phInjuryContext(e)}${e.club && team && e.club !== team.name ? ` · ${escapeHtml(e.club)}` : ""}</td></tr>`).join("") +
+      `</tbody></table></div>`;
+  } else {
+    const ev = playerHistoryEvents(player);
+    const types = Object.keys(PH_TYPE_LABELS).filter(t => ev.some(e => e.type === t));
+    body = `<h3>Historique du joueur — ${escapeHtml(player.name)}</h3>` +
+      `<div class="ph-filters">${types.map(t => `<label><input type="checkbox" data-ph-filter="${t}" checked> ${escapeHtml(PH_TYPE_LABELS[t])}</label>`).join("")}</div>` +
+      `<div class="ph-table-wrap"><table class="pdp-games ph-table"><thead><tr><th>Événement</th><th>Date</th><th class="num">Saison</th><th>Détails</th></tr></thead><tbody>` +
+      ev.map(e => `<tr data-ph-type="${e.type}"><td class="strong">${escapeHtml(phEventLabel(e))}</td><td>${escapeHtml(phDate(e.at))}</td><td class="num">${e.season || "–"}</td><td>${phEventDetails(e)}</td></tr>`).join("") +
+      `</tbody></table></div>` +
+      `<p class="sub ph-foot">${(player.awards || []).length} distinction${(player.awards || []).length > 1 ? "s" : ""} · ${ev.filter(e => e.type === "transfer").length} transfert${ev.filter(e => e.type === "transfer").length > 1 ? "s" : ""}</p>`;
+  }
+  const overlay = document.createElement("div");
+  overlay.className = "upgrade-confirm-overlay player-season-stats-overlay";
+  overlay.id = "playerHistoryOverlay";
+  overlay.innerHTML = `<div class="upgrade-confirm-box player-season-stats-box ph-box">${body}` +
+    `<button type="button" class="upgrade-confirm-cancel-btn" id="playerHistoryCloseBtn" style="margin-top:14px; width:100%;">Fermer</button></div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closePlayerHistoryModal(); });
+  overlay.addEventListener("change", (e) => {
+    const cb = e.target.closest("[data-ph-filter]");
+    if (!cb) return;
+    overlay.querySelectorAll(`tr[data-ph-type="${cb.dataset.phFilter}"]`).forEach(tr => { tr.hidden = !cb.checked; });
+  });
+  document.getElementById("playerHistoryCloseBtn").addEventListener("click", closePlayerHistoryModal);
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest && e.target.closest("[data-ph-open]");
+  if (!btn || btn.disabled) return;
+  showPlayerHistoryModal(btn.dataset.phOpen);
+});
+
 function renderPlayerDetail(teamIdx, playerId) {
   if (playerDetailForeign && !playerDetailForeignActive) return withPlayerForeign(() => renderPlayerDetail(teamIdx, playerId));
   const nameHeader = document.getElementById("playerDetailName");
@@ -32926,7 +33111,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   // beau ») : Contrat puis Mise en vente sous les Classements (colonne de
   // droite, équilibrée avec Saison + Derniers matchs), puis Partager ;
   // Personnalisation (Premium) en pleine largeur tout en bas.
-  let sideCards = "", leftCards = "", bottomCards = "";
+  let sideCards = "", leftCards = "", bottomCards = "", shareBottom = "";
   if (isOwnTeam) {
     const mainHtml = html;
     html = "";
@@ -32953,11 +33138,14 @@ function renderPlayerDetail(teamIdx, playerId) {
     // Personnalisation : seulement si quelque chose est réglable (Premium) —
     // sinon la brique prenait de la place pour rien (retour 2026-10-03).
     sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${playerContractCardHtml(team, player)}${html}</div>`;
-    bottomCards = teamIsPremium(team) ? `<div class="pdp-contract-sale pdp2-bottom-cards">${playerPersonalizationCardHtml(team, player)}</div>` : "";
+    bottomCards = teamIsPremium(team) ? playerPersonalizationCardHtml(team, player) : "";
     // Partager tout en bas, sans cadre (retour 2026-10-03).
-    if (!playerDetailForeign) bottomCards += `<div class="pdp2-share-bottom">${pdpShareHtml(player)}</div>`;
+    if (!playerDetailForeign) shareBottom = `<div class="pdp2-share-bottom">${pdpShareHtml(player)}</div>`;
     html = mainHtml;
   }
+  // Personnalisation (Premium), Historique du joueur et Blessures côte à
+  // côte (historique et blessures pour tout joueur, comme sur BuzzerBeater).
+  bottomCards = `<div class="pdp-contract-sale pdp2-bottom-cards">${bottomCards}${playerHistoryCardHtml(player)}${playerInjuryCardHtml(player, team)}</div>${shareBottom}`;
   html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards).replace("<!--PDP_BOTTOM_CARDS-->", bottomCards);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
   // (retour utilisateur, 2026-09-24 : "enleve le match par match en bas"),
