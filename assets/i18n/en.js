@@ -5917,4 +5917,9 @@ window.HM_I18N_EN = {
   "· aucune enchère": "· no bid",
   "Salaire demandé": "Asking salary",
   "Fin : {0}, {1} · {2}": "Ends: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "The curve starts at the next Monday update",
+  "Note GEN": "GEN rating",
+  "note GEN par semaine": "GEN rating per week",
+  "clôture imminente": "closing imminent",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ wk, fixed until the end of season {0}",
 };

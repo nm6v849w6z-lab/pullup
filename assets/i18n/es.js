@@ -5892,4 +5892,9 @@ window.HM_I18N_ES = {
   "· aucune enchère": "· sin pujas",
   "Salaire demandé": "Salario pedido",
   "Fin : {0}, {1} · {2}": "Fin: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "La curva empieza con la próxima actualización del lunes",
+  "Note GEN": "Nota GEN",
+  "note GEN par semaine": "nota GEN por semana",
+  "clôture imminente": "cierre inminente",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ sem., fijo hasta el final de la temporada {0}",
 };

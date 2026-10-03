@@ -5955,4 +5955,9 @@ window.HM_I18N_IT = {
   "· aucune enchère": "· nessuna offerta",
   "Salaire demandé": "Stipendio richiesto",
   "Fin : {0}, {1} · {2}": "Fine: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "La curva parte dal prossimo aggiornamento del lunedì",
+  "Note GEN": "Valutazione GEN",
+  "note GEN par semaine": "valutazione GEN per settimana",
+  "clôture imminente": "chiusura imminente",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ sett., fisso fino alla fine della stagione {0}",
 };

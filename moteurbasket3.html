@@ -4006,6 +4006,7 @@
   .yl-foot .upgrade-confirm-cancel-btn{margin:0; width:auto; flex:none; padding-left:18px; padding-right:18px;}
   .ac-id{min-width:0; flex:1;}
   .ac-name{font-weight:800; font-size:15.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-injury{font-size:12px; color:var(--danger); font-weight:600; margin-top:2px;}
   .ac-sub{font-size:12.5px; color:var(--ink-dim); margin-top:2px; white-space:nowrap;}
   .ac-pos{display:inline-block; min-width:22px; text-align:center; padding:1px 6px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); font-weight:800; font-size:11.5px; margin-right:6px;}
   .ac-pot{display:inline-block; font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:999px; white-space:nowrap; border:1px solid var(--line); color:var(--ink-dim); background:var(--panel-2);}
@@ -32646,11 +32647,9 @@ function renderPlayerDetail(teamIdx, playerId) {
     `<div class="pdp2-id-text">`;
   // Refonte (maquette validée, retour utilisateur 2026-10-03) : poste, club
   // et classement mondial sur une ligne, puis les infos en tuiles.
-  const wr = isOwnTeam ? worldRankForPlayer(league, teamIdx, player.id) : null;
   html += `<div class="pdp2-id-top"><span class="pdp2-pos">${escapeHtml(player.position)}</span>${teamLinkHtml(teamIdx, team.name)}` +
-    // Rang par note GEN dans le championnat, remplacé par le vrai rang
-    // mondial dès que /api/world/player-ranks répond (loadPlayerRankings).
-    (wr ? `<span class="pdp2-chip pdp2-chip--world" id="pdpWorldRank" title="Classement par note GEN parmi les joueurs du championnat">${ordinalFr(wr.rank)} du championnat · ${ordinalFr(wr.posRank)} ${escapeHtml(wr.position)}</span>` : "") + `</div>` +
+    // Rang mondial retiré de l'en-tête (retour utilisateur 2026-10-03).
+    `</div>` +
     `<h3 class="pdp2-name" title="${escapeHtml(nationName(player.nationality) || "")}">${nationFlagHtml(player.nationality, "nat-flag--name")}${escapeHtml(player.name)}</h3>`;
   const tile = (label, value, cls = "") => `<div class="pdp2-info${cls ? " " + cls : ""}"><span class="pdp2-info-k">${label}</span><span class="pdp2-info-v">${value}</span></div>`;
   const tiles = [tile("Âge", `${player.age} ans`), tile("Taille", `${player.height} cm`)];
@@ -33034,16 +33033,11 @@ function playerContractCardHtml(team, player) {
     return html;
   }
   const last = left <= 1;
-  // Fin du contrat plutôt qu'un nombre de saisons restantes (retour
-  // 2026-10-01 : à mi-saison, « 3 saisons restantes » prêtait à confusion).
-  const after = left - 1;
-  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la fin de la saison <b>${player.contractUntilSeason}</b>${after > 0 ? ` · encore ${after} saison${after > 1 ? "s" : ""} après celle-ci` : ""}</span>` +
+  html += `<div class="pdp-contract-head"><span>Contrat jusqu'à la fin de la saison <b>${player.contractUntilSeason}</b></span>` +
     (last ? `<span class="contract-end-badge">Dernière saison</span>` : "") + `</div>`;
-  html += `<div class="pdp-contract-lines"><span>Salaire : <b>${formatMoney(player.salary)}</b> / sem., fixe jusqu'à la fin du contrat</span>`;
-  if (typeof player.nextSalary === "number") {
-    html += `<span>Nouveau salaire signé : <b>${formatMoney(player.nextSalary)}</b> / sem. à partir de la saison ${season + 1}</span>`;
-  }
-  html += `</div>`;
+  // « encore N saisons » et « Nouveau salaire signé » retirés (retour
+  // utilisateur 2026-10-03).
+  html += `<div class="pdp-contract-lines"><span>Salaire : <b>${formatMoney(player.salary)}</b> / sem., fixe jusqu'à la fin de la saison ${player.contractUntilSeason}</span></div>`;
   if (player.raiseRequest) {
     html += `<div class="pdp-contract-box pdp-raise" id="pdpRaiseBox"><h4>Demande d'augmentation</h4>` +
       `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 1 semaine, il le prendra comme un refus.</p>` +
@@ -46433,7 +46427,9 @@ function renderMarketMine() {
     : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" ${attr}>Ouvrir</button>`;
   listEl.innerHTML = rows.map(({ kind, role, l, st }) => {
     const urgent = l.closesAt - now < 3600000;
-    const timer = `<span class="${urgent ? "mk-timer urgent" : ""}">clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>`;
+    // Échéance passée : « clôture imminente » seul (et non « clôture dans
+    // Clôture imminente »).
+    const timer = `<span class="${urgent ? "mk-timer urgent" : ""}">${l.closesAt <= now ? "clôture imminente" : `clôture dans ${escapeHtml(mkTimeLeft(l.closesAt, now))}`}</span>`;
     let badge, amt, sub;
     const autoMax = myAutoMaxOf(l);
     if (st === "lead") {
@@ -46535,13 +46531,49 @@ function myAuctionsMerge(list, fresh) {
   });
   return changed;
 }
+// Enchère de joueur terminée (retour utilisateur 2026-10-03 : « obligé de
+// reload la page pour que les joueurs arrivent dans le roster ») : dès qu'une
+// annonce où l'on achète ou vend est close côté serveur (ou que son échéance
+// est passée depuis 15 s), l'état complet est rechargé — effectif, budget,
+// marché — puis la page visible est redessinée. Au plus une fois par 20 s.
+let myAuctionsReloadAt = 0;
+let myAuctionsCloseTimer = null;
+function myAuctionsInvolved(l) {
+  return !!l && (l.sellerIdx === myTeamIndex || l.currentBidderIdx === myTeamIndex);
+}
+async function myAuctionsReloadState() {
+  if (Date.now() - myAuctionsReloadAt < 20000) return false;
+  myAuctionsReloadAt = Date.now();
+  if (typeof ordresValidationInFlight !== "undefined" && ordresValidationInFlight) return false;
+  const ok = await reloadLeagueOnly();
+  if (!ok) return false;
+  const page = currentVisiblePageId();
+  const rerender = { marcheSection: () => renderMarcheSectionKeeping(null), effectifSection: renderEffectifSection, economieSection: renderEconomieSection, clubSection: renderClubSection }[page];
+  try { if (rerender) rerender(); } catch (e) { /* page redessinée au prochain passage */ }
+  try { updateTopbar(); } catch (e) { /* rien */ }
+  try { mkUpdateBadge(); } catch (e) { /* rien */ }
+  return true;
+}
 async function myAuctionsRefresh() {
   if (typeof managerToken === "undefined" || !managerToken || !league) return false;
   try {
     const res = await fetchApi("/api/auctions/mine");
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) return false;
+    const openBefore = new Set((league.transferListings || []).filter(l => l.status === "open" && myAuctionsInvolved(l)).map(l => l.id));
     let changed = myAuctionsMerge(league.transferListings, data.transferListings);
+    const nowMs = Date.now();
+    const closedNow = (league.transferListings || []).some(l => openBefore.has(l.id) && l.status !== "open");
+    const overdue = (league.transferListings || []).some(l => l.status === "open" && myAuctionsInvolved(l) && l.closesAt < nowMs - 15000);
+    if ((closedNow || overdue) && await myAuctionsReloadState()) return true;
+    // Prochaine clôture qui nous concerne avant le prochain passage : on
+    // revient vérifier 20 s après elle.
+    const next = (league.transferListings || []).filter(l => l.status === "open" && myAuctionsInvolved(l) && l.closesAt > nowMs)
+      .reduce((m, l) => Math.min(m, l.closesAt), Infinity);
+    if (next < nowMs + MY_AUCTIONS_POLL_MS) {
+      clearTimeout(myAuctionsCloseTimer);
+      myAuctionsCloseTimer = setTimeout(() => myAuctionsRefresh(), next - nowMs + 20000);
+    }
     Object.entries(data.staff || {}).forEach(([field, arr]) => { if (myAuctionsMerge(league[field], arr)) changed = true; });
     // Annonce d'un autre championnat où l'on a misé, disparue de l'index : close.
     const alive = new Set(data.foreignIds || []);
@@ -49473,8 +49505,13 @@ function acAllAttrsHtml(p) {
     `</div></details>`;
 }
 function acIdentityHtml(p) {
-  return `${playerAvatarHtml(p, teamA, 44)}<div class="ac-id"><div class="ac-name">${nationFlagHtml(p.nationality, "nat-flag--name")}${escapeHtml(p.name)}</div>` +
-    `<div class="ac-sub"><span class="ac-pos">${POS_SHORT[p.position]}</span>${p.age} ans · ${p.height} cm</div></div>`;
+  // Blessure (en amical, retour utilisateur 2026-10-03 : « apparaît sur
+  // l'amical mais pas dans la fiche du jeune ») : croix rouge et jours restants.
+  const injured = isCurrentlyInjured(p);
+  const days = injured ? injuryDaysRemaining(p) : 0;
+  return `${playerAvatarHtml(p, teamA, 44)}<div class="ac-id"><div class="ac-name">${injured ? injuryCrossHtml(p) + " " : ""}${nationFlagHtml(p.nationality, "nat-flag--name")}${escapeHtml(p.name)}</div>` +
+    `<div class="ac-sub"><span class="ac-pos">${POS_SHORT[p.position]}</span>${p.age} ans · ${p.height} cm</div>` +
+    (injured ? `<div class="ac-injury">Blessé : ${escapeHtml(p.injuryType || "Blessure")}, ${days} jour${days > 1 ? "s" : ""} restant${days > 1 ? "s" : ""}</div>` : "") + `</div>`;
 }
 
 // Bandeau de synthèse en haut de page : places, masse salariale des
@@ -54081,7 +54118,7 @@ function managerAchievementsHtml(team) {
 // défaut, ou la caractéristique choisie (demande du 2026-10-01, même courbe
 // que la page publique /j/<code>, server/playerPage.js). Ancien journal
 // (Player.progressLog, note seule) tant que l'historique n'a pas deux points.
-const PP_EMPTY_MSG = "La progression s'affichera au fil des semaines";
+const PP_EMPTY_MSG = "La courbe démarre à la prochaine mise à jour du lundi";
 // Copie de ppChartHtml (server/playerPage.js) : même dessin des deux côtés.
 function ppChartHtml(vals, weeks, emptyMsg) {
   var n = vals.length;
@@ -54113,31 +54150,49 @@ function playerWeeklyHistory(player) {
   return (player.weeklyHistory || []).filter(e => Array.isArray(e) && typeof e[2] === "number");
 }
 // `key` : "overall" ou une clé d'ATTRS.
+// Courbe (retour utilisateur 2026-10-03 : « au bout de 5 semaines c'est
+// toujours vide ») : un point par mise à jour du lundi (weeklyHistory), plus
+// la valeur ACTUELLE en dernier point — un seul lundi suffit donc pour voir
+// une courbe. « Note globale » = note GEN (meilleur poste), recalculée sur
+// les caractéristiques de chaque semaine.
+function ppGenOf(attrs) {
+  return Math.round(Math.max(...Object.values(positionRatings({ attrs }))) * 10) / 10;
+}
 function playerProgressChartHtml(player, key = "overall") {
   const hist = playerWeeklyHistory(player);
-  if (hist.length >= 2) {
-    const col = key === "overall" ? 2 : 3 + ATTRS.indexOf(key);
-    const pts = hist.filter(e => col >= 2 && typeof e[col] === "number");
-    return ppChartHtml(pts.map(e => e[col]), pts.map(e => `S${e[0]} · sem. ${e[1]}`), escapeHtml(PP_EMPTY_MSG));
+  const valueOf = e => {
+    if (key !== "overall") return e[3 + ATTRS.indexOf(key)];
+    const attrs = {};
+    ATTRS.forEach((a, i) => { if (typeof e[3 + i] === "number") attrs[a] = e[3 + i]; });
+    return ATTRS.every(a => typeof attrs[a] === "number") ? ppGenOf(attrs) : e[2];
+  };
+  const vals = [], labels = [];
+  if (hist.length) {
+    hist.forEach(e => { const v = valueOf(e); if (typeof v === "number") { vals.push(v); labels.push(`S${e[0]} · sem. ${e[1]}`); } });
+  } else {
+    (player.progressLog || []).filter(x => typeof x.ovr === "number").forEach(x => { vals.push(x.ovr); labels.push(`Semaine ${x.week}`); });
   }
-  const log = (player.progressLog || []).filter(x => typeof x.ovr === "number");
-  return ppChartHtml(log.map(x => x.ovr), log.map(x => `Semaine ${x.week}`), escapeHtml(PP_EMPTY_MSG));
+  if (vals.length) {
+    vals.push(key === "overall" ? ppGenOf(player.attrs) : player.attrs[key]);
+    labels.push("Aujourd'hui");
+  }
+  return ppChartHtml(vals, labels, escapeHtml(PP_EMPTY_MSG));
 }
 function playerProgressHtml(player) {
   let body, selector = "";
   // Sans Premium : plus de brique (retour utilisateur 2026-10-03).
   if (!teamIsPremium(teamA)) return "";
   {
-    if (playerWeeklyHistory(player).length >= 2) {
+    if (playerWeeklyHistory(player).length >= 1) {
       const groups = [["Fondamentaux", PDP_ATTR_ORDER.Fondamentaux], ["Physique", PDP_ATTR_ORDER.Physique], ["Mental", PDP_ATTR_ORDER.Mental]];
-      selector = `<select class="pp-sel" id="ppAttrSel" aria-label="Courbe affichée"><option value="overall">Note globale</option>` +
+      selector = `<select class="pp-sel" id="ppAttrSel" aria-label="Courbe affichée"><option value="overall">Note GEN</option>` +
         groups.map(([title, keys]) => `<optgroup label="${escapeHtml(title)}">` +
           keys.filter(k => ATTRS.includes(k)).map(k => `<option value="${k}">${escapeHtml(TRAINING_LABELS[k] || k)}</option>`).join("") + `</optgroup>`).join("") +
         `</select>`;
     }
     body = `<div id="ppChartBox">${playerProgressChartHtml(player)}</div>`;
   }
-  return `<div class="pdp2-row pdp2-row--progress"><section class="pdp2-card"><div class="pdp2-head"><h3>Progression</h3>${selector || `<span class="pdp2-meta">note globale par semaine</span>`}</div>${body}</section></div>`;
+  return `<div class="pdp2-row pdp2-row--progress"><section class="pdp2-card"><div class="pdp2-head"><h3>Progression</h3>${selector || `<span class="pdp2-meta">note GEN par semaine</span>`}</div>${body}</section></div>`;
 }
 
 // ---------------------------------------------------------------------

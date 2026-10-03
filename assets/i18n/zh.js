@@ -5892,4 +5892,9 @@ window.HM_I18N_ZH = {
   "· aucune enchère": "· 暂无出价",
   "Salaire demandé": "要求薪资",
   "Fin : {0}, {1} · {2}": "结束：{0}，{1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "曲线将在下周一更新后开始",
+  "Note GEN": "GEN 评分",
+  "note GEN par semaine": "每周 GEN 评分",
+  "clôture imminente": "即将结束",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ 周，固定至第 {0} 赛季结束",
 };

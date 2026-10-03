@@ -5892,4 +5892,9 @@ window.HM_I18N_PL = {
   "· aucune enchère": "· brak ofert",
   "Salaire demandé": "Żądana pensja",
   "Fin : {0}, {1} · {2}": "Koniec: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "Wykres ruszy przy najbliższej poniedziałkowej aktualizacji",
+  "Note GEN": "Ocena GEN",
+  "note GEN par semaine": "ocena GEN na tydzień",
+  "clôture imminente": "zamknięcie wkrótce",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ tydz., stała do końca sezonu {0}",
 };

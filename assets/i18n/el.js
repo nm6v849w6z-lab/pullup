@@ -5892,4 +5892,9 @@ window.HM_I18N_EL = {
   "· aucune enchère": "· καμία προσφορά",
   "Salaire demandé": "Ζητούμενος μισθός",
   "Fin : {0}, {1} · {2}": "Λήξη: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "Η καμπύλη ξεκινά με την επόμενη ενημέρωση της Δευτέρας",
+  "Note GEN": "Βαθμός GEN",
+  "note GEN par semaine": "βαθμός GEN ανά εβδομάδα",
+  "clôture imminente": "λήξη επίκειται",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ εβδ., σταθερός έως το τέλος της σεζόν {0}",
 };

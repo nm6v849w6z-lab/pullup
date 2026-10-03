@@ -28,7 +28,7 @@ async function until(fn, n = 100) { for (let i = 0; i < n; i++) { if (fn()) retu
     Engine.ATTRS.forEach(a => { star.attrs[a] = Math.min(99, saved[a] + gain); });
     star.attrs.threePoint = Math.min(99, saved.threePoint + gain * 2);
     Engine.pushPlayerHistory(star, 1, w);
-    star.attrs = saved;
+    if (w < 4) star.attrs = saved; // le joueur garde son niveau de la semaine 4
   });
   const oppIdx = lg.teams.findIndex(t => !t.isHuman);
   const opp = lg.teams[oppIdx].players[0];
@@ -52,7 +52,8 @@ async function until(fn, n = 100) { for (let i = 0; i < n; i++) { if (fn()) retu
   // 2) Courbe de progression : note globale + sélecteur.
   const sel = doc.querySelector("#ppAttrSel");
   if (!sel || sel.value !== "overall" || !sel.querySelector('option[value="threePoint"]')) fail("sélecteur de la courbe absent.");
-  if (doc.querySelectorAll("#ppChartBox .pp-dot").length !== 4 || !doc.querySelector("#ppChartBox .pp-line")) fail("courbe de la note globale : 4 points attendus.");
+  // 4 lundis + la valeur actuelle (« Aujourd'hui », retour 2026-10-03).
+  if (doc.querySelectorAll("#ppChartBox .pp-dot").length !== 5 || !doc.querySelector("#ppChartBox .pp-line")) fail("courbe de la note GEN : 5 points attendus.");
   if (!/S1 · sem\. 1/.test(doc.querySelector("#ppChartBox .pp-x").textContent)) fail(`semaines : ${doc.querySelector("#ppChartBox .pp-x").textContent}`);
   sel.value = "threePoint";
   sel.dispatchEvent(new win.Event("change", { bubbles: true }));

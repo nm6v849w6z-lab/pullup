@@ -5892,4 +5892,9 @@ window.HM_I18N_LT = {
   "· aucune enchère": "· pasiūlymų nėra",
   "Salaire demandé": "Prašomas atlyginimas",
   "Fin : {0}, {1} · {2}": "Pabaiga: {0}, {1} · {2}",
+  "La courbe démarre à la prochaine mise à jour du lundi": "Kreivė prasidės per kitą pirmadienio atnaujinimą",
+  "Note GEN": "GEN įvertis",
+  "note GEN par semaine": "GEN įvertis per savaitę",
+  "clôture imminente": "netrukus baigiasi",
+  "/ sem., fixe jusqu'à la fin de la saison {0}": "/ sav., fiksuotas iki {0} sezono pabaigos",
 };
