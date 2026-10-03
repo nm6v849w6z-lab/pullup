@@ -3490,6 +3490,8 @@ window.HM_I18N_ES = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Rechazado: le parece una oferta baja. Su petición sube a",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Al salario pedido ({0}): acuerdo inmediato. Hasta −10 %: puede rechazar. Su petición sube un 3 % tras cada rechazo y, tras 3 rechazos, solo firma al salario pedido.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Tras tres rechazos, solo firma al salario pedido ({0}).",
+  "Salaire proposé": "Salario ofrecido",
+  "Salaire conclu :": "Salario acordado:",
   "RO": "RO",
   "Rebonds offensifs": "Rebotes ofensivos",
   "reb. déf./match": "reb. def./partido",

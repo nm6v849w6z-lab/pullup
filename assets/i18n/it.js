@@ -3526,6 +3526,8 @@ window.HM_I18N_IT = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Rifiutato: trova l'offerta troppo bassa. La sua richiesta sale a",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Allo stipendio richiesto ({0}): accordo immediato. Fino a −10 %: può rifiutare. La richiesta sale del 3 % a ogni rifiuto e dopo 3 rifiuti firma solo allo stipendio richiesto.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Dopo tre rifiuti firma solo allo stipendio richiesto ({0}).",
+  "Salaire proposé": "Stipendio offerto",
+  "Salaire conclu :": "Stipendio concordato:",
   "RO": "RO",
   "Rebonds offensifs": "Rimbalzi offensivi",
   "reb. déf./match": "rimb. dif./partita",

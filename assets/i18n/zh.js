@@ -3490,6 +3490,8 @@ window.HM_I18N_ZH = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "被拒绝：他觉得报价太低。要价升至",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "按要价（{0}）：立即达成协议。最多低 10%：他可能拒绝。每次拒绝后要价上涨 3%，拒绝 3 次后只按要价签约。",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "拒绝三次后，他只按要价（{0}）签约。",
+  "Salaire proposé": "报价薪水",
+  "Salaire conclu :": "约定薪水：",
   "RO": "前板",
   "Rebonds offensifs": "前场篮板",
   "reb. déf./match": "场均防守篮板",

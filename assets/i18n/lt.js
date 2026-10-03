@@ -3490,6 +3490,8 @@ window.HM_I18N_LT = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Atmesta: pasiūlymas per mažas. Jo prašymas pakyla iki",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Už prašomą atlyginimą ({0}): iškart susitariama. Iki −10 %: gali atsisakyti. Po kiekvieno atsisakymo prašymas didėja 3 %, o po 3 atsisakymų pasirašo tik už prašomą atlyginimą.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Po trijų atsisakymų pasirašo tik už prašomą atlyginimą ({0}).",
+  "Salaire proposé": "Siūlomas atlyginimas",
+  "Salaire conclu :": "Sutartas atlyginimas:",
   "RO": "AK",
   "Rebonds offensifs": "Atkovoti kamuoliai puolime",
   "reb. déf./match": "atk. gyn./rungt.",

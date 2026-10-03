@@ -47888,13 +47888,12 @@ function mkNegotiationHtml(l, asked) {
   return `<div class="mk-nego">` +
     `<div class="mk-step"><span>1 · Contrat avec le joueur</span><span>${firm ? "dernier mot" : `essai ${Math.min(refusals + 1, CONTRACT_FIRM_AFTER_REFUSALS)}/${CONTRACT_FIRM_AFTER_REFUSALS}`}</span></div>` +
     (fb && fb.text ? `<div class="mk-nego-msg ${fb.ok ? "ok" : "no"}">${fb.html || escapeHtml(fb.text)}</div>` : "") +
-    `<div class="mk-nego-row"><label>Salaire proposé (€ / sem.)<input type="number" id="negoSalary_${l.id}" value="${salary}" min="${firm ? demand : contractOfferFloor(demand)}" max="${demand}" step="10"${firm ? " readonly" : ""}></label>` +
+    `<div class="mk-nego-row"><label>Salaire proposé<input type="number" id="negoSalary_${l.id}" value="${salary}" min="${firm ? demand : contractOfferFloor(demand)}" max="${demand}" step="10"${firm ? " readonly" : ""}></label>` +
       `<label>Durée<select id="negoSeasons_${l.id}">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === seasons ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label></div>` +
     `<button type="button" class="mk-btn mk-btn--primary" data-mk-negotiate="${l.id}">Proposer au joueur</button>` +
-    `<div class="mk-hint">${firm
-      ? `Après trois refus, il ne signe qu'au salaire demandé (${escapeHtml(formatMoney(demand))}).`
-      : `Au salaire demandé (${escapeHtml(formatMoney(demand))}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.`}</div>` +
-    `</div><div class="mk-nego-lock">🔒 Enchères ouvertes une fois l'accord conclu avec le joueur.</div>`;
+    // Texte d'explication et cadenas retirés (retour utilisateur 2026-10-03).
+    (firm ? `<div class="mk-hint">Après trois refus, il ne signe qu'au salaire demandé (${escapeHtml(formatMoney(demand))}).</div>` : "") +
+    `</div>`;
 }
 async function mkNegotiate(listingId) {
   const l = (league.transferListings || []).find(x => String(x.id) === String(listingId));
@@ -47965,9 +47964,8 @@ function mkListingCardHtml(l, player, now) {
     const avail = mkBudget() - mkCommitted(l.id);
     const over = minBid > avail;
     const deal = l.myAgreement;
-    action = (deal
-        ? `<div class="mk-deal-ok">✅ Accord conclu : <b>${deal.seasons} saison${deal.seasons > 1 ? "s" : ""}</b> à <b>${escapeHtml(formatMoney(deal.salary))} / sem.</b> <span>· figé jusqu'à la fin de l'enchère</span></div>`
-        : `<div class="mk-deal-ok">✅ Accord conclu au salaire demandé (${escapeHtml(formatMoney(asked))} / sem.)</div>`) +
+    // Juste le salaire conclu (retour utilisateur 2026-10-03).
+    action = `<div class="mk-deal-ok">Salaire conclu : <b>${escapeHtml(formatMoney(deal && typeof deal.salary === "number" ? deal.salary : asked))}</b></div>` +
       `<div class="mk-step">2 · ${fa ? "Prime de signature" : "Indemnité de transfert"}</div>` +
       `<div class="mk-bidrow">` +
         `<input type="number" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'enchère pour ${escapeHtml(player.name)}">` +

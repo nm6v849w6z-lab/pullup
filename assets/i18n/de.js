@@ -3490,6 +3490,8 @@ window.HM_I18N_DE = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Abgelehnt: Das Angebot ist ihm zu niedrig. Seine Forderung steigt auf",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Zum geforderten Gehalt ({0}): sofortige Einigung. Bis −10 %: er kann ablehnen. Seine Forderung steigt nach jeder Ablehnung um 3 %, nach 3 Ablehnungen unterschreibt er nur noch zum geforderten Gehalt.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Nach drei Ablehnungen unterschreibt er nur zum geforderten Gehalt ({0}).",
+  "Salaire proposé": "Angebotenes Gehalt",
+  "Salaire conclu :": "Vereinbartes Gehalt:",
   "RO": "OR",
   "Rebonds offensifs": "Offensivrebounds",
   "reb. déf./match": "Def.-Reb./Spiel",

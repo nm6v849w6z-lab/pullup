@@ -3490,6 +3490,8 @@ window.HM_I18N_PL = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Odrzucone: oferta jest za niska. Jego żądanie rośnie do",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Przy żądanej pensji ({0}): natychmiastowe porozumienie. Do −10%: może odmówić. Po każdej odmowie żądanie rośnie o 3%, a po 3 odmowach podpisze tylko za żądaną pensję.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Po trzech odmowach podpisze tylko za żądaną pensję ({0}).",
+  "Salaire proposé": "Proponowana pensja",
+  "Salaire conclu :": "Uzgodniona pensja:",
   "RO": "ZA",
   "Rebonds offensifs": "Zbiórki w ataku",
   "reb. déf./match": "zb. obr./mecz",

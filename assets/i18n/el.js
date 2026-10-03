@@ -3490,6 +3490,8 @@ window.HM_I18N_EL = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Απορρίφθηκε: τη βρίσκει χαμηλή. Το αίτημά του ανεβαίνει στα",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "Στον ζητούμενο μισθό ({0}): άμεση συμφωνία. Έως −10 %: μπορεί να αρνηθεί. Το αίτημα ανεβαίνει 3 % σε κάθε άρνηση και μετά από 3 αρνήσεις υπογράφει μόνο στον ζητούμενο μισθό.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "Μετά από τρεις αρνήσεις υπογράφει μόνο στον ζητούμενο μισθό ({0}).",
+  "Salaire proposé": "Προτεινόμενος μισθός",
+  "Salaire conclu :": "Συμφωνημένος μισθός:",
   "RO": "ΕΡ",
   "Rebonds offensifs": "Επιθετικά ριμπάουντ",
   "reb. déf./match": "αμ. ριμπ/αγώνα",

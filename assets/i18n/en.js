@@ -3488,6 +3488,8 @@ window.HM_I18N_EN = {
   "Refusé : il trouve l'offre trop basse. Sa demande passe à": "Refused: he finds the offer too low. His demand rises to",
   "Au salaire demandé ({0}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.": "At his asking salary ({0}): instant agreement. Up to −10%: he may refuse. His demand rises 3% after each refusal, and after 3 refusals he only signs at his asking salary.",
   "Après trois refus, il ne signe qu'au salaire demandé ({0}).": "After three refusals, he only signs at his asking salary ({0}).",
+  "Salaire proposé": "Offered salary",
+  "Salaire conclu :": "Agreed salary:",
   "RO": "OR",
   "Rebonds offensifs": "Offensive rebounds",
   "reb. déf./match": "def. reb/game",
