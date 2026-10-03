@@ -5885,4 +5885,5 @@ window.HM_I18N_PT = {
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Ligas privadas temporariamente indisponíveis, tente novamente em alguns minutos.",
   "Maîtrise du système": "Domínio do sistema",
   "Système {0}": "Sistema {0}",
+  "Donner vos ordres": "Dar as suas ordens",
 };

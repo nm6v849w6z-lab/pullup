@@ -5910,4 +5910,5 @@ window.HM_I18N_EN = {
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Private leagues are temporarily unavailable, try again in a few minutes.",
   "Maîtrise du système": "Mastery of the system",
   "Système {0}": "System {0}",
+  "Donner vos ordres": "Give your orders",
 };

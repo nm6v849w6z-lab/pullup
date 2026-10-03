@@ -5885,4 +5885,5 @@ window.HM_I18N_EL = {
   "Ligues privées momentanément indisponibles, réessayez dans quelques minutes.": "Οι ιδιωτικές λίγκες δεν είναι διαθέσιμες προσωρινά, δοκίμασε ξανά σε λίγα λεπτά.",
   "Maîtrise du système": "Αφομοίωση του συστήματος",
   "Système {0}": "Σύστημα {0}",
+  "Donner vos ordres": "Δώστε τις οδηγίες σας",
 };

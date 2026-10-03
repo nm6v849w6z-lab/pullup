@@ -178,7 +178,12 @@ async function waitFor(fn, label, tries = 60) {
   [...docA3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "lp").click();
   const played = [...docA3.querySelectorAll(".lp-table tbody tr")].every(tr => tr.children[2].textContent === "1");
   check(played, "après vendredi 20h00 : chaque équipe a 1 match joué");
-  const scoreBtn = docA3.querySelector(".lp-score");
+  const scoreBtn = docA3.querySelector(".lp-cal .lp-score");
+  // Comme une ligue classique (retour utilisateur 2026-10-03).
+  check(!!docA3.querySelector(".lp-results .lg-res-card") && /Résultats de la journée 1/.test(docA3.querySelector(".lp-results").textContent), "résultats de la journée affichés");
+  check(/MVP de la journée 1/.test((docA3.querySelector(".lp-mvp") || {}).textContent || ""), "MVP de la journée affiché");
+  check(docA3.querySelectorAll(".lp-leaders .lg-card").length === 6, "leaders de la ligue affichés (6 catégories)");
+  check(!/ne touche pas/.test(docA3.getElementById("lpContent").textContent) && !docA3.querySelector(".lp-orders-row"), "plus de rappel des règles ni de bandeau d'ordres en haut");
   check(!!scoreBtn && /\d+ – \d+/.test(scoreBtn.textContent), `score cliquable dans le calendrier (${scoreBtn && scoreBtn.textContent})`);
   scoreBtn.click();
   const overlay = docA3.getElementById("matchBoxscoreOverlay");
