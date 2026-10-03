@@ -142,6 +142,9 @@ async function waitFor(fn, label, tries = 60) {
     check(/Ordres verrouillés/.test(d.querySelector(".hm-hero").textContent) && !/Donnez vos ordres|Modifier vos ordres/.test(d.querySelector(".hm-hero").textContent), "tableau de bord : « Ordres verrouillés » à moins de 5 min du coup d'envoi");
     // Horloge du navigateur de test au-delà du coup d'envoi de J1 : verrou
     // neutralisé pour la suite.
+    // Pendant le direct d'une journée, les ordres visent la suivante : pas
+    // de verrou (retour utilisateur 2026-10-03).
+    check(w.eval(`(() => { const lp = { rounds: [{ dueAt: Date.now() - 60000, matches: [{ home: myTeamIndex, away: 1, played: false, live: true }] }, { dueAt: Date.now() + 86400000, matches: [{ home: 1, away: myTeamIndex, played: false }] }] }; return window.__realLpOrdersLocked(lp); })()`) === false, "ordres de ligue privée modifiables pendant le direct (journée suivante)");
     w.eval("lpOrdersLocked = () => false");
     w.eval("updateTopbar()");
     check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Donnez vos ordres", "barre du haut : adversaire de ligue privée + bouton « Donnez vos ordres »");

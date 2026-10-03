@@ -40185,6 +40185,9 @@ function updateLockAvailability() {
   const forfeitInevitable = rosterCannotFieldLineup(teamA) || rosterCannotFieldLineup(teamB);
 
   const warnEl = document.getElementById("lockWarning");
+  // Ordres de ligue privée ou d'amical : ces alertes portent sur la feuille
+  // de match du CLUB (matchs officiels), pas sur celle en cours d'édition.
+  if (tqEdit && (tqEdit.kind === "lp" || tqEdit.kind === "friendly")) { warnEl.textContent = ""; return; }
   if (forfeitInevitable) {
     warnEl.textContent = rosterCannotFieldLineup(teamA)
       ? "Effectif insuffisant pour aligner un cinq de départ complet : ce match se soldera automatiquement par un forfait (défaite 0-20) à l'heure prévue. Recrutez sur le marché avant le coup d'envoi pour l'éviter."
@@ -52464,7 +52467,10 @@ function lpOrdersSources(lp) {
 // Verrou à T − 5 min (même règle que le serveur, voir
 // server/privateLeague.js:memberOrdersLocked) : prochain match du club.
 function lpOrdersLocked(lp, now = Date.now()) {
-  const round = lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && (m.home === myTeamIndex || m.away === myTeamIndex)));
+  // Match en direct (`live`, déjà joué côté serveur) : les ordres valent pour
+  // la journée SUIVANTE (retour utilisateur 2026-10-03 : « je ne peux pas
+  // enregistrer » pendant le direct de J3).
+  const round = lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && !m.live && (m.home === myTeamIndex || m.away === myTeamIndex)));
   return !!round && typeof round.dueAt === "number" && now >= round.dueAt - 5 * 60 * 1000;
 }
 function openPrivateLeagueOrders(lpId, tab) {
