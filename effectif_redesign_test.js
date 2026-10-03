@@ -37,7 +37,8 @@ try {
     const starterSlots = ids.slice(0, 5).map(id => win.eval(`teamA.starterPosition(${id})`));
     if (JSON.stringify(starterSlots) !== JSON.stringify(win.eval("POSITIONS"))) throw new Error(`❌ Titulaires attendus dans l'ordre M, A, AS, AF, P, obtenu ${starterSlots.join(", ")}.`);
     const starters = rows.filter(r => r.classList.contains("eff-row-starter"));
-    if (starters.length !== 5 || starters.some(r => !r.querySelector(".eff-starter-mark"))) throw new Error(`❌ 5 titulaires marqués (liseré + « 5 ») attendus, obtenu ${starters.length}.`);
+    // Liseré seul : la pastille « 5 » a été retirée (retour utilisateur 2026-10-03).
+    if (starters.length !== 5 || starters.some(r => r.querySelector(".eff-starter-mark"))) throw new Error(`❌ 5 titulaires marqués (liseré seul, sans « 5 ») attendus, obtenu ${starters.length}.`);
     const reserves = rows.filter((r, i) => roles[i] === "Réserviste");
     if (reserves.some(r => !r.classList.contains("eff-row-reserve"))) throw new Error("❌ Les réservistes devraient porter .eff-row-reserve.");
     const avatarSizes = new Set(rows.map(r => r.querySelector(".player-avatar").style.width));

@@ -6754,6 +6754,12 @@
   .eff-player .nat-flag{margin-right:-3px;}
   .nat-flag--name{width:auto; height:.7em; aspect-ratio:4/3; margin-right:.28em; vertical-align:baseline; border-radius:3px;}
   .eff-player .player-link{font-weight:600;}
+  /* Nom + numéro + pastilles (« $ » aux enchères…) jamais au-delà de la
+     colonne Nom (retour utilisateur 2026-10-03 : la pastille d'Adama
+     Brooks chevauchait le poste) : le nom se raccourcit (…) si besoin. */
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player{display:flex; max-width:100%;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > *{flex:none;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .player-link{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .eff-pos{display:inline-flex; min-width:34px; justify-content:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; letter-spacing:.02em;}
   .eff-pos-m{background:var(--eff-pos-m-bg); color:var(--eff-pos-m);}
   .eff-pos-a{background:var(--eff-pos-a-bg); color:var(--eff-pos-a);}
@@ -45373,8 +45379,10 @@ function effRosterDefaultCmp(team, tie) {
 function effRoleRowClass(role) {
   return role === "Titulaire" ? " eff-row-starter" : role === "Réserviste" ? " eff-row-reserve" : "";
 }
+// Pastille « 5 » des titulaires retirée (retour utilisateur 2026-10-03 : le
+// liseré jaune à gauche de la ligne suffit).
 function effRoleMarkHtml(role) {
-  return role === "Titulaire" ? `<span class="eff-starter-mark" title="Cinq de départ" aria-label="Cinq de départ">5</span>` : "";
+  return "";
 }
 // Regroupement des colonnes du sous-onglet Caractéristiques (maquette) : les
 // 13 FUNDAMENTAL_ATTRS répartis en 3 familles, puis les 2 moyennes.
