@@ -46265,6 +46265,45 @@ function syncMarketAlertToServer(body) {
   } catch (e) { console.warn("Alerte marché : serveur indisponible :", e); return Promise.resolve(null); }
 }
 
+// Re-rendu du marché après une enchère SANS saut de page (retour
+// utilisateur 2026-10-03 : « la page saute et on remonte tout en haut ») :
+// hauteur figée pendant le rendu, puis la carte de l'annonce est remise à
+// la même hauteur à l'écran (la liste « Mes enchères » au-dessus peut avoir
+// grandi entre-temps).
+function renderMarcheSectionKeeping(cardId, render = renderMarcheSection) {
+  const section = document.getElementById("marcheSection");
+  // Safari garde le focus dans le champ du montant après le clic sur
+  // « Enchérir » : détruire un champ focalisé le fait remonter en haut.
+  const active = document.activeElement;
+  if (active && section && section.contains(active) && typeof active.blur === "function") active.blur();
+  // Sans carte précise : on garde la première carte visible à l'écran.
+  if (!cardId) {
+    const first = [...document.querySelectorAll("#marketListings > .mk-lst")].find(c => c.getBoundingClientRect().bottom > 0);
+    if (first) cardId = first.id;
+  }
+  const cardBefore = cardId ? document.getElementById(cardId) : null;
+  const topBefore = cardBefore ? cardBefore.getBoundingClientRect().top : null;
+  const root = document.scrollingElement || document.documentElement;
+  const sc = document.querySelector(".content-scroll");
+  const saved = [[root, root.scrollTop], ...(sc ? [[sc, sc.scrollTop]] : [])];
+  if (section) section.style.minHeight = section.offsetHeight + "px";
+  render();
+  if (section) section.style.minHeight = "";
+  const restore = () => {
+    saved.forEach(([el, top]) => { el.scrollTop = top; });
+    const cardAfter = cardId ? document.getElementById(cardId) : null;
+    if (cardAfter && topBefore != null) {
+      const delta = cardAfter.getBoundingClientRect().top - topBefore;
+      if (Math.abs(delta) > 1) {
+        const scroller = sc && sc.scrollHeight > sc.clientHeight ? sc : root;
+        scroller.scrollTop += delta;
+      }
+    }
+  };
+  restore();
+  // Au cas où le navigateur recale le défilement après coup (Safari).
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(restore);
+}
 function renderMarcheSection() {
   // Sous-titre et note de bas de page retirés (retour utilisateur,
   // 2026-09-26 : "enleve: Enchères de 1 jour · le plus offrant [...]" et
@@ -46450,7 +46489,10 @@ async function myAuctionsRefresh() {
     if (!changed) return true;
     const typingIn = sel => document.activeElement && document.activeElement.closest && document.activeElement.closest(sel);
     const visible = id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
-    if (visible("marcheSection")) { renderMarketKpis(); renderMarketMine(); if (!typingIn("#marcheSection")) renderMarketListings(); }
+    if (visible("marcheSection")) {
+      const typing = typingIn("#marcheSection");
+      renderMarcheSectionKeeping(null, () => { renderMarketKpis(); renderMarketMine(); if (!typing) renderMarketListings(); });
+    }
     if (visible("staffSection") && !typingIn("#staffSection")) renderStaffPanel();
     return true;
   } catch (e) {
@@ -46534,7 +46576,7 @@ async function mkSetAuto(id, off) {
   marketFeedback(msg, good);
   clearTimeout(marketFeedbackTimer);
   marketFeedbackTimer = setTimeout(() => marketFeedback("", true), 5000);
-  renderMarcheSection();
+  renderMarcheSectionKeeping(`marketCard_${id}`);
 }
 // Ligne « Enchère automatique jusqu'à … · Arrêter » (Marché et Staff).
 function autoBidStatusHtml(max, offAttr) {
@@ -46991,13 +47033,13 @@ function mkStaffAction(kind, keyId, confirmed) {
   marketUi.sConfirm = null;
   if (kind === "bid") {
     staffPlaceBid(role, id, amount, mkStaffSay);
-    renderMarcheSection();
+    renderMarcheSectionKeeping(`marketStaffCard_${role.key}_${id}`);
     return;
   }
   setAutoBidFor(role.listKey, id, amount).then(r => {
     const [msg, good] = autoBidMessage(r, amount);
     mkStaffSay(msg, good);
-    renderMarcheSection();
+    renderMarcheSectionKeeping(`marketStaffCard_${role.key}_${id}`);
   });
 }
 
@@ -47359,7 +47401,7 @@ function mkPlaceBid(id) {
       });
     }
   }
-  renderMarcheSection();
+  renderMarcheSectionKeeping(`marketCard_${id}`);
 }
 
 document.getElementById("marcheSection").addEventListener("click", (e) => {

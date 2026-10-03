@@ -159,6 +159,36 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") closeOverlays();
     });
+
+    // Clavier iOS (retour utilisateur 2026-10-03, capture iPhone : barre du
+    // bas au milieu de la page du marché) : à l'ouverture du clavier, iOS
+    // décale la page et ne la recale pas toujours à la fermeture — les
+    // éléments fixes (barre d'onglets) restent alors au milieu de l'écran.
+    // Barre masquée tant que le clavier est ouvert, puis petit recalage du
+    // défilement une fois le clavier fermé.
+    var vv = window.visualViewport;
+    var isField = function (el) { return !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && el.type !== "range" && el.type !== "checkbox" && el.type !== "radio"; };
+    var realign = function () {
+      setTimeout(function () {
+        if (isField(document.activeElement)) return;
+        var x = window.scrollX, y = window.scrollY;
+        window.scrollTo(x, y + 1);
+        window.scrollTo(x, y);
+      }, 80);
+    };
+    document.addEventListener("focusin", function (e) {
+      if (mq && mq.matches && isField(e.target)) document.body.classList.add("m-keyboard-open");
+    });
+    document.addEventListener("focusout", function (e) {
+      if (!isField(e.target)) return;
+      setTimeout(function () { if (!isField(document.activeElement)) document.body.classList.remove("m-keyboard-open"); }, 60);
+      realign();
+    });
+    if (vv && vv.addEventListener) {
+      vv.addEventListener("resize", function () {
+        if (vv.height >= window.innerHeight * 0.85) { document.body.classList.remove("m-keyboard-open"); realign(); }
+      });
+    }
     if (mq && mq.addEventListener) {
       mq.addEventListener("change", function (ev) { if (!ev.matches) closeOverlays(); });
     }

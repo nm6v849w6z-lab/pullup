@@ -145,6 +145,8 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
     -webkit-tap-highlight-color: transparent;
   }
   .m-tabbar .m-tab.active { color: var(--amber); }
+  /* Clavier ouvert (voir mobile.js) : pas de barre flottante au-dessus. */
+  body.m-keyboard-open .m-tabbar { display: none; }
   .m-tabbar .m-tab[aria-expanded="true"] { color: var(--ink); }
 
   /* ---- Ordres : terrain de la feuille de match ---- */
