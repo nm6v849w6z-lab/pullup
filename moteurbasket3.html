@@ -46795,7 +46795,7 @@ const marketUi = {
   // Fourchettes âge/potentiel (palier)/prix : null = pas de borne ; origin =
   // "all", "league" ou un code pays (retour utilisateur 2026-10-01).
   pos: "all", q: "", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
-  deal: false, hideMine: false, origin: "all",
+  hideMine: false, origin: "all",
   sort: "ends", mineTab: "all", open: new Set(), expanded: new Set(), crit: [], critOpen: false, watched: false,
   // Mode Staff (2026-10-01) : "players" | "staff", puis filtres du staff
   // (rôle, "rôle:spécialité", recherche, niveau 1-5, salaire, budget, fin
@@ -47748,9 +47748,7 @@ function renderMarketFilterControls() {
       return `<button type="button" class="mk-poscell ${marketUi.pos === k ? "on" : ""}" aria-pressed="${marketUi.pos === k}" data-mk-pos="${escapeHtml(k)}" title="${k === "all" ? "Tous les postes" : escapeHtml(k)}">${escapeHtml(t)}<span class="n">${n}</span></button>`;
     }).join("");
   }
-  const deal = document.getElementById("marketDealBtn");
   const hide = document.getElementById("marketHideMineBtn");
-  if (deal) { deal.classList.toggle("on", marketUi.deal); deal.setAttribute("aria-pressed", String(marketUi.deal)); }
   const budgetBtn = document.getElementById("marketBudgetBtn");
   if (budgetBtn) { budgetBtn.classList.toggle("on", marketUi.budget); budgetBtn.setAttribute("aria-pressed", String(marketUi.budget)); }
   mkRenderOriginPicker();
@@ -47830,18 +47828,15 @@ function mkFilteredListings() {
     if (u.budget && !mine && next > budget - mkCommitted(l.id)) return false;
     if (u.priceMin !== null && next < u.priceMin) return false;
     if (u.priceMax !== null && next > u.priceMax) return false;
-    if (u.deal && mkVerdict(l, player)[0] !== "good") return false;
     if (u.hideMine && mine) return false;
     if (u.watched && !(teamA.isWatchingPlayer && teamA.isWatchingPlayer(player.id))) return false;
     for (const c of crit) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
     return true;
   });
-  const deal = r => estimateMarketValue(r.player) / Math.max(1, minNextBidFor(r.l));
   const by = {
     ends: (a, b) => a.l.closesAt - b.l.closesAt,
     ovr: (a, b) => b.player.overall() - a.player.overall(),
     pot: (a, b) => potentialTierIndex(b.player.potential) - potentialTierIndex(a.player.potential) || a.l.closesAt - b.l.closesAt,
-    deal: (a, b) => deal(b) - deal(a),
     price: (a, b) => minNextBidFor(a.l) - minNextBidFor(b.l),
     age: (a, b) => a.player.age - b.player.age,
   };
@@ -48067,7 +48062,7 @@ function renderMarketListings() {
   const total = mkOpenListings().length;
   const rows = mkFilteredListings();
   const u = marketUi;
-  const active = u.pos !== "all" || u.q || u.origin !== "all" || mkRangesActive() || u.deal || u.hideMine || u.watched || mkCritActive().length > 0;
+  const active = u.pos !== "all" || u.q || u.origin !== "all" || mkRangesActive() || u.hideMine || u.watched || mkCritActive().length > 0;
   const count = document.getElementById("marketResCount");
   if (count) {
     // Alertes (Premium) : enregistrer les filtres actuels (poste, âge,
@@ -48093,7 +48088,7 @@ function renderMarketListings() {
 
 function mkResetFilters() {
   Object.assign(marketUi, { pos: "all", q: "", origin: "all", ageMin: null, ageMax: null, potMin: null, potMax: null, priceMin: null, priceMax: null, budget: false,
-    deal: false, hideMine: false, watched: false, crit: [], critOpen: false });
+    hideMine: false, watched: false, crit: [], critOpen: false });
   clearTimeout(mkRangeTimer);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   set("marketSearch", "");
@@ -48209,7 +48204,6 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   if (d.staffGoto) { const [k, id] = d.staffGoto.split(":"); mkGotoStaff(k, Number(id)); return; }
   if (d.mkGoto) { mkGotoListing(Number(d.mkGoto)); return; }
   if (d.mkPos) { marketUi.pos = d.mkPos; renderMarketListings(); return; }
-  if (t.id === "marketDealBtn") { marketUi.deal = !marketUi.deal; renderMarketListings(); return; }
   if (t.id === "marketBudgetBtn") { marketUi.budget = !marketUi.budget; renderMarketListings(); return; }
   if (d.mkOriginBtn !== undefined) { mkToggleOriginPicker(); return; }
   if (d.mkOrigin) {
