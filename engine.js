@@ -19085,6 +19085,8 @@ class MatchEngine {
         id: p.id,
         name: p.name, position: p.matchPosition || p.position,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
+        // Titulaire (liseré jaune sur les feuilles de match, 2026-10-03).
+        starter: !!p.isStarterThisMatch,
         ...p.stats,
       }));
   }

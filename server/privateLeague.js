@@ -463,6 +463,7 @@ function compactBoxScore(rows) {
     pts: r.pts, reb: r.reb, ast: r.ast, stl: r.stl, blk: r.blk, tov: r.tov, pf: r.pf,
     fgm2: r.fgm2, fga2: r.fga2, fgm3: r.fgm3, fga3: r.fga3, ftm: r.ftm, fta: r.fta,
     plusMinus: r.plusMinus || 0,
+    starter: r.starter || undefined,
   }));
 }
 

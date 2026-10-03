@@ -4716,6 +4716,8 @@
   .bx-scroll table.boxscore tbody tr.boxscore-mvp-row{background:transparent;}
   .bx-scroll table.boxscore tbody tr.boxscore-mvp-row td{background:linear-gradient(rgba(240,162,60,.09), rgba(240,162,60,.09)), var(--bg);}
   .bx-scroll table.boxscore tbody tr.boxscore-mvp-row td.bx-name{box-shadow:inset 3px 0 0 var(--amber);}
+  table.boxscore tbody tr.bx-starter td:first-child{box-shadow:inset 3px 0 0 #f2cf3c;}
+  .bx-scroll table.boxscore tbody tr.bx-starter td.bx-name, .bx-scroll table.boxscore tbody tr.bx-starter.boxscore-mvp-row td.bx-name{box-shadow:inset 3px 0 0 #f2cf3c;}
   .bx-scroll table.boxscore tr.boxscore-mvp-row .bx-name::after{content:"MVP"; margin-left:8px; font-size:9.5px; font-weight:800; letter-spacing:.08em; color:var(--amber-ink); background:var(--amber); border-radius:4px; padding:2px 5px; vertical-align:1px;}
   .bx-scroll table.boxscore tbody tr.boxscore-totals{border-top:none;}
   .bx-scroll table.boxscore tbody tr.boxscore-totals td{background:var(--panel); color:var(--ink); font-weight:800; border-top:1px solid var(--line); border-bottom:none;}
@@ -19146,6 +19148,8 @@ class Team {
     // Récupération de forme physique (voir engine.js, miroir identique).
     this.players.forEach(p => {
       p.resetForMatch(now, this.conditionRecoveryPerDay());
+      // Titulaire du match (liseré jaune des feuilles de match, voir engine.js).
+      p.isStarterThisMatch = false;
       p.matchChemistryFactor = chemistryFactor;
       // Club humain : chaque joueur joue avec SA maîtrise du système.
       p.matchTacticalKnowledgeFactor = this.isHuman ? this.playerTacticalKnowledgeFactor(p) : tacticalKnowledgeFactor;
@@ -19159,7 +19163,7 @@ class Team {
       if (p && p.matchInjuryLocked) {
         p = this.backupsForSlot(pos)[0] || null;
       }
-      if (p) { p.onCourt = true; p.matchPosition = pos; }
+      if (p) { p.onCourt = true; p.matchPosition = pos; p.isStarterThisMatch = true; }
     });
   }
 
@@ -25914,6 +25918,8 @@ class MatchEngine {
         id: p.id,
         name: p.name, position: p.matchPosition || p.position,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
+        // Titulaire (liseré jaune sur les feuilles de match, 2026-10-03).
+        starter: !!p.isStarterThisMatch,
         ...p.stats,
       }));
   }
@@ -40708,7 +40714,7 @@ function liveBoxscoreTableHtml(rows) {
   LIVE_BOXSCORE_COLS.forEach(c => { totals[c[0]] = 0; });
   totals.fgm2 = 0; totals.fga2 = 0; totals.fgm3 = 0; totals.fga3 = 0; totals.ftm = 0; totals.fta = 0;
   rows.forEach(p => {
-    html += `<tr><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position] || ""}</td>`;
+    html += `<tr${p.starter ? ' class="bx-starter"' : ""}><td>${escapeHtml(p.name)}</td><td>${POS_SHORT[p.position] || ""}</td>`;
     LIVE_BOXSCORE_COLS.forEach(c => { const val = p[c[0]] || 0; html += `<td>${val}</td>`; totals[c[0]] += val; });
     html += `<td>${p.fgm2}/${p.fga2}</td><td>${p.fgm3}/${p.fga3}</td><td>${p.ftm}/${p.fta}</td><td>${statEvaluation(p)}</td></tr>`;
     totals.fgm2 += p.fgm2 || 0; totals.fga2 += p.fga2 || 0;
@@ -41660,7 +41666,8 @@ function boxscoreTableHtml(rows, mvpRow) {
   rows.forEach(p => {
     const isMvp = !!(mvpRow && p === mvpRow);
     const dnp = !(p.min > 0);
-    const cls = [isMvp ? "boxscore-mvp-row" : "", dnp ? "bx-dnp" : ""].filter(Boolean).join(" ");
+    // Titulaires : petit liseré jaune (retour utilisateur 2026-10-03).
+    const cls = [isMvp ? "boxscore-mvp-row" : "", dnp ? "bx-dnp" : "", p.starter ? "bx-starter" : ""].filter(Boolean).join(" ");
     html += `<tr${cls ? ` class="${cls}"` : ""}><td class="bx-name">${escapeHtml(p.name)}</td><td><span class="bx-pos">${POS_SHORT[p.position] || ""}</span></td>`;
     BOXSCORE_COLS.forEach(c => {
       const val = p[c[0]] || 0;
@@ -41827,6 +41834,7 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
         // awardMatchMvp côté moteur) : `undefined` pour tout le monde sauf le
         // joueur élu, propagé jusqu'à boxscoreMatchMvp/matchMvpCalloutHtml.
         isMvp: entry.isMvp || false, mvpQuote: entry.mvpQuote || null,
+        starter: !!entry.starter,
       };
     })
     .filter(Boolean)
