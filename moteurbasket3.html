@@ -2999,6 +2999,18 @@
   .pdp2-hist-last{margin:4px 0 2px; font-size:14px;}
   .pdp2-hist-last span{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; margin-bottom:2px;}
   .pdp2-hist-btn{margin-top:10px;}
+  .pdp2-hist-count{display:inline-block; min-width:20px; text-align:center; font-size:11px; border-radius:999px; padding:1px 7px; background:rgba(240,162,60,.16); color:var(--amber); margin-left:6px; vertical-align:2px;}
+  .pdp2-hist-row{display:grid; grid-template-columns:88px minmax(0,1fr); gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .pdp2-hist-row:first-child{border-top:0;}
+  .pdp2-hist-ev{min-width:0; display:flex; flex-direction:column;}
+  .pdp2-hist-ev small{color:var(--ink-dim); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp2-hist-counts{margin:6px 0 0;}
+  .pdp-perso-sum{display:flex; gap:14px; align-items:center; margin:2px 0 10px;}
+  .pdp-perso-jersey{flex:none;}
+  .pdp-perso-jersey svg{display:block; width:64px; height:64px;}
+  .pdp-perso-facts{display:grid; gap:3px; font-size:13px; min-width:0;}
+  .pdp-perso-facts div{display:flex; gap:8px;}
+  .pdp-perso-facts span{color:var(--ink-dim); min-width:78px;}
   .pdp2-inj-count{display:inline-block; min-width:20px; text-align:center; font-size:11px; border-radius:999px; padding:1px 7px; background:rgba(226,105,79,.16); color:var(--danger); margin-left:6px; vertical-align:2px;}
   .pdp2-inj-list{display:flex; flex-direction:column;}
   .pdp2-inj-row{display:grid; grid-template-columns:88px minmax(0,1fr) auto; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px;}
@@ -32624,10 +32636,14 @@ function playerHistoryCardHtml(player) {
   const ev = playerHistoryEvents(player);
   const last = ev[0];
   const counts = Object.keys(PH_TYPE_LABELS).map(t => [t, ev.filter(e => e.type === t).length]).filter(([, n]) => n > 0);
-  return `<div class="pdp-card pdp2-hist-card"><h3>Historique du joueur</h3>` +
+  // Les 3 derniers événements (retour 2026-10-03 : « remplis plus la brique »).
+  const rows = ev.slice(0, 3).map(e =>
+    `<div class="pdp2-hist-row"><span class="pdp2-inj-date">${escapeHtml(phDate(e.at) !== "–" ? phDate(e.at) : `Saison ${e.season || "?"}`)}</span>` +
+    `<span class="pdp2-hist-ev"><b>${escapeHtml(phEventLabel(e))}</b><small>${phEventDetails(e)}</small></span></div>`).join("");
+  return `<div class="pdp-card pdp2-hist-card"><h3>Historique du joueur${ev.length ? ` <span class="pdp2-hist-count">${ev.length}</span>` : ""}</h3>` +
     (last
-      ? `<p class="pdp2-hist-last"><span>${escapeHtml(phEventLabel(last))} · ${escapeHtml(phDate(last.at) !== "–" ? phDate(last.at) : `Saison ${last.season || "?"}`)}</span>${phEventDetails(last)}</p>` +
-        `<p class="sub">${counts.map(([t, n]) => `${n} ${PH_TYPE_COUNT[t][n > 1 ? 1 : 0]}`).join(" · ")}</p>`
+      ? `<div class="pdp2-inj-list">${rows}</div>` +
+        `<p class="sub pdp2-hist-counts">${counts.map(([t, n]) => `${n} ${PH_TYPE_COUNT[t][n > 1 ? 1 : 0]}`).join(" · ")}</p>`
       : `<p class="sub">Aucun événement marquant pour l'instant.</p>`) +
     `<button type="button" class="secondary pdp2-hist-btn" data-ph-open="history"${ev.length ? "" : " disabled"}>Voir l'historique</button></div>`;
 }
@@ -33370,6 +33386,16 @@ function playerPersonalizationCardHtml(team, player) {
   const premium = teamIsPremium(team);
   const custom = canCustomizePlayerLook(team, player);
   let html = `<div class="pdp-card pdp-perso" id="pdpPersoCard"><h3>Personnalisation <span class="prm-tag">Premium</span></h3>`;
+  // Aperçu du maillot floqué et infos (retour 2026-10-03 : « remplis plus
+  // la brique »).
+  if (!custom) {
+    const homegrown = !!player.homegrownClub;
+    html += `<div class="pdp-perso-sum"><div class="pdp-perso-jersey">` +
+      jerseySvgHtml(team.jerseyShape, team.jerseyColor, 64, "home", effectiveJerseyPattern(team), effectiveJerseyTwoTone(team), null, Number.isInteger(player.number) ? player.number : null, team) + `</div>` +
+      `<div class="pdp-perso-facts"><div><span>Maillot</span><b>${Number.isInteger(player.number) ? `n° ${player.number}` : "Sans numéro"}</b></div>` +
+      `<div><span>Formation</span><b>${homegrown ? "Formé dans un autre club" : "Recruté à l'extérieur"}</b></div>` +
+      `<div><span>Apparence</span><b>${player.look ? "Personnalisée" : "D'origine"}</b></div></div></div>`;
+  }
   // Numéro
   html += `<div class="pdp-perso-row"><span class="pdp-perso-lbl">Numéro de maillot</span>`;
   html += premium
