@@ -2858,6 +2858,16 @@
   /* Caractéristiques à côté du radar (maquette 2026-10-03) : libellé +
      valeur, sans mini-barre, pour lire les 28 sans les couper. */
   .pdp2-row--profile .pdp2-bar{display:none;}
+  /* Caractéristiques un peu plus grandes, colonne radar + profils de jeu
+     un peu plus compacte : les deux colonnes ont à peu près la même hauteur
+     (retour 2026-10-03 : « un grand vide sous la brique carac »). */
+  @media (min-width:1181px){
+    .pdp2 .pdp2-row--profile .pdp-attr-row{padding:9px 0; font-size:15px;}
+    .pdp2 .pdp2-row--profile .pdp-attr-value{font-size:18px;}
+    .pdp2 .pdp2-row--profile .pdp-scouting{margin-top:18px;}
+  }
+  .pdp2-row--profile .pdp2-side{gap:14px;}
+  .pdp2-row--profile .pdp-profile-row{padding:5px 0;}
   .pdp2-row--profile .pdp-attr-grid{gap:22px;}
   .pdp2-row--profile .pdp2-attr-list.two{column-gap:22px;}
   .pdp2-row--profile .pdp2-radar svg{max-width:100%; height:auto;}
@@ -2870,7 +2880,9 @@
   .pdp2-info-v .pdp2-info-warn{color:var(--amber);}
   .pdp2-form--motiv .motivation-badge{background:none; padding:0; font-size:18px; font-weight:800;}
   .pdp2-row--games{grid-template-columns:minmax(0,1fr) 360px;}
-  .pdp2-radar svg{display:block; width:100%; height:auto; max-height:420px;}
+  /* Hauteur plafonnée (retour 2026-10-03 : grossir le radar, pas la
+     brique) : sur grand écran le dessin ne fait plus grandir la carte. */
+  .pdp2-radar svg{display:block; width:100%; height:auto; max-height:244px; margin:0 auto;}
 
   .pdp2-tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .pdp2-tile{background:var(--bg); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:4px;}
@@ -2975,8 +2987,12 @@
   .pdp-contract-sale{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin:18px 0 16px; align-items:start;}
   .pdp-contract-sale.pdp2-side-cards{grid-template-columns:minmax(0,1fr); margin:0;}
   .pdp-contract-sale.pdp2-left-cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin:0;}
-  .pdp2-share-card .pdp2-share{align-items:flex-start; margin-top:0;}
+  /* Partager : une seule ligne compacte (titre, bouton, état du lien). */
+  .pdp-contract-sale > .pdp2-share-card{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px !important;}
+  .pdp-contract-sale > .pdp2-share-card h3{margin:0;}
+  .pdp2-share-card .pdp2-share{flex:1 1 auto; flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-top:0; width:auto; gap:6px 10px;}
   .pdp2-share-card .pdp2-share-state{justify-content:flex-start;}
+  .pdp2-share-card .pdp2-share-msg{flex-basis:100%; text-align:right;}
   .pdp-contract-sale > .pdp-card{padding:14px 18px !important;}
   .pdp-contract-sale > .pdp-card h3{margin:0 0 8px;}
   .pdp-contract-sale .training-intro, .pdp-contract-sale .sub{margin:4px 0;}
@@ -46412,7 +46428,8 @@ function renderMarketMine() {
       sub = autoMax != null ? `auto jusqu'à ${formatMoney(autoMax)}` : "votre enchère";
     } else if (st === "out") {
       badge = `<span class="mk-badge out">Dépassé</span>`; amt = formatMoney(l.currentBid);
-      sub = autoMax != null ? `plafond de ${formatMoney(autoMax)} dépassé` : `relance dès ${formatMoney(minNextBidFor(l))}`;
+      // « plafond … dépassé » / « relance dès … » retirés (retour utilisateur 2026-10-03).
+      sub = "";
     } else if (l.currentBid) {
       const n = (l.bids || []).length;
       const leader = league.teams[l.currentBidderIdx];
@@ -46427,7 +46444,7 @@ function renderMarketMine() {
         `<div class="mk-task-av">${staffAvatarHtml(staffIdentity(staffListingKey(l)), STAFF_NEUTRAL_POLO, 44)}</div>` +
         `<div class="mk-task-t"><b>${escapeHtml(role.label)} ${staffStarsHtml(l.level)}</b><span>${spec ? escapeHtml(spec) + " · " : ""}Staff · ${timer}</span></div>` +
         badge +
-        `<div class="mk-task-amt"><b>${amt}</b><span>${sub}</span></div>` +
+        `<div class="mk-task-amt"><b>${amt}</b>${sub ? `<span>${sub}</span>` : ""}</div>` +
         btnFor(st, `data-staff-goto="${role.key}:${l.id}"`) +
       `</div>`;
     }
@@ -46438,7 +46455,7 @@ function renderMarketMine() {
       `<div class="mk-task-av">${playerAvatarHtml(player, seller, 44)}</div>` +
       `<div class="mk-task-t"><b>${escapeHtml(player.name)}</b><span>${escapeHtml(player.position)} · ${player.age} ans · ${timer}</span></div>` +
       badge +
-      `<div class="mk-task-amt"><b>${amt}</b><span>${sub}</span></div>` +
+      `<div class="mk-task-amt"><b>${amt}</b>${sub ? `<span>${sub}</span>` : ""}</div>` +
       btnFor(st, `data-mk-goto="${l.id}"`) +
     `</div>`;
   }).join("");
