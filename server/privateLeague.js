@@ -485,7 +485,10 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
   // Ordres propres à la ligue privée (setPrivateLeagueOrders) : appliqués à
   // la copie, avec ses propres joueurs copiés (jamais les vrais).
   const withOrders = (copy, slot) => {
-    const orders = copy && lp.members && lp.members[slot] && lp.members[slot].orders;
+    // Compo photographiée à T − 5 min (freezeDueOrders) en priorité, sinon
+    // ordres de ligue privée actuels, sinon ordres du club (copie telle quelle).
+    const frozen = match.frozen && match.frozen[slot];
+    const orders = copy && (frozen || (lp.members && lp.members[slot] && lp.members[slot].orders));
     if (!orders) return copy;
     try { return require("./friendlies.js").applyFriendlyOrders(Engine, copy, copy, orders, kickoffAt); } catch (e) { return copy; }
   };
@@ -495,6 +498,7 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
   const awayOk = !!away && away.hasValidLineup();
   match.played = true;
   match.playedAt = now;
+  delete match.frozen;
   if (homeOk && awayOk) {
     const engine = new Engine.MatchEngine(home, away, { homeAdvantage: lp.venue === "home" });
     const result = engine.simulate(now);
@@ -551,6 +555,33 @@ function teamOfRef(leagues, ref) {
 // les journées dues, annonce les résultats une fois la diffusion finie,
 // clôt et purge. `out.replays` reçoit les directs à ranger ({ lpId, item }).
 // Renvoie true si `store` a changé.
+// Compo lue à T − 5 min, comme un match officiel (retour utilisateur
+// 2026-10-03) : pour chaque match pas encore joué dont le coup d'envoi est
+// dans moins de 5 minutes, photographie des ordres de chaque club — ses
+// ordres de ligue privée, sinon les ordres actuels de son club (tactique et
+// feuille de match) — jouée telle quelle au coup d'envoi (voir playMatch).
+// Une seule photo par journée (round.frozenAt). Renvoie true si posée.
+function freezeDueOrders(Engine, lp, round, leagues, now) {
+  if (round.frozenAt || typeof round.dueAt !== "number" || now < round.dueAt - LP_ORDERS_LOCK_MS) return false;
+  const todo = round.matches.filter(m => !m.played);
+  if (!todo.length) return false;
+  // Championnat d'un membre illisible ce passage-ci : on réessaie au suivant.
+  if (todo.some(m => [m.home, m.away].some(slot => { const r = lp.members[slot]; return !r || !leagues.has(r.leagueId); }))) return false;
+  todo.forEach(m => {
+    m.frozen = {};
+    [m.home, m.away].forEach(slot => {
+      const member = lp.members[slot];
+      if (member && member.orders) { m.frozen[slot] = JSON.parse(JSON.stringify(member.orders)); return; }
+      const team = teamOfRef(leagues, member);
+      if (team && typeof team.snapshotTactics === "function") {
+        m.frozen[slot] = { ...JSON.parse(JSON.stringify(team.snapshotTactics())), lineup: JSON.parse(JSON.stringify(team.lineup || {})) };
+      }
+    });
+  });
+  round.frozenAt = now;
+  return true;
+}
+
 function catchUp(Engine, store, leagues, now, out = {}) {
   if (!isValidStore(store)) return false;
   const replays = out.replays || (out.replays = []);
@@ -559,6 +590,7 @@ function catchUp(Engine, store, leagues, now, out = {}) {
   store.list.forEach(lp => {
     if (lp.status !== "running") return;
     lp.rounds.forEach(round => {
+      if (freezeDueOrders(Engine, lp, round, leagues, now)) changed = true;
       if (round.dueAt > now) return;
       const todo = round.matches.filter(m => !m.played);
       if (!todo.length) return;
@@ -618,7 +650,11 @@ function nextDeadline(store, now) {
   ((store && store.list) || []).forEach(lp => {
     if (lp.status !== "running") return;
     lp.rounds.forEach(round => {
-      if (round.matches.some(m => !m.played)) take(round.dueAt);
+      if (round.matches.some(m => !m.played)) {
+        take(round.dueAt);
+        // Photo de la compo à T − 5 min (freezeDueOrders).
+        if (!round.frozenAt) take(round.dueAt - LP_ORDERS_LOCK_MS);
+      }
       if (round.feedPushed === false) round.matches.forEach(m => take(typeof m.liveUntil === "number" ? m.liveUntil + 1000 : null));
     });
   });
@@ -838,6 +874,8 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
         matches: round.matches.map(m => {
           const v = hideLive({ ...m, home: local[m.home], away: local[m.away] }, now);
           delete v.legacyKey;
+          // Compo photographiée à T − 5 min : jamais envoyée (ordres privés).
+          delete v.frozen;
           return v;
         }),
       })),
@@ -919,7 +957,7 @@ function catchUpPrivateLeagues(Engine, league, now) {
 function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = Date.now()) {
   return (privateLeagues || []).map(lp => {
     const member = (lp.teamIndices || []).includes(viewerTeamIndex);
-    const rounds = (lp.rounds || []).map(round => ({ ...round, matches: round.matches.map(m => hideLive(m, now)) }));
+    const rounds = (lp.rounds || []).map(round => ({ ...round, matches: round.matches.map(m => { const v = hideLive({ ...m }, now); delete v.frozen; return v; }) }));
     return { ...lp, rounds, code: member ? lp.code : null };
   });
 }

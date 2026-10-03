@@ -154,8 +154,27 @@ const ok = m => console.log("✅ " + m);
   assert.ok(r.status >= 400 && /verrouillés/.test(r.body.error), `ordres refusés à T − 4 min : ${JSON.stringify(r.body)}`);
   r = await api("/api/private-league/orders", boston, { id: lpId, reset: true });
   assert.ok(r.status >= 400, "retour aux ordres du club refusé à T − 4 min");
+  // Photo de la compo à T − 5 min (retour 2026-10-03) : ordres de ligue
+  // privée de Boston, ordres actuels du club pour Rome (sans ordres propres).
+  assert.strictEqual(PL.nextDeadline(raw, kickoff - 10 * 60 * 1000), kickoff - 5 * 60 * 1000, "prochain passage du monde à T − 5 min");
+  await World.catchUpWorld(multiSavePath, clock.now);
+  {
+    const st = await store.loadWorldAuxStrict("privateleagues", multiSavePath);
+    const l = st.list.find(x => x.id === lpId);
+    const bSlot = l.members.findIndex(x => x.leagueId === boston.leagueId && x.idx === boston.teamIndex);
+    const rSlot = l.members.findIndex(x => x.leagueId === roma.leagueId && x.idx === roma.teamIndex);
+    const ms = l.rounds[0].matches;
+    const bm = ms.find(m => m.home === bSlot || m.away === bSlot);
+    const rm = ms.find(m => m.home === rSlot || m.away === rSlot);
+    assert.ok(l.rounds[0].frozenAt && !ms.some(m => m.played), "compo photographiée, match pas encore joué");
+    assert.deepStrictEqual(bm.frozen[bSlot].lineup.starters, lpOrders.lineup.starters, "Boston : ses ordres de ligue privée photographiés");
+    const romaLg = await World.loadLeague(w, roma.leagueId, multiSavePath);
+    assert.deepStrictEqual(rm.frozen[rSlot].lineup.starters, JSON.parse(JSON.stringify(romaLg.teams[roma.teamIndex].lineup.starters)), "Rome : compo du club photographiée");
+    const seen = (await api("/api/save", roma)).body.league.privateLeagues.find(x => x.id === lpId);
+    assert.ok(seen.rounds[0].matches.every(m => !("frozen" in m)), "photo jamais envoyée aux membres");
+  }
   clock.now = before;
-  ok("ordres de ligue privée verrouillés 5 minutes avant le coup d'envoi");
+  ok("ordres de ligue privée verrouillés 5 minutes avant le coup d'envoi, compo photographiée à T − 5 min");
   clock.now = kickoff + 60 * 1000;
   // Course (retour Diablue 2026-10-03 : ordres de ligue privée ignorés) :
   // le rattrapage lit les ligues privées AVANT les ordres de Boston (copie
@@ -167,7 +186,7 @@ const ok = m => console.log("✅ " + m);
     const st = await realLoadStore(...a);
     if (lpLoads++ === 0 && st) {
       const stale = JSON.parse(JSON.stringify(st));
-      stale.list.forEach(l => l.members.forEach(m => { delete m.orders; }));
+      stale.list.forEach(l => { l.members.forEach(m => { delete m.orders; }); l.rounds.forEach(rd => rd.matches.forEach(m => { delete m.frozen; })); });
       return stale;
     }
     return st;
