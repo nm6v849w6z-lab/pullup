@@ -771,7 +771,12 @@ export function createLiveView(root, opts = {}) {
     const tac = S.teams.map(x => x.tactics || null);
     $("tactics").innerHTML = tac.some(Boolean)
       ? `<div class="klbl">Tactiques</div><table class="tac"><thead><tr><th></th><th style="color:var(--c0)">${esc(S.teams[0].short)}</th><th style="color:var(--c1)">${esc(S.teams[1].short)}</th></tr></thead><tbody>` +
-        [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]].map(([l, k]) => `<tr><th>${l}</th><td>${esc((tac[0] && tac[0][k]) || "–")}</td><td>${esc((tac[1] && tac[1][k]) || "–")}</td></tr>`).join("") +
+        [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]].map(([l, k]) => {
+          // Attaque : les trois priorités (retour utilisateur 2026-10-03).
+          const cell = x => k === "offense" && x && Array.isArray(x.offenses) && x.offenses.length
+            ? x.offenses.map((o, i) => `${i + 1}. ${esc(o)}`).join("<br>") : esc((x && x[k]) || "–");
+          return `<tr><th>${l}</th><td>${cell(tac[0])}</td><td>${cell(tac[1])}</td></tr>`;
+        }).join("") +
         `</tbody></table>`
       : "";
     const dnp = T.players.filter(p => !played.includes(p));

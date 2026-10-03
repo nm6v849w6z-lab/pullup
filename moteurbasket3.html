@@ -3889,7 +3889,7 @@
   .mbx-tactics-table th, .mbx-tactics-table td{padding:8px 10px; border-bottom:1px solid var(--line, rgba(255,255,255,.08)); text-align:left;}
   .mbx-tactics-table thead th{font-size:12px; color:var(--ink-dim); font-weight:700;}
   .mbx-tactics-table tbody th{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; width:110px;}
-  .mbx-tactics-table td{color:var(--ink); font-weight:600;}
+  .mbx-tactics-table td{color:var(--ink); font-weight:600; vertical-align:top;}
   .market-card-bid .mk-stf-replace{margin-top:12px; padding-top:10px; border-top:1px solid var(--line, rgba(255,255,255,.08)); display:grid; grid-template-columns:auto 1fr; column-gap:8px; row-gap:4px; align-items:center;}
   .market-card-bid .mk-stf-replace > :last-child{grid-column:2;}
   .mk-stf-confirm{display:flex; flex-direction:column; gap:10px; padding:12px 14px; border-radius:12px; border:1px solid rgba(240,162,60,.55); background:rgba(240,162,60,.08);}
@@ -8008,8 +8008,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-4">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-4">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-5">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-5">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -41467,7 +41467,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261003-4";
+const HM_LIVE_ASSET_VERSION = "20261003-5";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -42134,7 +42134,10 @@ function matchTacticsFromTeam(team, round, competition) {
 function matchTacticsHtml(tactics, nameHome, nameAway) {
   const h = tactics && tactics.home, a = tactics && tactics.away;
   if (!h && !a) return "";
-  const cell = (t, k) => escapeHtml((t && t[k]) || "–");
+  // Attaque : les trois priorités (retour utilisateur 2026-10-03), sinon la n° 1 (anciens matchs).
+  const cell = (t, k) => k === "offense" && t && Array.isArray(t.offenses) && t.offenses.length
+    ? t.offenses.map((o, i) => `${i + 1}. ${escapeHtml(o)}`).join("<br>")
+    : escapeHtml((t && t[k]) || "–");
   const rows = [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]];
   return `<div class="mbx-block mbx-tactics"><div class="mbx-block-title">Tactiques</div>` +
     `<table class="mbx-tactics-table"><thead><tr><th></th><th>${escapeHtml(nameHome)}</th><th>${escapeHtml(nameAway)}</th></tr></thead><tbody>` +
@@ -52381,7 +52384,7 @@ var tqEdit = null; // { slot, name, source, proxy, dirty } — var : lu par rend
 // (joué avant cet historique) est reconstitué depuis le journal des joueurs
 // (tqOrdersFromMatchLog) : attaque n°1/défense/rythme réellement joués, cinq
 // et rotation d'après les minutes.
-const TQ_SOURCE_MATCHES = 5;
+const TQ_SOURCE_MATCHES = 12;
 function tqOrdersSources() {
   const out = [];
   (teamA.tacticPresets || []).forEach((p, i) => out.push({ key: "preset:" + i, label: `Tactique « ${p.name} »`, orders: p.orders }));
@@ -52389,16 +52392,20 @@ function tqOrdersSources() {
   // (msgT) — la couche i18n ne sait pas traduire l'<option> entière, faite
   // de trous (adversaire, score, date) : retour testeur 2026-09-30, textes
   // restés en français dans l'éditeur de tactique en anglais.
-  const label = (competition, round, isHome, oppName, pf, pa, at) => {
-    const comp = msgT(competition === "cup" ? "Coupe" : competition === "championship" ? `J${round + 1}` : "Match");
-    const res = pf != null && pa != null ? ` · ${pf > pa ? "V" : pf < pa ? "D" : "N"} ${pf}-${pa}` : "";
+  // Tout type de match (retour utilisateur 2026-10-03) : championnat,
+  // coupe, play-offs, ligue privée, amical.
+  const label = (competition, round, isHome, oppName, pf, pa, at, hidden) => {
+    const comp = competition === "lp" ? `${msgT("LP")} J${(round || 0) + 1}` : msgT(competition === "cup" ? "Coupe" : competition === "championship" ? `J${round + 1}` : competition === "friendly" ? "Amical" : /playoff/.test(competition || "") ? "Play-offs" : "Match");
+    const res = !hidden && pf != null && pa != null ? ` · ${pf > pa ? "V" : pf < pa ? "D" : "N"} ${pf}-${pa}` : "";
     return `${comp} ${isHome ? "vs" : "@"} ${oppName || "?"}${res}${at ? ` · ${msgT(formatCalendarDayFr(at))}` : ""}`;
   };
   const matches = [];
   const seen = new Set();
   (teamA.ordersHistory || []).forEach((h, i) => {
     seen.add(`${h.competition || "championship"}:${h.round}`);
-    matches.push({ at: h.at || 0, key: "hist:" + i, label: label(h.competition, h.round, h.isHome, h.opponentName, h.scoreFor, h.scoreAgainst, h.at), orders: h.orders });
+    // Amical : score masqué tant qu'il n'est pas dévoilé (huis clos).
+    const hidden = typeof h.revealAt === "number" && Date.now() < h.revealAt;
+    matches.push({ at: h.at || 0, key: "hist:" + i, label: label(h.competition, h.round, h.isHome, h.opponentName, h.scoreFor, h.scoreAgainst, h.at, hidden), orders: h.orders });
   });
   tqMatchLogMatches().forEach(m => {
     if (seen.has(`${m.competition}:${m.round}`)) return;
@@ -52415,7 +52422,7 @@ function tqOrdersSources() {
 function tqMatchLogMatches() {
   const byKey = new Map();
   (teamA.players || []).forEach(p => (p.matchLog || []).forEach(e => {
-    if (e.competition !== "championship" && e.competition !== "cup") return;
+    if (e.competition !== "championship" && e.competition !== "cup" && !/playoff/.test(e.competition || "")) return;
     const k = `${e.competition}:${e.round}`;
     if (!byKey.has(k)) byKey.set(k, { competition: e.competition, round: e.round, entries: [] });
     byKey.get(k).entries.push({ player: p, log: e });

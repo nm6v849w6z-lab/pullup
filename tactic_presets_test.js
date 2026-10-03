@@ -44,14 +44,15 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   // Ordres complets des derniers matchs (onglet Tactiques : « partir d'un match précédent »).
   const [h1, h2] = lg.teams.slice(2, 4);
   h1.isHuman = true;
-  for (let i = 0; i < 12; i++) {
+  const N = E.ORDERS_HISTORY_MAX + 2;
+  for (let i = 0; i < N; i++) {
     const r = E.simulateOrForfeit(h1, h2, Date.now() + i);
     E.recordMatchStatsAndAwardMvp(h1, h2, i, "championship", Date.now() + i, r.quarterScores, r.tacticsUsed);
   }
-  assert(h1.ordersHistory.length === E.ORDERS_HISTORY_MAX && h1.ordersHistory[0].round === 11, "ordres des 10 derniers matchs gardés, le plus récent en tête");
+  assert(h1.ordersHistory.length === E.ORDERS_HISTORY_MAX && h1.ordersHistory[0].round === N - 1, `ordres des ${E.ORDERS_HISTORY_MAX} derniers matchs gardés, le plus récent en tête`);
   assert(h1.ordersHistory[0].opponentName === h2.name && h1.ordersHistory[0].orders.lineup && h1.ordersHistory[0].isHome === true, "match précédent : adversaire, lieu, ordres complets");
   assert(!h2.ordersHistory.length, "pas d'historique pour un club CPU");
-  assert(E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(h1)))).ordersHistory.length === 10, "historique des ordres persisté");
+  assert(E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(h1)))).ordersHistory.length === E.ORDERS_HISTORY_MAX, "historique des ordres persisté");
   // Serveur.
   const t2 = lg.teams[1];
   const s2 = t2.snapshotTactics();

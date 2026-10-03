@@ -105,7 +105,8 @@ check(feedBumped, "une entrée de fil d'actu par club membre");
 const snapshotAfter = league.teams.map(t => JSON.stringify(Engine.serializeTeam(t)));
 league.teams.forEach((t, i) => {
   const a = JSON.parse(snapshotBefore[i]); const b = JSON.parse(snapshotAfter[i]);
-  delete a.feed; delete b.feed;
+  // Fil d'actu et historique des ordres (« partir d'un match », 2026-10-03) : seuls ajouts attendus.
+  delete a.feed; delete b.feed; delete a.ordersHistory; delete b.ordersHistory;
   assert.deepStrictEqual(b, a, `l'équipe ${t.name} ne doit pas changer`);
 });
 check(true, "aucune équipe réelle modifiée (forme, fatigue, blessures, entraînement, budget, matchLog, alchimie...)");

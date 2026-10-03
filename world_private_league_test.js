@@ -237,6 +237,10 @@ const ok = m => console.log("✅ " + m);
     seen.push(res);
     const me = v.teams[m.teamIndex];
     assert.ok(me.feed.entries.some(e => /Ligue des Nations · J1/.test(e.title)), `fil d'actu du membre (${m.leagueId})`);
+    // Onglet Tactiques : ordres du match de ligue privée récupérables
+    // (retour utilisateur 2026-10-03), jamais ceux des autres membres.
+    assert.ok((me.ordersHistory || []).some(h => h.competition === "lp" && h.round === 0 && h.orders && h.orders.offensivePriorities), `ordres LP dans l'historique (${m.leagueId})`);
+    assert.ok(lp.rounds[0].matches.every(x => !x.ordersUsed), "ordres joués jamais envoyés");
   }
   assert.ok(seen.every(s => s === seen[0]));
   ok(`mêmes résultats pour les 4 membres (${seen[0]}) + fil d'actu dans leurs championnats`);

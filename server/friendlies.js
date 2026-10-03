@@ -556,6 +556,15 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
     // marqué) et fait gagner un peu de connaissance tactique selon les
     // minutes des joueurs habituels (rôles) — sur les VRAIS clubs, la
     // coquille ci-dessus est jetée.
+    // « Partir d'un match précédent » (onglet Tactiques) : ordres joués dans
+    // cet amical, score masqué jusqu'à revealAt.
+    if (typeof Engine.pushOrdersHistory === "function") {
+      [[homeReal, home, away, true], [awayReal, away, home, false]].forEach(([t, shell, opp, isHome]) => {
+        Engine.pushOrdersHistory(t, { competition: "friendly", round: -1, at, opponentName: opp.name, isHome,
+          scoreFor: isHome ? res.scoreHome : res.scoreAway, scoreAgainst: isHome ? res.scoreAway : res.scoreHome,
+          revealAt: res.revealAt, orders: shell.snapshotTactics() });
+      });
+    }
     const friendlyDay = Engine.parisCalendarDayIndex(at);
     [[homeReal, home], [awayReal, away]].forEach(([t, shell]) => {
       // Joueurs retenus pour l'amical : exclus de la récupération/du physique

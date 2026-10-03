@@ -5287,7 +5287,7 @@ const TACTIC_PRESETS_MAX = 6;
 const TACTIC_PRESETS_FREE_MAX = 3;
 const TACTIC_PRESET_NAME_MAX = 30;
 // Nombre de matchs dont on garde les ordres complets (Team.ordersHistory).
-const ORDERS_HISTORY_MAX = 10;
+const ORDERS_HISTORY_MAX = 20;
 const TACTIC_PRESET_FIELDS = ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"];
 // Copie profonde d'un jeu d'ordres (forme snapshotTactics) en tactique
 // enregistrable : sans watchAssignments.
@@ -12092,6 +12092,16 @@ function awardMatchMvp(home, away, round, competition, now = Date.now()) {
 // « partir d'un match précédent »), clubs humains seulement. Appelé AVANT
 // toute application du plan de la journée suivante : les ordres en direct
 // sont bien ceux de ce match.
+// Ordres d'un match hors championnat/coupe (ligue privée, amical, retour
+// utilisateur 2026-10-03 : « il faut pouvoir récupérer une tactique depuis
+// un match de LP, amical ou coupe ») : `entry` = { competition, round,
+// at, opponentName, isHome, scoreFor, scoreAgainst, orders, revealAt? }.
+function pushOrdersHistory(team, entry) {
+  if (!team || !team.isHuman || !entry || !entry.orders) return;
+  if (!Array.isArray(team.ordersHistory)) team.ordersHistory = [];
+  team.ordersHistory.unshift({ ...entry, orders: tacticPresetOrdersFrom(entry.orders) });
+  if (team.ordersHistory.length > ORDERS_HISTORY_MAX) team.ordersHistory.length = ORDERS_HISTORY_MAX;
+}
 function recordOrdersHistory(team, opponent, isHome, round, competition, now, quarterScores) {
   if (!team || !team.isHuman || !team.snapshotTactics) return;
   if (!Array.isArray(team.ordersHistory)) team.ordersHistory = [];
@@ -12190,7 +12200,11 @@ function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.
 // priorité offensive n°1 du moment (team.offensivePriorities est un
 // classement de 3, pas un choix unique).
 function tacticsSnapshotFor(team) {
-  return { defense: team.defense, offense: (team.offensivePriorities || [])[0] || null, rhythm: team.rhythm };
+  // `offenses` : les trois priorités offensives (retour utilisateur
+  // 2026-10-03 : « il faut mettre les trois types d'attaque ») ; `offense`
+  // (la n° 1) reste pour le scouting et les anciens matchs.
+  const pr = (team.offensivePriorities || []).filter(Boolean);
+  return { defense: team.defense, offense: pr[0] || null, offenses: pr.slice(0, 3), rhythm: team.rhythm };
 }
 
 function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
@@ -19348,7 +19362,7 @@ return {
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
   MARKET_WATCHLIST_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel, marketAlertParts, marketAlertRanges,
-  TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory,
+  TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory, pushOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE, PLAYER_TACTICAL_KNOWLEDGE_GAIN_STEP, PLAYER_TACTICAL_KNOWLEDGE_GAIN_MAX, PLAYER_TACTICAL_KNOWLEDGE_RECRUIT, TACTICAL_FULL_GAIN_SECONDS,

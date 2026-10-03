@@ -411,4 +411,4 @@ html[data-theme="light"] .hm-live dialog::backdrop{background:rgba(20,32,51,.45)
 .hm-live table.tac th,.hm-live table.tac td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 .hm-live table.tac thead th{font-size:12px;font-weight:800}
 .hm-live table.tac tbody th{font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;width:96px}
-.hm-live table.tac td{font-weight:600}
+.hm-live table.tac td{font-weight:600;vertical-align:top}

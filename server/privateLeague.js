@@ -507,6 +507,10 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
     const engine = new Engine.MatchEngine(home, away, { homeAdvantage: lp.venue === "home" });
     const result = engine.simulate(now);
     match.tacticsUsed = tacticsUsed;
+    // Ordres joués (onglet Tactiques, « partir d'un match ») : rangés dans
+    // l'historique de chaque club à l'annonce du résultat, jamais envoyés
+    // au navigateur (voir projectForViewer).
+    match.ordersUsed = { home: Engine.tacticPresetOrdersFrom(home.snapshotTactics()), away: Engine.tacticPresetOrdersFrom(away.snapshotTactics()) };
     match.scoreHome = result.finalScore.A;
     match.scoreAway = result.finalScore.B;
     match.forfeit = null;
@@ -627,7 +631,12 @@ function catchUp(Engine, store, leagues, now, out = {}) {
           const mine = slot === m.home;
           const opp = lp.members[mine ? m.away : m.home];
           Engine.pushEntry(team.feed, { key: `private_league_${lp.id}_${round.index}_${ref.idx}`, week: team.week, ...feedEntryFor(lp, round, m, mine, opp && opp.name) });
+          if (m.ordersUsed && m.ordersUsed[mine ? "home" : "away"] && typeof Engine.pushOrdersHistory === "function") {
+            Engine.pushOrdersHistory(team, { competition: "lp", round: round.index, lpName: lp.name, at: round.dueAt, opponentName: opp && opp.name, isHome: mine,
+              scoreFor: mine ? m.scoreHome : m.scoreAway, scoreAgainst: mine ? m.scoreAway : m.scoreHome, orders: m.ordersUsed[mine ? "home" : "away"] });
+          }
         });
+        delete m.ordersUsed;
       });
       round.feedPushed = true;
       changed = true;
@@ -881,6 +890,7 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
           delete v.legacyKey;
           // Compo photographiée à T − 5 min : jamais envoyée (ordres privés).
           delete v.frozen;
+          delete v.ordersUsed;
           return v;
         }),
       })),
@@ -962,7 +972,7 @@ function catchUpPrivateLeagues(Engine, league, now) {
 function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = Date.now()) {
   return (privateLeagues || []).map(lp => {
     const member = (lp.teamIndices || []).includes(viewerTeamIndex);
-    const rounds = (lp.rounds || []).map(round => ({ ...round, matches: round.matches.map(m => { const v = hideLive({ ...m }, now); delete v.frozen; return v; }) }));
+    const rounds = (lp.rounds || []).map(round => ({ ...round, matches: round.matches.map(m => { const v = hideLive({ ...m }, now); delete v.frozen; delete v.ordersUsed; return v; }) }));
     return { ...lp, rounds, code: member ? lp.code : null };
   });
 }
