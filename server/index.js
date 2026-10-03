@@ -545,6 +545,27 @@ async function attachNationalCupGuests(ctx, multiSavePath) {
   ctx.league.guestTeamsByIdx = new Map([[guestIdx, team]]);
 }
 
+// Adversaire de ligue privée venu d'un autre championnat (index local
+// ≥ PRIVATE_LEAGUE_GUEST_IDX, voir PrivateLeague.projectForViewer) : rangé
+// comme un club invité de la Coupe nationale (guestTeamsByIdx, guestLeague)
+// pour que l'analyse d'équipe le trouve (retour utilisateur 2026-10-03 :
+// « je suis premium et ça me met ce message » — l'accès échouait, l'écran
+// de déblocage s'affichait même en Premium).
+async function attachPrivateLeagueScoutingGuest(ctx, opponentIdx, multiSavePath, now) {
+  if (!ctx.world || !ctx.lpStore || !Number.isInteger(opponentIdx) || opponentIdx < PrivateLeague.PRIVATE_LEAGUE_GUEST_IDX) return;
+  const w = PrivateLeague.projectForViewer(ctx.lpStore, ctx.leagueId, ctx.teamIndex, now);
+  const g = w.guests.find(x => x.localIdx === opponentIdx);
+  if (!g || !ctx.world.leagues.some(e => e.id === g.leagueId)) return;
+  const lg = await World.loadLeague(ctx.world, g.leagueId, multiSavePath);
+  const team = lg && lg.teams[g.idx];
+  if (!team) return;
+  team.guestLeague = lg;
+  team.guestIdx = g.idx;
+  const map = ctx.league.guestTeamsByIdx instanceof Map ? ctx.league.guestTeamsByIdx : new Map();
+  map.set(opponentIdx, team);
+  ctx.league.guestTeamsByIdx = map;
+}
+
 // Amicaux entre championnats (server/worldFriendlies.js) : données annexes
 // du monde, jours d'amicaux « monde » posés sur la ligue (conflits), liste
 // fusionnée pour le navigateur.
@@ -2235,6 +2256,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (ctx.world) await attachNationalCupGuests(ctx, multiSavePath);
         const opponentParam = route.searchParams.get("opponent");
         const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
+        await attachPrivateLeagueScoutingGuest(ctx, opponentIdx, multiSavePath, now);
         const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
         if (!access.ok) { sendJson(res, 400, access); return; }
         sendJson(res, 200, access);
@@ -2249,6 +2271,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (ctx.world) await attachNationalCupGuests(ctx, multiSavePath);
         const opponentParam = route.searchParams.get("opponent");
         const opponentIdx = opponentParam === null ? NaN : Number(opponentParam);
+        await attachPrivateLeagueScoutingGuest(ctx, opponentIdx, multiSavePath, now);
         const access = Scouting.getScoutingAccess(ctx.league, ctx.teamIndex, opponentIdx, now);
         if (!access.ok) { sendJson(res, 400, access); return; }
         // Rapport JAMAIS renvoyé sans accès "full" (Premium ou pub déjà
@@ -2637,6 +2660,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
 
         if (ctx.world && route.pathname.startsWith("/api/scouting/")) await attachNationalCupGuests(ctx, multiSavePath);
+        if (ctx.world && route.pathname.startsWith("/api/scouting/") && body) await attachPrivateLeagueScoutingGuest(ctx, body.opponent, multiSavePath, now);
         const fstoreForFriendly = ctx.world && route.pathname.startsWith("/api/friendly/") ? await loadWorldFriendlies(multiSavePath) : null;
         if (fstoreForFriendly) attachWorldFriendlyDays(ctx.league, ctx.leagueId, fstoreForFriendly);
         const result = actionFn(ctx.league.teams[ctx.teamIndex], ctx.teamIndex, ctx.league, body, now);

@@ -133,6 +133,16 @@ async function waitFor(fn, label, tries = 60) {
     // Plus aucun match officiel avant le vendredi 20h00 : le match de ligue
     // privée devient le prochain match partout.
     w.eval("scheduledTimeForCurrentMatch = () => Date.now() + 30 * 86400000");
+    // Verrou T − 5 min (retour utilisateur 2026-10-03) : « Ordres verrouillés »
+    // dans la barre du haut et le bandeau du tableau de bord.
+    w.eval("window.__realLpOrdersLocked = lpOrdersLocked; lpOrdersLocked = () => true");
+    w.eval("updateTopbar()");
+    check(d.getElementById("topbarOrdersBtn").textContent === "Ordres verrouillés", "barre du haut : « Ordres verrouillés » à moins de 5 min du coup d'envoi");
+    w.eval("TAB_HANDLERS.club()");
+    check(/Ordres verrouillés/.test(d.querySelector(".hm-hero").textContent) && !/Donnez vos ordres|Modifier vos ordres/.test(d.querySelector(".hm-hero").textContent), "tableau de bord : « Ordres verrouillés » à moins de 5 min du coup d'envoi");
+    // Horloge du navigateur de test au-delà du coup d'envoi de J1 : verrou
+    // neutralisé pour la suite.
+    w.eval("lpOrdersLocked = () => false");
     w.eval("updateTopbar()");
     check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Donnez vos ordres", "barre du haut : adversaire de ligue privée + bouton « Donnez vos ordres »");
     w.eval("TAB_HANDLERS.club()");

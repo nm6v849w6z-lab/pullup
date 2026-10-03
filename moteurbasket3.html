@@ -3858,6 +3858,8 @@
   .mk-stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--amber);}
   .mk-stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
   .mk-stf-replace{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; color:var(--ink-dim);}
+  .market-card-bid .mk-stf-replace{margin-top:12px; padding-top:10px; border-top:1px solid var(--line, rgba(255,255,255,.08)); display:grid; grid-template-columns:auto 1fr; column-gap:8px; row-gap:4px; align-items:center;}
+  .market-card-bid .mk-stf-replace > :last-child{grid-column:2;}
   .mk-stf-confirm{display:flex; flex-direction:column; gap:10px; padding:12px 14px; border-radius:12px; border:1px solid rgba(240,162,60,.55); background:rgba(240,162,60,.08);}
   .mk-stf-confirm p{margin:0; font-size:13.5px; color:var(--ink);}
   .mk-stf-confirm .row{display:flex; gap:8px; flex-wrap:wrap;}
@@ -28438,7 +28440,7 @@ function updateTopbar() {
     const validated = nextOther ? nextOther.validated : !!currentMatch && (currentMatch.competition === "cup"
       ? teamA.hasPlanForRound(currentMatch.round, "cup")
       : teamA.ordresValidatedRound === currentMatch.round);
-    const locked = !nextOther && currentMatchLineupLocked();
+    const locked = nextOther ? (nextOther.kind === "lp" && lpOrdersLocked(nextOther.lpNext.lp)) : currentMatchLineupLocked();
     const prematch = prematchShowAvailable();
     ordersBtn.textContent = prematch ? "Émission d'avant-match"
       : lpNext && lpNext.live ? "Voir le direct"
@@ -33631,6 +33633,32 @@ let teamDetailOrigin = null; // { pageId, tabKey } — où revenir avec "← Ret
 // demandée.
 let teamDetailSubView = "apercu"; // "apercu" | "effectif" | "calendrier" | "analyse"
 
+// Adversaire de ligue privée d'un autre championnat (invité « léger » : nom
+// et maillot seulement, voir installGuestTeams) : son vrai club est chargé
+// en lecture seule (GET /api/world/team-page) pour la fiche équipe et
+// l'analyse d'équipe (retour utilisateur 2026-10-03). Une fois par club.
+const lpGuestHydration = new Map();
+function hydrateLpGuestTeam(teamIdx) {
+  const t = league && league.teams ? league.teams[teamIdx] : null;
+  if (!t || !t.isGuest || !t.guestLeagueId || t.players.length || !(league.guestTeamsByIdx instanceof Map)) return Promise.resolve(false);
+  const key = t.guestLeagueId + ":" + t.guestIdx;
+  if (!lpGuestHydration.has(key)) {
+    lpGuestHydration.set(key, (async () => {
+      let data;
+      try { data = await planeteFetch(`/api/world/team-page?league=${encodeURIComponent(t.guestLeagueId)}`); } catch (e) { return false; }
+      if (!data || !data.league || !data.league.teams || !data.league.teams[t.guestIdx]) return false;
+      const ownTz = league ? league.timeZone : null;
+      let full;
+      try { full = teamFromSave(data.league.teams[t.guestIdx]); } catch (e) { return false; } finally { setCalendarTimeZone(ownTz); }
+      if (!full || full.name !== t.name) return false;
+      ["isGuest", "guestLeagueId", "guestIdx", "guestLevel", "guestLabel"].forEach(k => { full[k] = t[k]; });
+      league.guestTeamsByIdx.set(teamIdx, full);
+      return true;
+    })());
+  }
+  return lpGuestHydration.get(key);
+}
+
 function showTeamDetail(teamIdx) {
   // Même garde que showPlayerDetail : ne mémorise pas teamDetailSection
   // lui-même comme origine (au cas où la fiche équipe ouvrirait un jour un
@@ -33645,6 +33673,9 @@ function showTeamDetail(teamIdx) {
   teamDetailEffectifView = "general";
   renderTeamDetail(teamIdx);
   showPage("teamDetailSection");
+  hydrateLpGuestTeam(teamIdx).then(done => {
+    if (done && teamDetailIdx === teamIdx && !teamDetailForeign && currentVisiblePageId() === "teamDetailSection") renderTeamDetail(teamIdx);
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -38075,7 +38106,7 @@ function scoutingFreeAnalysisHtml(teamIdx) {
 
 async function refreshScoutingProPanel(teamIdx) {
   const now = Date.now();
-  const access = await fetchScoutingAccess(teamIdx);
+  const [access] = await Promise.all([fetchScoutingAccess(teamIdx), hydrateLpGuestTeam(teamIdx)]);
   // Garde-fou (même patron que refreshTeamDetailLiveBanner juste au-dessus) :
   // le manager a pu changer de fiche/sous-onglet pendant l'aller-retour
   // réseau — ne jamais réinjecter du HTML périmé dans une page qu'il a déjà
@@ -44185,7 +44216,11 @@ function dashRenderNextMatch(data) {
     ${m.rivalryHtml || ""}
     <div class="hm-hero__actions">
       ${m.privateLeague
-        ? `${m.lpLiveBtn || `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`}
+        ? `${m.lpLiveBtn || (m.lpLocked
+          // Verrou à T − 5 min (retour utilisateur 2026-10-03 : « le match est
+          // dans moins de 5 min et les ordres ne sont pas bloqués »).
+          ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">Ordres verrouillés</button>`
+          : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`)}
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
@@ -44871,7 +44906,7 @@ function dashboardDataFromGameState() {
     const oppTeam = league.teams[lpNext.oppIdx];
     nextMatch = {
       privateLeague: true,
-      lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders,
+      lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders, lpLocked: lpOrdersLocked(lpNext.lp),
       lpLiveBtn: lpNext.live ? lpLiveBtnHtml(lpNext.lp, lpNext.round.index, lpNext.match, "hm-btn hm-btn--primary hm-btn--display") : null,
       competition: "Ligue privée",
       round: lpNext.round.index + 1,
@@ -47467,19 +47502,18 @@ function mkStaffCardHtml(role, l, now) {
       `<div class="row"><button type="button" class="mk-btn mk-btn--primary" data-mk-staff-confirm="${keyId}">Confirmer l'enchère</button>` +
       `<button type="button" class="mk-btn mk-btn--outline" data-mk-staff-cancel="${keyId}">Annuler</button></div></div>`;
   } else {
-    const plus10 = Math.max(minBid, Math.round(minBid * 1.1 / 100) * 100);
     action = `<div class="mk-bidrow">` +
         `<input type="number" id="${inputId}" value="${minBid}" min="${minBid}" step="100" aria-label="Salaire proposé par semaine">` +
         `<button type="button" class="mk-btn mk-btn--primary" data-mk-staff-bid="${keyId}">${lead ? "Augmenter mon enchère" : "Enchérir"}</button>` +
         `<button type="button" class="mk-btn mk-btn--outline" data-mk-staff-auto="${keyId}" title="Le montant saisi devient votre plafond : on enchérit pour vous, au minimum, chaque fois qu'un autre club vous dépasse.">${autoMax != null ? "Changer le plafond" : "Enchère auto"}</button>` +
       `</div>` +
       (autoMax != null ? autoBidStatusHtml(autoMax, `data-mk-staff-auto-off="${keyId}"`) : "") +
-      `<div class="mk-quick"><button type="button" data-mk-staff-quick="${inputId}" data-v="${minBid}">Minimum</button><button type="button" data-mk-staff-quick="${inputId}" data-v="${plus10}">+10 %</button></div>` +
       `<div class="mk-hint ${minBid > budget ? "warn" : ""}">${minBid > budget ? escapeHtml(`Au-delà de votre budget disponible (${formatMoney(budget)}).`) : "Le montant remporté devient son salaire de départ."}</div>`;
+    // « Remplacera votre … actuel ★★★★ » dans la colonne d'enchère, à côté
+    // du salaire de départ (retour utilisateur 2026-10-03 ; boutons
+    // Minimum / +10 % retirés).
+    if (current) action += `<div class="mk-stf-replace">${STAFF_UI_ICONS.swap}<span>${escapeHtml(STAFF_REPLACE_LABELS[role.key])}</span>${staffStarsHtml(current.level)}</div>`;
   }
-  const replace = current
-    ? `<div class="mk-stf-replace">${STAFF_UI_ICONS.swap}<span>${escapeHtml(STAFF_REPLACE_LABELS[role.key])}</span>${staffStarsHtml(current.level)}</div>`
-    : "";
   return `<article class="mk-card mk-lst mk-stf ${lead ? "is-lead" : out ? "is-out" : ""}" data-staff-listing="${keyId}" id="marketStaffCard_${role.key}_${l.id}">` +
     `<div class="mk-lst-main">` +
       `<div class="mk-lst-id">` +
@@ -47496,7 +47530,7 @@ function mkStaffCardHtml(role, l, now) {
           `</div>` +
         `</div>` +
       `</div>` +
-      `<div class="mk-lst-prof mk-stf-prof"><div class="mk-stf-effect"><span class="stf-k">Effet</span>${staffEffectHtml(role.key, l.level, l.specialty)}</div>${replace}</div>` +
+      `<div class="mk-lst-prof mk-stf-prof"><div class="mk-stf-effect"><span class="stf-k">Effet</span>${staffEffectHtml(role.key, l.level, l.specialty)}</div></div>` +
       `<div class="mk-lst-deal market-card-bid">` +
         `<div class="mk-deal-top">` +
           `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Salaire de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${bidderLinkHtml(l) || (nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère")}</div></div>` +
@@ -48564,7 +48598,9 @@ function renderCalendrierSection() {
         location: lp.venue === "neutral" ? "Terrain neutre" : isHomeLp ? "Domicile" : "Extérieur",
         scoreText, boxscore: null,
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
-        cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
+        cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : (typeof round.dueAt === "number" && Date.now() >= round.dueAt - 5 * 60 * 1000)
+          ? `<button type="button" class="calendar-order-btn calendar-lp-btn" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}Ordres verrouillés</button>`
+          : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
         isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
@@ -53449,6 +53485,50 @@ function nextNonOfficialMatch() {
   }
   return best;
 }
+// Bascule du verrou T − 5 min d'un match de ligue privée pendant que la
+// page est ouverte : barre du haut, tableau de bord, calendrier et page des
+// ordres de ligue privée redessinés au passage (sinon ils restaient sur
+// « Modifier vos ordres » jusqu'au prochain rafraîchissement).
+// Coup d'envoi passé et direct pas encore connu (retour utilisateur
+// 2026-10-03 : « 14h et le bouton du live ne s'affiche pas, il faut
+// recharger la page ») : on relit les ligues privées auprès du serveur
+// jusqu'à ce que le direct apparaisse (15 min au plus).
+let lpLockStateKey = null;
+let lpKickoffPollBusy = false;
+async function lpRefreshFromServer() {
+  if (lpKickoffPollBusy) return false;
+  lpKickoffPollBusy = true;
+  try {
+    const res = await fetchApi("/api/save");
+    const data = await res.json().catch(() => null);
+    const lg = data && (data.league || data);
+    if (!res.ok || !lg || !Array.isArray(lg.privateLeagues)) return false;
+    if (Array.isArray(lg.guestTeams)) installGuestTeams(league, lg.guestTeams);
+    league.privateLeagues = lg.privateLeagues;
+    return true;
+  } catch (e) { return false; } finally { lpKickoffPollBusy = false; }
+}
+setInterval(async () => {
+  if (typeof document === "undefined" || document.visibilityState === "hidden" || !teamA || !league) return;
+  let n = null;
+  try { n = nextNonOfficialMatch(); } catch (e) { return; }
+  if (n && n.kind === "lp" && !n.lpNext.live && Date.now() >= n.at && Date.now() - n.at < 15 * 60 * 1000) {
+    await lpRefreshFromServer();
+    try { n = nextNonOfficialMatch(); } catch (e) { return; }
+  }
+  const key = n ? `${n.kind}:${n.lpId || n.friendlyId || ""}:${n.at}:${n.kind === "lp" ? lpOrdersLocked(n.lpNext.lp) + ":" + !!n.lpNext.live : ""}` : "";
+  if (key === lpLockStateKey) return;
+  const first = lpLockStateKey === null;
+  lpLockStateKey = key;
+  if (first) return;
+  try { updateTopbar(); } catch (e) { /* rien */ }
+  const visible = id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
+  try { if (visible("clubSection")) renderClubSection(); } catch (e) { /* rien */ }
+  try { if (visible("calendrierSection")) renderCalendrierSection(); } catch (e) { /* rien */ }
+  try { if (visible("lpSection")) renderLpSection(); } catch (e) { /* rien */ }
+  try { if (tqEdit && tqEdit.kind === "lp" && visible("prepSection")) renderTacticEditorBar(); } catch (e) { /* rien */ }
+}, 15000);
+
 // Ouvre les ordres du prochain match (onglet Ordres, bouton du topbar).
 function openNextMatchOrders() {
   const n = nextNonOfficialMatch();
