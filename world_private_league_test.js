@@ -147,6 +147,15 @@ const ok = m => console.log("✅ " + m);
   const dayKey = require("./server/friendlies.js").dayKeyOf(kickoff);
   assert.ok(!(await api("/api/save", boston)).body.myOfficialDays.includes(dayKey), "le vendredi ne compte pas comme jour de match à Boston");
   ok("le vendredi de ligue privée ne bloque ni l'entraînement ni les amicaux");
+  // Verrou à T − 5 min, comme un match officiel (retour 2026-10-03).
+  const before = clock.now;
+  clock.now = kickoff - 4 * 60 * 1000;
+  r = await api("/api/private-league/orders", boston, { id: lpId, orders: lpOrders });
+  assert.ok(r.status >= 400 && /verrouillés/.test(r.body.error), `ordres refusés à T − 4 min : ${JSON.stringify(r.body)}`);
+  r = await api("/api/private-league/orders", boston, { id: lpId, reset: true });
+  assert.ok(r.status >= 400, "retour aux ordres du club refusé à T − 4 min");
+  clock.now = before;
+  ok("ordres de ligue privée verrouillés 5 minutes avant le coup d'envoi");
   clock.now = kickoff + 60 * 1000;
   // Course (retour Diablue 2026-10-03 : ordres de ligue privée ignorés) :
   // le rattrapage lit les ligues privées AVANT les ordres de Boston (copie

@@ -52081,6 +52081,12 @@ function lpOrdersSources(lp) {
   tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
   return out;
 }
+// Verrou à T − 5 min (même règle que le serveur, voir
+// server/privateLeague.js:memberOrdersLocked) : prochain match du club.
+function lpOrdersLocked(lp, now = Date.now()) {
+  const round = lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && (m.home === myTeamIndex || m.away === myTeamIndex)));
+  return !!round && typeof round.dueAt === "number" && now >= round.dueAt - 5 * 60 * 1000;
+}
 function openPrivateLeagueOrders(lpId, tab) {
   const lp = findLpById(lpId);
   if (!lp) return;
@@ -52118,12 +52124,15 @@ function renderTacticEditorBar() {
     if (title) title.textContent = "Ordres de la ligue privée";
     const opts = lpOrdersSources(lp).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
     const saved = !!(lp && lp.myOrders);
+    const locked = lpOrdersLocked(lp);
     bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Ligue privée</label><div class="fr-oe-vs"><span><b>${escapeHtml(lp ? lp.name : "")}</b><small>${lp ? escapeHtml(lpWhenLabel(lp)) : ""}</small></span></div></div>` +
       `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${opts}</select></div>` +
-      `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave">Enregistrer les ordres</button>` +
-        (saved ? `<button type="button" class="tq-btn" id="lpOrdersReset">Revenir aux ordres du club</button>` : "") +
+      `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave"${locked ? " disabled" : ""}>Enregistrer les ordres</button>` +
+        (saved && !locked ? `<button type="button" class="tq-btn" id="lpOrdersReset">Revenir aux ordres du club</button>` : "") +
         `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
-      `<p class="tq-editor-note">${tqEdit.feedback ? `<b class="${tqEdit.feedback.ok ? "gain-up" : "gain-down"}">${escapeHtml(tqEdit.feedback.text)}</b> ` : ""}Ces ordres valent pour tous vos matchs de ligue privée à venir, jamais pour les matchs officiels. Sans ordres enregistrés, la ligue privée se joue avec les ordres actuels du club.</p>`;
+      `<p class="tq-editor-note">${tqEdit.feedback ? `<b class="${tqEdit.feedback.ok ? "gain-up" : "gain-down"}">${escapeHtml(tqEdit.feedback.text)}</b> ` : ""}` +
+      (locked ? `<b class="gain-down">Ordres verrouillés : le coup d'envoi est dans moins de 5 minutes.</b> ` : "") +
+      `Ces ordres valent pour tous vos matchs de ligue privée à venir, jamais pour les matchs officiels. Ils sont figés 5 minutes avant chaque coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, la ligue privée se joue avec les ordres actuels du club.</p>`;
     return;
   }
   if (tqEdit.kind === "friendly") {

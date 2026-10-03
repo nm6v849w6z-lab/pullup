@@ -279,12 +279,23 @@ function leavePrivateLeague(Engine, store, me, body, now) {
 // autres), valables pour tous ses matchs de ligue privée à venir, appliqués
 // sur la COPIE de l'équipe au coup d'envoi (voir playMatch) — rien sur les
 // ordres des matchs officiels. Sans ordres propres : ordres actuels du club.
+// Verrou à T − 5 min, comme un match officiel (retour utilisateur
+// 2026-10-03 : « il faut que la compo soit lue dans les 5 min avant le match,
+// comme un match classique ») : plus aucune modification des ordres de ligue
+// privée entre T − 5 min et la fin de son prochain match.
+const LP_ORDERS_LOCK_MS = 5 * 60 * 1000;
+const LP_ORDERS_LOCKED_ERROR = "Ordres verrouillés : le coup d'envoi est dans moins de 5 minutes.";
+function memberOrdersLocked(lp, slot, now) {
+  const round = (lp.rounds || []).find(r => r.matches.some(m => !m.played && (m.home === slot || m.away === slot)));
+  return !!round && typeof round.dueAt === "number" && now >= round.dueAt - LP_ORDERS_LOCK_MS;
+}
 function setPrivateLeagueOrders(Engine, store, me, body, now) {
   const lp = findById(store, body && body.id);
   if (!lp || !isActive(lp)) return fail("Ligue privée introuvable.");
   const slot = memberSlot(lp, me.ref.leagueId, me.idx);
   if (slot < 0) return fail("Votre club ne fait pas partie de cette ligue privée.");
   const member = lp.members[slot];
+  if (memberOrdersLocked(lp, slot, now)) return fail(LP_ORDERS_LOCKED_ERROR);
   if (body && body.reset) { delete member.orders; return { ok: true, privateLeagueId: lp.id }; }
   const team = me.league && me.league.teams[me.idx];
   if (!team) return fail("Club introuvable.");
@@ -914,6 +925,7 @@ function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = 
 }
 
 module.exports = {
+  LP_ORDERS_LOCK_MS, memberOrdersLocked,
   PRIVATE_LEAGUE_SIZES, PRIVATE_LEAGUE_MIN_TEAMS_TO_START, PRIVATE_LEAGUE_VENUES,
   PRIVATE_LEAGUE_WEEKDAY, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE, PRIVATE_LEAGUE_TIMES, PRIVATE_LEAGUE_NAME_MAX,
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS, PRIVATE_LEAGUE_GUEST_IDX, STORE_NAME,
