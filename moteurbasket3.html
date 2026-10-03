@@ -20,7 +20,7 @@
      correspondre le viewport à la largeur réelle de l'appareil et démarre au
      zoom 1:1 — cela permet aussi enfin aux media queries mobiles existantes
      de s'appliquer normalement. -->
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Hoop Manager</title>
 <!-- Application mobile (PWA, 2026-09-25 — retour utilisateur : "réfléchis à
      l'application mobile et prépare le code"). Tout le code mobile vit dans
@@ -7810,6 +7810,15 @@
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
      que showPlayer.js. -->
 <script src="assets/i18n/i18n.js" defer></script>
+<style>html, body { touch-action: pan-x pan-y; }</style>
+<script>
+/* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
+   pouvoir zoomer sur aucune page, tout doit être fixe ») : iOS Safari
+   ignore user-scalable=no, on bloque donc aussi le geste de pincement. */
+["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
+  document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+});
+</script>
 </head>
 <body>
 <!-- Écran de chargement (retour utilisateur, 2026-09 : "crée aussi une
@@ -32257,7 +32266,6 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `</div>`;
   }
   if (isOwnTeam) html += `<div id="playerDetailTransferRequestFeedback"></div>`;
-  if (onMarket) html += `<p class="sub">Ce joueur est actuellement aux enchères sur le marché des transferts, ses caractéristiques sont donc visibles.</p>`;
 
   // ---- Refonte visuelle (retour utilisateur, 2026-09-25 : "code la page
   // joueur stp" sur la maquette canevas "Hoop Manager – Fiche joueur

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Hoop Manager · Jeu de gestion de basket en ligne</title>
 <meta name="description" content="Dirige ton club de basket en ligne : matchs diffusés en direct, ligue de 10 managers, entraînement, transferts aux enchères. Gratuit, dans le navigateur.">
 <link rel="canonical" href="https://hoop-manager.com/bienvenue">
@@ -197,6 +197,15 @@
   }
   @media (prefers-reduced-motion:reduce){ .kicker i,.waiting .ball{animation:none} }
 </style>
+<style>html, body { touch-action: pan-x pan-y; }</style>
+<script>
+/* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
+   pouvoir zoomer sur aucune page, tout doit être fixe ») : iOS Safari
+   ignore user-scalable=no, on bloque donc aussi le geste de pincement. */
+["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
+  document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+});
+</script>
 </head>
 <body>
 
