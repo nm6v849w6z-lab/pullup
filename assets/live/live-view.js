@@ -56,7 +56,7 @@ const TEMPLATE = `
         <div class="tmeta"><span data-ref="fouls${t}"></span><span class="dots" data-ref="tos${t}" title="Temps morts restants"></span></div>
       </div>
     </div>
-    <div class="score-wrap" style="order:${t ? 4 : 2}">
+    <div class="score-wrap s${t}" style="order:${t ? 4 : 2}">
       <div class="score" data-ref="score${t}">0</div>
       <div class="poss" data-ref="poss${t}" title="Possession">${BALL}</div>
     </div>`).join("")}

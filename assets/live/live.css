@@ -329,6 +329,23 @@
   .hm-live .box td,.hm-live .box th{padding:7px 6px}
 }
 @container hmlive (max-width:560px){
+  /* Tableau de score sur téléphone (retour utilisateur 2026-10-03 :
+     « horrible l'affichage ») : écusson, sigle et fautes en haut de chaque
+     colonne, score juste dessous, chrono au centre. */
+  .hm-live .board-top{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"t0 c t1" "s0 c s1";align-items:center;column-gap:8px;row-gap:2px;padding:14px 12px 16px}
+  .hm-live .board-top .team.home{grid-area:t0;align-self:start}
+  .hm-live .board-top .team.away{grid-area:t1;align-self:start}
+  .hm-live .board-top .score-wrap.s0{grid-area:s0}
+  .hm-live .board-top .score-wrap.s1{grid-area:s1}
+  .hm-live .board-top .center{grid-area:c;align-self:center}
+  .hm-live .team,.hm-live .team.away{width:100%;align-items:center}
+  .hm-live .tinfo{display:flex;flex-direction:column;align-items:center;min-width:0;width:100%}
+  .hm-live .tmeta{flex-direction:column;gap:2px;line-height:1.25}
+  .hm-live .score{font-size:40px;letter-spacing:-1px;min-width:0}
+  .hm-live .clock{font-size:26px}
+  .hm-live .clock.final{font-size:26px}
+  .hm-live .shotclock{font-size:13px;padding:1px 6px}
+  .hm-live .period{font-size:10.5px;letter-spacing:1px}
   .hm-live .mini-in{padding:7px 10px;gap:8px;margin-top:4px}
   .hm-live .mcrest{width:24px;height:24px}
   .hm-live .mteam{gap:6px}
