@@ -26625,6 +26625,9 @@ async function reloadLeagueOnly() {
 }
 
 function syncMarketBidToServer(listingId, amount, seasons = null) {
+  // Budget de la barre du haut : enchères en tête déduites (voir
+  // updateTopbarBudget), à jour dès l'enchère posée.
+  try { updateTopbarBudget(); } catch (e) { /* rien */ }
   try {
     return fetchApi("/api/market/bid", {
       method: "POST",
@@ -26634,6 +26637,7 @@ function syncMarketBidToServer(listingId, amount, seasons = null) {
       .then(async res => {
         const data = await res.json().catch(() => null);
         if (!res.ok) console.warn("Enchère refusée côté serveur.", res.status);
+        try { updateTopbarBudget(); } catch (e) { /* rien */ }
         return { ok: res.ok, data };
       })
       .catch(e => { console.warn("Enchère : serveur indisponible :", e); return null; });
@@ -28133,7 +28137,12 @@ function describeMatchup() {
 function updateTopbarBudget() {
   const el = document.getElementById("topbarBudget");
   if (!el || !teamA || typeof teamA.budget !== "number") return;
-  el.innerHTML = `<small>Budget</small><b class="${teamA.budget < 0 ? "neg" : ""}">${formatMoney(teamA.budget)}</b>`;
+  // Argent réellement disponible (retour utilisateur 2026-10-03) : budget
+  // moins les enchères où le club est en tête (Team.spendableBudget).
+  const available = typeof teamA.spendableBudget === "function" ? teamA.spendableBudget() : teamA.budget;
+  const reserved = teamA.budget - available;
+  el.innerHTML = `<small>Budget</small><b class="${available < 0 ? "neg" : ""}">${formatMoney(available)}</b>`;
+  el.title = reserved > 0 ? `Budget ${formatMoney(teamA.budget)} dont ${formatMoney(reserved)} réservés sur vos enchères en tête` : "Économie";
 }
 function updateTopbar() {
   updateTopbarBudget();
