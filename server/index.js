@@ -1557,6 +1557,41 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // "Économie" du club concerné. Même authentification que les deux
       // routes admin ci-dessus (X-Admin-Token) ; agit UNIQUEMENT sur la
       // ligue PARTAGÉE, jamais sur une carrière solo.
+      // Lecture d'un club pour diagnostic (retour utilisateur 2026-10-03 :
+      // « c'est pour un bug ») : GET /api/admin/team?name=… — effectif
+      // complet, caractéristiques comprises. LECTURE SEULE, même
+      // authentification que les autres routes admin (X-Admin-Token) ;
+      // club cherché par nom exact (sans majuscules) dans tout le monde.
+      if (route.pathname === "/api/admin/team" && req.method === "GET") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        const wanted = String(route.searchParams.get("name") || "").trim().toLowerCase();
+        if (!wanted) { sendJson(res, 400, { ok: false, error: "'name' requis (?name=…)." }); return; }
+        let hostLeague = null, team = null;
+        const world = await World.loadWorld(multiSavePath, now);
+        for (const entry of (world ? world.leagues : [])) {
+          const lg = await World.loadLeague(world, entry.id, multiSavePath);
+          const t = lg && lg.teams.find(x => String(x.name || "").trim().toLowerCase() === wanted);
+          if (t) { hostLeague = lg; team = t; break; }
+        }
+        if (!team) {
+          const multi = await store.loadMultiLeague(multiSavePath);
+          team = multi ? (multi.league.teams.find(t => String(t.name || "").trim().toLowerCase() === wanted) || null) : null;
+          hostLeague = team ? multi.league : null;
+        }
+        if (!team) { sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${route.searchParams.get("name")}" dans le monde.` }); return; }
+        const view = p => ({
+          id: p.id, name: p.name, position: p.position, age: p.age, height: p.height, nationality: p.nationality || null,
+          overall: typeof p.overall === "function" ? p.overall() : null, potential: p.potential, form: p.form,
+          salary: p.salary, contractUntilSeason: p.contractUntilSeason == null ? null : p.contractUntilSeason,
+          injuryUntil: p.injuryUntil || null, attrs: { ...(p.attrs || {}) },
+        });
+        sendJson(res, 200, {
+          ok: true, teamName: team.name, leagueId: hostLeague.leagueId || null, isHuman: !!team.isHuman,
+          lineup: team.lineup || null, players: (team.players || []).map(view), youthPlayers: (team.youthPlayers || []).map(view),
+        });
+        return;
+      }
+
       if (route.pathname === "/api/admin/credit-team" && req.method === "POST") {
         if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
         const multi = await store.loadMultiLeague(multiSavePath);
