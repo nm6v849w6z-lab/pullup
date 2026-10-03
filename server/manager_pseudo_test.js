@@ -206,6 +206,15 @@ async function main() {
     check(r.status === 200 && r.body.persisted === false, "manager sans compte (lien privé) : rien d'enregistré, le navigateur garde son choix");
     r = await request(server, "POST", "/api/account/lang", { lang: "en" });
     check(r.status === 401, "sans jeton : refusé");
+    // --- Affichage des notes GEN / TC sur le compte (retour 2026-10-03).
+    r = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
+    check(r.body.account.ratingMode === null, "compte sans choix GEN/TC : null (le jeu enverra celui de l'appareil)");
+    r = await request(server, "POST", "/api/account/rating-mode", { mode: "xx" }, { "X-TipIn-Token": newToken });
+    check(r.status === 400, "mode d'affichage inconnu refusé");
+    r = await request(server, "POST", "/api/account/rating-mode", { mode: "tc" }, { "X-TipIn-Token": newToken });
+    check(r.status === 200 && r.body.persisted === true, "affichage TC enregistré dans le compte");
+    r = await request(server, "GET", "/api/account/me", undefined, { "X-TipIn-Token": newToken });
+    check(r.body.account.ratingMode === "tc", "/api/account/me renvoie l'affichage TC (tout appareil)");
     console.log("\n🏁 Pseudo du manager : validation, unicité mondiale, délai, confidentialité, langue du compte.");
   } finally {
     server.close();

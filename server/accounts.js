@@ -228,6 +228,10 @@ function publicView(account) {
     discordName: account.discordName || null,
     hasClub: !!account.managerToken,
     lang: normalizeLang(account.lang),
+    // Affichage des notes sur la fiche joueur (retour utilisateur 2026-10-03 :
+    // « paramétré sur le compte ») : "gen" (défaut) ou "tc".
+    // null : jamais choisi (le navigateur envoie alors son choix local).
+    ratingMode: account.ratingMode === "tc" || account.ratingMode === "gen" ? account.ratingMode : null,
   };
 }
 

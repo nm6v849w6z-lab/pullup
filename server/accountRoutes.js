@@ -417,6 +417,22 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       return true;
     }
 
+    // Affichage des notes (fiche joueur) : { mode: "gen" | "tc" }, sur le
+    // compte (retour utilisateur 2026-10-03). Sans compte : persisted:false.
+    if (p === "/api/account/rating-mode" && req.method === "POST") {
+      const token = getManagerToken(req);
+      if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const b = await body(req, res); if (!b) return true;
+      if (b.mode !== "gen" && b.mode !== "tc") { sendJson(res, 400, { ok: false, code: "mode-invalid" }); return true; }
+      await withAccounts(async data => {
+        const account = Accounts.findByManagerToken(data, token);
+        if (!account) { sendJson(res, 200, { ok: true, mode: b.mode, persisted: false }); return; }
+        if ((account.ratingMode || "gen") !== b.mode) { account.ratingMode = b.mode; await Accounts.saveAccounts(data, accountsPath); }
+        sendJson(res, 200, { ok: true, mode: b.mode, persisted: true });
+      });
+      return true;
+    }
+
     // Manager existant (lien privé, sans compte) qui se crée des
     // identifiants — ou compte Discord seul qui ajoute un mot de passe.
     if (p === "/api/account/claim" && req.method === "POST") {

@@ -32710,14 +32710,19 @@ document.addEventListener("click", (e) => {
 
 // Affichage des notes (Paramètres > Affichage, retour utilisateur
 // 2026-10-03 : « chacun choisit ce qu'il préfère ») : "gen" (moyenne, note
-// au meilleur poste) ou "tc" (total des caractéristiques). Préférence de
-// l'appareil (localStorage).
+// au meilleur poste) ou "tc" (total des caractéristiques). Enregistré sur le
+// COMPTE (POST /api/account/rating-mode, relu au chargement par
+// hmSyncAccountLang) ; localStorage n'est qu'un cache pour l'affichage.
 const RATING_MODE_KEY = "hm-rating-mode";
 function ratingDisplayMode() {
   try { return localStorage.getItem(RATING_MODE_KEY) === "tc" ? "tc" : "gen"; } catch (e) { return "gen"; }
 }
-function setRatingDisplayMode(mode) {
-  try { localStorage.setItem(RATING_MODE_KEY, mode === "tc" ? "tc" : "gen"); } catch (e) { /* navigation privée */ }
+function setRatingDisplayMode(mode, persist = true) {
+  const m = mode === "tc" ? "tc" : "gen";
+  try { localStorage.setItem(RATING_MODE_KEY, m); } catch (e) { /* navigation privée */ }
+  if (persist && typeof managerToken !== "undefined" && managerToken && typeof fetchApi === "function") {
+    window.__lastRatingModeSave = fetchApi("/api/account/rating-mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: m }) }).catch(() => null);
+  }
 }
 function playerTotalCaracs(player, keys) {
   return keys.reduce((sum, k) => sum + (Number(player.attrs && player.attrs[k]) || 0), 0);
@@ -45289,7 +45294,7 @@ function showSettingsModal(tab) {
     `<div class="settings-theme" id="settingsThemeChoices">` +
     opt("dark", "Sombre", "is-dark") + opt("light", "Clair", "is-light") + opt("system", "Appareil", "is-system") +
     `</div>` +
-    `<div class="settings-row-label" style="margin-top:16px;">Note des joueurs (fiche joueur)</div>` +
+    `<div class="settings-row-label" style="margin-top:16px;">Note des joueurs (fiche joueur)${managerToken ? " · enregistrée sur le compte" : ""}</div>` +
     `<div class="settings-theme settings-rating" id="settingsRatingChoices">` +
     `<button type="button" data-rating-choice="gen" aria-pressed="${ratingDisplayMode() === "gen"}">Moyenne (GEN)</button>` +
     `<button type="button" data-rating-choice="tc" aria-pressed="${ratingDisplayMode() === "tc"}">Total des caractéristiques (TC)</button>` +
@@ -45584,6 +45589,15 @@ async function hmSyncAccountLang() {
     acc = res.ok && data && data.ok ? data.account : null;
   } catch (e) { return; }
   if (!acc) return; // lien privé sans compte : le navigateur décide
+  // Affichage des notes (GEN / TC) : choix du compte, sur tous les appareils.
+  if (!acc.ratingMode) {
+    // Jamais choisi sur le compte : on y enregistre le choix de cet appareil.
+    if (ratingDisplayMode() === "tc") setRatingDisplayMode("tc");
+  } else if (acc.ratingMode !== ratingDisplayMode()) {
+    setRatingDisplayMode(acc.ratingMode, false);
+    const ref = currentPlayerDetailRef;
+    if (ref && currentVisiblePageId() === "playerDetailSection") renderPlayerDetail(ref.teamIdx, ref.playerId);
+  }
   const current = hmCurrentLang();
   if (!acc.lang) { await hmSaveAccountLang(current); return; }
   if (acc.lang !== current) {
