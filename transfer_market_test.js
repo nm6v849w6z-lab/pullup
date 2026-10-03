@@ -13,6 +13,8 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave } = require("./test_helpers.js");
 const E = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(E);
 const {
   generateTeam, generateLeague, Player,
   estimateMarketValue, transferMinIncrement, minNextBidFor,
@@ -448,7 +450,9 @@ const marketCards = [...doc2.querySelectorAll("#marketListings .market-card")];
 console.log(`\nOnglet Marché — cartes visibles : ${marketCards.length} (attendu au moins 2 : la vôtre + celle d'un adversaire)`);
 if (marketCards.length < 2) throw new Error("❌ Le Marché devrait afficher au moins 2 annonces ouvertes (la vôtre et celle d'un adversaire), pas seulement vos joueurs.");
 if (!marketCards.some(c => c.textContent.includes("Vendeur : Vous"))) throw new Error("❌ Votre propre annonce devrait toujours apparaître dans le Marché.");
-if (!marketCards.some(c => c.querySelector('[data-bid-listing="999001"]'))) throw new Error("❌ L'annonce d'un AUTRE club devrait apparaître dans le Marché, pas seulement les vôtres.");
+// Depuis la règle « accord avant l'enchère » (2026-10-03) : la carte d'un
+// autre club propose d'abord la négociation du contrat.
+if (!marketCards.some(c => c.querySelector('[data-bid-listing="999001"], [data-mk-negotiate="999001"]'))) throw new Error("❌ L'annonce d'un AUTRE club devrait apparaître dans le Marché, pas seulement les vôtres.");
 console.log("✅ Le Marché affiche bien toutes les enchères en cours de la ligue — les vôtres ET celles des adversaires, pas 'mes joueurs uniquement'.");
 
 // --- Retour utilisateur (2026-09, 2 passes) : "il faut pouvoir voir le
@@ -465,7 +469,15 @@ if (doc2.querySelector("#marketListings table")) {
 if (doc2.querySelector("#marketListings .table-scroll")) {
   throw new Error("❌ Le Marché ne devrait plus avoir de conteneur à défilement horizontal (.table-scroll).");
 }
-const cardWithBidBtn = marketCards.find(c => c.querySelector('[data-bid-listing="999001"]'));
+// Étape 1 (règle du 2026-10-03) : accord de contrat au salaire demandé
+// (champ prérempli) avant de pouvoir enchérir.
+if (doc2.querySelector('[data-mk-negotiate="999001"]')) {
+  doc2.querySelector('[data-mk-negotiate="999001"]').click();
+  for (let i = 0; i < 100 && !doc2.querySelector('[data-bid-listing="999001"]'); i++) await new Promise(r => setTimeout(r, 50));
+  if (!doc2.querySelector('[data-bid-listing="999001"]')) throw new Error("❌ Accord au salaire demandé : les enchères devraient s'ouvrir.");
+  console.log("✅ Accord de contrat au salaire demandé : enchères ouvertes.");
+}
+const cardWithBidBtn = [...doc2.querySelectorAll("#marketListings .market-card")].find(c => c.querySelector('[data-bid-listing="999001"]'));
 const bidZone = cardWithBidBtn.querySelector(".market-card-bid");
 if (!bidZone || !bidZone.querySelector('[data-bid-listing="999001"]')) {
   throw new Error("❌ Le bouton 'Enchérir' devrait se trouver à côté du prix/enchère actuelle (.market-card-bid), pas ailleurs sur la carte.");

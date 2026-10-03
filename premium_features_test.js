@@ -9,6 +9,8 @@ const assert = require("assert");
 const crypto = require("crypto");
 const fs = require("fs");
 const Engine = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(Engine);
 const Calendar = require("./server/calendar.js");
 const store = require("./server/store.js");
 const WebPush = require("./server/webpush.js");

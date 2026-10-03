@@ -11,6 +11,8 @@
 // server/autoSim.js:runWeeklyEconomyTick ; server/worldMarket.js.
 const assert = require("assert");
 const E = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(E);
 const actions = require("./server/actions.js");
 const AutoSim = require("./server/autoSim.js");
 const WorldMarket = require("./server/worldMarket.js");
@@ -209,7 +211,8 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   assert.strictEqual(p.salary, listing.askedSalary, "toujours signé au salaire demandé");
   assert.strictEqual(p.contractUntilSeason, lg.contractSeason() + 4, "5 saisons à partir de la saison en cours");
   const msg = buyer.feed.entries.find(e => e.key === `contract_signed_${p.id}`);
-  assert.ok(msg && /5 saisons/.test(msg.text) && /salaire demandé/.test(msg.text), "message de confirmation");
+  // Texte depuis la visite médicale (2026-10-03) : durée, salaire, visite.
+  assert.ok(msg && /5 saisons/.test(msg.text) && /Visite médicale/.test(msg.text), "message de confirmation");
   assert.ok(!seller.players.includes(p), "le vendeur ne le paie plus");
   // Durée invalide refusée par l'action serveur ; enchère auto avec durée.
   const p2 = seller.players[1];

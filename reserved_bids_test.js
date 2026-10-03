@@ -2,6 +2,8 @@
 // l'argent n'était pas bloqué, j'ai agrandi ma salle et je suis en négatif »).
 const assert = require("assert");
 const E = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(E);
 const lg = E.generateMultiManagerLeague(["Gotham Knights"], 1, Date.now());
 const me = 0, team = lg.teams[me];
 team.budget = 1000000;

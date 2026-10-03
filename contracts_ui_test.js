@@ -115,20 +115,22 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   const faListing = lg.transferListings.find(l => l.freeAgent && l.playerId === fa.id);
   const lFa = cardOf(faListing.id);
   if (!lFa || !lFa.querySelector(".mk-badge-fa") || !/Prime de signature/.test(lFa.textContent)) fail("annonce d'agent libre : badge / prime de signature.");
-  if (!lFa.querySelector(`#bidSeasons_${faListing.id}`)) fail("durée du contrat absente du formulaire d'enchère.");
+  // Règle du 2026-10-03 : durée et salaire négociés AVANT l'enchère.
+  if (!lFa.querySelector(`#negoSeasons_${faListing.id}`) || lFa.querySelector(`[data-bid-listing="${faListing.id}"]`)) fail("négociation du contrat absente (ou enchère ouverte sans accord).");
   const exListing = lg.transferListings.find(l => l.freeAgent && l.playerId === former.id);
   const lEx = cardOf(exListing.id);
-  if (!lEx || !lEx.querySelector(".mk-former-club") || lEx.querySelector("[data-bid-listing]")) fail("ancien club : enchère interdite.");
-  doc.querySelector(`#bidSeasons_${faListing.id}`).value = "4";
+  if (!lEx || !lEx.querySelector(".mk-former-club") || lEx.querySelector("[data-bid-listing]") || lEx.querySelector("[data-mk-negotiate]")) fail("ancien club : enchère interdite.");
+  doc.querySelector(`#negoSeasons_${faListing.id}`).value = "4";
+  lFa.querySelector(`[data-mk-negotiate="${faListing.id}"]`).click();
+  if (!await until(() => !!doc.querySelector(`#bid_${faListing.id}`), 100)) fail("accord au salaire demandé : enchère toujours fermée.");
   doc.querySelector(`#bid_${faListing.id}`).value = "5000";
-  lFa.querySelector(`[data-bid-listing="${faListing.id}"]`).click();
+  cardOf(faListing.id).querySelector(`[data-bid-listing="${faListing.id}"]`).click();
   await win.__lastSave;
-  let terms = null;
   await until(() => false, 15);
   const reloaded = (await store.loadMultiLeague(multiSavePath)).league.transferListings.find(l => l.id === faListing.id);
-  terms = reloaded && reloaded.contractTerms;
-  if (!reloaded || reloaded.currentBid !== 5000 || !terms || terms[`l:${idx}`] !== 4) fail(`enchère / durée non enregistrées : ${JSON.stringify(reloaded && { bid: reloaded.currentBid, terms })}`);
-  ok("Marché : salaire demandé, « Fin de contrat », « Agent libre » + prime de signature, durée jointe à l'enchère (serveur), ancien club exclu");
+  const deal = reloaded && reloaded.agreements && reloaded.agreements[`l:${idx}`];
+  if (!reloaded || reloaded.currentBid !== 5000 || !deal || deal.seasons !== 4) fail(`enchère / accord non enregistrés : ${JSON.stringify(reloaded && { bid: reloaded.currentBid, deal })}`);
+  ok("Marché : salaire demandé, « Fin de contrat », « Agent libre » + prime de signature, accord (4 saisons) avant l'enchère (serveur), ancien club exclu");
 
   server.close();
   console.log("\n🏁 contracts_ui_test.js : tout est vert");

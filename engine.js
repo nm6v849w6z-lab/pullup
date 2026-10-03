@@ -3674,6 +3674,24 @@ function releaseIndemnityFor(player, season, seasonWeek) {
   const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * RELEASE_WEEKS_PER_SEASON;
   return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
 }
+// Marché des joueurs : contrat négocié AVANT l'enchère, puis visite
+// médicale (retour utilisateur 2026-10-03 : « Contract negotiation → We
+// need to reach an agreement with the player before we're allowed to start
+// bidding […] Medical examination → 5–10 % reduction ») — voir
+// League.negotiateTransferContract et _applyTransferContract.
+// Visite médicale : antécédents des ~2 dernières saisons (saison écoulée et
+// saison en cours), SANS la blessure en cours (visible sur l'annonce, pas une
+// surprise). Réduction appliquée au SALAIRE convenu (pas à l'indemnité).
+const MEDICAL_HISTORY_WINDOW_MS = 24 * 7 * 24 * 3600 * 1000;
+function medicalCheckFor(player, now = Date.now()) {
+  const list = ((player && player.injuryHistory) || []).filter(e => e && typeof e.at === "number" && e.at >= now - MEDICAL_HISTORY_WINDOW_MS &&
+    !(typeof e.until === "number" && e.until > now));
+  if (!list.length) return { rate: 0, entries: [] };
+  const longest = list.reduce((m, e) => Math.max(m, e.days || 0), 0);
+  const rate = (list.length >= 2 || longest >= 21) ? 0.10 : longest >= 7 ? 0.07 : 0.05;
+  return { rate, entries: list.map(e => ({ type: e.type || "Blessure", days: e.days || null, at: e.at })) };
+}
+
 function contractSeasonsLeft(player, season) {
   if (!player || typeof player.contractUntilSeason !== "number") return null;
   return player.contractUntilSeason - (season || 1) + 1;
@@ -13351,18 +13369,30 @@ class League {
   // avec l'enchère ; message de confirmation au club humain.
   _applyTransferContract(listing, buyer, player, buyerSeason, now) {
     const key = listing.currentBidderIdx === FOREIGN_BIDDER_IDX ? autoBidKey(FOREIGN_BIDDER_IDX, listing.currentBidderRef) : autoBidKey(listing.currentBidderIdx, null);
-    const seasons = buyer.isHuman ? this._contractSeasonsFor(listing, key) : normalizeContractSeasons(listing.contractTerms && listing.contractTerms[key], 2 + Math.floor(rand01() * 3));
-    const salary = typeof listing.askedSalary === "number" ? listing.askedSalary : askedSalary(player);
+    // Accord négocié avant l'enchère (voir negotiateTransferContract) ;
+    // sans accord (club de l'IA) : salaire demandé, durée de l'offre.
+    const deal = this._transferAgreementFor(listing, key);
+    const seasons = deal && deal.seasons ? normalizeContractSeasons(deal.seasons)
+      : buyer.isHuman ? this._contractSeasonsFor(listing, key) : normalizeContractSeasons(listing.contractTerms && listing.contractTerms[key], 2 + Math.floor(rand01() * 3));
+    const agreed = deal && typeof deal.salary === "number" ? deal.salary : (typeof listing.askedSalary === "number" ? listing.askedSalary : askedSalary(player));
+    // Visite médicale : antécédents → salaire revu de 5 à 10 %.
+    const medical = medicalCheckFor(player, now != null ? now : Date.now());
+    const salary = medical.rate ? Math.max(SALARY_MIN, Math.round(agreed * (1 - medical.rate) / 10) * 10) : agreed;
     signNewContract(player, seasons, buyerSeason, salary);
+    const result = { seasons, salary, agreedSalary: agreed, medicalRate: medical.rate, medicalEntries: medical.entries };
+    listing.signed = { seasons, salary, agreedSalary: agreed, medicalRate: medical.rate };
     if (buyer.isHuman && buyer.feed) {
+      const pct = Math.round(medical.rate * 100);
+      const what = medical.entries.slice(0, 2).map(e => `${e.type}${e.days ? ` (${e.days} j)` : ""}`).join(", ");
       pushEntry(buyer.feed, {
         key: `contract_signed_${player.id}`, category: "marche", week: buyer.week, createdAt: now,
         title: `${player.name} a signé`,
-        text: `${player.name} rejoint le club pour ${seasons} saison${seasons > 1 ? "s" : ""}, au salaire demandé de ${salary.toLocaleString("fr-FR")} €/sem.`,
+        text: `${player.name} rejoint le club pour ${seasons} saison${seasons > 1 ? "s" : ""}, à ${salary.toLocaleString("fr-FR")} €/sem.` +
+          (medical.rate ? ` Visite médicale : antécédents (${what}), salaire convenu de ${agreed.toLocaleString("fr-FR")} € revu de -${pct} %.` : " Visite médicale : rien à signaler."),
         action: { label: "Fiche joueur", href: `/joueur/${player.id}` },
       });
     }
-    return { seasons, salary };
+    return result;
   }
 
   // Annonce « agent libre » : départ à 1 €, la mise est une prime de
@@ -13763,6 +13793,7 @@ class League {
     if (kind === "player" && !foreign && listing.sellerIdx === bidderIdx) return { ok: false, reason: "own-listing" };
     if (kind === "player" && team.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
     if (kind === "player" && this._isFormerClub(listing, team, foreign ? null : bidderIdx)) return { ok: false, reason: "former-club" };
+    if (kind === "player" && team.isHuman && !this._hasAgreementForBid(listing, key, idx, ref)) return { ok: false, reason: "no-agreement" };
     const minMax = leaderKey === key ? (listing.currentBid || 0) : minNextBidFor(listing);
     if (max < minMax) return { ok: false, reason: "too-low", minBid: minMax };
     if (team.isHuman && max > team.budget - (kind === "player" && !foreign ? this.reservedBidsFor(bidderIdx, listing.id) : 0)) return { ok: false, reason: "insufficient-budget" };
@@ -13789,6 +13820,66 @@ class League {
     (this.teams || []).forEach((t, idx) => { if (t) t.reservedForBids = this.reservedBidsFor(idx); });
   }
 
+  // Accord de contrat d'un club (clé autoBidKey) sur l'annonce, ou null.
+  _transferAgreementFor(listing, key) {
+    return (listing && listing.agreements && listing.agreements[key]) || null;
+  }
+  // Un club humain ne peut enchérir qu'avec un accord. Club qui avait déjà
+  // misé avant cette règle (annonce ouverte au déploiement) : accord
+  // implicite au salaire demandé, durée déjà choisie — rien ne casse.
+  _hasAgreementForBid(listing, key, idx, ref) {
+    if (this._transferAgreementFor(listing, key)) return true;
+    const already = (listing.bids || []).some(b => autoBidKey(b.bidderIdx, b.bidderRef) === key) ||
+      (listing.autoBids || []).some(a => autoBidKey(a.bidderIdx, a.bidderRef) === key);
+    if (!already) return false;
+    listing.agreements = listing.agreements || {};
+    listing.agreements[key] = { salary: typeof listing.askedSalary === "number" ? listing.askedSalary : null, seasons: this._contractSeasonsFor(listing, key), at: null, legacy: true };
+    return true;
+  }
+
+  // Négociation du contrat avec le joueur d'une annonce (marché des
+  // joueurs, agents libres compris) : `offer` = { salary, seasons }. Au
+  // salaire demandé : accord immédiat ; jusqu'à -10 % : tirage
+  // (contractAcceptanceChance, comme une prolongation) ; refus : demande
+  // +3 %, après 3 refus seulement au salaire demandé. Accord figé jusqu'à la
+  // fin de l'enchère. `foreign` = { ref, team } (club d'un autre
+  // championnat, marché mondial). Renvoie { ok, accepted, salary, seasons,
+  // demand, refusals } ou { ok: false, reason }.
+  negotiateTransferContract(listingId, bidderIdx, offer, now, foreign = null, rng = rand01) {
+    const listing = (this.transferListings || []).find(l => l.id === listingId);
+    if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
+    const idx = foreign ? FOREIGN_BIDDER_IDX : bidderIdx;
+    const ref = foreign ? { leagueId: foreign.ref.leagueId, idx: foreign.ref.idx, name: foreign.ref.name || (foreign.team && foreign.team.name) } : null;
+    const team = foreign ? foreign.team : this.teams[bidderIdx];
+    if (!team) return { ok: false, reason: "invalid-bidder" };
+    if (!foreign && listing.sellerIdx === bidderIdx) return { ok: false, reason: "own-listing" };
+    if (this._isFormerClub(listing, team, foreign ? null : bidderIdx)) return { ok: false, reason: "former-club" };
+    const player = this.listingPlayer(listing);
+    if (!player) return { ok: false, reason: "closed" };
+    const key = autoBidKey(idx, ref);
+    if (this._transferAgreementFor(listing, key)) return { ok: false, reason: "already-agreed" };
+    listing.negotiations = listing.negotiations || {};
+    const neg = listing.negotiations[key] || { refusals: 0, demand: typeof listing.askedSalary === "number" ? listing.askedSalary : askedSalary(player) };
+    const seasons = normalizeContractSeasons(offer && offer.seasons, null);
+    if (seasons == null) return { ok: false, reason: "invalid-seasons" };
+    const salary = Math.round(Number(offer && offer.salary));
+    if (!Number.isFinite(salary) || salary <= 0) return { ok: false, reason: "invalid-salary", demand: neg.demand };
+    const firm = neg.refusals >= CONTRACT_FIRM_AFTER_REFUSALS;
+    const floor = firm ? neg.demand : contractOfferFloor(neg.demand);
+    if (salary < floor) return { ok: false, reason: "invalid-salary", demand: neg.demand, floor };
+    const offered = Math.min(salary, neg.demand);
+    if (offered >= neg.demand || rng() < contractAcceptanceChance(neg.demand, offered, player.form, team.prestige)) {
+      listing.agreements = listing.agreements || {};
+      listing.agreements[key] = { salary: offered, seasons, at: now };
+      delete listing.negotiations[key];
+      return { ok: true, accepted: true, salary: offered, seasons, demand: neg.demand, refusals: neg.refusals };
+    }
+    neg.refusals += 1;
+    neg.demand = Math.max(SALARY_MIN, Math.round(neg.demand * (1 + CONTRACT_REFUSAL_DEMAND_BUMP) / 10) * 10);
+    listing.negotiations[key] = neg;
+    return { ok: true, accepted: false, demand: neg.demand, refusals: neg.refusals, firm: neg.refusals >= CONTRACT_FIRM_AFTER_REFUSALS };
+  }
+
   placeBid(listingId, bidderIdx, amount, now, seasons = null) {
     const listing = this.transferListings.find(l => l.id === listingId);
     if (!listing || listing.status !== "open" || now >= listing.closesAt) return { ok: false, reason: "closed" };
@@ -13797,6 +13888,7 @@ class League {
     if (!bidder) return { ok: false, reason: "invalid-bidder" };
     if (this._isFormerClub(listing, bidder, bidderIdx)) return { ok: false, reason: "former-club" };
     if (bidder.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
+    if (bidder.isHuman && !this._hasAgreementForBid(listing, autoBidKey(bidderIdx, null), bidderIdx, null)) return { ok: false, reason: "no-agreement" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
     // Le budget des équipes CPU n'est pas suivi de façon réaliste (elles ne
@@ -13893,11 +13985,12 @@ class League {
     if (!bidder || !bidderRef) return { ok: false, reason: "invalid-bidder" };
     if (this._isFormerClub(listing, bidder, null)) return { ok: false, reason: "former-club" };
     if (bidder.players.length >= MAX_ROSTER_SIZE) return { ok: false, reason: "roster-full" };
+    const ref = { leagueId: bidderRef.leagueId, idx: bidderRef.idx, name: bidderRef.name || bidder.name };
+    if (bidder.isHuman && !this._hasAgreementForBid(listing, autoBidKey(FOREIGN_BIDDER_IDX, ref), FOREIGN_BIDDER_IDX, ref)) return { ok: false, reason: "no-agreement" };
     const minBid = minNextBidFor(listing);
     if (amount < minBid) return { ok: false, reason: "too-low", minBid };
     if (bidder.isHuman && amount > bidder.budget) return { ok: false, reason: "insufficient-budget" };
     const rounded = Math.round(amount);
-    const ref = { leagueId: bidderRef.leagueId, idx: bidderRef.idx, name: bidderRef.name || bidder.name };
     listing.currentBid = rounded;
     listing.currentBidderIdx = FOREIGN_BIDDER_IDX;
     listing.currentBidderRef = ref;
@@ -19194,7 +19287,7 @@ return {
   YOUTH_PROMOTION_CONTRACT_SEASONS, FREE_AGENT_AUCTION_DURATION_MS, FREE_AGENT_RETIRE_AGE, FREE_AGENT_SIGNING_LABEL, CPU_MIN_ROSTER_AFTER_CONTRACTS,
   contractHash, initialContractSeasonsFor, contractAgeFactor, contractMoraleFactor, askedSalary, contractOfferFloor,
   contractAcceptanceChance, contractOfferHint, normalizeContractSeasons, contractSeasonsLeft, isLastContractSeason, signNewContract,
-  RELEASE_INDEMNITY_RATE, releaseIndemnityFor,
+  RELEASE_INDEMNITY_RATE, releaseIndemnityFor, medicalCheckFor, MEDICAL_HISTORY_WINDOW_MS,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
   COURT_WOODS, normalizeCourtStyle, courtStyleFor, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,

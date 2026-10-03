@@ -3872,6 +3872,19 @@
   .mk-stf-effect li::before{content:""; position:absolute; left:0; top:.55em; width:5px; height:5px; border-radius:50%; background:var(--amber);}
   .mk-stf-effect .stf-attrs{color:var(--ok); font-weight:700;}
   .mk-stf-replace{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; color:var(--ink-dim);}
+  .mk-nego{border:1px solid var(--line, rgba(255,255,255,.1)); border-radius:12px; padding:12px; background:rgba(255,255,255,.02); display:flex; flex-direction:column; gap:9px;}
+  .mk-step{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); font-weight:700; display:flex; justify-content:space-between; gap:8px; margin-top:2px;}
+  .mk-nego-row{display:grid; grid-template-columns:minmax(0,1fr) 118px; gap:8px;}
+  .mk-nego-row label{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--ink-dim);}
+  .mk-nego-row input, .mk-nego-row select{height:38px; border-radius:9px; border:1px solid var(--line, rgba(255,255,255,.12)); background:var(--bg-2, #0b1220); color:var(--ink); padding:0 10px; font:inherit; font-weight:700; min-width:0;}
+  .mk-nego-msg{border-radius:9px; padding:8px 10px; font-size:12.5px;}
+  .mk-nego-msg.no{border:1px solid rgba(231,76,60,.45); background:rgba(231,76,60,.08); color:#ffd2cc;}
+  .mk-nego-msg.ok{border:1px solid rgba(46,204,113,.45); background:rgba(46,204,113,.08); color:#d6f5e3;}
+  .mk-nego-lock{font-size:12.5px; color:var(--ink-dim); padding:8px 10px; border-radius:9px; background:rgba(255,255,255,.03); margin-top:8px;}
+  .mk-deal-ok{border:1px solid rgba(46,204,113,.45); background:rgba(46,204,113,.08); border-radius:12px; padding:10px 12px; font-size:13px; color:#d6f5e3; margin-bottom:10px;}
+  .mk-deal-ok b{color:#fff;} .mk-deal-ok span{opacity:.75;}
+  html[data-theme="light"] .mk-deal-ok, html[data-theme="light"] .mk-nego-msg.ok{color:#14532d;} html[data-theme="light"] .mk-deal-ok b{color:#0f3d22;}
+  html[data-theme="light"] .mk-nego-msg.no{color:#7f1d1d;}
   .mbx-tactics-table{width:100%; border-collapse:collapse; font-size:14px;}
   .mbx-tactics-table th, .mbx-tactics-table td{padding:8px 10px; border-bottom:1px solid var(--line, rgba(255,255,255,.08)); text-align:left;}
   .mbx-tactics-table thead th{font-size:12px; color:var(--ink-dim); font-weight:700;}
@@ -14433,6 +14446,17 @@ function releaseIndemnityFor(player, season, seasonWeek) {
   const thisSeason = Math.max(0, RELEASE_WEEKS_PER_SEASON - Math.max(1, seasonWeek || 1) + 1);
   const weeks = thisSeason + Math.max(0, player.contractUntilSeason - s) * RELEASE_WEEKS_PER_SEASON;
   return Math.round((player.salary || 0) * weeks * RELEASE_INDEMNITY_RATE);
+}
+// Visite médicale (miroir de engine.js:medicalCheckFor) : antécédents des
+// ~2 dernières saisons, sans la blessure en cours.
+const MEDICAL_HISTORY_WINDOW_MS = 24 * 7 * 24 * 3600 * 1000;
+function medicalCheckFor(player, now = Date.now()) {
+  const list = ((player && player.injuryHistory) || []).filter(e => e && typeof e.at === "number" && e.at >= now - MEDICAL_HISTORY_WINDOW_MS &&
+    !(typeof e.until === "number" && e.until > now));
+  if (!list.length) return { rate: 0, entries: [] };
+  const longest = list.reduce((m, e) => Math.max(m, e.days || 0), 0);
+  const rate = (list.length >= 2 || longest >= 21) ? 0.10 : longest >= 7 ? 0.07 : 0.05;
+  return { rate, entries: list.map(e => ({ type: e.type || "Blessure", days: e.days || null, at: e.at })) };
 }
 function contractSeasonsLeft(player, season) {
   if (!player || typeof player.contractUntilSeason !== "number") return null;
@@ -47840,6 +47864,62 @@ function mkBarHtml(value) {
   return `<span class="mk-bar"><span style="width:${clamp(value, 0, 100)}%;background:${color}"></span></span>`;
 }
 
+// Contrat négocié avant l'enchère (voir League.negotiateTransferContract
+// côté serveur) : accord conclu, ou club qui avait déjà misé avant la règle
+// (accord implicite au salaire demandé, voir _hasAgreementForBid).
+function mkHasAgreement(l) {
+  if (l.myAgreement) return true;
+  return (l.bids || []).some(b => b.bidderIdx === myTeamIndex) || myAutoMaxOf(l) != null;
+}
+function mkNegotiationHtml(l, asked) {
+  const neg = l.myNegotiation || null;
+  const demand = neg ? neg.demand : asked;
+  const refusals = neg ? neg.refusals : 0;
+  const firm = refusals >= CONTRACT_FIRM_AFTER_REFUSALS;
+  const fb = marketUi.nego && marketUi.nego[l.id];
+  const seasons = (fb && fb.seasons) || CONTRACT_DEFAULT_SEASONS;
+  const salary = fb && fb.salary != null && !firm ? fb.salary : demand;
+  return `<div class="mk-nego">` +
+    `<div class="mk-step"><span>1 · Contrat avec le joueur</span><span>${firm ? "dernier mot" : `essai ${Math.min(refusals + 1, CONTRACT_FIRM_AFTER_REFUSALS)}/${CONTRACT_FIRM_AFTER_REFUSALS}`}</span></div>` +
+    (fb && fb.text ? `<div class="mk-nego-msg ${fb.ok ? "ok" : "no"}">${fb.html || escapeHtml(fb.text)}</div>` : "") +
+    `<div class="mk-nego-row"><label>Salaire proposé (€ / sem.)<input type="number" id="negoSalary_${l.id}" value="${salary}" min="${firm ? demand : contractOfferFloor(demand)}" max="${demand}" step="10"${firm ? " readonly" : ""}></label>` +
+      `<label>Durée<select id="negoSeasons_${l.id}">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === seasons ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label></div>` +
+    `<button type="button" class="mk-btn mk-btn--primary" data-mk-negotiate="${l.id}">Proposer au joueur</button>` +
+    `<div class="mk-hint">${firm
+      ? `Après trois refus, il ne signe qu'au salaire demandé (${escapeHtml(formatMoney(demand))}).`
+      : `Au salaire demandé (${escapeHtml(formatMoney(demand))}) : accord immédiat. Jusqu'à −10 % : il peut refuser. Sa demande monte de 3 % à chaque refus, et après 3 refus il ne signe qu'au salaire demandé.`}</div>` +
+    `</div><div class="mk-nego-lock">🔒 Enchères ouvertes une fois l'accord conclu avec le joueur.</div>`;
+}
+async function mkNegotiate(listingId) {
+  const l = (league.transferListings || []).find(x => String(x.id) === String(listingId));
+  if (!l) return;
+  const salEl = document.getElementById(`negoSalary_${l.id}`), seaEl = document.getElementById(`negoSeasons_${l.id}`);
+  const salary = Math.round(Number(salEl && salEl.value) || 0), seasons = Number(seaEl && seaEl.value) || CONTRACT_DEFAULT_SEASONS;
+  marketUi.nego = marketUi.nego || {};
+  let data = null;
+  try {
+    const res = await fetchApi("/api/market/negotiate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId: l.id, salary, seasons }) });
+    data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) { marketUi.nego[l.id] = { ok: false, text: (data && data.error) || "Négociation impossible pour l'instant.", salary, seasons }; renderMarcheSectionKeeping(`marketCard_${l.id}`); return; }
+  } catch (e) { marketUi.nego[l.id] = { ok: false, text: "Serveur indisponible, réessayez.", salary, seasons }; renderMarcheSectionKeeping(`marketCard_${l.id}`); return; }
+  if (data.accepted) {
+    l.myAgreement = { salary: data.salary, seasons: data.seasons };
+    delete l.myNegotiation;
+    delete marketUi.nego[l.id];
+  } else {
+    l.myNegotiation = { refusals: data.refusals, demand: data.demand };
+    marketUi.nego[l.id] = { ok: false, text: `Refusé : il trouve l'offre trop basse. Sa demande passe à ${formatMoney(data.demand)} / sem.`, html: `Refusé : il trouve l'offre trop basse. Sa demande passe à <b>${escapeHtml(formatMoney(data.demand))}</b> / sem.`, salary: null, seasons };
+  }
+  renderMarcheSectionKeeping(`marketCard_${l.id}`);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-mk-negotiate]");
+  if (!b) return;
+  e.preventDefault();
+  b.disabled = true;
+  mkNegotiate(b.dataset.mkNegotiate);
+});
+
 function mkListingCardHtml(l, player, now) {
   // Agent libre (demande du 2026-10-01) : pas de club vendeur, la mise est
   // une prime de signature ; l'ancien club n'a pas le droit d'enchérir.
@@ -47871,16 +47951,18 @@ function mkListingCardHtml(l, player, now) {
       : `<div class="mk-hint">Aucune offre pour l'instant.</div>`;
   } else if (formerClub) {
     action = `<div class="mk-hint warn mk-former-club">Votre ancien joueur : son ancien club ne peut pas enchérir sur lui.</div>`;
+  } else if (!mkHasAgreement(l)) {
+    // Étape 1 : contrat avec le joueur, avant toute enchère (retour
+    // utilisateur 2026-10-03, maquettes validées).
+    action = mkNegotiationHtml(l, asked);
   } else {
     const avail = mkBudget() - mkCommitted(l.id);
     const over = minBid > avail;
-    // Durée du contrat choisie avec l'offre (1 à 5 saisons, 3 par défaut),
-    // signée au salaire demandé si l'enchère est remportée.
-    const curSeasons = normalizeContractSeasons(l.myContractSeasons);
-    action = `<div class="mk-contract-row"><label for="bidSeasons_${l.id}">Durée du contrat</label>` +
-        `<select id="bidSeasons_${l.id}" class="mk-seasons" data-mk-seasons="${l.id}">` +
-        [1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === curSeasons ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("") +
-        `</select><span class="mk-contract-note">au salaire demandé (${escapeHtml(formatMoney(asked))} / sem.)</span></div>` +
+    const deal = l.myAgreement;
+    action = (deal
+        ? `<div class="mk-deal-ok">✅ Accord conclu : <b>${deal.seasons} saison${deal.seasons > 1 ? "s" : ""}</b> à <b>${escapeHtml(formatMoney(deal.salary))} / sem.</b> <span>· figé jusqu'à la fin de l'enchère</span></div>`
+        : `<div class="mk-deal-ok">✅ Accord conclu au salaire demandé (${escapeHtml(formatMoney(asked))} / sem.)</div>`) +
+      `<div class="mk-step">2 · ${fa ? "Prime de signature" : "Indemnité de transfert"}</div>` +
       `<div class="mk-bidrow">` +
         `<input type="number" id="bid_${l.id}" value="${minBid}" min="${minBid}" step="100" aria-label="Montant de l'enchère pour ${escapeHtml(player.name)}">` +
         `<button type="button" class="mk-btn mk-btn--primary" data-bid-listing="${l.id}">${st === "lead" ? "Augmenter mon enchère" : "Enchérir"}</button>` +
@@ -47935,7 +48017,8 @@ function mkListingCardHtml(l, player, now) {
             (player.retiringAfterSeason ? `<span class="mk-chip mk-chip-retiring" title="Il a annoncé que cette saison serait sa dernière.">Dernière saison</span>` : "") +
             (player.height ? `<span class="mk-chip">${player.height} cm</span>` : "") +
             `<span class="mk-chip">Potentiel · ${potentialCell}</span>` +
-            `<span class="mk-chip mk-chip-asked" title="Salaire hebdomadaire qu'il signera avec son nouveau club">Salaire demandé : <b>${formatMoney(asked)}</b> / sem.</span>` +
+            `<span class="mk-chip mk-chip-asked" title="Salaire hebdomadaire demandé au nouveau club (à négocier avant d'enchérir)">Salaire demandé : <b>${formatMoney(asked)}</b> / sem.</span>` +
+            (isMine ? "" : `<span class="mk-chip mk-chip-med" title="Le détail est révélé à la visite médicale, après l'enchère : 5 à 10 % de salaire en moins selon les antécédents.">🩺 Antécédents médicaux : <b>${medicalCheckFor(player).rate ? "oui" : "non"}</b></span>`) +
             (fa
               ? `<span class="mk-chip">Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span></span>`
               : `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>`) +
@@ -48013,6 +48096,9 @@ function mkResetFilters() {
 let marketFeedbackTimer = null;
 // Durée de contrat choisie sur la carte de l'annonce (demande du 2026-10-01).
 function mkSeasonsFor(id) {
+  // Durée de l'accord négocié avec le joueur (voir mkNegotiationHtml).
+  const l = (league.transferListings || []).find(x => String(x.id) === String(id));
+  if (l && l.myAgreement && l.myAgreement.seasons) return normalizeContractSeasons(l.myAgreement.seasons);
   const sel = document.getElementById(`bidSeasons_${id}`);
   return normalizeContractSeasons(sel ? Number(sel.value) : null);
 }

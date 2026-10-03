@@ -728,7 +728,19 @@ function sellListedPlayer(team, teamIndex, league, body) {
 // Annonce telle qu'un club la voit : sans les plafonds d'enchère
 // automatique des autres (listing.autoBids, secrets), avec le sien
 // (myAutoMax). Voir AUTO_BID_FIELDS (engine.js).
+// Accords/négociations de contrat (voir League.negotiateTransferContract) :
+// seuls ceux de `myKey` partent au navigateur (myAgreement/myNegotiation).
+function withMyDeal(l, myKey) {
+  if (!l || (!l.agreements && !l.negotiations)) return l;
+  const { agreements, negotiations, ...r } = l;
+  const a = agreements && agreements[myKey];
+  const n = negotiations && negotiations[myKey];
+  if (a) r.myAgreement = { salary: a.salary, seasons: a.seasons };
+  if (n) r.myNegotiation = { refusals: n.refusals, demand: n.demand };
+  return r;
+}
 function viewListing(l, teamIndex) {
+  l = withMyDeal(l, Engine.autoBidKey(teamIndex, null));
   if (l && l.contractTerms) {
     const { contractTerms, ...r } = l;
     const k = Engine.autoBidKey(teamIndex, null);
@@ -766,6 +778,27 @@ function contractSeasonsFromBody(body) {
   return Engine.normalizeContractSeasons(body.seasons, false);
 }
 
+// Négociation du contrat avec le joueur (avant toute enchère, retour
+// utilisateur 2026-10-03) : { listingId, salary, seasons }.
+const NEGOTIATION_REASONS = {
+  closed: "Annonce close.", "own-listing": "C'est votre propre joueur.", "former-club": "Votre ancien joueur ne veut pas revenir.",
+  "invalid-bidder": "Club introuvable.", "already-agreed": "Accord déjà conclu avec ce joueur.",
+  "invalid-seasons": "Durée de contrat invalide (1 à 5 saisons).",
+};
+function negotiateTransfer(team, teamIndex, league, body, now) {
+  if (!body || (typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") return fail("listingId requis.");
+  const listingId = typeof body.listingId === "string" && /^-?\d+$/.test(body.listingId) ? Number(body.listingId) : body.listingId;
+  const result = league.negotiateTransferContract(listingId, teamIndex, { salary: body.salary, seasons: body.seasons }, now);
+  if (!result.ok) {
+    if (result.reason === "invalid-salary") return fail(result.floor != null && result.floor === result.demand
+      ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(result.demand).toLocaleString("fr-FR")} €).`
+      : `Proposez entre ${Math.round(result.floor || 0).toLocaleString("fr-FR")} € et ${Math.round(result.demand || 0).toLocaleString("fr-FR")} € par semaine.`);
+    return fail(NEGOTIATION_REASONS[result.reason] || "Négociation impossible.");
+  }
+  const listing = (league.transferListings || []).find(l => l.id === listingId);
+  return { ok: true, ...result, listing: viewListing(listing, teamIndex) };
+}
+
 function bidOnListing(team, teamIndex, league, body, now) {
   if (!body || (typeof body.listingId !== "number" && typeof body.listingId !== "string") || body.listingId === "") {
     return fail("listingId requis.");
@@ -775,7 +808,8 @@ function bidOnListing(team, teamIndex, league, body, now) {
   const seasons = contractSeasonsFromBody(body);
   if (seasons === false) return fail("Durée de contrat invalide (1 à 5 saisons).");
   const result = league.placeBid(listingId, teamIndex, body.amount, now, seasons);
-  if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
+  if (!result.ok && result.reason === "no-agreement") return fail("Concluez d'abord un accord de contrat avec le joueur.");
+if (!result.ok) return fail(`Enchère refusée : ${result.reason}${result.minBid ? ` (minimum ${result.minBid})` : ""}.`);
   return { ok: true, listing: viewListing(result.listing, teamIndex), autoOutbid: !!result.autoOutbid };
 }
 
@@ -1610,7 +1644,7 @@ module.exports = {
   // Demande de transfert (voir le grand commentaire au-dessus de
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
-  talkRetirement, offerContractExtension, respondToRaiseRequest, releasePlayer,
+  talkRetirement, offerContractExtension, respondToRaiseRequest, releasePlayer, negotiateTransfer,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   inductHallOfFame, setRetiredJersey,
   setTeamAwayJersey, setTeamAwayJerseyPattern, setTeamAwayJerseyTwoTone,

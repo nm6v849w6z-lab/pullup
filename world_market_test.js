@@ -86,6 +86,18 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), "pays « fr » : l'annonce américaine est masquée");
   pick("all");
   const minBid = Engine.minNextBidFor(listing);
+  // Règle du 2026-10-03 : accord de contrat (au salaire demandé) avant
+  // l'enchère, conclu dans le championnat du vendeur.
+  assert.ok(!doc.getElementById(`bid_${-en.gid}`) && doc.querySelector(`[data-mk-negotiate="${-en.gid}"]`), "négociation avant l'enchère");
+  doc.querySelector(`[data-mk-negotiate="${-en.gid}"]`).click();
+  await wait(async () => !!doc.getElementById(`bid_${-en.gid}`), "accord conclu, enchère ouverte");
+  {
+    const ww = await World.loadWorld(multiSavePath, clock.now);
+    const lgUs = await World.loadLeague(ww, "us-1", multiSavePath);
+    const lu = lgUs.transferListings.find(x => x.id === listing.id);
+    assert.ok(lu.agreements && lu.agreements[Engine.autoBidKey(Engine.FOREIGN_BIDDER_IDX, { leagueId: "fr-1", idx: 0 })], "accord enregistré aux USA");
+  }
+  ok("accord de contrat conclu depuis la France sur l'annonce américaine");
   doc.getElementById(`bid_${-en.gid}`).value = String(minBid);
   doc.querySelector(`[data-bid-listing="${-en.gid}"]`).click();
   await wait(async () => {
@@ -102,6 +114,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   const saveP = (await api("/api/save", paris.managerLinkToken)).body;
   const flP = saveP.league.transferListings.find(l => l.id === -en.gid);
   assert.strictEqual(flP.currentBidderIdx, 0, "Lyon (même ligue) en tête vu de Paris");
+  const noDeal = await api("/api/market/bid", paris.managerLinkToken, { method: "POST", body: JSON.stringify({ listingId: -en.gid, amount: minBid + 5000 }) });
+  assert.strictEqual(noDeal.status, 400); assert.strictEqual(noDeal.body.reason, "no-agreement");
+  const nego = await api("/api/market/negotiate", paris.managerLinkToken, { method: "POST", body: JSON.stringify({ listingId: -en.gid, salary: listing.askedSalary, seasons: 2 }) });
+  assert.ok(nego.status === 200 && nego.body.accepted, JSON.stringify(nego.body));
   const low = await api("/api/market/bid", paris.managerLinkToken, { method: "POST", body: JSON.stringify({ listingId: -en.gid, amount: minBid }) });
   assert.strictEqual(low.status, 400); assert.strictEqual(low.body.reason, "too-low");
   ok("Paris voit Lyon en tête ; une enchère trop basse est refusée par le championnat du vendeur");

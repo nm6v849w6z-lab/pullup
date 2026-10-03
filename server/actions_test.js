@@ -10,6 +10,8 @@
 // la dernière section exerce explicitement un `teamIndex` NON NUL, sur une
 // vraie ligue multi-manager (voir generateMultiManagerLeague).
 const E = require("../engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("../test_transfer_agreement_helper.js")(E);
 const {
   generateStartingRoster, generateLeague, generateMultiManagerLeague, POSITIONS,
   generateYouthCandidate, MAX_YOUTH_ROSTER_SIZE, YOUTH_TRAINEE_WEEKLY_SALARY, salaryForOverall,

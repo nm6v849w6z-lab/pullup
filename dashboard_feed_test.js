@@ -11,6 +11,8 @@
 // dashboard.test.mjs du prestataire — voir tableau-de-bord/*.test.mjs pour
 // les scénarios d'origine dont ce fichier s'inspire.
 const E = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(E);
 const {
   generateTeam, generateLeague, serializeTeam, teamFromSave,
   createFeed, serializeFeed, pushEntry, removeByKey, markAllRead, unreadCount,

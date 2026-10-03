@@ -10,6 +10,8 @@ const assert = require("assert");
 const freePlayerId = (lg, idx) => lg.teams[idx].players.find(p => !(lg.transferListings || []).some(l => l.status === "open" && l.playerId === p.id)).id;
 const fs = require("fs");
 const Engine = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(Engine);
 const store = require("./server/store.js");
 const World = require("./server/world.js");
 const Push = require("./server/push.js");
@@ -161,7 +163,9 @@ const inc = n => Engine.minNextBidFor({ currentBid: n, startPrice: 0 });
   const saved = (await store.loadMultiLeague(multiSavePath)).league;
   const l5 = saved.transferListings.filter(x => x.status === "open" && x.sellerIdx === 7 && x.currentBidderIdx == null).pop();
   assert.ok(l5, "une annonce libre");
-  win.eval(`mkResetFilters(); renderMarketListings();`);
+  // Accord de contrat déjà conclu (règle du 2026-10-03, côté serveur voir
+  // test_transfer_agreement_helper.js) : la carte propose l'enchère.
+  win.eval(`(league.transferListings.find(x => x.id === ${JSON.stringify(l5.id)}) || {}).myAgreement = { salary: 1000, seasons: 3 }; mkResetFilters(); renderMarketListings();`);
   const input = doc.getElementById(`bid_${l5.id}`);
   assert.ok(input, "carte de l'annonce");
   input.value = "25000";

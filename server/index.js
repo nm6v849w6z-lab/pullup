@@ -1054,6 +1054,7 @@ const ACTION_ROUTES = {
   "/api/market/coach-bid": actions.bidOnCoachListing,
   // Enchère automatique (plafond), tous marchés — voir actions.setAutoBid.
   "/api/market/auto-bid": actions.setAutoBid,
+  "/api/market/negotiate": actions.negotiateTransfer,
   "/api/arena": actions.upgradeArena,
   "/api/arena/build-seats": actions.buildArenaSeats,
   "/api/ticket-prices": actions.setTicketPrices,
@@ -2580,6 +2581,34 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const cur = nextWorldDeadlineAt.get(multiSavePath);
           if (cur == null || closesAt + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, closesAt + 1000);
           sendJson(res, 200, { ok: true, foreign: true, autoOutbid: !!out.autoOutbid, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+          return;
+        }
+        req.__parsedBody = body;
+      }
+      // Négociation de contrat sur l'annonce d'un AUTRE championnat (id négatif).
+      if (route.pathname === "/api/market/negotiate" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const rawId = body && body.listingId;
+        const numId = typeof rawId === "string" && /^-?\d+$/.test(rawId) ? Number(rawId) : rawId;
+        if (ctx.world && typeof numId === "number" && numId < 0) {
+          const index = await store.loadWorldAuxRaw("market", multiSavePath);
+          const out = await World.WorldMarket.negotiateForeign({
+            index, leagueId: ctx.leagueId, teamIdx: ctx.teamIndex, team: ctx.league.teams[ctx.teamIndex], gid: -numId,
+            offer: { salary: body.salary, seasons: body.seasons }, now,
+            loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
+            saveLeague: lg => store.saveMultiLeague(lg, multiSavePath),
+            saveIndex: ix => store.saveWorldAuxRaw("market", ix, multiSavePath),
+          });
+          if (!out.ok) {
+            const msg = out.reason === "invalid-salary"
+              ? (out.floor != null && out.floor === out.demand ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(out.demand).toLocaleString("fr-FR")} €).` : `Proposez entre ${Math.round(out.floor || 0).toLocaleString("fr-FR")} € et ${Math.round(out.demand || 0).toLocaleString("fr-FR")} € par semaine.`)
+              : out.reason === "already-agreed" ? "Accord déjà conclu avec ce joueur." : out.reason === "former-club" ? "Votre ancien joueur ne veut pas revenir." : "Négociation impossible.";
+            sendJson(res, 400, { ok: false, error: msg, reason: out.reason }); return;
+          }
+          sendJson(res, 200, { ok: true, foreign: true, ...out });
           return;
         }
         req.__parsedBody = body;

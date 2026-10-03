@@ -63,6 +63,19 @@ function leaderOf(lg, leagueId, l) {
 function autoRefsOf(lg, leagueId, l) {
   return (l.autoBids || []).map(a => ({ ref: a.bidderIdx === FOREIGN ? { ...(a.bidderRef || {}) } : { leagueId, idx: a.bidderIdx }, max: a.max }));
 }
+// Accords et négociations de contrat (voir League.negotiateTransferContract)
+// des clubs d'AUTRES championnats : chacun ne voit que les siens (voir
+// projectForLeague, myAgreement/myNegotiation).
+function refFromKey(key) {
+  const m = /^w:(.+):(-?\d+)$/.exec(String(key));
+  return m ? { leagueId: m[1], idx: Number(m[2]) } : null;
+}
+function dealsOf(l) {
+  const out = { agreements: [], negotiations: [] };
+  Object.entries(l.agreements || {}).forEach(([k, v]) => { const ref = refFromKey(k); if (ref) out.agreements.push({ ref, salary: v.salary, seasons: v.seasons }); });
+  Object.entries(l.negotiations || {}).forEach(([k, v]) => { const ref = refFromKey(k); if (ref) out.negotiations.push({ ref, refusals: v.refusals, demand: v.demand }); });
+  return out;
+}
 
 // Index de toutes les annonces ouvertes du monde. `prev` : index précédent
 // (garde les identifiants globaux stables) ; `leagues` : Map id → League ;
@@ -91,7 +104,7 @@ function buildIndex(prev, worldLeagues, leagues, now, labelOf) {
         player: leanPlayerRecord(player),
         startPrice: l.startPrice, currentBid: l.currentBid, currentBidder: leader,
         bids: (l.bids || []).map(b => ({ ref: refOfBid(lg, e.id, b), amount: b.amount, at: b.at })).filter(b => b.ref),
-        createdAt: l.createdAt, closesAt: l.closesAt, autoRefs: autoRefsOf(lg, e.id, l),
+        createdAt: l.createdAt, closesAt: l.closesAt, autoRefs: autoRefsOf(lg, e.id, l), ...dealsOf(l),
       });
     });
   });
@@ -132,8 +145,12 @@ function projectForLeague(index, leagueId, teamIdx, now, limit = MARKET_PROJECTI
     g.light.players.push(en.player);
     const localBidder = ref => (isMe(ref) ? teamIdx : (ref && ref.leagueId === leagueId ? ref.idx : FOREIGN));
     const myAuto = (en.autoRefs || []).find(a => isMe(a.ref));
+    const myDeal = (en.agreements || []).find(a => isMe(a.ref));
+    const myNego = (en.negotiations || []).find(a => isMe(a.ref));
     return {
       ...(myAuto ? { myAutoMax: myAuto.max } : {}),
+      ...(myDeal ? { myAgreement: { salary: myDeal.salary, seasons: myDeal.seasons } } : {}),
+      ...(myNego ? { myNegotiation: { refusals: myNego.refusals, demand: myNego.demand } } : {}),
       id: -en.gid, playerId: en.player.id, sellerIdx: g.localIdx,
       startPrice: en.startPrice, currentBid: en.currentBid,
       currentBidderIdx: en.currentBidder ? localBidder(en.currentBidder) : null,
@@ -196,6 +213,24 @@ function syncEntry(en, lg, l) {
   en.currentBidder = leaderOf(lg, en.leagueId, l);
   en.bids = (l.bids || []).map(b => ({ ref: refOfBid(lg, en.leagueId, b), amount: b.amount, at: b.at })).filter(b => b.ref);
   en.autoRefs = autoRefsOf(lg, en.leagueId, l);
+  Object.assign(en, dealsOf(l));
+}
+
+// Négociation du contrat avec le joueur d'une annonce d'un autre
+// championnat (voir League.negotiateTransferContract) : mêmes paramètres
+// que placeForeignBid, `offer` = { salary, seasons }.
+async function negotiateForeign({ index, leagueId, teamIdx, team, gid, offer, now, loadLeague, saveLeague, saveIndex }) {
+  const en = ((index && index.entries) || []).find(x => x.gid === gid);
+  if (!en || en.leagueId === leagueId) return { ok: false, reason: "closed" };
+  const lg = await loadLeague(en.leagueId);
+  if (!lg) return { ok: false, reason: "closed" };
+  const res = lg.negotiateTransferContract(en.listingId, null, offer, now, { ref: { leagueId, idx: teamIdx, name: team.name }, team });
+  if (!res.ok) return res;
+  const listing = (lg.transferListings || []).find(l => l.id === en.listingId);
+  await saveLeague(lg);
+  if (listing) syncEntry(en, lg, listing);
+  await saveIndex(index);
+  return res;
 }
 
 // Enchère automatique d'un manager sur l'annonce d'un autre championnat
@@ -255,5 +290,5 @@ function resolveForeignTransfers(leagues, now, events = []) {
 
 module.exports = {
   FREE_AGENT_SELLER_IDX, MARKET_GUEST_SELLER_IDX, MARKET_GUEST_BIDDER_IDX, MARKET_PROJECTION_LIMIT,
-  buildIndex, nextForeignClosing, projectForLeague, projectOwnForeignBidders, placeForeignBid, setForeignAutoBid, resolveForeignTransfers,
+  buildIndex, nextForeignClosing, projectForLeague, projectOwnForeignBidders, placeForeignBid, setForeignAutoBid, negotiateForeign, resolveForeignTransfers,
 };

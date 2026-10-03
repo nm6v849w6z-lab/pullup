@@ -28,6 +28,8 @@
 // Test purement moteur (pas de serveur HTTP ni de DOM, comme
 // server/actions_test.js) : plus rapide, se concentre sur la logique.
 const E = require("./engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("./test_transfer_agreement_helper.js")(E);
 const {
   generateStartingRoster, generateLeague, generateMultiManagerLeague, serializeTeam, teamFromSave,
   chemistryRosterImportance, rosterRankOf, chemistryLabel,

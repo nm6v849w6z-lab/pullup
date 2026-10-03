@@ -16,6 +16,8 @@ const store = require("./store.js");
 const World = require("./world.js");
 const Accounts = require("./accounts.js");
 const Engine = require("../engine.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("../test_transfer_agreement_helper.js")(Engine);
 const { createHandler } = require("./index.js");
 
 const ok = m => console.log("✅ " + m);

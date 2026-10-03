@@ -79,6 +79,14 @@ function sanitizeAutoBids(leaguePayload, teamIdx) {
     leaguePayload[f] = leaguePayload[f].map(l => {
       if (!l) return l;
       let out = l;
+      // Accord/négociation de contrat : seulement les siens.
+      if (l.agreements || l.negotiations) {
+        const { agreements, negotiations, ...rest } = out;
+        const a = agreements && agreements[myKey], n = negotiations && negotiations[myKey];
+        if (a) rest.myAgreement = { salary: a.salary, seasons: a.seasons };
+        if (n) rest.myNegotiation = { refusals: n.refusals, demand: n.demand };
+        out = rest;
+      }
       // Durées de contrat jointes aux offres (demande du 2026-10-01) : seule
       // la sienne est renvoyée (myContractSeasons).
       if (l.contractTerms) {

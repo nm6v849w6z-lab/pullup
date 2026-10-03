@@ -7,6 +7,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { createHandler } = require("./index.js");
+// Enchères d'avant la règle « accord avant l'enchère » (2026-10-03).
+require("../test_transfer_agreement_helper.js")(require("../engine.js"));
 const store = require("./store.js");
 const World = require("./world.js");
 const LeagueChat = require("./leagueChat.js");
