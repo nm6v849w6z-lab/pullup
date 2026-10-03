@@ -35,6 +35,8 @@
 <meta name="apple-mobile-web-app-title" content="Hoop Manager">
 <link rel="apple-touch-icon" href="/assets/mobile/apple-touch-icon.png?v=4">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile/favicon-32.png?v=4">
+<link rel="icon" type="image/png" sizes="180x180" href="/assets/mobile/apple-touch-icon.png?v=4">
+<link rel="shortcut icon" href="/favicon.ico?v=4">
 <script>
   /* Thème (Paramètres, voir hmThemeApply plus bas) appliqué AVANT le premier
      rendu pour éviter un flash sombre → clair au chargement. */
@@ -32593,7 +32595,7 @@ function renderPlayerDetail(teamIdx, playerId) {
       html += `<p class="training-intro pdp-sale-blocked">${escapeHtml(CONTRACT_SALE_BLOCKED_MSG)}</p>`;
     } else if (onMarket) {
       const bidLine = openListing.currentBid
-        ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>`
+        ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>${bidderLinkHtml(openListing) ? ` par ${bidderLinkHtml(openListing)}` : ""}`
         : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
       html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> ${bidLine} · ${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}. Suivez l'enchère dans l'onglet <b>Marché</b>.</p>`;
     } else {
@@ -32910,6 +32912,26 @@ function hideStandings() {
 // verrouillé plutôt que la valeur — le manager doit voir QU'IL MANQUE une
 // info, pas juste ne rien voir du tout (retour utilisateur implicite : on
 // veut sentir qu'il y a quelque chose à débloquer).
+// Club en tête d'une annonce (retour utilisateur 2026-10-03 : « mettre le
+// nom de l'équipe qui enchérit, cliquable ») : club du championnat ou club
+// d'un autre championnat (marché mondial, currentBidderRef). "" sans enchère.
+function bidderLinkHtml(l) {
+  if (!l || l.currentBidderIdx == null || !l.currentBid) return "";
+  const ref = l.currentBidderRef;
+  if (ref && ref.leagueId != null) {
+    return `<button type="button" class="team-link" data-foreign-bidder="${escapeHtml(String(ref.leagueId))}:${Number(ref.idx)}">${escapeHtml(ref.name || "Club étranger")}</button>`;
+  }
+  const t = league && league.teams ? league.teams[l.currentBidderIdx] : null;
+  return t ? teamLinkHtml(l.currentBidderIdx, t.name) : "";
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-foreign-bidder]");
+  if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const [lid, idx] = b.dataset.foreignBidder.split(":");
+  showForeignTeamDetail(lid, Number(idx));
+});
+
 function teamLinkHtml(teamIdx, displayName) {
   const team = typeof league !== "undefined" && league && league.teams ? league.teams[teamIdx] : null;
   return `<button type="button" class="team-link" data-team-idx="${teamIdx}">${escapeHtml(displayName)}${robotBadgeHtml(team)}</button>`;
@@ -46595,7 +46617,7 @@ function mkStaffCardHtml(role, l, now) {
       `<div class="mk-lst-prof mk-stf-prof"><div class="mk-stf-effect"><span class="stf-k">Effet</span>${staffEffectHtml(role.key, l.level, l.specialty)}</div>${replace}</div>` +
       `<div class="mk-lst-deal market-card-bid">` +
         `<div class="mk-deal-top">` +
-          `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Salaire de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
+          `<div class="market-card-price"><div class="mk-deal-lbl">${l.currentBid ? "Enchère actuelle" : "Salaire de départ"}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${bidderLinkHtml(l) || (nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère")}</div></div>` +
           `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}<span data-closes-at="${l.closesAt}">${escapeHtml(mkTimeLeft(l.closesAt, now))}</span></span>` +
         `</div>` +
         (badge ? `<div>${badge}</div>` : "") +
@@ -46879,7 +46901,7 @@ function mkListingCardHtml(l, player, now) {
       `<div class="mk-lst-prof">${mkRingHtml(overall)}<div class="mk-grps" aria-label="Moyennes par famille">${grps}</div></div>` +
       `<div class="mk-lst-deal market-card-bid">` +
         `<div class="mk-deal-top">` +
-          `<div class="market-card-price"><div class="mk-deal-lbl">${fa ? (l.currentBid ? "Prime de signature actuelle" : "Prime de signature (départ)") : (l.currentBid ? "Enchère actuelle" : "Prix de départ")}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère"}</div></div>` +
+          `<div class="market-card-price"><div class="mk-deal-lbl">${fa ? (l.currentBid ? "Prime de signature actuelle" : "Prime de signature (départ)") : (l.currentBid ? "Enchère actuelle" : "Prix de départ")}</div><b class="mk-deal-price">${formatMoney(l.currentBid || l.startPrice)}</b><div class="mk-deal-sub">${bidderLinkHtml(l) || (nBids ? `${nBids} enchère${nBids > 1 ? "s" : ""}` : "Aucune enchère")}</div></div>` +
           `<span class="mk-timer ${urgent ? "urgent" : ""}">${MK_CLOCK}${escapeHtml(mkTimeLeft(l.closesAt, now))}</span>` +
         `</div>` +
         (badge ? `<div>${badge}</div>` : "") +
