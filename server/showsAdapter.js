@@ -122,6 +122,12 @@ function teamsMapFor(league, teamIdxs) {
   return teams;
 }
 
+// Toutes les équipes du championnat : le classement liste aussi les équipes
+// exemptées de la journée (bye), qui doivent avoir un nom dans `teams`.
+function allTeamIdxs(league) {
+  return league.teams.map((t, i) => i).filter(i => league.teams[i]);
+}
+
 function standingsBefore(league) {
   return league.standings().map(r => ({ teamId: String(r.idx), w: r.wins, l: r.losses }));
 }
@@ -307,7 +313,7 @@ function buildPrematchInput(league, myTeamIdx, round, kickoffAt) {
 
   return {
     day: round + 1, leagueId: "main", myTeamId: String(myTeamIdx),
-    teams: teamsMapFor(league, Array.from(teamIdxs)),
+    teams: teamsMapFor(league, allTeamIdxs(league)),
     players: playersMapFor(league, fx ? [fx.home, fx.away] : []),
     standings: standingsBefore(league),
     fixtures: fixtures.map(f => ({ id: matchId(round, f.home, f.away), homeId: String(f.home), awayId: String(f.away) })),
@@ -324,7 +330,7 @@ function buildHalftimeInput(league, myTeamIdx, round) {
   })());
   return {
     day: round + 1, leagueId: "main", myTeamId: String(myTeamIdx),
-    teams: teamsMapFor(league, teamIdxs),
+    teams: teamsMapFor(league, allTeamIdxs(league)),
     players: playersMapFor(league, teamIdxs),
     matches, standings: standingsBefore(league), resumeAt,
   };
