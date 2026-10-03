@@ -14,7 +14,7 @@ const myIdx = lg.teams.indexOf(me);
 const sellerIdx = (myIdx + 1) % lg.teams.length;
 const seller = lg.teams[sellerIdx];
 const player = seller.players[0];
-// Antécédent : 3 semaines il y a 2 mois (−10 %) ; une blessure en cours n'est pas comptée.
+// Antécédent : 3 semaines il y a 2 mois (−7 %).
 player.injuryHistory = [{ at: T0 - 60 * DAY, type: "Entorse de la cheville", days: 21, until: T0 - 39 * DAY }];
 const listing = lg.listPlayerForSale(sellerIdx, player.id, 1000, T0);
 assert.ok(listing, "annonce créée");
@@ -53,19 +53,22 @@ listing.closesAt = T0 + 10000;
 lg._resolveListing(listing, T0 + 20000);
 const signed = me.players.find(p => p.id === player.id);
 assert.ok(signed, "joueur arrivé");
-assert.strictEqual(signed.salary, Math.round(r3.demand * 0.9 / 10) * 10, `salaire après visite : ${signed.salary}`);
+assert.strictEqual(signed.salary, Math.round(r3.demand * 0.93 / 10) * 10, `salaire après visite : ${signed.salary}`);
 assert.strictEqual(signed.contractUntilSeason - lg.contractSeason() + 1, 4);
-ok(`visite médicale : ${r3.demand} € → ${signed.salary} € (−10 %), 4 saisons`);
+ok(`visite médicale : ${r3.demand} € → ${signed.salary} € (−7 %), 4 saisons`);
 
-// 5) Barème de la visite médicale.
+// 5) Barème de la visite médicale (12 semaines, blessures de 10 j et plus).
 const mc = (h, now = T0) => E.medicalCheckFor({ injuryHistory: h }, now).rate;
+const inj = (ago, days) => ({ at: T0 - DAY * ago, days, until: T0 - DAY * ago + DAY * days });
 assert.strictEqual(mc([]), 0);
-assert.strictEqual(mc([{ at: T0 - DAY * 10, days: 3, until: T0 - DAY * 7 }]), 0.05);
-assert.strictEqual(mc([{ at: T0 - DAY * 10, days: 10, until: T0 - DAY }]), 0.07);
-assert.strictEqual(mc([{ at: T0 - DAY * 10, days: 3, until: T0 - DAY * 7 }, { at: T0 - DAY * 30, days: 2, until: T0 - DAY * 28 }]), 0.10);
+assert.strictEqual(mc([inj(20, 4), inj(40, 6), inj(60, 9)]), 0, "petits pépins ignorés");
+assert.strictEqual(mc([inj(30, 12)]), 0.05);
+assert.strictEqual(mc([inj(30, 12), inj(60, 15)]), 0.07);
+assert.strictEqual(mc([inj(40, 24)]), 0.07, "3 semaines et plus");
+assert.strictEqual(mc([inj(20, 10), inj(40, 12), inj(70, 14)]), 0.10);
 assert.strictEqual(mc([{ at: T0 - DAY * 2, days: 20, until: T0 + DAY * 18 }]), 0, "blessure en cours : visible, pas comptée");
-assert.strictEqual(mc([{ at: T0 - DAY * 400, days: 40, until: T0 - DAY * 360 }]), 0, "trop ancienne");
-ok("barème : 0 / 5 / 7 / 10 %, blessure en cours et anciennes ignorées");
+assert.strictEqual(mc([inj(100, 25)]), 0, "plus d'une saison : oubliée");
+ok("barème : 0 / 5 / 7 / 10 %, petits pépins, blessure en cours et anciennes ignorées");
 
 // 6) Annonce ouverte au déploiement : un club qui avait déjà misé garde la main.
 const p2 = seller.players[1];

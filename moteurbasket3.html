@@ -14449,13 +14449,19 @@ function releaseIndemnityFor(player, season, seasonWeek) {
 }
 // Visite médicale (miroir de engine.js:medicalCheckFor) : antécédents des
 // ~2 dernières saisons, sans la blessure en cours.
-const MEDICAL_HISTORY_WINDOW_MS = 24 * 7 * 24 * 3600 * 1000;
+// Barème adouci (retour utilisateur 2026-10-03 : « un peu sévère […] le
+// mec a jamais le droit de se blesser ») : une saison (12 semaines), seules
+// les blessures de 10 jours ou plus comptent (contusions et petites
+// entorses ignorées).
+const MEDICAL_HISTORY_WINDOW_MS = 12 * 7 * 24 * 3600 * 1000;
+const MEDICAL_MIN_INJURY_DAYS = 10;
 function medicalCheckFor(player, now = Date.now()) {
   const list = ((player && player.injuryHistory) || []).filter(e => e && typeof e.at === "number" && e.at >= now - MEDICAL_HISTORY_WINDOW_MS &&
-    !(typeof e.until === "number" && e.until > now));
+    !(typeof e.until === "number" && e.until > now) && (e.days || 0) >= MEDICAL_MIN_INJURY_DAYS);
   if (!list.length) return { rate: 0, entries: [] };
   const longest = list.reduce((m, e) => Math.max(m, e.days || 0), 0);
-  const rate = (list.length >= 2 || longest >= 21) ? 0.10 : longest >= 7 ? 0.07 : 0.05;
+  // 1 blessure : −5 % ; 2, ou une de 3 semaines et plus : −7 % ; 3 et plus : −10 %.
+  const rate = list.length >= 3 ? 0.10 : (list.length >= 2 || longest >= 21) ? 0.07 : 0.05;
   return { rate, entries: list.map(e => ({ type: e.type || "Blessure", days: e.days || null, at: e.at })) };
 }
 function contractSeasonsLeft(player, season) {
