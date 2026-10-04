@@ -21,3 +21,15 @@ t.plannedTactics = stale;
 t.applyPlannedTacticsForRound(3, "championship");
 assert.ok(t.hasValidLineup(), "plan ancien réparé à l'application : " + t.missingStarterPositions().join(","));
 console.log("✅ Joueur vendu : retiré des ordres préparés, remplaçant promu, pas de forfait");
+
+// Plan resté inutilisé en fin de saison (ex. play-offs non atteints) : il
+// ne doit pas s'appliquer à la même journée de la saison suivante.
+{
+  const lg2 = E.generateLeague(E.generateStartingRoster("Club"));
+  const t2 = lg2.teams[0];
+  t2.stagePlanForRound(19, t2.snapshotTactics(), "championship");
+  assert.ok(t2.hasPlanForRound(19, "championship"));
+  lg2.startNextSeason(Date.now());
+  assert.ok(!t2.hasPlanForRound(19, "championship"), "plan de la saison passée effacé");
+  console.log("✅ Nouvelle saison : plus aucun ordre préparé de la saison passée");
+}

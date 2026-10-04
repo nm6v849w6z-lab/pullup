@@ -13408,6 +13408,11 @@ class League {
       // club) ; les amicaux d'intersaison ne comptent pas dans la nouvelle.
       (t.players || []).forEach(p => { p.matchLog = []; });
       t.departedMatchLog = [];
+      // Ordres préparés : la clé « compétition:journée » repart de zéro à
+      // chaque saison — un plan resté inutilisé (ex. finale de play-offs non
+      // atteinte) s'appliquerait sinon à la même journée de la saison
+      // suivante.
+      t.plannedTactics = {};
       if (!t.isHuman) t.autoAssignLineup();
     });
     assignSeasonObjectives(this);
