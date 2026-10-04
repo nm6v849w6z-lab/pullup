@@ -17798,10 +17798,16 @@ const FOUL_POSITION_MULT = { Pivot: 1.3, "Ailier fort": 1.15 };
 // Chrono du 4e quart-temps (ou d'une prolongation) à partir duquel un
 // joueur à 4 fautes revient en jeu (voir substituteIfNeeded).
 const FOUL_TROUBLE_RETURN_CLOCK = 300;
+// Prudence d'un joueur chargé de fautes : il lève le pied, sur les fautes
+// hors tir (foulProneness) comme, depuis le 2026-10-04, sur les fautes au
+// tir (foulDrawBase dans playPossession) — le défenseur au contact d'un
+// tireur ne tenait jusque-là aucun compte de ses 3 ou 4 fautes.
+function foulCaution(p) {
+  return p.fouls >= 4 ? 0.6 : p.fouls === 3 ? 0.85 : 1;
+}
 function foulProneness(p) {
   const base = (115 - (p.attrs.discipline ?? 50)) * (FOUL_POSITION_MULT[p.matchPosition] || 1);
-  const caution = p.fouls >= 4 ? 0.6 : p.fouls === 3 ? 0.85 : 1;
-  return Math.max(base * caution, 1);
+  return Math.max(base * foulCaution(p), 1);
 }
 
 class MatchEngine {
@@ -18069,7 +18075,13 @@ class MatchEngine {
     const pos = p.matchPosition;
     const elapsed = this.elapsedSeconds(quarter, clock);
     const ahead = x => (x.secondsPlayedByPosition[pos] || 0) - (shares[x.id] || 0) * elapsed;
-    const inFoulTrouble = x => x.fouls >= 4 && quarter < 4 && !team.maintainDespiteFouls.has(x.id);
+    // Même règle que le mode sans plan (substituteIfNeeded) : à 4 fautes, le
+    // joueur attend les 5 dernières minutes (FOUL_TROUBLE_RETURN_CLOCK).
+    // Avant le 2026-10-04, il revenait dès le début du 4e quart-temps et,
+    // en retard sur sa cible de minutes, y jouait presque tout le quart :
+    // 0,8 exclusion pour 5 fautes par équipe et par match avec un plan,
+    // contre 0,2 sans (retour BC DIA : « 2 ou 3 joueurs exclus »).
+    const inFoulTrouble = x => x.fouls >= 4 && !(quarter >= 4 && clock <= FOUL_TROUBLE_RETURN_CLOCK) && !team.maintainDespiteFouls.has(x.id);
     const candidates = team.players.filter(x =>
       (shares[x.id] || 0) > 0 && !x.onCourt && !x.disqualified && !x.injured && !x.matchInjuryLocked &&
       !inFoulTrouble(x) && x.fatigue < 90 && x.convokedThisMatch !== false
@@ -18481,7 +18493,9 @@ class MatchEngine {
     // fautes/équipe/match mesurées (cible 18-20), points/équipe/match et
     // pace INCHANGÉS par rapport à la mesure sans ce correctif (~66-68
     // pts/équipe, ~76-77 de pace dans les deux cas).
-    const nonShootingFoulChance = 0.125;
+    // 0.125 → 0.117 le 2026-10-04 (réduction modérée du volume de fautes,
+    // retour « trop de joueurs exclus pour 5 fautes »).
+    const nonShootingFoulChance = 0.117;
     if (rand01() < nonShootingFoulChance) {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
       const commonFoulDefender = weightedPick(onCourtDef, p => foulProneness(p));
@@ -18792,7 +18806,11 @@ class MatchEngine {
     // défenseur peu discipliné commet davantage de fautes en défendant un
     // tir, un défenseur discipliné évite mieux le contact inutile. Pivot à
     // 50 (valeur moyenne) => aucun effet pour un défenseur "moyen".
-    const disciplineFoulMod = (50 - defender.attrs.discipline) * 0.0015;
+    // Poids ramené de 0.0015 à 0.0011 le 2026-10-04 : à Discipline 30
+    // (divisions basses), +0,03 de probabilité absolue doublait presque les
+    // fautes au tir à mi-distance (base 0,03) — l'écart entre profils reste,
+    // moins extrême.
+    const disciplineFoulMod = (50 - defender.attrs.discipline) * 0.0011;
     // Puissance (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
     // qui ne sont pas utilisées") : en zone "inside" uniquement, un tireur
     // puissant provoque plus de contact au moment du tir - à distinguer de
@@ -18806,7 +18824,7 @@ class MatchEngine {
     // !blocked : un tir contré ne peut pas aussi être une faute sur le tir
     // (voir `blocked` plus haut) — évite de cumuler les deux évènements sur
     // la même tentative.
-    const shootingFoul = !blocked && rand01() < clamp(foulDrawBase - defBoost, 0.01, 0.35);
+    const shootingFoul = !blocked && rand01() < clamp(foulDrawBase - defBoost, 0.01, 0.35) * foulCaution(defender);
 
     // Audit moteur 2026-09-29 : mesuré intérieur 42,6 %, mi-distance 47,1 %,
     // 3 pts 40,4 % — l'ordre était INVERSÉ par rapport au vrai basket
