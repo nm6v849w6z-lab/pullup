@@ -8020,7 +8020,8 @@
   /* Signets (2026-10-04) : étoile de la fiche joueur, page Signets, toast. */
   .pdp2-btn.pdp2-bm{display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; width:auto; min-height:30px; padding:0 12px; font-size:12.5px; border-radius:999px;}
   .pdp2-btn.pdp2-bm svg{width:14px; height:14px; flex:0 0 auto;}
-  .pdp2-id-share{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .pdp2-bottom-actions{display:flex; justify-content:center; align-items:flex-start; flex-wrap:wrap; gap:10px; margin:18px 0 4px;}
+  .pdp2-bottom-actions .pdp2-share{width:auto; margin-top:0;}
   .pdp2-btn.pdp2-bm.is-on{color:var(--amber); border-color:rgba(240,162,60,.55);}
   .bm-intro{margin:-6px 0 14px;}
   .bm-empty{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px;}
@@ -33309,10 +33310,9 @@ function renderPlayerDetail(teamIdx, playerId) {
   tiles.push(tile("Rôle", escapeHtml(roleLabel)));
   html += `<div class="pdp2-infos">${tiles.join("")}`;
   html += `</div></div>`; // infos, id-text
-  // « Partager » en haut à droite de l'en-tête (retour utilisateur 2026-10-03).
-  // Signet juste en dessous (retour utilisateur 2026-10-04 : à côté de
-  // « Comparer », il prenait trop de place et décalait tout à gauche).
-  html += `<div class="pdp2-id-share">${isOwnTeam && !playerDetailForeign ? pdpShareHtml(player) : ""}${pdpBookmarkBtnHtml(player)}</div>`;
+  // « Partager » et « Signet » : tout en bas de la fiche, juste au-dessus du
+  // bouton Retour (retour utilisateur 2026-10-04 : dans l'en-tête, le lien
+  // public actif recouvrait le nom du joueur) — voir shareBottom plus bas.
   html += `</div>`; // id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
@@ -33639,6 +33639,7 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   // Personnalisation (Premium), Historique du joueur et Blessures côte à
   // côte (historique et blessures pour tout joueur, comme sur BuzzerBeater).
+  shareBottom = `<div class="pdp2-bottom-actions">${isOwnTeam && !playerDetailForeign ? pdpShareHtml(player) : ""}${pdpBookmarkBtnHtml(player)}</div>`;
   bottomCards = `<div class="pdp-contract-sale pdp2-bottom-cards">${bottomCards}${playerHistoryCardHtml(player)}${playerInjuryCardHtml(player, team)}</div>${shareBottom}`;
   html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards).replace("<!--PDP_BOTTOM_CARDS-->", bottomCards);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
