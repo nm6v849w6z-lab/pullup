@@ -363,6 +363,47 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   server.close();
 }
 
+// =======================================================================
+// Partie 5 (retour utilisateur 2026-10-04 : « joueur de la TL non trouvé
+// dans l'outil de comparaison ») : un agent libre en vente, hors de tout
+// club, est trouvé par la recherche et comparé (étiquette « Agent libre »).
+// =======================================================================
+{
+  const { server, savePath, baseUrl } = await startTestServer();
+  const domInit = await openGame(html, baseUrl);
+  await flush(domInit);
+  const saved = readRawSave(savePath);
+  const fa = saved.league.teams[4].players.pop();
+  saved.league.freeAgents = [...(saved.league.freeAgents || []), fa];
+  saved.league.transferListings.push({
+    id: 999501, playerId: fa.id, sellerIdx: null, freeAgent: true, formerTeamName: saved.league.teams[4].teamName || "Ancien club",
+    startPrice: 1000, currentBid: null, currentBidderIdx: null, bids: [],
+    createdAt: Date.now(), closesAt: Date.now() + E.TRANSFER_AUCTION_DURATION_MS,
+    lastCpuCheckAt: Date.now(), status: "open", result: null, finalPrice: null,
+  });
+  writeRawSave(savePath, saved);
+  await domInit.window.close();
+
+  const dom = await openGame(html, baseUrl);
+  const doc = dom.window.document;
+  const win = dom.window;
+  win.showPlayerDetail(0, saved.team.players[0].id);
+  doc.getElementById("topbarComparePlayerBtn").click();
+  const input = doc.getElementById("compareSearchInput");
+  input.value = fa.name;
+  input.dispatchEvent(new win.Event("input", { bubbles: true }));
+  const btn = [...doc.getElementById("compareSearchResults").querySelectorAll("[data-compare-player-id]")]
+    .find(b => Number(b.dataset.comparePlayerId) === fa.id);
+  if (!btn) throw new Error(`❌ L'agent libre en vente ("${fa.name}") devrait apparaître dans les résultats.`);
+  btn.click();
+  const teams = [...doc.getElementById("playerCompareContent").querySelectorAll(".cph-team")].map(el => el.textContent.trim());
+  if (teams[1] !== "Agent libre") throw new Error(`❌ Étiquette attendue « Agent libre », obtenu "${teams[1]}".`);
+  console.log("✅ Un agent libre en vente (sans club) est trouvé par la recherche du comparateur et comparé.");
+  await flush(dom);
+  await dom.window.close();
+  server.close();
+}
+
 console.log("\n✅ Comparateur de joueurs vérifié : ouverture depuis la fiche joueur, sélecteur du 2e joueur (recherche + exclusion de soi-même), rendu (en-têtes, note de poste, bandeau de profil, 28 caractéristiques), verrou de scoutisme dans ses 3 cas (propre effectif/marché/adversaire non scouté), mise en avant de la meilleure valeur, et retour vers la fiche du joueur A.");
 })().catch(err => {
   console.error(err);

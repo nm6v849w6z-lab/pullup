@@ -31802,8 +31802,7 @@ document.getElementById("topbarPlayerPrevBtn").addEventListener("click", () => n
 document.getElementById("topbarPlayerNextBtn").addEventListener("click", () => navigatePlayerDetail(1));
 
 function showPlayerComparePicker(teamIdxA, idA) {
-  const teamObj = league.teams[teamIdxA];
-  const playerA = teamObj && teamObj.players.find(p => p.id === idA);
+  const playerA = comparePlayerOf(teamIdxA, idA);
   if (!playerA) return; // joueur A plus dans son effectif (vendu/transféré depuis) : rien à comparer
   playerCompareState = { a: { teamIdx: teamIdxA, playerId: idA }, b: null };
 
@@ -31827,7 +31826,9 @@ function hidePlayerCompare() {
   // (là où on a cliqué "Comparer"), jamais vers playerCompareOrigin séparé —
   // plus prévisible que de remonter encore plus loin, et cohérent avec le
   // fait qu'on est arrivé ici DEPUIS cette fiche.
-  if (playerCompareState.a) {
+  if (playerCompareState.a && playerCompareState.a.teamIdx === COMPARE_FREE_AGENT_IDX) {
+    TAB_HANDLERS.marche(); // agent libre : pas de fiche, retour au marché
+  } else if (playerCompareState.a) {
     showPlayerDetail(playerCompareState.a.teamIdx, playerCompareState.a.playerId);
   } else {
     hidePlayerDetail();
@@ -31856,6 +31857,20 @@ function renderCompareSearchResults(rawQuery) {
       if (normalizeSearchText(p.name).includes(query)) matched.push({ teamIdx: idx, teamName: t.name, player: p });
     });
   });
+  // Joueurs de la liste des transferts hors de nos 10 clubs (retour
+  // utilisateur 2026-10-04 : « joueur de la TL non trouvé dans l'outil de
+  // comparaison ») : clubs d'autres championnats (marché mondial, rangés à
+  // part dans league.guestTeamsByIdx) et agents libres (COMPARE_FREE_AGENT_IDX).
+  const seen = new Set(matched.map(m => m.player.id));
+  (league.transferListings || []).filter(l => l.status === "open" && !seen.has(l.playerId)).forEach(l => {
+    const idx = l.sellerIdx == null ? COMPARE_FREE_AGENT_IDX : l.sellerIdx;
+    if (idx === teamIdxA && l.playerId === idA) return;
+    const p = comparePlayerOf(idx, l.playerId);
+    if (!p || !normalizeSearchText(p.name).includes(query)) return;
+    seen.add(p.id);
+    const t = idx === COMPARE_FREE_AGENT_IDX ? null : league.teams[idx];
+    matched.push({ teamIdx: idx, teamName: idx === COMPARE_FREE_AGENT_IDX ? "Agent libre" : `${t ? t.name : "?"}${l.foreign && l.foreign.label ? ` (${l.foreign.label})` : ""}`, player: p });
+  });
 
   let html = "";
   if (matched.length === 0) {
@@ -31875,8 +31890,11 @@ function renderCompareSearchResults(rawQuery) {
 }
 
 // Joueur d'un club pour le comparateur : effectif pro, puis académie (mon
-// club uniquement, les jeunes des autres ne sont jamais chargés).
+// club uniquement, les jeunes des autres ne sont jamais chargés). Agent
+// libre (sans club) : index COMPARE_FREE_AGENT_IDX.
+const COMPARE_FREE_AGENT_IDX = -1;
 function comparePlayerOf(teamIdx, playerId) {
+  if (teamIdx === COMPARE_FREE_AGENT_IDX) return league.freeAgentById ? league.freeAgentById(playerId) : null;
   const t = league.teams[teamIdx];
   if (!t) return null;
   return t.players.find(p => p.id === playerId) || (teamIdx === myTeamIndex ? (t.youthPlayers || []).find(p => p.id === playerId) : null) || null;
@@ -32018,10 +32036,10 @@ function renderPlayerCompareView() {
   const { a, b } = playerCompareState;
   if (!a || !b) return;
 
-  const teamObjA = league.teams[a.teamIdx];
-  const teamObjB = league.teams[b.teamIdx];
-  const playerA = teamObjA && comparePlayerOf(a.teamIdx, a.playerId);
-  const playerB = teamObjB && comparePlayerOf(b.teamIdx, b.playerId);
+  const teamObjA = league.teams[a.teamIdx] || null; // null : agent libre
+  const teamObjB = league.teams[b.teamIdx] || null;
+  const playerA = comparePlayerOf(a.teamIdx, a.playerId);
+  const playerB = comparePlayerOf(b.teamIdx, b.playerId);
   if (!playerA || !playerB) {
     picker.classList.add("hidden");
     holder.innerHTML = "<p class='training-empty'>Un des deux joueurs n'est plus disponible (vendu ou transféré depuis).</p>";
@@ -32034,6 +32052,7 @@ function renderPlayerCompareView() {
   const setA = visA.visibleAttrsSet, setB = visB.visibleAttrsSet;
   const teamLabel = (teamIdx, vis) => teamIdx === myTeamIndex
     ? "Votre équipe"
+    : teamIdx === COMPARE_FREE_AGENT_IDX ? "Agent libre"
     : (vis.onMarket ? "Marché des transferts" : league.teams[teamIdx].name);
   const lastName = p => (p.name || "").split(" ").slice(-1)[0];
 
@@ -32148,8 +32167,8 @@ function renderPlayerCompareView() {
   // que pour votre propre effectif).
   {
     const nowMs = Date.now();
-    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA.conditionRecoveryPerDay());
-    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB.conditionRecoveryPerDay());
+    const condA = conditionBadgeHtml(playerA, nowMs, teamObjA ? teamObjA.conditionRecoveryPerDay() : undefined);
+    const condB = conditionBadgeHtml(playerB, nowMs, teamObjB ? teamObjB.conditionRecoveryPerDay() : undefined);
     html += compareProfileTileHtml("Forme", condA, condB, "small", "small");
   }
   html += `</div>`; // compare-profile-strip
@@ -48327,7 +48346,8 @@ function mkListingCardHtml(l, player, now) {
             (player.height ? `<span class="mk-chip">${player.height} cm</span>` : "") +
             `<span class="mk-chip">Potentiel · ${potentialCell}</span>` +
             `<span class="mk-chip mk-chip-asked" title="Salaire hebdomadaire demandé au nouveau club (à négocier avant d'enchérir)">Salaire demandé : <b>${formatMoney(asked)}</b> / sem.</span>` +
-            (isMine ? "" : `<span class="mk-chip mk-chip-med" title="Le détail est révélé à la visite médicale, après l'enchère : 5 à 10 % de salaire en moins selon les antécédents.">🩺 Antécédents médicaux : <b>${medicalCheckFor(player).rate ? "oui" : "non"}</b></span>`) +
+            // Pas d'indice « Antécédents médicaux : oui/non » avant l'enchère
+            // (retour utilisateur 2026-10-04 : on le découvre à la visite médicale).
             (fa
               ? `<span class="mk-chip">Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span></span>`
               : `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>`) +
@@ -48353,7 +48373,7 @@ function mkListingCardHtml(l, player, now) {
       `<div class="acts">` +
         // « Suivre » dans le pied de carte, à côté de « Comparer » (retour utilisateur 2026-10-01 : pas assez visible).
         (isMine ? "" : mkWatchBtnHtml(player)) +
-        (isMine || (fa && !l.foreign) ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
+        (isMine ? "" : `<button type="button" class="mk-btn mk-btn--outline mk-btn--sm" data-mk-compare="${l.id}">Comparer</button>`) +
         (fa && !l.foreign ? "" : `<button type="button" class="mk-btn mk-btn--accent mk-btn--sm" data-player-team="${l.sellerIdx}" data-player-id="${player.id}">Fiche joueur</button>`) +
       `</div>` +
     `</div>` +
@@ -48506,7 +48526,7 @@ document.getElementById("marcheSection").addEventListener("click", (e) => {
   }
   if (d.mkCompare) {
     const l = league.transferListings.find(x => x.id === Number(d.mkCompare));
-    if (l) showPlayerComparePicker(l.sellerIdx, l.playerId);
+    if (l) showPlayerComparePicker(l.sellerIdx == null ? COMPARE_FREE_AGENT_IDX : l.sellerIdx, l.playerId);
     return;
   }
   if (d.mkMtab) { marketUi.mineTab = d.mkMtab; renderMarketMine(); return; }
