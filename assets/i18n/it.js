@@ -6053,4 +6053,8 @@ window.HM_I18N_IT = {
   "Prime de signature (départ) :": "Premio alla firma (base):",
   "/ sem. · {0} saisons": "/ sett. · {0} stagioni",
   "/ sem. · {0} saison": "/ sett. · {0} stagione",
+  "Dernière connexion :": "Ultimo accesso:",
+  "aujourd'hui": "oggi",
+  "hier": "ieri",
+  "il y a {0} jours": "{0} giorni fa",
 };

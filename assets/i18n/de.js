@@ -5990,4 +5990,8 @@ window.HM_I18N_DE = {
   "Prime de signature (départ) :": "Handgeld (Start):",
   "/ sem. · {0} saisons": "/ Wo. · {0} Saisons",
   "/ sem. · {0} saison": "/ Wo. · {0} Saison",
+  "Dernière connexion :": "Letzte Anmeldung:",
+  "aujourd'hui": "heute",
+  "hier": "gestern",
+  "il y a {0} jours": "vor {0} Tagen",
 };

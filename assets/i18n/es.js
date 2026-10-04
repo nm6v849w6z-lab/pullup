@@ -5990,4 +5990,8 @@ window.HM_I18N_ES = {
   "Prime de signature (départ) :": "Prima de fichaje (salida):",
   "/ sem. · {0} saisons": "/ sem. · {0} temporadas",
   "/ sem. · {0} saison": "/ sem. · {0} temporada",
+  "Dernière connexion :": "Última conexión:",
+  "aujourd'hui": "hoy",
+  "hier": "ayer",
+  "il y a {0} jours": "hace {0} días",
 };

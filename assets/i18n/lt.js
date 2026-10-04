@@ -5990,4 +5990,8 @@ window.HM_I18N_LT = {
   "Prime de signature (départ) :": "Pasirašymo premija (pradinė):",
   "/ sem. · {0} saisons": "/ sav. · {0} sezonai",
   "/ sem. · {0} saison": "/ sav. · {0} sezonas",
+  "Dernière connexion :": "Paskutinis prisijungimas:",
+  "aujourd'hui": "šiandien",
+  "hier": "vakar",
+  "il y a {0} jours": "prieš {0} d.",
 };

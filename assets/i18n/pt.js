@@ -5990,4 +5990,8 @@ window.HM_I18N_PT = {
   "Prime de signature (départ) :": "Luvas (inicial):",
   "/ sem. · {0} saisons": "/ sem. · {0} temporadas",
   "/ sem. · {0} saison": "/ sem. · {0} temporada",
+  "Dernière connexion :": "Último acesso:",
+  "aujourd'hui": "hoje",
+  "hier": "ontem",
+  "il y a {0} jours": "há {0} dias",
 };

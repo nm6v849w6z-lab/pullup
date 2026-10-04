@@ -5990,4 +5990,8 @@ window.HM_I18N_PL = {
   "Prime de signature (départ) :": "Premia za podpis (start):",
   "/ sem. · {0} saisons": "/ tydz. · {0} sezony",
   "/ sem. · {0} saison": "/ tydz. · {0} sezon",
+  "Dernière connexion :": "Ostatnie logowanie:",
+  "aujourd'hui": "dzisiaj",
+  "hier": "wczoraj",
+  "il y a {0} jours": "{0} dni temu",
 };

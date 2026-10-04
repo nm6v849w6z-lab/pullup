@@ -5990,4 +5990,8 @@ window.HM_I18N_EL = {
   "Prime de signature (départ) :": "Μπόνους υπογραφής (αρχή):",
   "/ sem. · {0} saisons": "/ εβδ. · {0} σεζόν",
   "/ sem. · {0} saison": "/ εβδ. · {0} σεζόν",
+  "Dernière connexion :": "Τελευταία σύνδεση:",
+  "aujourd'hui": "σήμερα",
+  "hier": "χθες",
+  "il y a {0} jours": "πριν από {0} ημέρες",
 };

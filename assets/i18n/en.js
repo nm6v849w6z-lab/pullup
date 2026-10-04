@@ -6015,4 +6015,8 @@ window.HM_I18N_EN = {
   "Prime de signature (départ) :": "Signing bonus (start):",
   "/ sem. · {0} saisons": "/ wk · {0} seasons",
   "/ sem. · {0} saison": "/ wk · {0} season",
+  "Dernière connexion :": "Last login:",
+  "aujourd'hui": "today",
+  "hier": "yesterday",
+  "il y a {0} jours": "{0} days ago",
 };

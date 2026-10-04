@@ -5990,4 +5990,8 @@ window.HM_I18N_ZH = {
   "Prime de signature (départ) :": "签字费（起价）：",
   "/ sem. · {0} saisons": "/周 · {0}个赛季",
   "/ sem. · {0} saison": "/周 · {0}个赛季",
+  "Dernière connexion :": "上次登录：",
+  "aujourd'hui": "今天",
+  "hier": "昨天",
+  "il y a {0} jours": "{0}天前",
 };
