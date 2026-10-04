@@ -5347,6 +5347,44 @@
   .sp2-mini div{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:9px 12px;}
   .sp2-mini b{display:block; font-family:var(--display); font-size:19px; font-weight:800; line-height:1.05;}
   .sp2-mini span{font-size:11px; color:var(--ink-faint); font-weight:700;}
+  /* Version téléphone du rapport de scouting (retour utilisateur
+     2026-10-04 : « gros problème d'affichage sur la version mobile dans
+     l'analyse d'équipe ») — la maquette v2 n'avait été reprise qu'en
+     version bureau (voir plus haut) : grilles à 2-4 colonnes conservées
+     sur 390 px, texte écrasé mot par mot, page plus large que l'écran. */
+  @media (max-width:700px){
+    .sp2-hero{grid-template-columns:auto minmax(0,1fr); gap:14px 16px; padding:18px 16px;}
+    .sp2-hero-court{width:300px; right:-60px;}
+    .sp2-crest{width:64px; height:64px;}
+    .sp2-hero-name{font-size:30px;}
+    .sp2-hero-sub{gap:6px 12px;}
+    .sp2-hero-stats{grid-column:1 / -1;}
+    .sp2-hs{flex:1 1 0; min-width:0; padding:10px 12px;}
+    .sp2-hero-num{font-size:24px;}
+    .sp2-hs-sub{white-space:normal;}
+    .sp2-plan{padding:16px 14px;}
+    .sp2-plan-cols, .sp2-grid-2, .sp2-grid-even, .sp2-ctx-grid, .sp2-leaders{grid-template-columns:minmax(0,1fr);}
+    .sp2-ctx-cell.full{grid-column:auto;}
+    .sp2-plan-item{padding:10px 12px;}
+    .sp2-plan-big{font-size:23px;}
+    .sp2-panel{padding:16px 14px 18px;}
+    .sp2-kpis, .sp2-mini, .sp2-ident{grid-template-columns:repeat(2, minmax(0,1fr));}
+    .sp2-ident-item:nth-child(odd){border-left:none;}
+    .sp2-ident-item:nth-child(n+3){border-top:1px solid var(--line);}
+    .sp2-rings{gap:8px;}
+    .sp2-ring{padding:12px 6px 10px;}
+    .sp2-ring-wrap{width:70px; height:70px;}
+    .sp2-ring-val{font-size:17px;}
+    .sp2-bf-head, .sp2-bf-row{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);}
+    .sp2-bf-v{min-width:40px;}
+    .sp2-strat-row{grid-template-columns:110px minmax(0,1fr);}
+    .sp2-cmp th, .sp2-cmp td{padding:7px 8px;}
+    .sp2-token{width:92px;}
+    .sp2-token .player-avatar{width:40px !important; height:44px !important;}
+    .sp2-token-name{font-size:11.5px; margin-top:6px;}
+    .sp2-token-stats{font-size:10.5px; white-space:normal;}
+    .sp2-lineup{aspect-ratio:500/440;}
+  }
   /* Fenêtre "Voir toute la saison" de la fiche joueur (retour utilisateur,
      2026-09-24 : "ajoute un bouton pour voir plus que les 5 derniers
      matchs et voir toute la saison [...] une fenetre qui se superpose et
