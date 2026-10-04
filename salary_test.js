@@ -124,7 +124,9 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   };
   const freak = new Player({ name: "Freak Test", position: "Pivot", height: 215, age: 24, attrs: freakAttrs, aggressiveness: 0.5 });
   console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "€/sem.");
-  if (freak.salary > 90000) throw new Error("❌ La prime de pic plafonnée devrait empêcher un salaire absurde même sur un profil extrême (obtenu : " + freak.salary + ").");
+  // Grille du 2026-10-04 : un profil exceptionnel coûte cher, mais la prime
+  // de pic plafonnée (5 points) le garde sous le palier du niveau 90.
+  if (freak.salary > 160000) throw new Error("❌ La prime de pic plafonnée devrait empêcher un salaire absurde même sur un profil extrême (obtenu : " + freak.salary + ").");
   console.log("✅ La prime de pic reste plafonnée même sur un profil cumulant plusieurs carac exceptionnelles.");
 }
 

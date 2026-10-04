@@ -3509,9 +3509,29 @@ const SALARY_AT_BASELINE = 1500;    // salaire hebdo à ce niveau de référence
 const SALARY_GROWTH_PER_POINT = 1.032; // +3.2%/point au-dessus/dessous de la référence
 const SALARY_MIN = 200; // plancher, même pour un très jeune/faible joueur (≈ joueur de complément BuzzerBeater)
 
-function salaryForOverall(overall) {
+// Grille de 2026-10-04 (retour utilisateur : « les gros joueurs sont
+// sous-payés ») : inchangée jusqu'à 50 de niveau, puis paliers de plus en
+// plus raides (interpolation géométrique entre paliers) : un joueur moyen
+// reste abordable, une star devient une dépense majeure. Ancienne courbe
+// (+3,2 %/point partout) : ×1,9 seulement entre 50 et 70, le haut de
+// l'échelle ne venant que du bonus d'UNE caractéristique au-dessus de 90.
+// Variante « A » validée : 60 → +36 %, 65 → +76 %, 70 → +132 %,
+// 75 → +216 %, 80 → +327 % par rapport à l'ancienne courbe.
+const SALARY_GRID_ANCHORS = [[55, 8000], [60, 11500], [65, 17500], [70, 27000], [75, 43000], [80, 68000], [85, 105000], [90, 160000]];
+function legacySalaryForOverall(overall) {
   const raw = SALARY_AT_BASELINE * Math.pow(SALARY_GROWTH_PER_POINT, overall - SALARY_BASELINE_OVERALL);
   return Math.max(SALARY_MIN, Math.round(raw));
+}
+function salaryForOverall(overall) {
+  if (!(overall > 50)) return legacySalaryForOverall(overall);
+  let a = 50, va = SALARY_AT_BASELINE * Math.pow(SALARY_GROWTH_PER_POINT, 50 - SALARY_BASELINE_OVERALL);
+  for (const [b, vb] of SALARY_GRID_ANCHORS) {
+    if (overall <= b) return Math.round(va * Math.pow(vb / va, (overall - a) / (b - a)));
+    a = b; va = vb;
+  }
+  // Au-delà du dernier palier : même progression que le dernier écart.
+  const [p, vp] = SALARY_GRID_ANCHORS[SALARY_GRID_ANCHORS.length - 2];
+  return Math.round(va * Math.pow(va / vp, (overall - a) / (a - p)));
 }
 
 // ---------------------------------------------------------------------
@@ -3601,11 +3621,16 @@ function contractMoraleFactor(form) {
 
 // Salaire demandé (€/semaine) : niveau actuel (grille salariale, bonus de
 // pic compris), âge et motivation. Arrondi à 10 €.
-function askedSalary(player) {
+// `legacy` : ancienne grille (contrat signé avant le 2026-10-04) — sert
+// uniquement aux demandes d'augmentation de mi-saison, pour que le seul
+// changement de grille ne déclenche pas une vague de demandes : ces
+// joueurs passent à la nouvelle grille à leur prochain contrat.
+function askedSalary(player, legacy = false) {
   if (!player || !player.attrs) return SALARY_MIN;
   const level = levelCoefficientFor(player.attrs, player.position);
   const bump = 1 + CONTRACT_REFUSAL_DEMAND_BUMP * (player.contractRefusals || 0);
-  const raw = salaryForOverall(level.coefficient) * contractAgeFactor(player.age) * contractMoraleFactor(player.form) * bump;
+  const base = legacy ? legacySalaryForOverall(legacyLevelCoefficientFor(player.attrs)) : salaryForOverall(level.coefficient);
+  const raw = base * contractAgeFactor(player.age) * contractMoraleFactor(player.form) * bump;
   return Math.max(SALARY_MIN, Math.round(raw / 10) * 10);
 }
 
@@ -3712,6 +3737,7 @@ function isLastContractSeason(player, season) {
 // durée `seasons` à partir de la saison `season`.
 function signNewContract(player, seasons, season, salary = null) {
   player.salary = salary != null ? salary : askedSalary(player);
+  player.salaryGrid = 2;
   player.contractUntilSeason = (season || 1) + normalizeContractSeasons(seasons) - 1;
   player.nextSalary = null;
   player.raiseRequest = null;
@@ -9125,6 +9151,7 @@ class Team {
     }
     p.contractUntilSeason = season + seasons;
     p.nextSalary = salary;
+    p.salaryGrid = 2;
     p.lastContractOfferWeek = null;
     p.contractRefusals = 0;
     p.raiseRequest = null;
@@ -10193,8 +10220,14 @@ function attrsForCardPosition(position, makeAttrs) {
 // cohérente, atteinte dès qu'un pic est déjà nettement exceptionnel, sans
 // dépendre du reste du profil.
 const SALARY_PEAK_BONUS_THRESHOLD = 90;
-const SALARY_PEAK_BONUS_FACTOR = 6;
-const SALARY_PEAK_BONUS_MAX = 40;
+// Réduit le 2026-10-04 (6/point, plafond 40 → 0,75/point, plafond 5) : une
+// seule caractéristique au-dessus de 90 multipliait le salaire jusqu'à ×3,5
+// et pesait plus que le niveau lui-même ; elle reste récompensée (jusqu'à
+// +25-45 % selon le palier) sans faire exploser le salaire.
+const SALARY_PEAK_BONUS_FACTOR = 0.75;
+const SALARY_PEAK_BONUS_MAX = 5;
+const LEGACY_SALARY_PEAK_BONUS_FACTOR = 6;
+const LEGACY_SALARY_PEAK_BONUS_MAX = 40;
 
 function peakBonusFor(attrs, position) {
   const profile = POSITION_ATTR_PROFILE[position] || {};
@@ -10220,6 +10253,13 @@ function peakBonusFor(attrs, position) {
 // « le salaire doit être calculé sur base du meilleur poste », comme la note
 // affichée) : la plus haute des notes par poste (positionRating) + bonus de
 // pic de ce poste. `position` reste le poste de carte (ou le meilleur).
+function legacyLevelCoefficientFor(attrs) {
+  const best = bestPosition({ attrs });
+  const profile = POSITION_ATTR_PROFILE[best] || {};
+  const strong = ATTRS.filter(a => profile[a] === "strong");
+  const peak = strong.length ? Math.max(...strong.map(a => attrs[a])) : 0;
+  return positionRating(attrs, best) + Math.min(LEGACY_SALARY_PEAK_BONUS_MAX, Math.max(0, peak - SALARY_PEAK_BONUS_THRESHOLD) * LEGACY_SALARY_PEAK_BONUS_FACTOR);
+}
 function levelCoefficientFor(attrs, cardPosition) {
   const position = POSITIONS.includes(cardPosition) ? cardPosition : bestPosition({ attrs });
   const best = bestPosition({ attrs });
@@ -13775,7 +13815,9 @@ class League {
         }
         if (week !== CONTRACT_RAISE_WEEK || this.seasonEndTickDone) return;
         if (!(left >= 2) || p.raiseRequest || p.raiseRequestSeason === season || typeof p.nextSalary === "number") return;
-        const asked = askedSalary(p);
+        // Contrat signé avant la grille du 2026-10-04 : demande calculée sur
+        // l'ancienne grille (pas de vague de demandes due au seul changement).
+        const asked = askedSalary(p, p.salaryGrid !== 2);
         if (asked < p.salary * (1 + CONTRACT_RAISE_THRESHOLD)) return;
         p.raiseRequestSeason = season;
         if (!team.isHuman) { p.nextSalary = asked; return; }
@@ -16311,6 +16353,7 @@ function serializePlayerRecord(p) {
     nextSalary: typeof p.nextSalary === "number" ? p.nextSalary : null,
     lastContractOfferWeek: typeof p.lastContractOfferWeek === "number" ? p.lastContractOfferWeek : null,
     contractRefusals: p.contractRefusals || 0,
+    ...(p.salaryGrid ? { salaryGrid: p.salaryGrid } : {}),
     raiseRequest: p.raiseRequest ? { ...p.raiseRequest } : null,
     raiseRequestSeason: typeof p.raiseRequestSeason === "number" ? p.raiseRequestSeason : null,
     extensionRequestSeason: typeof p.extensionRequestSeason === "number" ? p.extensionRequestSeason : null,
@@ -16941,6 +16984,7 @@ function playerFromSave(pdata) {
   if (typeof pdata.nextSalary === "number") p.nextSalary = pdata.nextSalary;
   if (typeof pdata.lastContractOfferWeek === "number") p.lastContractOfferWeek = pdata.lastContractOfferWeek;
   if (typeof pdata.contractRefusals === "number") p.contractRefusals = pdata.contractRefusals;
+  if (typeof pdata.salaryGrid === "number") p.salaryGrid = pdata.salaryGrid;
   if (pdata.raiseRequest && typeof pdata.raiseRequest.asked === "number") p.raiseRequest = { ...pdata.raiseRequest };
   if (typeof pdata.raiseRequestSeason === "number") p.raiseRequestSeason = pdata.raiseRequestSeason;
   if (typeof pdata.extensionRequestSeason === "number") p.extensionRequestSeason = pdata.extensionRequestSeason;
@@ -19689,7 +19733,7 @@ return {
   // consorts pour vérifier des accès directs (ex. round-trip de
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
-  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs, buildSeasonArchive, ARCHIVE_ROW_COLS,
+  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, legacySalaryForOverall, SALARY_GRID_ANCHORS, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs, buildSeasonArchive, ARCHIVE_ROW_COLS,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
