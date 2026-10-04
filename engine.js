@@ -3154,6 +3154,38 @@ const MVP_QUOTES = [
 // noir, blanc"), mêmes codes couleur que dans JERSEY_TWO_TONE_SETS plus bas
 // pour rester visuellement cohérent entre un maillot "uni" et un motif à 2
 // couleurs.
+// Couleurs libres (retour utilisateur 2026-10-04 : « remplacer le choix
+// limité de couleurs par une palette ») : jerseyColor / awayJerseyColor
+// acceptent désormais n'importe quelle couleur "#rrggbb" ; les anciennes
+// clés ci-dessous ("rouge", "bleu"…) restent valides (sauvegardes
+// existantes) et servent de raccourcis. Toujours lire une couleur de
+// maillot via jerseyHex, une paire via jerseyPair.
+const JERSEY_HEX_RE = /^#[0-9a-f]{6}$/i;
+function jerseyHex(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_COLORS, v)) return JERSEY_COLORS[v];
+  return JERSEY_HEX_RE.test(v) ? v.toLowerCase() : null;
+}
+// Valeur à enregistrer : ancienne clé telle quelle, sinon "#rrggbb" en minuscules.
+function normalizeJerseyColor(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_COLORS, v)) return v;
+  return JERSEY_HEX_RE.test(v) ? v.toLowerCase() : null;
+}
+// Combinaison de 2 couleurs : ancienne clé (JERSEY_TWO_TONE_SETS) ou paire
+// libre "#rrggbb/#rrggbb" (couleur 1 / couleur 2).
+function jerseyPair(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_TWO_TONE_SETS, v)) return JERSEY_TWO_TONE_SETS[v];
+  const m = /^(#[0-9a-f]{6})\/(#[0-9a-f]{6})$/i.exec(v);
+  return m ? [m[1].toLowerCase(), m[2].toLowerCase()] : null;
+}
+function normalizeJerseyPair(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_TWO_TONE_SETS, v)) return v;
+  const pair = jerseyPair(v);
+  return pair ? `${pair[0]}/${pair[1]}` : null;
+}
 const JERSEY_COLORS = {
   rouge:  "#d6473f",
   bleu:   "#3b6fd6",
@@ -3310,7 +3342,7 @@ function ensureJerseyNumbers(team) {
 // EXTÉRIEUR par défaut qui contraste avec le maillot domicile (voir
 // defaultAwayJerseyColor juste en dessous), jamais utilisée pour le rendu.
 function jerseyColorLuminance(colorKey) {
-  const hex = JERSEY_COLORS[colorKey];
+  const hex = jerseyHex(colorKey);
   if (!hex) return 0;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -7640,9 +7672,10 @@ class Team {
   // commentaire sur JERSEY_COLORS plus haut).
   setJersey(shape, color) {
     if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
-    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    const c = normalizeJerseyColor(color);
+    if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
     this.jerseyShape = shape;
-    this.jerseyColor = color;
+    this.jerseyColor = c;
     return { ok: true };
   }
 
@@ -7709,7 +7742,8 @@ class Team {
   // club n'est pas payant (voir effectiveJerseyTwoTone côté
   // moteurbasket3.html), même principe que jerseyPattern.
   setJerseyTwoTone(key) {
-    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    key = normalizeJerseyPair(key);
+    if (!key) return { ok: false, error: "Combinaison de couleurs inconnue." };
     if (!this.hasActivePremium()) {
       return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
@@ -7725,8 +7759,9 @@ class Team {
   // au mode payant, voir setAwayJerseyPattern/setAwayJerseyTwoTone
   // ci-dessous).
   setAwayJerseyColor(color) {
-    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
-    this.awayJerseyColor = color;
+    const c = normalizeJerseyColor(color);
+    if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.awayJerseyColor = c;
     return { ok: true };
   }
 
@@ -7750,7 +7785,8 @@ class Team {
   // effacée en repassant gratuit, seul le rendu l'ignore (voir
   // effectiveAwayJerseyTwoTone côté moteurbasket3.html).
   setAwayJerseyTwoTone(key) {
-    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    key = normalizeJerseyPair(key);
+    if (!key) return { ok: false, error: "Combinaison de couleurs inconnue." };
     if (!this.hasActivePremium()) {
       return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
@@ -17419,17 +17455,17 @@ function teamFromSave(data) {
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
-  if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
+  if (normalizeJerseyColor(data.jerseyColor)) team.jerseyColor = normalizeJerseyColor(data.jerseyColor);
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
-  if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
+  if (normalizeJerseyPair(data.jerseyTwoTone)) team.jerseyTwoTone = normalizeJerseyPair(data.jerseyTwoTone);
   // Maillot extérieur (voir serializeTeam ci-dessus) : absent = sauvegarde
   // d'avant cette fonctionnalité, on garde la valeur par défaut déjà posée
   // par le constructeur (couleur contrastant avec le maillot domicile déjà
   // restauré juste au-dessus, motif "uni", club gratuit) plutôt que
   // d'accepter une valeur brute non validée.
-  if (JERSEY_COLORS[data.awayJerseyColor]) team.awayJerseyColor = data.awayJerseyColor;
+  if (normalizeJerseyColor(data.awayJerseyColor)) team.awayJerseyColor = normalizeJerseyColor(data.awayJerseyColor);
   if (JERSEY_PATTERNS.includes(data.awayJerseyPattern)) team.awayJerseyPattern = data.awayJerseyPattern;
-  if (JERSEY_TWO_TONE_SETS[data.awayJerseyTwoTone]) team.awayJerseyTwoTone = data.awayJerseyTwoTone;
+  if (normalizeJerseyPair(data.awayJerseyTwoTone)) team.awayJerseyTwoTone = normalizeJerseyPair(data.awayJerseyTwoTone);
   // Fiche club (voir serializeTeam ci-dessus) : absent = sauvegarde d'avant
   // cette fonctionnalité, on garde les valeurs par défaut déjà posées par le
   // constructeur (foundedYear tiré à l'instant, trophies vide) plutôt que
@@ -19711,6 +19747,7 @@ return {
   MANAGER_PSEUDO_MIN_LENGTH, MANAGER_PSEUDO_MAX_LENGTH, MANAGER_PSEUDO_CHANGE_COOLDOWN_MS, managerPseudoKey, isValidManagerPseudo, checkManagerPseudo, managerPseudoOf, managerDisplayName, SEAT_CATEGORIES, seatCategoryInfo,
   FAN_SHOP_LEVELS, fanShopInfo, attendanceBaseForMorale, moraleForgiveness, moraleLabel,
   JERSEY_COLORS, JERSEY_SHAPES, JERSEY_PATTERNS, JERSEY_TWO_TONE_SETS, defaultAwayJerseyColor, MAX_TEAM_LOGO_DATA_URL_LENGTH,
+  jerseyHex, jerseyPair, normalizeJerseyColor, normalizeJerseyPair,
   // Interviews de jalon + MVP automatique (retour utilisateur, 2026-09 : voir
   // le grand commentaire au-dessus de MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS).
   MILESTONE_INTERVIEW_TYPES, MILESTONE_INTERVIEW_TONES, MILESTONE_INTERVIEW_QUOTES,

@@ -6026,4 +6026,11 @@ window.HM_I18N_ZH = {
   "Succès débloqué : Pilier du vestiaire": "成就解锁：更衣室支柱",
   "Succès débloqué : Une vie au club": "成就解锁：一生一队",
   "Succès débloqué : Noyau dur": "成就解锁：核心班底",
+  "Couleur 1": "颜色 1",
+  "Couleur 2": "颜色 2",
+  "Choisir une couleur": "选择颜色",
+  "{0} : choisir une couleur": "{0}：选择颜色",
+  "{0} : code couleur": "{0}：颜色代码",
+  "{0} : raccourcis": "{0}：快捷选择",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "在下方选择图案，即可使用双色球衣。",
 };

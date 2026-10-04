@@ -106,8 +106,7 @@ function avg(log, k) {
 
 // Maillot aux couleurs du club, floqué du numéro (ou des initiales).
 function jerseyBadge(team, player) {
-  const colors = Engine.JERSEY_COLORS || {};
-  const fill = colors[team.jerseyColor] || "#3b6fd6";
+  const fill = (Engine.jerseyHex && Engine.jerseyHex(team.jerseyColor)) || "#3b6fd6";
   const light = /^#(f|e)/i.test(fill);
   const label = Number.isInteger(player.number)
     ? String(player.number)

@@ -6026,4 +6026,11 @@ window.HM_I18N_DE = {
   "Succès débloqué : Pilier du vestiaire": "Erfolg freigeschaltet: Stütze der Kabine",
   "Succès débloqué : Une vie au club": "Erfolg freigeschaltet: Ein Leben im Verein",
   "Succès débloqué : Noyau dur": "Erfolg freigeschaltet: Harter Kern",
+  "Couleur 1": "Farbe 1",
+  "Couleur 2": "Farbe 2",
+  "Choisir une couleur": "Farbe wählen",
+  "{0} : choisir une couleur": "{0}: Farbe wählen",
+  "{0} : code couleur": "{0}: Farbcode",
+  "{0} : raccourcis": "{0}: Schnellauswahl",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wählen Sie unten ein Muster für ein zweifarbiges Trikot.",
 };

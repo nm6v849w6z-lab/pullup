@@ -6026,4 +6026,11 @@ window.HM_I18N_LT = {
   "Succès débloqué : Pilier du vestiaire": "Pasiekimas atrakintas: Rūbinės ramstis",
   "Succès débloqué : Une vie au club": "Pasiekimas atrakintas: Visas gyvenimas klube",
   "Succès débloqué : Noyau dur": "Pasiekimas atrakintas: Tvirtas branduolys",
+  "Couleur 1": "Spalva 1",
+  "Couleur 2": "Spalva 2",
+  "Choisir une couleur": "Pasirinkti spalvą",
+  "{0} : choisir une couleur": "{0}: pasirinkti spalvą",
+  "{0} : code couleur": "{0}: spalvos kodas",
+  "{0} : raccourcis": "{0}: greitieji pasirinkimai",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Pasirinkite raštą žemiau, kad marškinėliai būtų dviejų spalvų.",
 };

@@ -6051,4 +6051,11 @@ window.HM_I18N_EN = {
   "Succès débloqué : Pilier du vestiaire": "Achievement unlocked: Locker-room pillar",
   "Succès débloqué : Une vie au club": "Achievement unlocked: A life at the club",
   "Succès débloqué : Noyau dur": "Achievement unlocked: Core group",
+  "Couleur 1": "Color 1",
+  "Couleur 2": "Color 2",
+  "Choisir une couleur": "Pick a color",
+  "{0} : choisir une couleur": "{0}: pick a color",
+  "{0} : code couleur": "{0}: color code",
+  "{0} : raccourcis": "{0}: shortcuts",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Pick a pattern below for a two-color jersey.",
 };

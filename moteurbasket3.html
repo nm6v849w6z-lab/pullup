@@ -8020,6 +8020,17 @@
   /* Signets (2026-10-04) : étoile de la fiche joueur, page Signets, toast. */
   .pdp2-btn.pdp2-bm{display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; width:auto; min-height:30px; padding:0 12px; font-size:12.5px; border-radius:999px;}
   .pdp2-btn.pdp2-bm svg{width:14px; height:14px; flex:0 0 auto;}
+  /* Couleurs libres du maillot (2026-10-04). */
+  .jc-ctl{margin:0 0 12px;}
+  .jc-row{display:flex; align-items:center; gap:10px;}
+  .jc-swatch{position:relative; display:inline-block; width:44px; height:44px; border-radius:12px; border:2px solid var(--line); box-shadow:inset 0 0 0 2px rgba(0,0,0,.25); cursor:pointer; overflow:hidden; flex:none;}
+  .jc-swatch input[type=color]{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; padding:0;}
+  .jc-hex{width:104px; height:38px; border-radius:9px; border:1px solid var(--line); background:var(--panel-2, #0f1626); color:var(--ink); font:inherit; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.04em; padding:0 10px; text-transform:uppercase;}
+  .jc-hex.is-bad{border-color:var(--danger);}
+  .jc-presets{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .jc-preset{width:22px; height:22px; border-radius:6px; border:1px solid rgba(255,255,255,.18); cursor:pointer; padding:0;}
+  .jc-preset.on{outline:2px solid var(--amber); outline-offset:2px;}
+  html[data-theme="light"] .jc-preset{border-color:rgba(20,32,51,.2);}
   .pdp2-bottom-actions{display:flex; justify-content:center; align-items:flex-start; flex-wrap:wrap; gap:10px; margin:18px 0 4px;}
   .pdp2-bottom-actions .pdp2-share{width:auto; margin-top:0;}
   .pdp2-btn.pdp2-bm.is-on{color:var(--amber); border-color:rgba(240,162,60,.55);}
@@ -12215,6 +12226,38 @@ function interviewTranscriptFor(milestone, tones, won, opponentName, playerName)
 // noir/blanc/jaune ajoutés (retour utilisateur, 2026-09 : "mets plus de
 // choix [...] il manque jaune [...] noir, blanc"), voir engine.js pour le
 // commentaire détaillé.
+// Couleurs libres (retour utilisateur 2026-10-04 : « remplacer le choix
+// limité de couleurs par une palette ») : jerseyColor / awayJerseyColor
+// acceptent désormais n'importe quelle couleur "#rrggbb" ; les anciennes
+// clés ci-dessous ("rouge", "bleu"…) restent valides (sauvegardes
+// existantes) et servent de raccourcis. Toujours lire une couleur de
+// maillot via jerseyHex, une paire via jerseyPair.
+const JERSEY_HEX_RE = /^#[0-9a-f]{6}$/i;
+function jerseyHex(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_COLORS, v)) return JERSEY_COLORS[v];
+  return JERSEY_HEX_RE.test(v) ? v.toLowerCase() : null;
+}
+// Valeur à enregistrer : ancienne clé telle quelle, sinon "#rrggbb" en minuscules.
+function normalizeJerseyColor(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_COLORS, v)) return v;
+  return JERSEY_HEX_RE.test(v) ? v.toLowerCase() : null;
+}
+// Combinaison de 2 couleurs : ancienne clé (JERSEY_TWO_TONE_SETS) ou paire
+// libre "#rrggbb/#rrggbb" (couleur 1 / couleur 2).
+function jerseyPair(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_TWO_TONE_SETS, v)) return JERSEY_TWO_TONE_SETS[v];
+  const m = /^(#[0-9a-f]{6})\/(#[0-9a-f]{6})$/i.exec(v);
+  return m ? [m[1].toLowerCase(), m[2].toLowerCase()] : null;
+}
+function normalizeJerseyPair(v) {
+  if (typeof v !== "string") return null;
+  if (Object.prototype.hasOwnProperty.call(JERSEY_TWO_TONE_SETS, v)) return v;
+  const pair = jerseyPair(v);
+  return pair ? `${pair[0]}/${pair[1]}` : null;
+}
 const JERSEY_COLORS = {
   rouge:  "#d6473f",
   bleu:   "#3b6fd6",
@@ -12388,7 +12431,7 @@ function ensureJerseyNumbers(team) {
 // PART_COUNTS, qui ne servait qu'a exporter les pieces separement pour
 // l'artiste) ont ete retires. renderAvatar/generateAvatar attendent
 // desormais `options.teamColors` (voir teamAvatarColors juste en dessous,
-// qui lit les vraies couleurs JERSEY_COLORS[team.jerseyColor]/
+// qui lit les vraies couleurs jerseyHex(team.jerseyColor)/
 // [team.awayJerseyColor] de l'equipe reelle du joueur) et ne retombent sur
 // un gris neutre que si un appel oublie de le fournir.
 const AvatarGen = (function () {
@@ -13327,7 +13370,7 @@ function teamAvatarColors(team) {
   // maillot jaune et noir). Voir jerseySvgHtml (`usesTwoTone`).
   const twoTone = effectiveJerseyTwoTone(team);
   if (effectiveJerseyPattern(team) !== JERSEY_PATTERNS[0] && Array.isArray(twoTone) && twoTone.length === 2) return [twoTone[0], twoTone[1]];
-  return [JERSEY_COLORS[team.jerseyColor] || '#3a3a40', JERSEY_COLORS[team.awayJerseyColor] || '#55555c'];
+  return [jerseyHex(team.jerseyColor) || '#3a3a40', jerseyHex(team.awayJerseyColor) || '#55555c'];
 }
 
 /** Avatar SVG d'un joueur, recalcule depuis son id (voir AvatarGen ci-dessus, toujours le meme visage pour un joueur donne). size = largeur en px (hauteur au meme ratio que le viewBox 120x130). */
@@ -14215,7 +14258,7 @@ function arenaVisualCapacity(realCapacity) {
 // Couleur de maillot extérieur par défaut (voir engine.js pour le
 // commentaire détaillé, miroir identique).
 function jerseyColorLuminance(colorKey) {
-  const hex = JERSEY_COLORS[colorKey];
+  const hex = jerseyHex(colorKey);
   if (!hex) return 0;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -17473,9 +17516,10 @@ class Team {
   // Choix de maillot (voir engine.js, miroir identique).
   setJersey(shape, color) {
     if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
-    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
+    const c = normalizeJerseyColor(color);
+    if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
     this.jerseyShape = shape;
-    this.jerseyColor = color;
+    this.jerseyColor = c;
     return { ok: true };
   }
 
@@ -17529,7 +17573,8 @@ class Team {
   // Combinaison de 2 couleurs pour les motifs "rayures"/"degrade" (voir
   // engine.js, miroir identique).
   setJerseyTwoTone(key) {
-    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    key = normalizeJerseyPair(key);
+    if (!key) return { ok: false, error: "Combinaison de couleurs inconnue." };
     if (!this.hasActivePremium()) {
       return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
@@ -17539,8 +17584,9 @@ class Team {
 
   // Couleur du maillot extérieur (voir engine.js, miroir identique).
   setAwayJerseyColor(color) {
-    if (!JERSEY_COLORS[color]) return { ok: false, error: "Couleur de maillot inconnue." };
-    this.awayJerseyColor = color;
+    const c = normalizeJerseyColor(color);
+    if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    this.awayJerseyColor = c;
     return { ok: true };
   }
 
@@ -17557,7 +17603,8 @@ class Team {
   // Combinaison de 2 couleurs du maillot extérieur (voir engine.js, miroir
   // identique).
   setAwayJerseyTwoTone(key) {
-    if (!JERSEY_TWO_TONE_SETS[key]) return { ok: false, error: "Combinaison de couleurs inconnue." };
+    key = normalizeJerseyPair(key);
+    if (!key) return { ok: false, error: "Combinaison de couleurs inconnue." };
     if (!this.hasActivePremium()) {
       return { ok: false, error: "Passez Premium pour choisir une combinaison de couleurs." };
     }
@@ -24785,13 +24832,13 @@ function teamFromSave(data) {
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
-  if (JERSEY_COLORS[data.jerseyColor]) team.jerseyColor = data.jerseyColor;
+  if (normalizeJerseyColor(data.jerseyColor)) team.jerseyColor = normalizeJerseyColor(data.jerseyColor);
   if (JERSEY_PATTERNS.includes(data.jerseyPattern)) team.jerseyPattern = data.jerseyPattern;
-  if (JERSEY_TWO_TONE_SETS[data.jerseyTwoTone]) team.jerseyTwoTone = data.jerseyTwoTone;
+  if (normalizeJerseyPair(data.jerseyTwoTone)) team.jerseyTwoTone = normalizeJerseyPair(data.jerseyTwoTone);
   // Maillot extérieur (voir engine.js, miroir identique).
-  if (JERSEY_COLORS[data.awayJerseyColor]) team.awayJerseyColor = data.awayJerseyColor;
+  if (normalizeJerseyColor(data.awayJerseyColor)) team.awayJerseyColor = normalizeJerseyColor(data.awayJerseyColor);
   if (JERSEY_PATTERNS.includes(data.awayJerseyPattern)) team.awayJerseyPattern = data.awayJerseyPattern;
-  if (JERSEY_TWO_TONE_SETS[data.awayJerseyTwoTone]) team.awayJerseyTwoTone = data.awayJerseyTwoTone;
+  if (normalizeJerseyPair(data.awayJerseyTwoTone)) team.awayJerseyTwoTone = normalizeJerseyPair(data.awayJerseyTwoTone);
   // Fiche club (voir engine.js, miroir identique).
   if (typeof data.foundedYear === "number") team.foundedYear = data.foundedYear;
   // Migration ponctuelle des anciennes dates aléatoires (voir engine.js,
@@ -35360,7 +35407,7 @@ function jerseyCrestSvg(team, uid, cx, cy, r) {
 // brodé sur la poitrine, côté droit de l'image (cœur du joueur, comme sur un
 // vrai maillot NBA/Euroligue) ; omis pour les vignettes sans club.
 function jerseySvgHtml(shape, colorKey, size, variant, pattern, twoTone, sponsor, number, crest) {
-  const color = JERSEY_COLORS[colorKey] || Object.values(JERSEY_COLORS)[0];
+  const color = jerseyHex(colorKey) || Object.values(JERSEY_COLORS)[0];
   const s = size || 72;
   const isAway = variant === "away";
   const patternKey = JERSEY_PATTERNS.includes(pattern) ? pattern : JERSEY_PATTERNS[0];
@@ -35494,7 +35541,7 @@ function effectiveJerseyPattern(team) {
 // motif effectif retombe alors sur "uni" de toute façon, qui n'utilise
 // jamais `twoTone` dans jerseySvgHtml, mais autant rester explicite ici).
 function effectiveJerseyTwoTone(team) {
-  return teamIsPremium(team) ? (JERSEY_TWO_TONE_SETS[team.jerseyTwoTone] || null) : null;
+  return teamIsPremium(team) ? (jerseyPair(team.jerseyTwoTone) || null) : null;
 }
 
 // Motif/combinaison réellement affichés pour le maillot EXTÉRIEUR d'un club
@@ -35504,7 +35551,7 @@ function effectiveAwayJerseyPattern(team) {
   return teamIsPremium(team) ? team.awayJerseyPattern : JERSEY_PATTERNS[0];
 }
 function effectiveAwayJerseyTwoTone(team) {
-  return teamIsPremium(team) ? (JERSEY_TWO_TONE_SETS[team.awayJerseyTwoTone] || null) : null;
+  return teamIsPremium(team) ? (jerseyPair(team.awayJerseyTwoTone) || null) : null;
 }
 
 // Logo type d'un club gratuit (retour utilisateur : "le logo de l'équipe
@@ -35518,7 +35565,7 @@ function effectiveAwayJerseyTwoTone(team) {
 // jamais besoin de le régénérer/sauvegarder à part.
 function defaultTeamLogoSvg(team, size) {
   const s = size || 80;
-  const accent = JERSEY_COLORS[team.jerseyColor] || Object.values(JERSEY_COLORS)[0];
+  const accent = jerseyHex(team.jerseyColor) || Object.values(JERSEY_COLORS)[0];
   const abbrev = teamTrigram(team);
   return `<svg viewBox="0 0 120 120" width="${s}" height="${s}" role="img" aria-label="Logo de ${escapeHtml(team.name)}">` +
     `<circle cx="60" cy="60" r="55" fill="#d97b35" stroke="${accent}" stroke-width="5"/>` +
@@ -35751,8 +35798,8 @@ function teamDetailApercuHtml(teamIdx) {
   const oppName = idx => escapeHtml(league.teams[idx] ? league.teams[idx].name : "?");
 
   // --- Bannière ---
-  const c1 = JERSEY_COLORS[team.jerseyColor] || "#2a3550";
-  const c2 = JERSEY_COLORS[team.awayJerseyColor] || c1;
+  const c1 = jerseyHex(team.jerseyColor) || "#2a3550";
+  const c2 = jerseyHex(team.awayJerseyColor) || c1;
   const hexA = (hex, a) => /^#[0-9a-f]{6}$/i.test(hex) ? hex + Math.round(a * 255).toString(16).padStart(2, "0") : hex;
   const trophyText = trophies.length
     ? `${trophies.length} titre${trophies.length > 1 ? "s" : ""} · dernier : ${escapeHtml(trophies[0].label)} (${new Date(trophies[0].at).getFullYear()})`
@@ -39153,8 +39200,8 @@ function hoopShowDressOpts() {
       if (!t) return null;
       return {
         logo: (size) => teamLogoHtml(t, size),
-        color: JERSEY_COLORS[t.jerseyColor] || null,
-        altColor: JERSEY_COLORS[t.awayJerseyColor] || null,
+        color: jerseyHex(t.jerseyColor) || null,
+        altColor: jerseyHex(t.awayJerseyColor) || null,
       };
     },
     player: (id) => {
@@ -42278,8 +42325,8 @@ function hmLiveColors(homeTeam, awayTeam) {
   // Deux clubs de même couleur : l'équipe qui se déplace joue en maillot
   // extérieur, comme sur un vrai parquet.
   if (awayKey && awayKey === homeKey && awayTeam.awayJerseyColor) awayKey = awayTeam.awayJerseyColor;
-  const home = JERSEY_COLORS[homeKey] || null;
-  const away = JERSEY_COLORS[awayKey] || null;
+  const home = jerseyHex(homeKey) || null;
+  const away = jerseyHex(awayKey) || null;
   return [home, away && away !== home ? away : null];
 }
 // « Revoir le direct » (Premium, m.replay posé par /api/replay et le
@@ -45538,8 +45585,8 @@ function dashboardTeamRef(idx, team) {
     // valeur inventée : les deux sont de VRAIES couleurs déjà choisies par
     // ce club.
     colors: {
-      primary: JERSEY_COLORS[team.jerseyColor] || null,
-      secondary: JERSEY_COLORS[team.awayJerseyColor] || null,
+      primary: jerseyHex(team.jerseyColor) || null,
+      secondary: jerseyHex(team.awayJerseyColor) || null,
     },
     // Logo personnalisé d'un adversaire payant (autre manager humain de la
     // ligue) : même règle que pour son propre club (voir club.logoUrl dans
@@ -45732,8 +45779,8 @@ function dashboardDataFromGameState() {
       name: teamA.name,
       shortName: teamTrigram(teamA),
       colors: {
-        primary: JERSEY_COLORS[teamA.jerseyColor] || null,
-        secondary: JERSEY_COLORS[teamA.awayJerseyColor] || null,
+        primary: jerseyHex(teamA.jerseyColor) || null,
+        secondary: jerseyHex(teamA.awayJerseyColor) || null,
       },
       logoUrl: (teamIsPremium(teamA) && teamA.customLogoDataUrl) ? teamA.customLogoDataUrl : null,
       division: info.name,
@@ -46058,6 +46105,105 @@ function renderPersoIdentityCard() {
 // couleur/motif/combinaison propres à chacun (Team.awayJerseyColor et
 // consorts, engine.js) : attributs data-jersey-* / data-away-jersey-*
 // distincts, jamais confondus (voir l'écouteur délégué plus bas).
+// Raccourcis de la palette (les 8 couleurs historiques + nuances courantes) ;
+// le sélecteur et le code #rrggbb restent libres.
+const JERSEY_COLOR_PRESETS = ["#d6473f", "#e11d2e", "#7a2b3a", "#e08a2e", "#e8c93f", "#d4af37", "#3fae62", "#166534", "#84cc16",
+  "#14b8a6", "#38bdf8", "#3b6fd6", "#1e3a8a", "#8659d6", "#4c1d95", "#ec4899", "#f9c0d0", "#8a8f98", "#20242c", "#f2f2f0"];
+// Un sélecteur de couleur libre : pastille (color picker natif), code
+// #RRGGBB modifiable, raccourcis. `key` : "home-1" | "home-2" | "away-1" | "away-2".
+function jerseyColorCtlHtml(key, hex, label) {
+  const v = (jerseyHex(hex) || "#3b6fd6").toLowerCase();
+  return `<div class="jc-ctl" data-jc="${key}"><p class="pz-label">${escapeHtml(label)}</p>` +
+    `<div class="jc-row"><label class="jc-swatch" style="background:${v}" title="Choisir une couleur"><input type="color" value="${v}" data-jc-input="${key}" aria-label="${escapeHtml(label)} : choisir une couleur"></label>` +
+    `<input type="text" class="jc-hex" value="${v.toUpperCase()}" maxlength="7" spellcheck="false" autocomplete="off" data-jc-hex="${key}" aria-label="${escapeHtml(label)} : code couleur"></div>` +
+    `<div class="jc-presets" role="group" aria-label="${escapeHtml(label)} : raccourcis">` + JERSEY_COLOR_PRESETS.map(c =>
+      `<button type="button" class="jc-preset${c === v ? " on" : ""}" data-jc-preset="${key}" data-color="${c}" style="background:${c}" title="${c.toUpperCase()}" aria-label="${c.toUpperCase()}"></button>`
+    ).join("") + `</div></div>`;
+}
+// Couleurs affichées par la carte d'un maillot : [couleur 1, couleur 2|null].
+function jerseyCardColors(side) {
+  const home = side === "home";
+  const color = jerseyHex(home ? teamA.jerseyColor : teamA.awayJerseyColor) || "#3b6fd6";
+  const pattern = home ? effectiveJerseyPattern(teamA) : effectiveAwayJerseyPattern(teamA);
+  if (!teamIsPremium(teamA) || pattern === JERSEY_PATTERNS[0]) return [color, null];
+  const pair = jerseyPair(home ? teamA.jerseyTwoTone : teamA.awayJerseyTwoTone) || [color, "#f2f2f0"];
+  return [pair[0], pair[1]];
+}
+// Aperçu immédiat (sans enregistrer) pendant qu'on fait glisser le sélecteur.
+function previewJerseyColor(key, hex) {
+  const [side, n] = key.split("-");
+  const card = document.querySelector(`#clubIdentityPanel [data-pz-jersey="${side}"]`);
+  if (!card) return;
+  const cols = jerseyCardColors(side);
+  cols[Number(n) - 1] = hex;
+  const home = side === "home";
+  const pattern = home ? effectiveJerseyPattern(teamA) : effectiveAwayJerseyPattern(teamA);
+  const stage = card.querySelector(".pz-jersey-stage");
+  if (stage) stage.innerHTML = jerseySvgHtml(teamA.jerseyShape, cols[0], 150, side, pattern, cols[1] ? [cols[0], cols[1]] : null, sponsorNameForSlot(teamA, "maillot"), null, teamA) +
+    `<p class="sub">Aperçu ${home ? "domicile" : "extérieur"}</p>`;
+  const ctl = card.querySelector(`[data-jc="${key}"]`);
+  if (ctl) {
+    const sw = ctl.querySelector(".jc-swatch"); if (sw) sw.style.background = hex;
+    const tx = ctl.querySelector(".jc-hex"); if (tx && document.activeElement !== tx) tx.value = hex.toUpperCase();
+  }
+}
+// Enregistre une couleur choisie : couleur 1 = couleur du maillot (et 1re
+// couleur du motif), couleur 2 = 2e couleur du motif.
+// 1er motif choisi alors que la paire n'a jamais été personnalisée (clé par
+// défaut) : elle part de la couleur du maillot + une couleur contrastée.
+function seedJerseyPairFromColor(side) {
+  const home = side === "home";
+  const cur = home ? teamA.jerseyTwoTone : teamA.awayJerseyTwoTone;
+  if (cur !== Object.keys(JERSEY_TWO_TONE_SETS)[0] || !teamIsPremium(teamA)) return;
+  const c1 = jerseyHex(home ? teamA.jerseyColor : teamA.awayJerseyColor) || "#3b6fd6";
+  const pairKey = `${c1}/${jerseyColorLuminance(c1) > 0.6 ? "#20242c" : "#f2f2f0"}`;
+  const r = home ? teamA.setJerseyTwoTone(pairKey) : teamA.setAwayJerseyTwoTone(pairKey);
+  if (r.ok) { if (home) syncJerseyTwoToneToServer(teamA.jerseyTwoTone); else syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone); }
+}
+function commitJerseyColor(key, hex) {
+  const v = jerseyHex(hex);
+  if (!v) return false;
+  const [side, n] = key.split("-");
+  const home = side === "home";
+  const cols = jerseyCardColors(side);
+  cols[Number(n) - 1] = v;
+  if (n === "1") {
+    const r = home ? teamA.setJersey(teamA.jerseyShape, v) : teamA.setAwayJerseyColor(v);
+    if (!r.ok) return false;
+    if (home) syncJerseyToServer(teamA.jerseyShape, teamA.jerseyColor); else syncAwayJerseyColorToServer(teamA.awayJerseyColor);
+  }
+  if (cols[1]) {
+    const pairKey = `${cols[0]}/${cols[1]}`;
+    const r = home ? teamA.setJerseyTwoTone(pairKey) : teamA.setAwayJerseyTwoTone(pairKey);
+    if (r.ok) { if (home) syncJerseyTwoToneToServer(teamA.jerseyTwoTone); else syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone); }
+  }
+  saveMyTeam();
+  renderClubIdentityPanel(); renderPersoCourt(); renderPersoArena();
+  return true;
+}
+document.addEventListener("input", (e) => {
+  const inp = e.target.closest && e.target.closest("#clubIdentityPanel [data-jc-input]");
+  if (inp) previewJerseyColor(inp.dataset.jcInput, inp.value);
+});
+document.addEventListener("change", (e) => {
+  const inp = e.target.closest && e.target.closest("#clubIdentityPanel [data-jc-input]");
+  if (inp) { commitJerseyColor(inp.dataset.jcInput, inp.value); return; }
+  const tx = e.target.closest && e.target.closest("#clubIdentityPanel [data-jc-hex]");
+  if (tx) {
+    let v = tx.value.trim();
+    if (/^[0-9a-f]{6}$/i.test(v)) v = "#" + v;
+    if (!commitJerseyColor(tx.dataset.jcHex, v)) { tx.classList.add("is-bad"); tx.setAttribute("aria-invalid", "true"); }
+  }
+});
+document.addEventListener("keydown", (e) => {
+  const tx = e.target.closest && e.target.closest("#clubIdentityPanel [data-jc-hex]");
+  if (tx && e.key === "Enter") { e.preventDefault(); tx.blur(); }
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("#clubIdentityPanel [data-jc-preset]");
+  if (b) commitJerseyColor(b.dataset.jcPreset, b.dataset.color);
+});
+
 function persoJerseyCardHtml(side) {
   const home = side === "home";
   const premium = teamIsPremium(teamA);
@@ -46072,20 +46218,18 @@ function persoJerseyCardHtml(side) {
   html += `<div class="pz-jersey-stage jersey-mockup">${jerseySvgHtml(teamA.jerseyShape, color, 150, side, pattern, twoTone, sponsorNameForSlot(teamA, "maillot"), null, teamA)}` +
     `<p class="sub">Aperçu ${home ? "domicile" : "extérieur"}</p></div>`;
   html += `<div class="pz-jersey-controls"><h4 class="pz-subtitle">${label}</h4>`;
-  html += `<p class="pz-label">Couleur</p><div class="jersey-color-picker">` + Object.keys(JERSEY_COLORS).map(key =>
-    `<button type="button" class="jersey-color-swatch${color === key ? " active" : ""}" ${attr}-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}" aria-pressed="${color === key}"></button>`
-  ).join("") + `</div>`;
+  // Couleurs libres (retour utilisateur 2026-10-04) : une couleur pour le
+  // maillot uni, deux pour un motif (Premium) — couleur 1 = couleur
+  // principale du club, couleur 2 = celle du motif. Voir jerseyColorCtlHtml.
+  const twoColors = premium && pattern !== JERSEY_PATTERNS[0];
+  const pair = jerseyPair(savedTwoTone) || [jerseyHex(color) || "#3b6fd6", "#f2f2f0"];
+  if (twoColors) {
+    html += jerseyColorCtlHtml(`${side}-1`, pair[0], "Couleur 1") + jerseyColorCtlHtml(`${side}-2`, pair[1], "Couleur 2");
+  } else {
+    html += jerseyColorCtlHtml(`${side}-1`, jerseyHex(color) || "#3b6fd6", "Couleur");
+  }
   if (premium) {
-    // Combinaison de 2 couleurs : utile pour tous les motifs sauf "uni"
-    // ("uni" ignore toujours `twoTone`, voir jerseySvgHtml).
-    if (pattern !== JERSEY_PATTERNS[0]) {
-      html += `<p class="pz-label">Couleurs du motif</p><div class="jersey-twotone-picker">` + Object.keys(JERSEY_TWO_TONE_SETS).map(key => {
-        const [c1, c2] = JERSEY_TWO_TONE_SETS[key];
-        return `<button type="button" class="jersey-twotone-swatch${savedTwoTone === key ? " active" : ""}" ` +
-          `${attr}-twotone="${key}" style="background:linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)" ` +
-          `title="${JERSEY_TWO_TONE_LABELS[key]}" aria-label="Couleurs ${JERSEY_TWO_TONE_LABELS[key]}" aria-pressed="${savedTwoTone === key}"></button>`;
-      }).join("") + `</div>`;
-    }
+    if (!twoColors) html += `<p class="pz-note">Choisissez un motif ci-dessous pour un maillot à deux couleurs.</p>`;
   } else {
     html += `<p class="pz-note">Uni pour un club gratuit. Les ${JERSEY_PATTERNS.length - 1} autres motifs et les combinaisons de 2 couleurs sont réservés au Premium.</p>`;
   }
@@ -46688,12 +46832,14 @@ document.addEventListener("click", (e) => {
   } else if (colorBtn) {
     teamA.setJersey(teamA.jerseyShape, colorBtn.dataset.jerseyColor);
   } else if (patternBtn) {
+    seedJerseyPairFromColor("home");
     teamA.setJerseyPattern(patternBtn.dataset.jerseyPattern);
   } else if (twoToneBtn) {
     teamA.setJerseyTwoTone(twoToneBtn.dataset.jerseyTwotone);
   } else if (awayColorBtn) {
     teamA.setAwayJerseyColor(awayColorBtn.dataset.awayJerseyColor);
   } else if (awayPatternBtn) {
+    seedJerseyPairFromColor("away");
     teamA.setAwayJerseyPattern(awayPatternBtn.dataset.awayJerseyPattern);
   } else if (awayTwoToneBtn) {
     teamA.setAwayJerseyTwoTone(awayTwoToneBtn.dataset.awayJerseyTwotone);
@@ -51656,7 +51802,7 @@ function renderSalleSection() {
 let salleCourtDraft = null;
 function courtPreviewSvg(style) {
   const w = style ? COURT_WOODS[style.wood] || COURT_WOODS.nuit : COURT_WOODS.nuit;
-  const paint = style && style.paint ? JERSEY_COLORS[style.paint] : null;
+  const paint = style && style.paint ? (jerseyHex(style.paint) || JERSEY_COLORS[style.paint]) : null;
   let planks = "";
   if (style && style.wood !== "nuit") for (let y = 25; y < 500; y += 25) planks += `<line x1="0" y1="${y}" x2="940" y2="${y}" stroke="${w.grain}" stroke-width="3"/>`;
   const keys = paint

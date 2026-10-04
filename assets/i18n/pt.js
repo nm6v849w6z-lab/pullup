@@ -6026,4 +6026,11 @@ window.HM_I18N_PT = {
   "Succès débloqué : Pilier du vestiaire": "Conquista desbloqueada: Pilar do vestiário",
   "Succès débloqué : Une vie au club": "Conquista desbloqueada: Uma vida no clube",
   "Succès débloqué : Noyau dur": "Conquista desbloqueada: Núcleo duro",
+  "Couleur 1": "Cor 1",
+  "Couleur 2": "Cor 2",
+  "Choisir une couleur": "Escolher uma cor",
+  "{0} : choisir une couleur": "{0}: escolher uma cor",
+  "{0} : code couleur": "{0}: código de cor",
+  "{0} : raccourcis": "{0}: atalhos",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Escolha um padrão abaixo para uma camisola de duas cores.",
 };

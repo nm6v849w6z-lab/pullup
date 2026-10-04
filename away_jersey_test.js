@@ -77,15 +77,16 @@ console.log("✅ Le maillot extérieur affiche bien SA PROPRE couleur stockée, 
 // qui remplace l'ancienne fenêtre « Identité du club » (#clubIdentityPanel
 // y vit désormais en permanence).
 clickTab("personnalisation");
-const awayColorBtns = doc.querySelectorAll("[data-away-jersey-color]");
-console.log("Boutons de couleur extérieure trouvés :", awayColorBtns.length);
-if (awayColorBtns.length !== 8) throw new Error(`❌ Le sélecteur de couleur extérieure devrait exposer les 8 couleurs de JERSEY_COLORS, obtenu ${awayColorBtns.length}.`);
+// Couleurs libres (2026-10-04) : sélecteur + raccourcis (data-jc-preset).
+const awayColorBtns = doc.querySelectorAll('[data-jc-preset="away-1"]');
+console.log("Raccourcis de couleur extérieure trouvés :", awayColorBtns.length);
+if (!doc.querySelector('[data-jc-input="away-1"]') || awayColorBtns.length < 8) throw new Error(`❌ Le maillot extérieur devrait avoir un sélecteur de couleur libre et des raccourcis, obtenu ${awayColorBtns.length}.`);
 if (doc.querySelectorAll("[data-away-jersey-shape]").length !== 0) {
   throw new Error("❌ Le maillot extérieur ne devrait PAS avoir de sélecteur de forme propre (forme partagée avec le domicile).");
 }
 
 const someAwayColorBtn = awayColorBtns[4];
-const someAwayColorKey = someAwayColorBtn.dataset.awayJerseyColor;
+const someAwayColorKey = someAwayColorBtn.dataset.color;
 someAwayColorBtn.click();
 console.log("teamA.awayJerseyColor après clic :", win.eval("teamA.awayJerseyColor"), "(attendu", someAwayColorKey, ")");
 if (win.eval("teamA.awayJerseyColor") !== someAwayColorKey) throw new Error("❌ Cliquer sur une couleur de maillot extérieur devrait mettre à jour teamA.awayJerseyColor.");
@@ -95,7 +96,7 @@ if (win.eval("teamA.jerseyColor") === someAwayColorKey && win.eval("teamA.jersey
 console.log("✅ Le choix de couleur de maillot extérieur est bien appliqué, sans toucher au maillot domicile.");
 
 const homeColorBeforeAwayClick = win.eval("teamA.jerseyColor");
-const anotherAwayColorBtn = [...doc.querySelectorAll("[data-away-jersey-color]")].find(b => b.dataset.awayJerseyColor !== someAwayColorKey);
+const anotherAwayColorBtn = [...doc.querySelectorAll('[data-jc-preset="away-1"]')].find(b => b.dataset.color !== someAwayColorKey);
 anotherAwayColorBtn.click();
 console.log("teamA.jerseyColor inchangé après un clic sur le sélecteur extérieur :", win.eval("teamA.jerseyColor") === homeColorBeforeAwayClick);
 if (win.eval("teamA.jerseyColor") !== homeColorBeforeAwayClick) throw new Error("❌ Modifier le maillot extérieur ne devrait jamais affecter teamA.jerseyColor (maillot domicile).");
@@ -124,18 +125,18 @@ if (win.eval("teamA.jerseyPattern") === "bandes" && win.eval("teamA.jerseyPatter
 }
 console.log("✅ Le choix de motif de maillot extérieur est bien appliqué (club payant).");
 
-const awayTwoToneKeys = Object.keys(win.eval("JERSEY_TWO_TONE_SETS"));
-const chosenAwayTwoTone = awayTwoToneKeys[5];
-const awayTwoToneBtn = doc.querySelector(`[data-away-jersey-twotone="${chosenAwayTwoTone}"]`);
-if (!awayTwoToneBtn) throw new Error("❌ (setup) Le sélecteur de combinaison extérieure devrait apparaître une fois le club payant avec un motif \"bandes\".");
-awayTwoToneBtn.click();
+// Deux couleurs libres (2026-10-04) : couleur 1 et couleur 2 saisies par code.
+const chosenAwayPair = ["#1e3a8a", "#f4a300"];
+const chosenAwayTwoTone = chosenAwayPair.join("/");
+if (!doc.querySelector('[data-jc-hex="away-2"]')) throw new Error("❌ (setup) La 2e couleur extérieure devrait apparaître une fois le club payant avec un motif \"bandes\".");
+["away-1", "away-2"].forEach((k, i) => { const el = doc.querySelector(`[data-jc-hex="${k}"]`); el.value = chosenAwayPair[i]; el.dispatchEvent(new win.Event("change", { bubbles: true })); });
 console.log("teamA.awayJerseyTwoTone après clic :", win.eval("teamA.awayJerseyTwoTone"));
 if (win.eval("teamA.awayJerseyTwoTone") !== chosenAwayTwoTone) throw new Error("❌ Cliquer sur une combinaison extérieure devrait mettre à jour teamA.awayJerseyTwoTone.");
 console.log("✅ Le choix de combinaison de couleurs extérieure est bien appliqué (club payant).");
 
 win.showTeamDetail(myIdx);
 const awaySvgAfter = [...doc.querySelectorAll("#teamDetailContent .jersey-mockup svg")][1];
-const expectedAwayColors = win.eval("JERSEY_TWO_TONE_SETS")[chosenAwayTwoTone];
+const expectedAwayColors = chosenAwayPair;
 const usesExactAwayColors = awaySvgAfter && expectedAwayColors.every(c => awaySvgAfter.outerHTML.includes(c));
 console.log("Le maillot extérieur de l'Aperçu utilise les 2 couleurs exactes de la combinaison choisie :", usesExactAwayColors);
 if (!usesExactAwayColors) throw new Error("❌ Le maillot extérieur affiché sur l'Aperçu devrait utiliser les 2 couleurs exactes de la combinaison extérieure choisie.");

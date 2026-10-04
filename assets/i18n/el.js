@@ -6026,4 +6026,11 @@ window.HM_I18N_EL = {
   "Succès débloqué : Pilier du vestiaire": "Επίτευγμα: Πυλώνας των αποδυτηρίων",
   "Succès débloqué : Une vie au club": "Επίτευγμα: Μια ζωή στον σύλλογο",
   "Succès débloqué : Noyau dur": "Επίτευγμα: Σκληρός πυρήνας",
+  "Couleur 1": "Χρώμα 1",
+  "Couleur 2": "Χρώμα 2",
+  "Choisir une couleur": "Επιλογή χρώματος",
+  "{0} : choisir une couleur": "{0}: επιλογή χρώματος",
+  "{0} : code couleur": "{0}: κωδικός χρώματος",
+  "{0} : raccourcis": "{0}: συντομεύσεις",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Επιλέξτε ένα μοτίβο παρακάτω για δίχρωμη φανέλα.",
 };

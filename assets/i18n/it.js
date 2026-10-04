@@ -6089,4 +6089,11 @@ window.HM_I18N_IT = {
   "Succès débloqué : Pilier du vestiaire": "Traguardo sbloccato: Pilastro dello spogliatoio",
   "Succès débloqué : Une vie au club": "Traguardo sbloccato: Una vita nel club",
   "Succès débloqué : Noyau dur": "Traguardo sbloccato: Zoccolo duro",
+  "Couleur 1": "Colore 1",
+  "Couleur 2": "Colore 2",
+  "Choisir une couleur": "Scegli un colore",
+  "{0} : choisir une couleur": "{0}: scegli un colore",
+  "{0} : code couleur": "{0}: codice colore",
+  "{0} : raccourcis": "{0}: scorciatoie",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Scegli un motivo qui sotto per una maglia a due colori.",
 };

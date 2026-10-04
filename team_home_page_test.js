@@ -198,8 +198,8 @@ if (!doc.querySelector('[data-jersey-shape="B"]').classList.contains("active")) 
 }
 console.log("✅ Le choix de forme de maillot est bien appliqué et reflété visuellement.");
 
-const someColorBtn = doc.querySelectorAll("[data-jersey-color]")[2];
-const someColorKey = someColorBtn.dataset.jerseyColor;
+const someColorBtn = doc.querySelectorAll('[data-jc-preset="home-1"]')[2];
+const someColorKey = someColorBtn.dataset.color;
 someColorBtn.click();
 console.log("teamA.jerseyColor après clic sur une couleur :", win.eval("teamA.jerseyColor"), "(attendu", someColorKey, ")");
 if (win.eval("teamA.jerseyColor") !== someColorKey) throw new Error("❌ Cliquer sur une couleur de maillot devrait mettre à jour teamA.jerseyColor.");
@@ -303,31 +303,28 @@ console.log("✅ Repasser en club gratuit masque bien le motif personnalisé (sa
 // jerseyPattern déjà "degrade" (conservé, juste ignoré au rendu).
 // ---------------------------------------------------------------------
 win.renderPersonnalisationSection();
-if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
+if (doc.querySelector("#clubIdentityPanel [data-jc-hex=\"home-2\"]")) {
   throw new Error("❌ Le sélecteur de combinaison de couleurs ne devrait PAS être proposé à un club gratuit.");
 }
 console.log("✅ Le sélecteur de combinaison de couleurs est bien masqué pour un club gratuit.");
 
 // Premium (2026-09-27) : plus d'interrupteur dans l'identité du club, bouton de l'onglet Premium.
 (win.eval("renderPremiumSection()"), doc.getElementById("premiumToggleBtn").click(), win.eval("renderPersonnalisationSection()"));
-const twoToneSets = win.eval("JERSEY_TWO_TONE_SETS");
-const twoToneKeys = Object.keys(twoToneSets);
-console.log("Combinaisons de couleurs disponibles :", twoToneKeys.length, "(mets plus de choix)");
-if (twoToneKeys.length < 8) throw new Error(`❌ JERSEY_TWO_TONE_SETS devrait exposer au moins 8 combinaisons, obtenu ${twoToneKeys.length}.`);
-const chosenTwoToneKey = twoToneKeys[2];
-const twoToneBtn = doc.querySelector(`[data-jersey-twotone="${chosenTwoToneKey}"]`);
-if (!twoToneBtn) throw new Error("❌ (setup) Le sélecteur de combinaison de couleurs devrait apparaître une fois le club payant avec un motif \"degrade\".");
-twoToneBtn.click();
-console.log("teamA.jerseyTwoTone après clic :", win.eval("teamA.jerseyTwoTone"));
-if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ Cliquer sur une combinaison de couleurs devrait mettre à jour teamA.jerseyTwoTone.");
-if (!doc.querySelector(`[data-jersey-twotone="${chosenTwoToneKey}"]`).classList.contains("active")) {
-  throw new Error("❌ Le bouton de combinaison actif devrait porter la classe \"active\" après le clic.");
+// Couleurs libres (2026-10-04) : 2 sélecteurs (couleur 1 / couleur 2), paire "c1/c2".
+const twoToneSets = { libre: ["#1e3a8a", "#f4a300"] };
+const chosenTwoToneKey = twoToneSets.libre.join("/");
+if (!doc.querySelector('[data-jc-hex="home-2"]')) throw new Error("❌ (setup) Le sélecteur de 2e couleur devrait apparaître une fois le club payant avec un motif \"degrade\".");
+["home-1", "home-2"].forEach((k, i) => { const el = doc.querySelector(`[data-jc-hex="${k}"]`); el.value = twoToneSets.libre[i]; el.dispatchEvent(new win.Event("change", { bubbles: true })); });
+console.log("teamA.jerseyTwoTone après saisie :", win.eval("teamA.jerseyTwoTone"));
+if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ Choisir 2 couleurs devrait mettre à jour teamA.jerseyTwoTone.");
+if (doc.querySelector('[data-jc-hex="home-2"]').value.toLowerCase() !== "#f4a300") {
+  throw new Error("❌ Le sélecteur de 2e couleur devrait refléter la couleur choisie.");
 }
 console.log("✅ Le choix de combinaison de couleurs est bien appliqué et reflété visuellement (club payant).");
 
 win.showTeamDetail(myIdx);
 const apercuTwoToneSvg = doc.querySelector("#teamDetailContent .jersey-mockup svg");
-const expectedColors = twoToneSets[chosenTwoToneKey];
+const expectedColors = twoToneSets.libre;
 const svgMarkup = apercuTwoToneSvg ? apercuTwoToneSvg.outerHTML : "";
 const usesExactColors = apercuTwoToneSvg && expectedColors.every(c => svgMarkup.includes(c));
 console.log("Le maillot de l'Aperçu utilise les 2 couleurs exactes de la combinaison choisie :", usesExactColors);
@@ -342,7 +339,7 @@ console.log("✅ La combinaison de 2 couleurs personnalisée apparaît bien sur 
 // d'effet visible tant que le club n'est pas repassé payant).
 win.eval("teamA.setPaying(false);");
 win.renderPersonnalisationSection();
-if (doc.querySelector("#clubIdentityPanel [data-jersey-twotone]")) {
+if (doc.querySelector("#clubIdentityPanel [data-jc-hex=\"home-2\"]")) {
   throw new Error("❌ Un club redevenu gratuit ne devrait plus proposer le sélecteur de combinaison de couleurs.");
 }
 if (win.eval("teamA.jerseyTwoTone") !== chosenTwoToneKey) throw new Error("❌ Repasser en club gratuit ne devrait pas effacer teamA.jerseyTwoTone.");

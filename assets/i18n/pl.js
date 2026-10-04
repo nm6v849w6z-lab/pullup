@@ -6026,4 +6026,11 @@ window.HM_I18N_PL = {
   "Succès débloqué : Pilier du vestiaire": "Osiągnięcie odblokowane: Filar szatni",
   "Succès débloqué : Une vie au club": "Osiągnięcie odblokowane: Całe życie w klubie",
   "Succès débloqué : Noyau dur": "Osiągnięcie odblokowane: Twardy trzon",
+  "Couleur 1": "Kolor 1",
+  "Couleur 2": "Kolor 2",
+  "Choisir une couleur": "Wybierz kolor",
+  "{0} : choisir une couleur": "{0}: wybierz kolor",
+  "{0} : code couleur": "{0}: kod koloru",
+  "{0} : raccourcis": "{0}: skróty",
+  "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wybierz wzór poniżej, aby mieć koszulkę w dwóch kolorach.",
 };

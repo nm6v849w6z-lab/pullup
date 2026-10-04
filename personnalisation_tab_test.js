@@ -67,7 +67,7 @@ function duplicateIds(doc) {
   // --- 4a) Club gratuit : gating.
   assert(!win.eval("teamA.isPaying"), "(setup) club gratuit");
   assert(!doc.getElementById("clubLogoFileInput") && /Premium/.test(idCard.textContent), "gratuit : pas de chargement de logo, mention Premium");
-  assert(!jerseys.querySelector("[data-jersey-pattern], [data-away-jersey-pattern], [data-jersey-twotone]"), "gratuit : pas de motif ni de combinaison");
+  assert(!jerseys.querySelector("[data-jersey-pattern], [data-away-jersey-pattern], [data-jc-hex=\"home-2\"]"), "gratuit : pas de motif ni de combinaison");
   assert(!doc.querySelector("#persoCourtHolder [data-court-wood]") && doc.querySelector('#persoCourtHolder [data-tab="premium"]'), "gratuit : parquet en aperçu seul + « Passer Premium »");
   assert(doc.querySelector('#persoStatus [data-tab="premium"]'), "gratuit : bouton « Passer Premium » en tête de page");
 
@@ -122,16 +122,16 @@ function duplicateIds(doc) {
 
   // Saisie en cours préservée par un clic sur un maillot (cartes séparées).
   doc.getElementById("salleArenaNameInput").value = "brouillon";
-  const homeColor = [...doc.querySelectorAll("[data-jersey-color]")].find(b => b.dataset.jerseyColor !== win.eval("teamA.jerseyColor"));
+  const homeColor = [...doc.querySelectorAll('[data-jc-preset="home-1"]')].find(b => b.dataset.color !== win.eval("teamA.jerseyColor"));
   homeColor.click();
-  assert(win.eval("teamA.jerseyColor") === homeColor.dataset.jerseyColor && called("/api/club/set-jersey"), "couleur domicile → /api/club/set-jersey");
+  assert(win.eval("teamA.jerseyColor") === homeColor.dataset.color && called("/api/club/set-jersey"), "couleur domicile → /api/club/set-jersey");
   assert(doc.getElementById("salleArenaNameInput").value === "brouillon", "un clic sur un maillot n'efface pas la saisie en cours");
   doc.querySelector('[data-jersey-shape="B"]').click();
   assert(win.eval("teamA.jerseyShape") === "B" && doc.querySelector('[data-jersey-shape="B"]').classList.contains("active"), "coupe B appliquée et reflétée");
-  const awayColor = [...doc.querySelectorAll("[data-away-jersey-color]")].find(b => b.dataset.awayJerseyColor !== win.eval("teamA.awayJerseyColor"));
+  const awayColor = [...doc.querySelectorAll('[data-jc-preset="away-1"]')].find(b => b.dataset.color !== win.eval("teamA.awayJerseyColor"));
   awayColor.click();
-  assert(win.eval("teamA.awayJerseyColor") === awayColor.dataset.awayJerseyColor && called("/api/club/set-away-jersey"), "couleur extérieure → /api/club/set-away-jersey");
-  assert(doc.querySelector('[data-pz-jersey="away"] .jersey-color-swatch.active').dataset.awayJerseyColor === awayColor.dataset.awayJerseyColor, "aperçu extérieur redessiné");
+  assert(win.eval("teamA.awayJerseyColor") === awayColor.dataset.color && called("/api/club/set-away-jersey"), "couleur extérieure → /api/club/set-away-jersey");
+  assert(doc.querySelector('[data-jc-hex="away-1"]').value.toLowerCase() === awayColor.dataset.color && doc.querySelector('[data-pz-jersey="away"] .pz-jersey-stage svg').outerHTML.includes(awayColor.dataset.color), "aperçu extérieur redessiné");
 
   // --- 4b) Premium.
   win.eval("renderPremiumSection()");
@@ -144,9 +144,9 @@ function duplicateIds(doc) {
   assert(/Premium/.test(doc.getElementById("persoStatus").textContent) && !doc.querySelector('#persoStatus [data-tab="premium"]'), "Premium : statut affiché, plus de bouton « Passer Premium »");
   doc.querySelector('[data-jersey-pattern="rayures"]').click();
   assert(win.eval("teamA.jerseyPattern") === "rayures" && called("/api/club/set-jersey-pattern"), "motif domicile → /api/club/set-jersey-pattern");
-  const tt = doc.querySelector("[data-jersey-twotone]");
-  assert(tt, "combinaison de 2 couleurs proposée pour un motif");
-  tt.click();
+  const tt = doc.querySelector('[data-jc-hex="home-2"]');
+  assert(tt, "2e couleur proposée pour un motif");
+  tt.value = "#0b7a4b"; tt.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert(called("/api/club/set-jersey-two-tone"), "combinaison domicile → /api/club/set-jersey-two-tone");
   assert(doc.querySelectorAll('[data-pz-jersey="home"] [data-jersey-pattern]').length === 34 && !doc.querySelector("[data-pattern-locked]"), "Premium : les 34 motifs cliquables, plus de cadenas");
   doc.querySelector('[data-jersey-pattern="nid_abeille"]').click();
@@ -158,7 +158,7 @@ function duplicateIds(doc) {
   doc.querySelector('[data-jersey-pattern="rayures"]').click();
   doc.querySelector('[data-away-jersey-pattern="bandes"]').click();
   assert(win.eval("teamA.awayJerseyPattern") === "bandes" && called("/api/club/set-away-jersey-pattern"), "motif extérieur → /api/club/set-away-jersey-pattern");
-  doc.querySelector("[data-away-jersey-twotone]").click();
+  { const el = doc.querySelector('[data-jc-hex="away-2"]'); el.value = "#f4a300"; el.dispatchEvent(new win.Event("change", { bubbles: true })); }
   assert(called("/api/club/set-away-jersey-two-tone"), "combinaison extérieure → /api/club/set-away-jersey-two-tone");
 
   const woods = doc.querySelectorAll("#persoCourtHolder [data-court-wood]");
