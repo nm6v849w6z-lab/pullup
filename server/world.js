@@ -715,6 +715,22 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
     refreshCountrySummaries(world, country, leagues, now);
     worldDirty = true;
   }
+  // Feuilles de match vidées par des départs antérieurs à l'archivage au
+  // départ (retour utilisateur 2026-10-04) : restauration unique pour le
+  // monde, quand toutes les ligues sont lues. Les ajouts sont d'abord
+  // sauvegardés à part (« departed-matchlog-restore ») pour pouvoir être
+  // relus ou annulés ; rien d'existant n'est modifié.
+  if (allRead && !world.departedMatchLogsRestoredAt) {
+    try {
+      const restored = Engine.restoreDepartedMatchLogs([...allLeagues.values()]);
+      if (restored.length) {
+        await store.saveWorldAuxRaw("departed-matchlog-restore", { at: now, additions: restored }, savePath);
+        events.push({ type: "departed-matchlog-restored", clubs: restored.length, rows: restored.reduce((n, r) => n + r.rows.length, 0) });
+      }
+      world.departedMatchLogsRestoredAt = now;
+      worldDirty = true;
+    } catch (e) { console.warn("[feuilles de match] restauration :", e.message); }
+  }
   // Managers inactifs : club rendu à l'IA (voir releaseInactiveManagers).
   const releasedBefore = events.length;
   releaseInactiveManagers(world, allLeagues, now, events);

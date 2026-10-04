@@ -5420,6 +5420,63 @@ function archiveDepartedMatchLog(team, p) {
   team.departedMatchLog = kept.concat(rows).slice(-DEPARTED_MATCH_LOG_MAX);
 }
 
+// Restauration des feuilles de match vidées par des départs survenus AVANT
+// l'archivage au départ (retour utilisateur 2026-10-04). Pour chaque club,
+// les joueurs du monde dont l'historique montre un transfert depuis ce club
+// sont relus (journal de saison et lignes mises de côté) ; une ligne n'est
+// rendue au club que si elle appartient à l'un de SES matchs : même
+// compétition, même journée et même score par quart-temps que les lignes
+// de ses joueurs actuels. Rien n'est inventé, rien n'est supprimé, aucun
+// doublon (joueur + compétition + journée). Renvoie les ajouts par club.
+function restoreDepartedMatchLogs(leagues) {
+  const all = [];
+  for (const lg of leagues) {
+    if (!lg) continue;
+    (lg.teams || []).forEach(t => (t && t.players || []).forEach(p => all.push(p)));
+    (lg.freeAgents || []).forEach(p => all.push(p));
+  }
+  const leftFrom = new Map();
+  all.forEach(p => (p.historyLog || []).forEach(ev => {
+    if (!ev || ev.type !== "transfer" || !ev.from) return;
+    if (!leftFrom.has(ev.from)) leftFrom.set(ev.from, new Set());
+    leftFrom.get(ev.from).add(p);
+  }));
+  const k = e => `${e.competition || "championship"}:${e.round}`;
+  const qs = e => (e && e.quarterScores && Array.isArray(e.quarterScores.home) && Array.isArray(e.quarterScores.away)) ? JSON.stringify(e.quarterScores) : null;
+  const out = [];
+  for (const lg of leagues) {
+    if (!lg) continue;
+    (lg.teams || []).forEach(t => {
+      const cands = t && leftFrom.get(t.name);
+      if (!cands) return;
+      const sig = new Map();
+      t.players.forEach(p => (p.matchLog || []).forEach(e => {
+        if (e && e.competition !== "friendly" && (!e.team || e.team === t.name) && qs(e)) sig.set(k(e), qs(e));
+      }));
+      (t.departedMatchLog || []).forEach(r => { if (qs(r)) sig.set(k(r), qs(r)); });
+      const have = new Set((t.departedMatchLog || []).map(r => `${r.playerId}|${k(r)}`));
+      const added = [];
+      cands.forEach(p => {
+        if (t.players.includes(p)) return;
+        [...(p.matchLog || []), ...(p.archivedMatchLog || [])].forEach(e => {
+          if (!e || e.competition === "friendly" || (e.team && e.team !== t.name)) return;
+          const s = sig.get(k(e));
+          if (!s || qs(e) !== s) return;
+          const key = `${p.id}|${k(e)}`;
+          if (have.has(key)) return;
+          have.add(key);
+          added.push({ ...e, team: t.name, playerId: p.id, name: p.name, position: p.position });
+        });
+      });
+      if (added.length) {
+        t.departedMatchLog = (Array.isArray(t.departedMatchLog) ? t.departedMatchLog : []).concat(added);
+        out.push({ leagueId: lg.leagueId || null, team: t.name, rows: added });
+      }
+    });
+  }
+  return out;
+}
+
 function recordPlayerEvent(p, ev) {
   if (!p || !ev) return;
   if (!Array.isArray(p.historyLog)) p.historyLog = [];
@@ -19534,7 +19591,7 @@ return {
   // consorts pour vérifier des accès directs (ex. round-trip de
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
-  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog,
+  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
