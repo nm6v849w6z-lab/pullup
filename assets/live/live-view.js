@@ -773,15 +773,26 @@ export function createLiveView(root, opts = {}) {
     // Tactiques des deux équipes sous la feuille de match (retour
     // utilisateur 2026-10-03) : attaque, défense, rythme.
     const tac = S.teams.map(x => x.tactics || null);
+    // Variante A (retour utilisateur 2026-10-04) : une carte par équipe,
+    // même rendu que la feuille de match (matchTacticsHtml du jeu).
+    const RLVL = { Lent: 1, Normal: 2, Rapide: 3 };
+    const card = (x, t) => {
+      const T = S.teams[t];
+      const offs = x && Array.isArray(x.offenses) && x.offenses.length ? x.offenses : (x && x.offense ? [x.offense] : []);
+      const lvl = RLVL[x && x.rhythm] || 0;
+      const speed = lvl ? `<span class="tac-speed" aria-hidden="true">${[1, 2, 3].map(i => `<i${i <= lvl ? ' class="on"' : ""}></i>`).join("")}</span>` : "";
+      const pill = (v, extra = "") => v ? `<span class="tac-pill">${extra}${esc(v)}</span>` : `<span class="tac-none">–</span>`;
+      // Couleur claire (maillot blanc…) : chiffre n° 1 en foncé.
+      const rgb = hexRgb(T.color || DEFAULT_COLORS[t]);
+      const inkDark = rgb && luminance(rgb) > 0.6 ? ";--tc-ink:#1a1f2b" : "";
+      return `<div class="tac-card" style="--tc:var(--c${t})${inkDark}"><div class="tac-head"><span class="tac-logo${T.logo ? " has-logo" : ""}">${T.logo || esc(T.short)}</span><span class="tac-name">${esc(T.name || T.short)}</span></div>` +
+        `<div class="tac-body"><div class="tac-sec"><small>Attaque</small>` +
+        (offs.length ? `<div class="tac-off">${offs.map((o, i) => `<div${i === 0 ? ' class="main"' : ""}><b>${i + 1}</b>${esc(o)}</div>`).join("")}</div>` : `<div class="tac-none">–</div>`) +
+        `</div><div class="tac-row"><div class="tac-sec"><small>Défense</small>${pill(x && x.defense)}</div>` +
+        `<div class="tac-sec"><small>Rythme</small>${pill(x && x.rhythm, speed)}</div></div></div></div>`;
+    };
     $("tactics").innerHTML = tac.some(Boolean)
-      ? `<div class="klbl">Tactiques</div><table class="tac"><thead><tr><th></th><th style="color:var(--c0)">${esc(S.teams[0].short)}</th><th style="color:var(--c1)">${esc(S.teams[1].short)}</th></tr></thead><tbody>` +
-        [["Attaque", "offense"], ["Défense", "defense"], ["Rythme", "rhythm"]].map(([l, k]) => {
-          // Attaque : les trois priorités (retour utilisateur 2026-10-03).
-          const cell = x => k === "offense" && x && Array.isArray(x.offenses) && x.offenses.length
-            ? x.offenses.map((o, i) => `${i + 1}. ${esc(o)}`).join("<br>") : esc((x && x[k]) || "–");
-          return `<tr><th>${l}</th><td>${cell(tac[0])}</td><td>${cell(tac[1])}</td></tr>`;
-        }).join("") +
-        `</tbody></table>`
+      ? `<div class="klbl">Tactiques</div><div class="tac-grid">${card(tac[0], 0)}${card(tac[1], 1)}</div>`
       : "";
     const dnp = T.players.filter(p => !played.includes(p));
     $("dnp").innerHTML = dnp.length ? `<span class="klbl">Pas encore entrés</span> ` + dnp.map(p => esc(p.name)).join(", ") + "." : "";
