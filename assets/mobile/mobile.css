@@ -79,7 +79,12 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   /* Barre du haut (retour utilisateur 2026-09-30) : recherche (et flèches
      de la fiche joueur) à gauche, logo Hoop Manager au centre, profil à
      droite ; plus de « Donnez vos ordres » (déjà dans la barre du bas). */
-  .topbar { position: relative; justify-content: space-between; }
+  /* Barre du haut fixée en défilant (retour utilisateur 2026-10-04 :
+     « la barre du haut n'est pas fixée sur téléphone ») : sticky comme sur
+     ordinateur, au-dessus du contenu, sous le menu tiroir (z-index 55+).
+     Les barres collées dessous (Ordres, Personnalisation, direct) suivent
+     sa hauteur réelle (--topbar-h, voir syncTopbarHeightVar). */
+  .topbar { position: sticky; top: 0; z-index: 30; justify-content: space-between; }
   .topbar-left { display: none; }
   .topbar-right { flex: 1 1 auto; justify-content: flex-start; }
   button.topbar-cta { display: none !important; }
@@ -99,17 +104,10 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
      fait doublon avec « ‹ Retour » de la barre du haut (retour utilisateur
      2026-10-02). */
   .lg-back[data-lg-back] { display: none !important; }
-  /* … et du coup la barre des onglets ne réserve plus elle-même la zone de
-     l'encoche dans son padding (règle prévue pour le topbar masqué,
-     moteurbasket3.html) : sur iPhone elle laissait un grand vide sous le logo
-     (retour utilisateur 2026-10-01, capture). Le topbar défile avec la page ;
-     la barre se colle JUSTE sous l'encoche, et un bandeau de même couleur
-     (::before) couvre l'encoche au-dessus d'elle — caché par le topbar
-     (z-index supérieur) tant que celui-ci est encore à l'écran. */
-  .topbar.topbar-hidden-on-page ~ .content-scroll .ordres-actionbar { top: env(safe-area-inset-top, 0px); padding-top: 12px; }
-  .topbar.topbar-hidden-on-page ~ .content-scroll .ordres-actionbar::before {
-    content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: env(safe-area-inset-top, 0px); background: var(--panel);
-  }
+  /* Barre du haut désormais fixée (voir .topbar plus haut) : la barre des
+     onglets des Ordres se colle juste en dessous ; l'encoche est déjà
+     couverte par la barre du haut. */
+  .topbar.topbar-hidden-on-page ~ .content-scroll .ordres-actionbar { top: var(--topbar-h, 64px); padding-top: 12px; }
   .m-search-toggle { order: -1; }
   /* Pages de détail : « ‹ Retour » compact à gauche, puis la recherche ;
      flèches du joueur à droite, à côté du profil (retour utilisateur
