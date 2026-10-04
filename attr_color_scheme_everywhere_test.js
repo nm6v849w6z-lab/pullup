@@ -198,7 +198,7 @@ const { server, savePath, baseUrl } = await startTestServer();
   const expected = expectedLiteralColor(testValue);
 
   // Ordres.
-  [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+  doc.getElementById("topbarOrdersBtn").click();
   const ordresChemValue = doc.getElementById("ordresChemistryValue");
   if (!ordresChemValue) throw new Error("❌ (setup) #ordresChemistryValue introuvable sur Ordres.");
   if (!colorMatches(ordresChemValue.style.color, expected)) {
@@ -250,7 +250,7 @@ const { server, savePath, baseUrl } = await startTestServer();
   // calculée indépendamment ici à partir de teamA.tacticalKnowledge/ordres
   // plutôt que patchée à une valeur fixe (plus simple de la lire depuis le
   // moteur, déjà exposé côté fenêtre, que de deviner les clés d'ordres).
-  [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+  doc.getElementById("topbarOrdersBtn").click();
   const tacticValueEl = doc.getElementById("ordresTacticalKnowledgeValue");
   if (!tacticValueEl) throw new Error("❌ (setup) #ordresTacticalKnowledgeValue introuvable sur Ordres.");
   const avg = dom.window.eval(`

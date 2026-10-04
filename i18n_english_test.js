@@ -59,11 +59,11 @@ async function waitFor(fn, ms = 30000) {
   await sleep(100);
   const tab = k => d2.querySelector(`.tab-btn[data-tab=${k}]`);
   assert(/Dashboard/.test(tab("club").textContent), "onglet Tableau de bord → Dashboard");
-  assert(/Squad/.test(tab("effectif").textContent) && /Orders/.test(tab("ordres").textContent), "onglets Effectif / Ordres traduits");
+  assert(/Squad/.test(tab("effectif").textContent) && !d2.querySelector(".sidebar-link[data-tab=ordres]"), "onglet Effectif traduit, plus d’onglet Ordres");
   assert(/Schedule/.test(tab("calendrier").textContent) && /League/.test(tab("ligue").textContent), "onglets Calendrier / Ligue traduits");
 
   // Rendu dynamique après coup (la page Ordres est reconstruite au clic).
-  tab("ordres").click();
+  d2.getElementById("topbarOrdersBtn").click();
   await sleep(150);
   const prep = d2.getElementById("prepSection");
   assert(prep && /Match orders/.test(prep.textContent), "page Ordres (rendue au clic) : « Match orders »");

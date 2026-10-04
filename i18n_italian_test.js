@@ -101,9 +101,9 @@ function loadDict(file, name) {
   await sleep(100);
   const tab = k => d2.querySelector(`.tab-btn[data-tab=${k}]`);
   assert(/Panoramica/.test(tab("club").textContent) && /Rosa/.test(tab("effectif").textContent), "onglets Panoramica / Rosa");
-  assert(/Ordini/.test(tab("ordres").textContent) && /Calendario/.test(tab("calendrier").textContent) && /Lega/.test(tab("ligue").textContent), "onglets Ordini / Calendario / Lega");
+  assert(!d2.querySelector(".sidebar-link[data-tab=ordres]") && /Calendario/.test(tab("calendrier").textContent) && /Lega/.test(tab("ligue").textContent), "onglets Ordini / Calendario / Lega");
 
-  tab("ordres").click();
+  d2.getElementById("topbarOrdersBtn").click();
   await sleep(150);
   const prep = d2.getElementById("prepSection");
   assert(prep && /Ordini partita/.test(prep.textContent) && !/Ordres de match/.test(prep.textContent), "page Ordres (rendue au clic) : « Ordini partita »");
@@ -115,7 +115,7 @@ function loadDict(file, name) {
   assert(!/Partir de|Réglages actuels|Enregistrer la tactique|Réglez tout/.test(tqBar), "plus de français dans l'éditeur de tactique (italien)");
   assert(/Elenco compatto/.test(prep.textContent), "effectif de la composition en italien");
   w2.eval("closeTacticEditor()");
-  tab("ordres").click();
+  d2.getElementById("topbarOrdersBtn").click();
   await sleep(100);
   const search = d2.querySelector("input[placeholder]");
   assert(search && /Cerca/.test(search.getAttribute("placeholder")), "placeholder traduit : " + (search && search.getAttribute("placeholder")));

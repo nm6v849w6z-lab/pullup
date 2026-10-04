@@ -99,7 +99,7 @@ console.log("✅ Une équipe neuve démarre en mode 'débutant', tous réglages 
 //    est masqué, et endgameManagement (indépendant du tier) est visible
 //    MÊME en mode débutant.
 // ---------------------------------------------------------------------
-[...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+doc.getElementById("topbarOrdersBtn").click();
 const prepVisible = !doc.getElementById("prepSection").classList.contains("hidden");
 if (!prepVisible) throw new Error("❌ (setup) l'onglet Ordres devrait s'ouvrir.");
 
@@ -301,7 +301,7 @@ console.log("✅ Tous les réglages de tactique confirmée (y compris watchAssig
 // refléter le tier "confirmée" rechargé (bloc déjà révélé, pas besoin de
 // re-cliquer), preuve que le rendu initial lit bien team.tacticalTier et pas
 // seulement les clics.
-[...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+doc2.getElementById("topbarOrdersBtn").click();
 const confirmeeBtn2 = [...doc2.querySelectorAll("#prepGrid .tier-toggle-btn")].find(b => b.textContent.trim() === "Confirmé");
 const confirmedBlock2 = doc2.getElementById("ordresConfirmedBlock");
 console.log("Après rechargement — bouton 'Confirmée' actif :", confirmeeBtn2.classList.contains("active"), "| bloc révélé :", !confirmedBlock2.classList.contains("hidden"));
@@ -321,7 +321,7 @@ win2.close();
 const dom3 = await openGame(html, baseUrl);
 const doc3 = dom3.window.document;
 const win3 = dom3.window;
-[...doc3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+doc3.getElementById("topbarOrdersBtn").click();
 
 const futureRound = win3.eval(`
   (function() {

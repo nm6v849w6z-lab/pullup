@@ -62,7 +62,7 @@ function checkAllSelectsOnScreen(label) {
 let totalChecked = 0;
 totalChecked += checkAllSelectsOnScreen("Écran initial");
 
-[...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres")?.click();
+doc.getElementById("topbarOrdersBtn").click();
 totalChecked += checkAllSelectsOnScreen("Ordres");
 
 [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement")?.click();

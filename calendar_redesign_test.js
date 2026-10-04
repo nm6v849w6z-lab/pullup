@@ -77,7 +77,7 @@ if (doc.querySelectorAll("#calendrierContent .calendar-order-btn").length !== 18
   throw new Error("❌ La carte ne doit pas ajouter de .calendar-order-btn : il en faut exactement un par journée à venir.");
 }
 nextBtn.click();
-const onOrdres = !doc.getElementById("prepSection").classList.contains("hidden") && doc.getElementById("tabOrdres").classList.contains("active");
+const onOrdres = !doc.getElementById("prepSection").classList.contains("hidden") && win.eval("hmActiveTabKey") === "ordres";
 if (!onOrdres) throw new Error("❌ Le bouton de la carte Prochain match devrait ouvrir l'onglet Ordres.");
 console.log("✅ La carte Prochain match vise la bonne journée et ouvre l'onglet Ordres.");
 

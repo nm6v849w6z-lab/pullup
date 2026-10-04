@@ -166,6 +166,7 @@ async function waitFor(fn, label, tries = 60) {
     // Navigation par identifiant unique de match (retour utilisateur
     // 2026-10-04) : après les ordres de LP, « Ordres » d'une journée de
     // championnat ouvre bien les ordres du CLUB pour CETTE journée.
+    check(!d.querySelector(".sidebar-link[data-tab='ordres']") && !d.getElementById("tabOrdres"), "plus d'onglet « Ordres » dans la barre latérale");
     w.eval("openOrdersTarget(orderTargetFor('championship', 1))");
     check(w.eval("tqEdit") === null && w.eval("selectedOrdresRound") === 1 && w.eval("selectedOrdresCompetition") === "championship", "championnat J2 après les ordres de LP : ordres du club, journée 2");
     const lpNext = w.eval("(() => { const n = lpMyNextMatch(); return { id: n.lp.id, r: n.round.index }; })()");
@@ -177,8 +178,8 @@ async function waitFor(fn, label, tries = 60) {
     const calBtns = (() => { w.eval("TAB_HANDLERS.calendrier()"); return [...d.querySelectorAll("#calendrierContent [data-order-target]")].map(b => b.dataset.orderTarget); })();
     check(calBtns.length > 0 && new Set(calBtns).size === calBtns.length - calBtns.filter((x, i) => calBtns.indexOf(x) !== i).length && calBtns.some(t => t.startsWith("championship:")) && calBtns.some(t => t.startsWith("lp:")), "calendrier : chaque bouton d'ordres porte l'identifiant de son match (" + calBtns.slice(0, 4).join(", ") + "…)");
     w.eval("TAB_HANDLERS.calendrier()");
-    [...d.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
-    check(w.eval("tqEdit && tqEdit.kind") === "lp" && d.querySelector(".tab-btn.active").dataset.tab === "ordres", "l'onglet Ordres ouvre le prochain match, ici de ligue privée");
+    d.getElementById("topbarOrdersBtn").click();
+    check(w.eval("tqEdit && tqEdit.kind") === "lp" && w.eval("hmActiveTabKey") === "ordres", "le bouton de la barre du haut ouvre le prochain match, ici de ligue privée");
     // Journée lancée, diffusion en cours : « Voir le direct » en haut et sur
     // l'accueil (retour utilisateur 2026-10-02 : « il est 21h ça n'a
     // toujours pas commencé »).

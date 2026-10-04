@@ -8101,7 +8101,10 @@
     <div class="sidebar-section sidebar-group" data-sidebar-group="equipe">
       <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Équipe</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
-      <button class="tab-btn sidebar-link active" data-tab="ordres" id="tabOrdres"><span class="sidebar-label">Ordres</span></button>
+      <!-- Plus d'onglet « Ordres » (retour utilisateur 2026-10-04 : doublon
+           source de bugs) : prochain match = « Donnez / Modifier vos
+           ordres » de la barre du haut ; un match précis = son bouton dans
+           le Calendrier (voir openOrdersTarget). -->
       <button class="tab-btn sidebar-link" data-tab="tactiques"><span class="sidebar-label">Tactiques</span></button>
       <button class="tab-btn sidebar-link" data-tab="entrainement"><span class="sidebar-label">Entraînement</span></button>
       <button class="tab-btn sidebar-link" data-tab="medical"><span class="sidebar-label">Centre médical</span></button>
@@ -9227,7 +9230,7 @@
         <h3>Premiers pas</h3>
         <button type="button" class="tour-launch-btn" id="tourLaunchBtn">Lancer le tutoriel d'accueil (aperçu)</button>
         <p class="training-intro">Vous dirigez un club de basket en temps réel : les matchs se jouent tout seuls à l'heure prévue, que vous soyez connecté ou non. Une saison dure <b>11 semaines</b> : 9 semaines de championnat, deux journées par semaine le <b>mardi</b> et le <b>samedi à 20:00</b>, puis 2 semaines de <b>play-offs</b> le mardi, le jeudi et le samedi à 20:00 ; en Coupe, un tour chaque <b>jeudi à 20:00</b>. Chaque lundi à 6h (heure de Paris) a lieu la mise à jour de la semaine : salaires et recettes, et entraînement des fondamentaux. Celle qui suit la finale des play-offs clôt la saison (les joueurs prennent un an, les joueurs en fin de contrat partent libres, les retraités s'en vont, la forme repart à 100) et ouvre une <b>semaine d'intersaison</b> : marché ouvert et amicaux possibles, puis la saison suivante démarre toute seule, avec votre effectif. Entre deux matchs, votre travail : préparer les <b>Ordres</b>, régler l'<b>Entraînement</b>, gérer l'<b>Effectif</b> (marché, jeunes, staff) et les finances du club.</p>
-        <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans l'onglet Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
+        <p class="training-intro" style="margin-top:10px;">La routine conseillée avant chaque match : vérifier la forme des joueurs (<button type="button" class="gd-link" data-guide-goto="forme">Forme et blessures</button>), composer le cinq et la tactique dans la page Ordres, puis valider. Vous pouvez aussi préparer plusieurs journées à l'avance (voir <button type="button" class="gd-link" data-guide-goto="ordres">Ordres et tactiques</button>).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Pendant votre absence</b> : à votre retour, un récapitulatif résume ce qui s'est passé (victoires et défaites, finances de la semaine, progression des joueurs, points à savoir). Le <b>Tableau de bord</b> montre ensuite le prochain match, les actions en attente de la semaine et le pouls du club (humeur des supporters, alchimie).</p>
         <p class="training-intro" style="margin-top:10px;"><b>Longue absence</b> : sans aucune visite pendant 45 jours, votre club est confié à l'IA (effectif, nom et palmarès conservés). Reconnectez-vous à votre compte pour le récupérer, s'il n'a pas été repris entre-temps par un autre manager ; sinon un nouveau club vous est attribué.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Sur téléphone</b> : le site s'adapte automatiquement à l'écran (barre d'onglets en bas, menu en tiroir) et peut être ajouté à l'écran d'accueil comme une application.</p>
@@ -9303,8 +9306,8 @@
 
       <div class="guide-entry" data-guide-id="ordres" data-guide-group="Préparer les matchs">
         <h3>Ordres et tactiques</h3>
-        <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans l'onglet Ordres. Tout s'enregistre automatiquement à chaque changement, et le bouton "Enregistrer", toujours visible en bas de la page, confirme l'enregistrement ("Annuler" revient aux ordres tels qu'à l'ouverture de la page). Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
-        <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de l'onglet Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
+        <p class="training-intro">Avant chaque match, réglez trois choses pour votre équipe dans la page Ordres (bouton « Donnez vos ordres » en haut, ou le bouton du match dans le Calendrier). Tout s'enregistre automatiquement à chaque changement, et le bouton "Enregistrer", toujours visible en bas de la page, confirme l'enregistrement ("Annuler" revient aux ordres tels qu'à l'ouverture de la page). Dans le Calendrier, un match aux ordres validés affiche "Modifier vos ordres".</p>
+        <p class="training-intro" style="margin-top:10px;"><b>Préparer à l'avance</b> : le sélecteur de journée en haut de la page Ordres permet de régler n'importe quel match à venir, championnat ou Coupe. Quand cette journée devient le prochain match, vos ordres préparés deviennent automatiquement vos ordres actuels, et restent modifiables jusqu'au coup d'envoi. La composition est verrouillée <b>5 minutes avant le coup d'envoi</b>, au moment où commence l'émission d'avant-match.</p>
         <p class="training-intro" style="margin-top:10px;"><b>3 priorités offensives</b> : choisissez exactement 3 styles parmi les 10 proposés (Équilibrée, Jeu intérieur, Jeu extérieur, Jeu en pénétration, Pick &amp; Roll, Post-up, Isolation, Jeu en mouvement, Transition rapide, Tirs rapides). Les 3 choix se combinent à parts égales pour déterminer la répartition des tirs entre l'intérieur, la mi-distance et le 3 points, ainsi que le rythme, le taux de passes décisives et le risque de perte de balle. Un jeu intérieur ou en Post-up privilégie les tirs proches du panier ; un jeu extérieur ou des Tirs rapides misent sur le 3 points ; la Transition rapide et le Jeu en pénétration augmentent le rythme, au prix de plus de pertes de balle.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Défense</b> : un seul choix parmi 5 systèmes. Homme à homme est le réglage neutre. Zone press met la pression sur les extérieurs adverses, au prix d'une fatigue importante. Box and one colle un défenseur au meilleur joueur adverse : redoutable face à une vraie star, coûteux face à un cinq homogène (les quatre autres défendent en zone). Zone extérieure et Zone intérieure renforcent un secteur du terrain au détriment de l'autre.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Rythme</b> : Lent, Normal ou Rapide. Plus le rythme est élevé, plus il y a de possessions (donc d'occasions de marquer, des deux côtés), mais aussi plus de fatigue et de pertes de balle.</p>
@@ -44264,7 +44267,7 @@ function dashBuildTasks(data) {
       tone: "warn",
       cta: nm.prematchShow
         ? { label: "Regarder", href: "/emission-avant-match", style: "primary" }
-        : { label: "Voir", href: "/ordres", style: "ghost" },
+        : { label: "Voir", orderTarget: nm.orderTarget, href: "/ordres", style: "ghost" },
     });
   } else if (nm && !data.ordersGiven && !nm.isLive) {
     tasks.push({
@@ -44274,7 +44277,7 @@ function dashBuildTasks(data) {
       text: "Tactique, cinq de départ et rotations.",
       badge: nm.deadlineLabel ?? "Avant le match",
       tone: "info",
-      cta: { label: "Ouvrir", href: "/ordres", style: "ghost" },
+      cta: { label: "Ouvrir", orderTarget: nm.orderTarget, href: "/ordres", style: "ghost" },
     });
   }
   if (Array.isArray(data.sponsorOffers) && data.sponsorOffers.length) {
@@ -44544,7 +44547,7 @@ function dashRenderTasks(data) {
         <span class="hm-task__icon">${dashTaskIcon(t.icon)}</span>
         <div class="hm-task__body"><div class="hm-task__title">${dashEsc(t.title)}</div><div class="hm-task__text">${dashEsc(t.text)}</div></div>
         <span class="hm-badge hm-badge--${t.tone}">${dashEsc(t.badge)}</span>
-        <button type="button" class="hm-btn hm-btn--${t.cta.style}" data-dash-href="${dashEsc(t.cta.href)}">${dashEsc(t.cta.label)}</button>
+        <button type="button" class="hm-btn hm-btn--${t.cta.style}"${t.cta.orderTarget ? orderTargetAttr(t.cta.orderTarget) : ` data-dash-href="${dashEsc(t.cta.href)}"`}>${dashEsc(t.cta.label)}</button>
       </div>`).join("")
     : `<p class="hm-empty">Tout est à jour. Profitez-en pour regarder le marché.</p>`;
   return `<section class="hm-card hm-tasks">
@@ -56196,7 +56199,10 @@ const TAB_HANDLERS = {
   medical: () => { renderMedicalSection(); showPage("medicalSection"); setActiveTab("medical"); },
   academie: () => { renderAcademieSection(); showPage("academieSection"); setActiveTab("academie"); },
   humeur: () => { renderHumeurSection(); showPage("humeurSection"); setActiveTab("humeur"); },
-  ordres: () => { openNextMatchOrders(); },
+  // Plus d'onglet Ordres : adresse /ordres, barre du bas du téléphone et
+  // tutoriel ouvrent les ordres du prochain match, exactement comme le
+  // bouton de la barre du haut.
+  ordres: () => { openTopbarOrders(); },
   tactiques: () => { tqEdit = null; const ps = document.getElementById("prepSection"); if (ps) ps.classList.remove("tq-editing"); renderTactiquesSection(); showPage("tactiquesSection"); setActiveTab("tactiques"); },
   effectif: () => { renderEffectifSection(); showPage("effectifSection"); setActiveTab("effectif"); },
   marche: () => { refreshTransferMarket(); renderMarcheSection(); showPage("marcheSection"); setActiveTab("marche"); },
@@ -56375,7 +56381,7 @@ const TOUR_STEPS = [
   { kind: "spotlight", topic: "Compétitions", page: "coupe", target: "#coupeContent .cp-path",
     title: "La Coupe",
     text: "Un tableau à élimination directe, un tour chaque jeudi. Cette carte résume votre parcours ; à gauche, les matchs de chaque tour, et en bas l'arbre de la phase finale à partir des 8es.",
-    tip: "Les ordres de Coupe se préparent comme ceux du championnat, depuis le Calendrier ou le sélecteur de journée de l'onglet Ordres.",
+    tip: "Les ordres de Coupe se préparent comme ceux du championnat, depuis le Calendrier ou le sélecteur de journée de la page Ordres.",
   },
   { kind: "spotlight", topic: "Compétitions", page: "ligue", target: ".lg-race",
     title: "La ligue",
@@ -56942,7 +56948,11 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // Barre du haut : raccourci "Donnez vos ordres" pour le PROCHAIN match
 // uniquement (retour utilisateur — voir le commentaire HTML sur .topbar) ;
 // réutilise exactement la même logique que l'onglet Ordres (goToOrdresTab).
-document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
+// Ordres du PROCHAIN match : bouton « Donnez / Modifier vos ordres » de la
+// barre du haut (et son équivalent de la barre du bas sur téléphone, où ce
+// bouton est masqué). Seul point d'entrée « prochain match » depuis la
+// suppression de l'onglet Ordres (retour utilisateur 2026-10-04).
+function openTopbarOrders() {
   if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
   // Match de ligue privée en direct : le bouton ouvre le direct.
   const n = nextNonOfficialMatch();
@@ -56952,7 +56962,8 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", () => {
     return;
   }
   openNextMatchOrders();
-});
+}
+document.getElementById("topbarOrdersBtn").addEventListener("click", openTopbarOrders);
 
 // Recherche globale du topbar (voir renderTopbarSearchResults) : filtre à
 // chaque frappe, ré-affiche au retour du focus si un texte est déjà saisi,

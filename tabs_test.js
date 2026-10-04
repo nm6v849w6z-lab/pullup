@@ -17,6 +17,8 @@ let doc = dom.window.document;
 let win = dom.window;
 
 function clickTab(key) {
+  // Plus d'onglet Ordres (2026-10-04) : bouton « Donnez vos ordres » de la barre du haut.
+  if (key === "ordres") { doc.getElementById("topbarOrdersBtn").click(); return; }
   const btn = [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key);
   if (!btn) throw new Error(`❌ Onglet introuvable : ${key}`);
   btn.click();
@@ -95,7 +97,7 @@ const orderBtn = doc.querySelector(".calendar-order-btn");
 if (!orderBtn) throw new Error("❌ Le calendrier devrait proposer un bouton pour donner ses ordres pour le prochain match.");
 orderBtn.click();
 const jumpedToOrdres = !doc.getElementById("prepSection").classList.contains("hidden") &&
-  [...doc.querySelectorAll(".tab-btn")].find(b => b.classList.contains("active")).dataset.tab === "ordres";
+  win.eval("hmActiveTabKey") === "ordres";
 console.log(`\n${jumpedToOrdres ? "✅" : "❌"} Le bouton du calendrier amène directement à l'onglet Ordres.`);
 if (!jumpedToOrdres) throw new Error("❌ Le clic sur le bouton du calendrier devrait amener directement à l'onglet Ordres.");
 

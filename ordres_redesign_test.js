@@ -23,7 +23,7 @@ const { server, baseUrl } = await startTestServer();
 const dom = await openGame(html, baseUrl);
 const doc = dom.window.document;
 const win = dom.window;
-const openOrdres = () => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+const openOrdres = () => doc.getElementById("topbarOrdersBtn").click();
 openOrdres();
 
 // 1) Barre d'action. Vue « composition » (retour utilisateur 2026-09-30) :

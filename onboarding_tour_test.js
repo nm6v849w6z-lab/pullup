@@ -138,7 +138,7 @@ console.log("✅ Le tutoriel se ferme bien sur le vrai tableau de bord.");
 // --- Après le tutoriel, le bloc tactique confirmée doit être revenu à son
 // vrai état (débutant par défaut pour une carrière neuve) : la révélation
 // pendant le tutoriel était cosmétique, jamais une vraie mutation. ---
-[...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+doc.getElementById("topbarOrdersBtn").click();
 const confirmedBlockAfter = doc.getElementById("ordresConfirmedBlock");
 const realTier = win.eval("teamA.tacticalTier");
 console.log("Niveau tactique réel après le tutoriel :", realTier);

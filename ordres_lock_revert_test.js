@@ -25,7 +25,7 @@ const dom = await openGame(html, baseUrl, (w) => patchDateNow(w, () => clock.now
 patchDateNow(dom.window, () => clock.now);
 await flush(dom);
 const doc = dom.window.document, win = dom.window;
-const openOrdres = () => [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
+const openOrdres = () => doc.getElementById("topbarOrdersBtn").click();
 const $ = id => doc.getElementById(id);
 const statusText = () => $("ordresStatus").textContent.trim();
 const savedPlans = () => JSON.parse(fs.readFileSync(multiSavePath, "utf-8")).league.teams[0].plannedTactics || {};

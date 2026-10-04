@@ -127,7 +127,7 @@ writeRawSave(savePath, saved);
 
 const dom2 = await openGame(html, baseUrl);
 const doc2 = dom2.window.document;
-function clickTab(key) { [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
+function clickTab(key) { if (key === "ordres") { doc2.getElementById("topbarOrdersBtn").click(); return; } [...doc2.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
 
 clickTab("ordres");
 const warnText = doc2.getElementById("lockWarning").textContent;

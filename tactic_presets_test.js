@@ -133,7 +133,7 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
 
   // Dans les Ordres : 1 clic met la tactique en place.
   const other = zone;
-  tab("ordres").click();
+  doc.getElementById("topbarOrdersBtn").click();
   const bar = doc.getElementById("ordresPresetsBar");
   const chip = bar.querySelector('[data-ordres-preset="0"]');
   assert(chip && chip.textContent === "Mur", "la tactique apparaît dans les Ordres");

@@ -50,7 +50,7 @@ if (calendarOrderBtns.length !== 18) throw new Error(`❌ Le bouton 📋 Ordres 
 // doit quand même rejoindre l'écran de préparation / onglet Ordres.
 calendarOrderBtns[calendarOrderBtns.length - 1].click();
 const prepVisibleAfterFarClick = !doc1.getElementById("prepSection").classList.contains("hidden");
-const ordresTabActiveAfterFarClick = doc1.getElementById("tabOrdres").classList.contains("active");
+const ordresTabActiveAfterFarClick = dom1.window.eval("hmActiveTabKey") === "ordres";
 console.log(`${prepVisibleAfterFarClick && ordresTabActiveAfterFarClick ? "✅" : "❌"} Le bouton 📋 Ordres d'une journée lointaine (pas le prochain match) rejoint bien l'onglet Ordres.`);
 if (!prepVisibleAfterFarClick || !ordresTabActiveAfterFarClick) {
   throw new Error("❌ Le bouton 📋 Ordres du calendrier, sur une journée qui n'est pas le prochain match, devrait quand même rejoindre l'onglet Ordres (réglages persistants, applicables à tous les matchs à venir).");
