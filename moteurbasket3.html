@@ -34487,7 +34487,7 @@ function teamCalendarNextCardHtml(teamIdx, row) {
     ? `<div class="cal-next-count">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div><div class="cal-next-count-sub">avant le coup d'envoi</div>`
     : "";
   const action = row.vsMe
-    ? `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">Préparer ce match</button>`
+    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor(row.orderCompetition, row.orderRound))}>Préparer ce match</button>`
     : "";
   return `<div class="cal-card cal-next"><div class="cal-card-kicker">${escapeHtml(kicker)}</div>` +
     `<div class="cal-next-teams">${side(homeIdx)}<div class="cal-next-vs">VS</div>${side(awayIdx)}</div>` +
@@ -44515,8 +44515,8 @@ function dashRenderNextMatch(data) {
         ? m.lpLiveBtn ? m.lpLiveBtn : `${(m.lpLocked
           // Verrou à T − 5 min (retour utilisateur 2026-10-03 : « le match est
           // dans moins de 5 min et les ordres ne sont pas bloqués »).
-          ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">Ordres verrouillés</button>`
-          : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-lp-orders="${dashEsc(m.lpId)}">${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`)}
+          ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
+          : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display"${orderTargetAttr(m.orderTarget)}>${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`)}
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
@@ -44525,10 +44525,10 @@ function dashRenderNextMatch(data) {
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-tab="live">Voir le live</button>`
         : m.prematchShow
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">Émission d'avant-match</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">Ordres verrouillés</button>`
+      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
         : m.lineupLocked
-        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/ordres">Ordres verrouillés</button>`
-        : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/ordres">Préparer le match</button>
+        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
+        : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display"${orderTargetAttr(m.orderTarget)}>Préparer le match</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
   </section>`;
@@ -45168,6 +45168,7 @@ function dashboardDataFromGameState() {
       : `Journée ${currentMatch.round + 1}/${league.totalRounds}`;
     nextMatch = {
       competition,
+      orderTarget: orderTargetFor(currentMatch.competition === "cup" ? "cup" : "championship", currentMatch.round),
       round: currentMatch.round + 1,
       totalRounds: league.totalRounds,
       roundLabel,
@@ -45203,6 +45204,7 @@ function dashboardDataFromGameState() {
     nextMatch = {
       privateLeague: true,
       lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders, lpLocked: lpOrdersLocked(lpNext.lp),
+      orderTarget: orderTargetFor("lp", lpNext.lp.id, lpNext.round.index),
       lpLiveBtn: lpNext.live ? lpLiveBtnHtml(lpNext.lp, lpNext.round.index, lpNext.match, "hm-btn hm-btn--primary hm-btn--display") : null,
       competition: "Ligue privée",
       round: lpNext.round.index + 1,
@@ -48632,14 +48634,14 @@ function calendarNextMatchCardHtml(row) {
     // Ligue privée et amical : le bouton ouvre leurs ordres, comme pour un
     // match officiel (retour utilisateur 2026-10-02).
     : row.competition === "lp" && row.lpId
-    ? `<button type="button" class="cal-next-btn" data-lp-orders="${escapeHtml(row.lpId)}">${row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
+    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("lp", row.lpId, row.lpRound))}>${row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : row.competition === "fr" && row.frId && !row.frPending
-    ? `<button type="button" class="cal-next-btn" data-open-fr-orders="${escapeHtml(row.frId)}">${row.frOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
+    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("fr", row.frId))}>${row.frOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "fr"
     ? `<button type="button" class="cal-next-btn" data-tab="amicaux">Voir les amicaux</button>`
-    : `<button type="button" class="cal-next-btn" data-tab="ordres" data-round="${row.orderRound}" data-competition="${row.orderCompetition}">${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
+    : `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor(row.orderCompetition, row.orderRound))}>${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
       // "Ordres non définis pour ce match" retiré (retour utilisateur
       // 2026-09-26) : le bouton "Donner les ordres" le dit déjà.
       (row.alreadyOrdered ? `<div class="cal-next-orders is-ok">Ordres enregistrés pour ce match</div>` : "");
@@ -48804,7 +48806,7 @@ function renderCalendrierSection() {
           ? ""
           : `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`)
       : isUpcoming
-        ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${r}" data-competition="championship">${CALENDAR_ORDERS_ICON}${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
+        ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("championship", r))}>${CALENDAR_ORDERS_ICON}${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
         : "";
     rows.push({
       competition: "champ", label: `Journée ${r + 1}`, shortLabel: `J${r + 1}`, opponent: oppName, opponentIdx: oppIdx,
@@ -48870,7 +48872,7 @@ function renderCalendrierSection() {
       const actionCell = isCupLive
         ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`
         : !m.resolved
-          ? `<button class="calendar-order-btn${cupAlreadyPlanned ? " calendar-order-btn-validated" : ""}" data-tab="ordres" data-round="${round.index}" data-competition="cup">${CALENDAR_ORDERS_ICON}${cupAlreadyPlanned ? "Modifier vos ordres" : "Ordres"}</button>`
+          ? `<button class="calendar-order-btn${cupAlreadyPlanned ? " calendar-order-btn-validated" : ""}" ${orderTargetAttr(orderTargetFor("cup", round.index))}>${CALENDAR_ORDERS_ICON}${cupAlreadyPlanned ? "Modifier vos ordres" : "Ordres"}</button>`
           : "";
       rows.push({
         competition: "cup", label, opponent: oppName, opponentIdx: oppIdxCup, location: isHomeCup ? "Domicile" : "Extérieur",
@@ -48950,12 +48952,12 @@ function renderCalendrierSection() {
         scoreText, boxscore: null,
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
         cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : (typeof round.dueAt === "number" && Date.now() >= round.dueAt - 5 * 60 * 1000)
-          ? `<button type="button" class="calendar-order-btn calendar-lp-btn" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}Ordres verrouillés</button>`
-          : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}" data-lp-orders="${lp.id}">${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
+          ? `<button type="button" class="calendar-order-btn calendar-lp-btn"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}Ordres verrouillés</button>`
+          : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
         isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
-        lpId: lp.id, lpOrdered: !!lp.myOrders,
+        lpId: lp.id, lpRound: round.index, lpOrdered: !!lp.myOrders,
       });
     });
   });
@@ -52696,6 +52698,65 @@ function frOrdersSources(f) {
   tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
   return out;
 }
+// ---------------------------------------------------------------------
+// Navigation vers les ordres d'UN match précis (retour utilisateur
+// 2026-10-04 : « Modifier vos ordres » de la J12 de championnat ouvrait les
+// ordres de la ligue privée). Chaque bouton « Donner / Modifier vos ordres »
+// porte l'identifiant unique de SON match (data-order-target) :
+//   championship:<journée>  championnat ET play-offs (les play-offs
+//                           continuent la numérotation des journées, même
+//                           clé que Team.planKey) ;
+//   cup:<tour>              Coupe ;
+//   lp:<idLigue>:<journée>  match de ligue privée ;
+//   fr:<idAmical>           match amical.
+// La compétition fait partie de l'identifiant : « LP J5 » et « Championnat
+// J5 » ne peuvent jamais se confondre.
+function orderTargetFor(kind, a, b) {
+  if (kind === "lp") return b != null ? `lp:${a}:${b}` : `lp:${a}`;
+  if (kind === "fr") return `fr:${a}`;
+  return `${kind === "cup" ? "cup" : "championship"}:${a}`;
+}
+function orderTargetAttr(target) {
+  const t = String(target || "");
+  const m = /^(championship|cup):(\d+)$/.exec(t);
+  // data-round/data-competition gardés pour les matchs officiels (lus par
+  // l'interface et les tests existants) ; seul data-order-target pilote le clic.
+  return ` data-order-target="${escapeHtml(t)}"` + (m ? ` data-tab="ordres" data-round="${m[2]}" data-competition="${m[1]}"` : "");
+}
+// Ferme tout éditeur d'ordres encore ouvert (ligue privée, amical,
+// tactique enregistrée) avant d'ouvrir les ordres d'un autre match.
+function closeOrdersEditorSilently() {
+  if (!tqEdit) return;
+  tqEdit = null;
+  const ps = document.getElementById("prepSection");
+  if (ps) ps.classList.remove("tq-editing");
+  renderTacticEditorBar();
+}
+function openOrdersTarget(target) {
+  const t = String(target || "");
+  const i = t.indexOf(":");
+  const kind = i < 0 ? t : t.slice(0, i), rest = i < 0 ? "" : t.slice(i + 1);
+  closeOrdersEditorSilently();
+  if (kind === "championship" || kind === "cup") {
+    const round = Number(rest);
+    if (Number.isInteger(round)) goToOrdresTab(round, kind);
+    return;
+  }
+  if (kind === "lp") {
+    const j = rest.lastIndexOf(":");
+    const hasRound = j >= 0 && /^\d+$/.test(rest.slice(j + 1));
+    openPrivateLeagueOrders(hasRound ? rest.slice(0, j) : rest, undefined, hasRound ? Number(rest.slice(j + 1)) : null);
+    return;
+  }
+  if (kind === "fr") openFriendlyOrders(rest);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-order-target]");
+  if (!b) return;
+  e.preventDefault();
+  openOrdersTarget(b.dataset.orderTarget);
+});
+
 function openFriendlyOrders(fid, tab) {
   const f = frList().find(x => x.id === fid);
   if (!f) return;
@@ -52728,11 +52789,11 @@ function lpOrdersLocked(lp, now = Date.now()) {
   const round = lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && !m.live && (m.home === myTeamIndex || m.away === myTeamIndex)));
   return !!round && typeof round.dueAt === "number" && now >= round.dueAt - 5 * 60 * 1000;
 }
-function openPrivateLeagueOrders(lpId, tab) {
+function openPrivateLeagueOrders(lpId, tab, roundIndex = null) {
   const lp = findLpById(lpId);
   if (!lp) return;
   const src = lpOrdersSources(lp)[0];
-  tqEdit = { kind: "lp", lpId, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
+  tqEdit = { kind: "lp", lpId, lpRound: roundIndex, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
   showPage("prepSection");
   setActiveTab(tab || "lp");
   renderOrdresGrid();
@@ -52766,7 +52827,19 @@ function renderTacticEditorBar() {
     const opts = lpOrdersSources(lp).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
     const saved = !!(lp && lp.myOrders);
     const locked = lpOrdersLocked(lp);
+    // Prochain adversaire (retour utilisateur 2026-10-04 : « ce serait bien
+    // d'afficher l'adversaire ») : premier match du club pas encore joué.
+    const mine = m => m.home === myTeamIndex || m.away === myTeamIndex;
+    const askedRound = lp && tqEdit.lpRound != null ? (lp.rounds || []).find(r => r.index === tqEdit.lpRound && r.matches.some(mine)) : null;
+    const nextRound = askedRound || (lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && !m.live && mine(m))));
+    const nextMatch = nextRound && nextRound.matches.find(m => mine(m) && (askedRound || (!m.played && !m.live)));
+    const oppIdx = nextMatch ? (nextMatch.home === myTeamIndex ? nextMatch.away : nextMatch.home) : null;
+    const oppTeam = oppIdx != null ? league.teams[oppIdx] : null;
+    const oppHtml = nextMatch
+      ? `<span class="fr-logo">${oppTeam ? teamLogoHtml(oppTeam, 28) : ""}</span><span><b>${nextMatch.home === myTeamIndex ? "vs" : "@"} ${escapeHtml(lpTeamName(oppIdx))}</b><small>J${nextRound.index + 1} · ${escapeHtml(formatCalendarDayFr(nextRound.dueAt))} · ${escapeHtml(formatCalendarTimeFr(nextRound.dueAt))}</small></span>`
+      : "";
     bar.innerHTML = `<div class="tq-editor-field fr-oe-match"><label>Ligue privée</label><div class="fr-oe-vs"><span><b>${escapeHtml(lp ? lp.name : "")}</b><small>${lp ? escapeHtml(lpWhenLabel(lp)) : ""}</small></span></div></div>` +
+      (oppHtml ? `<div class="tq-editor-field fr-oe-match"><label>${askedRound ? "Match" : "Prochain adversaire"}</label><div class="fr-oe-vs">${oppHtml}</div></div>` : "") +
       `<div class="tq-editor-field"><label for="tqEditorSource">Partir de</label><select id="tqEditorSource">${opts}</select></div>` +
       `<div class="tq-editor-actions"><button type="button" class="cal-next-btn" id="tqEditorSave"${locked ? " disabled" : ""}>Enregistrer les ordres</button>` +
         (saved && !locked ? `<button type="button" class="tq-btn" id="lpOrdersReset">Revenir aux ordres du club</button>` : "") +
@@ -53904,7 +53977,7 @@ setInterval(async () => {
 // Ouvre les ordres du prochain match (onglet Ordres, bouton du topbar).
 function openNextMatchOrders() {
   const n = nextNonOfficialMatch();
-  if (n && n.kind === "lp") { openPrivateLeagueOrders(n.lpId, "ordres"); return; }
+  if (n && n.kind === "lp") { openPrivateLeagueOrders(n.lpId, "ordres", n.lpNext && n.lpNext.round ? n.lpNext.round.index : null); return; }
   if (n && n.kind === "friendly") { openFriendlyOrders(n.friendlyId, "ordres"); return; }
   tqEdit = null;
   goToOrdresTab();
@@ -54246,7 +54319,7 @@ function lpNextCardHtml(lp) {
     // Émission d'avant-match (sans pronostics) : dès 5 min avant le coup d'envoi.
     (Date.now() >= next.dueAt - 5 * 60 * 1000 ? `<p class="lp-next-live"><button type="button" class="secondary lp-show-btn" data-lp-show="${escapeHtml(lp.id)}" data-lp-round="${next.index}" data-lp-home="${m.home}" data-lp-away="${m.away}">Émission d'avant-match</button></p>` : "") +
     (iAmHome && lp.venue === "home" ? `<p class="cal-card-empty">Vous recevez : avantage du terrain.</p>` : "") +
-    (lp.status !== "finished" && !m.live ? `<p class="lp-next-orders"><button type="button" class="cal-next-btn lp-btn" data-lp-orders="${lp.id}">${lp.myOrders ? "Modifier vos ordres" : "Donner vos ordres"}</button></p>` : "") +
+    (lp.status !== "finished" && !m.live ? `<p class="lp-next-orders"><button type="button" class="cal-next-btn lp-btn"${orderTargetAttr(orderTargetFor("lp", lp.id, next.index))}>${lp.myOrders ? "Modifier vos ordres" : "Donner vos ordres"}</button></p>` : "") +
     `</div>`;
 }
 
@@ -56712,6 +56785,17 @@ function goToOrdresTab(round, competition) {
     refreshFromServerAndReenter(league.liveMatch.round, league.liveMatch.competition, round, competition);
     return;
   }
+  // Match officiel : on quitte tout éditeur d'ordres de ligue privée,
+  // d'amical ou de tactique encore ouvert (retour utilisateur 2026-10-04 :
+  // « Modifier vos ordres » d'une journée de championnat ouvrait les ordres
+  // de la ligue privée édités juste avant).
+  if (tqEdit) {
+    tqEdit = null;
+    const ps = document.getElementById("prepSection");
+    if (ps) ps.classList.remove("tq-editing");
+    renderTacticEditorBar();
+  }
+  closeOrdersEditorSilently();
   showPage("prepSection");
   setActiveTab("ordres");
   renderPrep();
@@ -56872,6 +56956,8 @@ document.querySelectorAll(".bs-tab").forEach(btn => {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-tab]");
   if (!btn) return;
+  // Bouton d'ordres d'un match précis : géré par openOrdersTarget.
+  if (btn.dataset.orderTarget) return;
   const key = btn.dataset.tab;
   // Bouton "📋 Ordres" d'une ligne du calendrier (voir
   // renderCalendrierSection) : porte data-round="<journée>" (et

@@ -22,7 +22,7 @@ const ordersBtn = () => doc.getElementById("topbarOrdersBtn");
 
 assert(win.eval("!!currentMatch && !!teamB"), "Un prochain match est programmé");
 clickTab("economie"); clickTab("club");
-assert(!!hero().querySelector('[data-dash-href="/ordres"]') && /Scouter/.test(hero().textContent), "Hors direct : boutons ordres + scouter dans le bandeau");
+assert(!!hero().querySelector(`[data-order-target="${win.eval("(currentMatch.competition === 'cup' ? 'cup' : 'championship') + ':' + currentMatch.round")}"]`) && /Scouter/.test(hero().textContent), "Hors direct : boutons ordres (de CE match) + scouter dans le bandeau");
 assert(!ordersBtn().classList.contains("hidden"), "Hors direct : bouton d'ordres visible dans la barre du haut");
 
 win.eval(`league.liveMatch = { round: currentMatch.round, competition: currentMatch.competition === "cup" ? "cup" : "championship", isHome: currentMatch.isHome, opponentIdx: currentMatch.opponent }; syncTopbarLiveStrip();`);
@@ -30,14 +30,14 @@ assert(ordersBtn().classList.contains("hidden"), "Pendant le direct : bouton d'o
 clickTab("economie"); clickTab("club");
 const liveBtn = hero().querySelector('[data-tab="live"]');
 assert(!!liveBtn && /Voir le live/.test(liveBtn.textContent), "Pendant le direct : bouton « Voir le live » dans le bandeau");
-assert(!hero().querySelector('[data-dash-href="/ordres"]') && !/Scouter/.test(hero().textContent), "Pendant le direct : plus de bouton ordres ni scouter dans le bandeau");
+assert(!hero().querySelector('[data-order-target]') && !/Scouter/.test(hero().textContent), "Pendant le direct : plus de bouton ordres ni scouter dans le bandeau");
 assert(/En direct/.test(hero().querySelector(".hm-hero__comp").textContent), "Pendant le direct : bandeau marqué « En direct »");
 assert(!/Ordres de match vs/.test(doc.getElementById("clubSection").textContent), "Pendant le direct : plus de tâche « Ordres de match » pour ce match");
 
 win.eval(`league.liveMatch = null; syncTopbarLiveStrip();`);
 assert(!ordersBtn().classList.contains("hidden"), "Après le direct : bouton d'ordres de retour dans la barre du haut");
 clickTab("economie"); clickTab("club");
-assert(!hero().querySelector('[data-tab="live"]') && !!hero().querySelector('[data-dash-href="/ordres"]'), "Après le direct : boutons habituels de retour dans le bandeau");
+assert(!hero().querySelector('[data-tab="live"]') && !!hero().querySelector('[data-order-target]'), "Après le direct : boutons habituels de retour dans le bandeau");
 
 await flush(dom);
 dom.window.close();

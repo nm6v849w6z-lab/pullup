@@ -123,7 +123,7 @@ async function waitFor(fn, label, tries = 60) {
     w.eval("TAB_HANDLERS.calendrier()");
     const lpRows = [...d.querySelectorAll("#calendrierContent tr.cal-row")].filter(tr => tr.querySelector(".cal-lp-badge"));
     check(lpRows.length === 6, `Calendrier : 6 lignes de ligue privée (${lpRows.length})`);
-    check(/LP J1/.test(lpRows[0].textContent) && lpRows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)) && !!lpRows[0].querySelector("[data-lp-orders]"), "ligne LP J1 à 20:00 (heure de Paris, affichée à l'heure locale) avec bouton Ordres de la ligue privée");
+    check(/LP J1/.test(lpRows[0].textContent) && lpRows[0].textContent.includes(domA2.window.eval(`formatCalendarTimeFr(${j1At})`)) && !!lpRows[0].querySelector("[data-order-target^=\"lp:\"]"), "ligne LP J1 à 20:00 (heure de Paris, affichée à l'heure locale) avec bouton Ordres de la ligue privée");
     // Match officiel du jour avant 20h00 : le prochain match reste l'officiel.
     w.eval("updateTopbar()");
     const officialFirst = !!w.eval("scheduledTimeForCurrentMatch() <= lpMyNextMatch().dueAt");
@@ -150,15 +150,32 @@ async function waitFor(fn, label, tries = 60) {
     check(/Ligue privée · J1/.test(d.getElementById("topbarWeek").textContent) && d.getElementById("topbarOrdersBtn").textContent === "Donnez vos ordres", "barre du haut : adversaire de ligue privée + bouton « Donnez vos ordres »");
     w.eval("TAB_HANDLERS.club()");
     const hero = d.querySelector(".hm-hero");
-    check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-lp-orders]") && /Donnez vos ordres/.test(hero.textContent) && !/Niveau/.test(hero.textContent), "tableau de bord : bandeau Prochain match = ligue privée");
+    check(!!hero && /Ligue privée/.test(hero.textContent) && /Coupe des Potes · J1/.test(hero.textContent) && !!hero.querySelector("[data-order-target^=\"lp:\"]") && /Donnez vos ordres/.test(hero.textContent) && !/Niveau/.test(hero.textContent), "tableau de bord : bandeau Prochain match = ligue privée");
     check(![...d.querySelectorAll(".hm-task__title")].some(t => new RegExp(w.eval("league.teams[lpMyNextMatch().oppIdx].name")).test(t.textContent) && /Ordres de match/.test(t.textContent)) || w.eval("league.teams[lpMyNextMatch().oppIdx].name === teamB.name"), "la tâche « Ordres de match » vise toujours le match officiel");
     w.eval("TAB_HANDLERS.calendrier()");
     // Carte "Prochain match" du Calendrier : elle suit l'ordre chronologique
     // réel des lignes ; rendue ici directement pour une ligne de ligue privée.
     const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false, lpId: n.lp.id, lpOrdered: false }); })()`);
-    check(/Prochain match · Ligue privée · J1/.test(card) && /data-lp-orders="/.test(card) && /Donner les ordres/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton Donner les ordres");
+    check(/Prochain match · Ligue privée · J1/.test(card) && /data-order-target="lp:/.test(card) && /Donner les ordres/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton Donner les ordres");
     d.getElementById("topbarOrdersBtn").click();
     check(!d.getElementById("prepSection").classList.contains("hidden") && w.eval("tqEdit && tqEdit.kind") === "lp", "le bouton de la barre du haut ouvre les ordres de la ligue privée");
+    w.eval("goToOrdresTab(0, 'championship')");
+    check(w.eval("tqEdit") === null && !/Ordres de la ligue privée/.test(d.querySelector("#ordresActionBar .oab-title") ? d.querySelector("#ordresActionBar .oab-title").textContent : ""), "« Ordres » d'une journée de championnat après les ordres de ligue privée : ordres du club, pas ceux de la LP");
+    d.getElementById("topbarOrdersBtn").click();
+    check(/Match|Prochain adversaire/.test(d.getElementById("tqEditorBar").textContent) && d.getElementById("tqEditorBar").textContent.includes(w.eval("league.teams[lpMyNextMatch().oppIdx].name")), "ordres de la ligue privée : adversaire du match affiché");
+    // Navigation par identifiant unique de match (retour utilisateur
+    // 2026-10-04) : après les ordres de LP, « Ordres » d'une journée de
+    // championnat ouvre bien les ordres du CLUB pour CETTE journée.
+    w.eval("openOrdersTarget(orderTargetFor('championship', 1))");
+    check(w.eval("tqEdit") === null && w.eval("selectedOrdresRound") === 1 && w.eval("selectedOrdresCompetition") === "championship", "championnat J2 après les ordres de LP : ordres du club, journée 2");
+    const lpNext = w.eval("(() => { const n = lpMyNextMatch(); return { id: n.lp.id, r: n.round.index }; })()");
+    w.eval(`openOrdersTarget(orderTargetFor('lp', ${JSON.stringify(lpNext.id)}, ${lpNext.r}))`);
+    check(w.eval("tqEdit && tqEdit.kind") === "lp" && w.eval("tqEdit.lpRound") === lpNext.r, "LP J" + (lpNext.r + 1) + " : ordres de la ligue privée sur cette journée");
+    w.eval("openOrdersTarget(orderTargetFor('championship', 1))");
+    check(w.eval("tqEdit") === null, "puis retour au championnat sans rester sur la LP");
+    check(w.eval("orderTargetFor('lp', 'x', 4)") !== w.eval("orderTargetFor('championship', 4)") && w.eval("orderTargetFor('cup', 4)") !== w.eval("orderTargetFor('championship', 4)"), "LP J5, Coupe et Championnat J5 : identifiants distincts");
+    const calBtns = (() => { w.eval("TAB_HANDLERS.calendrier()"); return [...d.querySelectorAll("#calendrierContent [data-order-target]")].map(b => b.dataset.orderTarget); })();
+    check(calBtns.length > 0 && new Set(calBtns).size === calBtns.length - calBtns.filter((x, i) => calBtns.indexOf(x) !== i).length && calBtns.some(t => t.startsWith("championship:")) && calBtns.some(t => t.startsWith("lp:")), "calendrier : chaque bouton d'ordres porte l'identifiant de son match (" + calBtns.slice(0, 4).join(", ") + "…)");
     w.eval("TAB_HANDLERS.calendrier()");
     [...d.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ordres").click();
     check(w.eval("tqEdit && tqEdit.kind") === "lp" && d.querySelector(".tab-btn.active").dataset.tab === "ordres", "l'onglet Ordres ouvre le prochain match, ici de ligue privée");
