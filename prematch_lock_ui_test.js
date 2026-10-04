@@ -33,7 +33,9 @@ assert(!/Émission/.test(doc.getElementById("topbarOrdersBtn").textContent), "À
 clock.now = kickoff - 4 * 60 * 1000;
 await sleep(1300);
 assert(!!hero().querySelector('[data-dash-href="/emission-avant-match"]'), "À T-4 min, page ouverte : bouton « Émission d'avant-match » dans le bandeau");
-assert(/Verrouillés|verrouillés/.test(hero().textContent), "Le bandeau indique que les ordres sont verrouillés");
+// Verrouillé : seulement l'émission, ni bouton vers les Ordres ni « Scouter »
+// (retour utilisateur 2026-10-04).
+assert(!hero().querySelector("[data-order-target]") && !/Scouter/.test(hero().textContent), "Verrouillé : ni bouton vers les Ordres ni « Scouter » dans le bandeau");
 assert(/Émission d'avant-match vs/.test(doc.getElementById("clubSection").textContent), "Tâche « Émission d'avant-match » dans Cette semaine");
 assert(/Émission/.test(doc.getElementById("topbarOrdersBtn").textContent), "Topbar : bouton « Émission d'avant-match »");
 

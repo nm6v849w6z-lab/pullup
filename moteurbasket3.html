@@ -3408,6 +3408,8 @@
   .cal-c-action .calendar-order-btn{width:100%; justify-content:center; box-sizing:border-box;}
   .calendar-order-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); font:inherit; font-size:12px; font-weight:600; padding:6px 11px; border-radius:8px; cursor:pointer;}
   .calendar-order-btn:hover{border-color:var(--amber); color:var(--amber);}
+  /* Ordres verrouillés (2026-10-04) : bouton inactif, sans effet au survol. */
+  .calendar-order-btn.is-locked, .cal-next-btn.is-locked, .hm-btn.is-locked, .topbar-cta.is-locked{opacity:.55; cursor:not-allowed; pointer-events:none;}
   .cal-row.me .calendar-order-btn{border-color:var(--amber); color:var(--amber);}
   .cal-icon{flex:none;}
   .cal-row .calendar-order-btn.calendar-order-btn-validated{border-color:var(--ok); color:var(--ok);}
@@ -28676,6 +28678,11 @@ function updateTopbar() {
       : locked ? "Ordres verrouillés"
       : validated ? "Modifier vos ordres" : "Donnez vos ordres";
     ordersBtn.classList.toggle("topbar-cta-validated", !!validated && !locked && !prematch);
+    // Verrouillé sans émission ni direct : plus de page Ordres à ouvrir.
+    const inert = !!locked && !prematch && !(lpNext && lpNext.live);
+    ordersBtn.disabled = inert;
+    ordersBtn.classList.toggle("is-locked", inert);
+    ordersBtn.title = inert ? LOCKED_ORDERS_TITLE : "";
   }
 }
 
@@ -29316,6 +29323,23 @@ function prematchShowAvailable(now = Date.now()) {
   return !!currentMatch && currentMatch.competition !== "cup" &&
     !currentMatchAlreadyLive() && currentMatchLineupLocked(now);
 }
+// Ordres verrouillés (retour utilisateur 2026-10-04 : « il ne faut plus
+// pouvoir cliquer sur le bouton et ouvrir la page ordres, il faut uniquement
+// pouvoir voir l'émission d'avant-match ») : bouton inactif, ou bouton de
+// l'émission quand elle existe (championnat, voir prematchShowAvailable).
+const LOCKED_ORDERS_TITLE = "Coup d'envoi dans moins de 5 minutes : les ordres ne sont plus modifiables.";
+function lockedOrdersBtnHtml(cls, icon = "") {
+  return `<button type="button" class="${cls} is-locked" disabled aria-disabled="true" title="${escapeHtml(LOCKED_ORDERS_TITLE)}">${icon}Ordres verrouillés</button>`;
+}
+function prematchShowBtnHtml(cls, icon = "") {
+  return `<button type="button" class="${cls}" data-prematch-show>${icon}Émission d'avant-match</button>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-prematch-show]");
+  if (!b) return;
+  e.preventDefault();
+  openHoopShow("prematch");
+});
 // Appelée UNE fois quand T − 5 min est franchi pendant que la page est
 // ouverte (voir startCountdown) : sans elle, le verrou et le bouton de
 // l'émission n'apparaissaient qu'en rechargeant/rouvrant l'écran Ordres.
@@ -44722,11 +44746,11 @@ function dashRenderNextMatch(data) {
       ${m.privateLeague
         // Direct en cours : seul « Voir le direct », centré (retour
         // utilisateur 2026-10-03 : pas de « Scouter » pendant le live).
-        ? m.lpLiveBtn ? m.lpLiveBtn : `${(m.lpLocked
-          // Verrou à T − 5 min (retour utilisateur 2026-10-03 : « le match est
-          // dans moins de 5 min et les ordres ne sont pas bloqués »).
-          ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
-          : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display"${orderTargetAttr(m.orderTarget)}>${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>`)}
+        ? m.lpLiveBtn ? m.lpLiveBtn : m.lpLocked
+          // Verrou à T − 5 min : bouton inactif, plus de « Scouter » (retour
+          // utilisateur 2026-10-04).
+          ? lockedOrdersBtnHtml("hm-btn hm-btn--ghost hm-btn--display")
+          : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display"${orderTargetAttr(m.orderTarget)}>${m.lpOrdered ? "Modifier vos ordres" : "Donnez vos ordres"}</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`
         : m.isLive
         // Retour utilisateur (2026-09-25) : "quand le match est en cours, on
@@ -44734,10 +44758,10 @@ function dashRenderNextMatch(data) {
         // l'adversaire, il faut que ce soit noté voir le live plutôt".
         ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-tab="live">Voir le live</button>`
         : m.prematchShow
-        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">Émission d'avant-match</button>
-      <button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
+        // Verrouillé : seulement l'émission (retour utilisateur 2026-10-04).
+        ? `<button type="button" class="hm-btn hm-btn--primary hm-btn--display" data-dash-href="/emission-avant-match">Émission d'avant-match</button>`
         : m.lineupLocked
-        ? `<button type="button" class="hm-btn hm-btn--ghost hm-btn--display"${orderTargetAttr(m.orderTarget)}>Ordres verrouillés</button>`
+        ? lockedOrdersBtnHtml("hm-btn hm-btn--ghost hm-btn--display")
         : `<button type="button" class="hm-btn hm-btn--primary hm-btn--display"${orderTargetAttr(m.orderTarget)}>Préparer le match</button>
       <button type="button" class="hm-btn hm-btn--ghost hm-btn--display" data-dash-href="/equipe/${dashEsc(m.opponent.id ?? "")}" title="Scouter ${dashEsc(m.opponent.name)}">Scouter ${dashEsc(m.opponent.name)}</button>`}
     </div>
@@ -48874,13 +48898,18 @@ function calendarNextMatchCardHtml(row) {
     // Verrou à T − 5 min (retour 2026-10-04 : la carte disait encore
     // « Modifier les ordres » quand la barre du haut affichait « Ordres
     // verrouillés »).
-    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("lp", row.lpId, row.lpRound))}>${typeof row.scheduledAt === "number" && Date.now() >= row.scheduledAt - 5 * 60 * 1000 ? "Ordres verrouillés" : row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
+    ? (typeof row.scheduledAt === "number" && Date.now() >= row.scheduledAt - 5 * 60 * 1000
+      ? lockedOrdersBtnHtml("cal-next-btn")
+      : `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("lp", row.lpId, row.lpRound))}>${row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`)
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : row.competition === "fr" && row.frId && !row.frPending
     ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("fr", row.frId))}>${row.frOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "fr"
     ? `<button type="button" class="cal-next-btn" data-tab="amicaux">Voir les amicaux</button>`
+    : row.orderCompetition && ordresRoundLocked(row.orderRound, row.orderCompetition)
+    ? (row.orderCompetition === "championship" && prematchShowAvailable() && currentMatch && currentMatch.round === row.orderRound
+      ? prematchShowBtnHtml("cal-next-btn") : lockedOrdersBtnHtml("cal-next-btn"))
     : `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor(row.orderCompetition, row.orderRound))}>${row.alreadyOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>` +
       // "Ordres non définis pour ce match" retiré (retour utilisateur
       // 2026-09-26) : le bouton "Donner les ordres" le dit déjà.
@@ -49135,6 +49164,8 @@ function renderCalendrierSection() {
       ? (liveHasEnded
           ? ""
           : `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`)
+      : isUpcoming && ordresRoundLocked(r, "championship")
+        ? (isImmediateRound && prematchShowAvailable() ? prematchShowBtnHtml("calendar-order-btn", CALENDAR_ORDERS_ICON) : lockedOrdersBtnHtml("calendar-order-btn", CALENDAR_ORDERS_ICON))
       : isUpcoming
         ? `<button class="calendar-order-btn${alreadyOrdered ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("championship", r))}>${CALENDAR_ORDERS_ICON}${alreadyOrdered ? "Modifier vos ordres" : "Ordres"}</button>`
         : "";
@@ -49201,6 +49232,8 @@ function renderCalendrierSection() {
       const cupAlreadyPlanned = teamA.hasPlanForRound(round.index, "cup");
       const actionCell = isCupLive
         ? `<button class="calendar-order-btn calendar-live-btn" data-tab="live">Voir le direct</button>`
+        : !m.resolved && ordresRoundLocked(round.index, "cup")
+          ? lockedOrdersBtnHtml("calendar-order-btn", CALENDAR_ORDERS_ICON)
         : !m.resolved
           ? `<button class="calendar-order-btn${cupAlreadyPlanned ? " calendar-order-btn-validated" : ""}" ${orderTargetAttr(orderTargetFor("cup", round.index))}>${CALENDAR_ORDERS_ICON}${cupAlreadyPlanned ? "Modifier vos ordres" : "Ordres"}</button>`
           : "";
@@ -49282,7 +49315,7 @@ function renderCalendrierSection() {
         scoreText, boxscore: null,
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
         cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : (typeof round.dueAt === "number" && Date.now() >= round.dueAt - 5 * 60 * 1000)
-          ? `<button type="button" class="calendar-order-btn calendar-lp-btn"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}Ordres verrouillés</button>`
+          ? lockedOrdersBtnHtml("calendar-order-btn calendar-lp-btn", CALENDAR_ORDERS_ICON)
           : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
@@ -57195,6 +57228,8 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // bouton est masqué). Seul point d'entrée « prochain match » depuis la
 // suppression de l'onglet Ordres (retour utilisateur 2026-10-04).
 function openTopbarOrders() {
+  const tb = document.getElementById("topbarOrdersBtn");
+  if (tb && tb.disabled) return;
   // Direct précédent terminé côté serveur mais pas encore relu : on le
   // finalise d'abord (comme l'ancien onglet « Ordres », voir goToOrdresTab),
   // sinon l'émission d'avant-match passait devant et le résultat, les
