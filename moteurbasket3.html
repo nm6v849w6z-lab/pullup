@@ -33488,7 +33488,9 @@ function renderPlayerDetail(teamIdx, playerId) {
       const bidLine = openListing.currentBid
         ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>${bidderLinkHtml(openListing) ? ` par ${bidderLinkHtml(openListing)}` : ""}`
         : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
-      html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> ${bidLine} · ${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}</p>`;
+      // Durée restante dans son propre <span> : sinon « … (prix de départ 1 €) · 1 j 0 h »
+      // formait un seul texte que la traduction ne reconnaissait pas (2026-10-04).
+      html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> <span>${bidLine}</span> · <span>${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}</span></p>`;
     } else {
       const valuation = comparableSalesValuation(player);
       if (valuation) {
@@ -33553,7 +33555,7 @@ async function loadPlayerRankings(teamIdx, playerId, leagueId) {
     body = (data.scopes || []).map((sc, i) => {
       const best = Object.entries(sc.ranks).sort((a, b) => a[1].rank / a[1].of - b[1].rank / b[1].of || a[1].rank - b[1].rank).slice(0, i === 0 ? 2 : 1);
       return `<div class="pdp2-rank-scope"><div class="pdp2-rank-lbl">${escapeHtml(sc.label)}</div>` +
-        best.map(([k, r]) => `<div class="pdp2-rank-row"><span>Classé <b>#${r.rank}</b> en ${PDP_RANK_LABELS[k] || k} / 40 min</span><small>sur ${r.of}</small></div>`).join("") + `</div>`;
+        best.map(([k, r]) => `<div class="pdp2-rank-row"><span>Classé #${r.rank} en ${PDP_RANK_LABELS[k] || k} / 40 min</span><small>sur ${r.of}</small></div>`).join("") + `</div>`;
     }).join("");
   }
   still.innerHTML = `<div class="pdp2-head"><h3>Classements du joueur</h3><span class="pdp2-meta">championnat, par 40 min</span></div>${body}`;
