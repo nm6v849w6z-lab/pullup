@@ -17451,7 +17451,34 @@ function leagueFromSave(data, userTeam = null) {
   // sauvegarde), salaire inchangé.
   lg.freeAgents = Array.isArray(data.freeAgents) ? data.freeAgents.map(playerFromSave) : [];
   lg.ensureContracts();
+  pruneForeignMatchLogs(lg);
   return lg;
+}
+
+// Matchs de championnat joués dans un AUTRE championnat (retour utilisateur
+// 2026-10-03 : des recrues venues d'ailleurs apparaissaient dans les leaders
+// et les feuilles de match de leur nouvelle ligue, avec leurs matchs de
+// l'ancienne). Une ligne de championnat n'est gardée que si son score par
+// quart-temps correspond à un résultat de CETTE ligue à la même journée
+// (les lignes sans score par quart-temps, très anciennes, sont gardées).
+function pruneForeignMatchLogs(league) {
+  if (!league || !Array.isArray(league.results) || !league.results.length) return 0;
+  const known = new Set(league.results.map(r => `${r.round}:${r.scoreHome}-${r.scoreAway}`));
+  const rounds = new Set(league.results.map(r => r.round));
+  const sum = a => a.reduce((x, y) => x + (y || 0), 0);
+  let removed = 0;
+  (league.teams || []).forEach(t => (t.players || []).forEach(p => {
+    if (!Array.isArray(p.matchLog) || !p.matchLog.length) return;
+    const kept = p.matchLog.filter(e => {
+      if ((e.competition || "championship") !== "championship" || !rounds.has(e.round)) return true;
+      const q = e.quarterScores;
+      if (!q || !Array.isArray(q.home) || !Array.isArray(q.away)) return true;
+      return known.has(`${e.round}:${sum(q.home)}-${sum(q.away)}`);
+    });
+    removed += p.matchLog.length - kept.length;
+    if (kept.length !== p.matchLog.length) p.matchLog = kept;
+  }));
+  return removed;
 }
 
 // ---------------------------------------------------------------------
@@ -19443,7 +19470,7 @@ return {
   // consorts pour vérifier des accès directs (ex. round-trip de
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
-  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave,
+  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
