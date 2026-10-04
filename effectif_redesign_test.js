@@ -46,7 +46,7 @@ try {
     console.log(`✅ Un seul bloc de ${rows.length} joueurs : ${starters.length} titulaires en tête (M→P), puis rotation, puis réserve ; avatar ${[...avatarSizes][0]}.`);
     // Tri de colonne : s'applique à TOUTE la liste.
     win.eval("rosterSortState.key = 'age'; rosterSortState.dir = 1; renderEffectifSection();");
-    const ages = [...doc.querySelectorAll("#rosterContent table.eff-general tr.eff-row")].map(r => Number(r.children[3].textContent));
+    const ages = [...doc.querySelectorAll("#rosterContent table.eff-general tr.eff-row")].map(r => Number(r.children[4].textContent)); // +1 : colonne GEN/TC (2026-10-04)
     if (ages.length !== rows.length || !ages.every((v, i) => i === 0 || ages[i - 1] <= v)) throw new Error(`❌ Tri par âge attendu sur toute la liste : ${ages.join(", ")}.`);
     console.log("✅ Tri par âge appliqué à toute la liste :", ages.join(" "));
     win.eval("rosterSortState.key = null; renderEffectifSection();");

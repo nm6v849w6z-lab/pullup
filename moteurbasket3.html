@@ -7065,7 +7065,8 @@
      collés, grands vides ailleurs). Somme = 100 %. */
   @media (min-width:1000px){
     #effectifSection table.eff-general, #teamDetailSection table.eff-general{table-layout:fixed; width:100%;}
-    #effectifSection table.eff-general :is(th.eff-th-name){width:23%;}
+    #effectifSection table.eff-general :is(th.eff-th-name){width:20%;}
+    #effectifSection table.eff-general th.eff-th-rating{width:6%;}
     #effectifSection table.eff-general th.eff-th-position{width:7%;}
     #effectifSection table.eff-general th.eff-th-potential{width:9%;}
     #effectifSection table.eff-general th.eff-th-age{width:5%;}
@@ -7162,6 +7163,9 @@
   .eff-td-avg{font-size:15px; font-weight:800;}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
+  /* Colonne GEN/TC de l'onglet Général : un TC tient sur 4 chiffres. */
+  #effectifSection td.eff-td-rating .attr-cell.eff-attr{width:auto; min-width:36px;}
+  #effectifSection td.eff-td-rating .attr-cell.eff-attr .attr-val{font-weight:800;}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
   :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
   /* --- Colonne Joueur figée (retour utilisateur 2026-09-30 (téléphone) :
@@ -46464,6 +46468,10 @@ function effectifSubNavHtml(rightHtml = "") {
 // consultables), remplacés par Motivation et Évaluation (5 derniers matchs).
 const ROSTER_SORT_COLUMNS = [
   { key: "name", label: "Nom" },
+  // Note du joueur (retour utilisateur 2026-10-04 : « ajoute une colonne
+  // avec le GEN ou TC selon ce qui est choisi dans les paramètres ») :
+  // libellé et valeur suivent ratingDisplayMode (voir rosterRatingValue).
+  { key: "rating", label: "GEN" },
   { key: "position", label: "Poste" },
   // Potentiel (retour utilisateur beta-testeur "Ariane", Discord, 2026-09 :
   // "Possible de le remettre ? [...] c'était avant sur le tableau, avant on
@@ -46495,9 +46503,16 @@ const ROSTER_SORT_COLUMNS = [
   { key: "evaluation", label: "Évaluation" },
 ];
 
+// GEN (note au meilleur poste) ou TC (total des caractéristiques), selon
+// Paramètres > Affichage — même valeur que la fiche joueur.
+function rosterRatingValue(p) {
+  return ratingDisplayMode() === "tc" ? playerTotalCaracs(p, ATTRS) : effAttrAverage(p);
+}
+
 function rosterSortValue(p, key) {
   switch (key) {
     case "name": return p.name;
+    case "rating": return rosterRatingValue(p);
     case "position": return POSITIONS.indexOf(p.position);
     // Rôle : Titulaire > Joueur de rotation > Réserviste (voir
     // playerRoleLabel), pas d'ordre alphabétique pertinent ici.
@@ -46817,7 +46832,9 @@ function renderEffectifSection() {
   let html = effectifSubNavHtml() + `<div id="rosterMarketFeedback"></div>`;
   html += `<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general">` +
     `<thead><tr>` +
-    columns.map(c => effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
+    columns.map(c => c.key === "rating"
+      ? effHeaderCellHtml(c.key, ratingDisplayMode() === "tc" ? "TC" : "GEN", { cls: "eff-th-rating", title: ratingDisplayMode() === "tc" ? "Total des caractéristiques" : "Note du meilleur poste" })
+      : effHeaderCellHtml(c.key, c.label, { cls: `eff-th-${c.key}` })).join("") +
     `<th class="eff-th-actions"><span class="eff-sr">Actions</span></th></tr></thead>`;
   // Un seul bloc de joueurs (retour utilisateur 2026-09-30) : ordre par
   // défaut cinq de départ puis rotation puis réserve, tri de colonne sur
@@ -46851,6 +46868,7 @@ function renderEffectifSection() {
         (isListed ? `<span class="eff-listed-coin" title="Aux enchères" aria-label="Aux enchères">$</span>` : "");
       html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${effRoleMarkHtml(role)}${badges}</span></td>` +
+        `<td class="eff-td-rating"><span class="attr-cell eff-attr ${attrColorTier(effAttrAverage(p))}"><span class="attr-val">${rosterRatingValue(p)}</span></span></td>` +
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td>` +
         `<td class="eff-num" title="${escapeHtml(salaryTitle)}">${formatMoney(p.salary)}</td>` +
