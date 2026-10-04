@@ -5977,4 +5977,5 @@ window.HM_I18N_PL = {
   "Licencier": "Zwolnić",
   "? Indemnité :": "? Odprawa:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% pozostałej należnej pensji). Zostanie wolnym agentem.",
+  "Nouveaux messages dans le chat de la ligue": "Nowe wiadomości na czacie ligi",
 };

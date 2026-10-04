@@ -5977,4 +5977,5 @@ window.HM_I18N_ZH = {
   "Licencier": "解约",
   "? Indemnité :": "？解约金：",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "（剩余应付薪水的30%）。他将成为自由球员。",
+  "Nouveaux messages dans le chat de la ligue": "联赛聊天有新消息",
 };

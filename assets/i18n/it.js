@@ -6040,4 +6040,5 @@ window.HM_I18N_IT = {
   "Licencier": "Licenziare",
   "? Indemnité :": "? Indennità:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% dello stipendio residuo dovuto). Diventerà svincolato.",
+  "Nouveaux messages dans le chat de la ligue": "Nuovi messaggi nella chat della lega",
 };

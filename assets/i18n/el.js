@@ -5977,4 +5977,5 @@ window.HM_I18N_EL = {
   "Licencier": "Αποδέσμευση του",
   "? Indemnité :": "; Αποζημίωση:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% του υπόλοιπου οφειλόμενου μισθού). Θα γίνει ελεύθερος.",
+  "Nouveaux messages dans le chat de la ligue": "Νέα μηνύματα στη συνομιλία της λίγκας",
 };

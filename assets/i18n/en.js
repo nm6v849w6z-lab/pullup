@@ -6002,4 +6002,5 @@ window.HM_I18N_EN = {
   "Licencier": "Release",
   "? Indemnité :": "? Severance:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% of the remaining salary owed). He will become a free agent.",
+  "Nouveaux messages dans le chat de la ligue": "New messages in the league chat",
 };

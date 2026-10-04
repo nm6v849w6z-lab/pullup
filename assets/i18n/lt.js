@@ -5977,4 +5977,5 @@ window.HM_I18N_LT = {
   "Licencier": "Atleisti",
   "? Indemnité :": "? Išeitinė išmoka:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30 % likusio mokėtino atlyginimo). Jis taps laisvuoju agentu.",
+  "Nouveaux messages dans le chat de la ligue": "Nauji pranešimai lygos pokalbyje",
 };

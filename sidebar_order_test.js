@@ -14,7 +14,7 @@ const got = sections.map(sec => {
 });
 const expected = [
   ": Tableau de bord, Messagerie",
-  "Équipe: Effectif, Ordres, Tactiques, Entraînement, Centre médical, Statistiques",
+  "Équipe: Effectif, Tactiques, Entraînement, Centre médical, Statistiques",
   "Compétitions: Calendrier, Ligue, Coupe, Matchs amicaux, Ligues privées",
   "Recrutement: Marché, Académie de jeunes",
   "Club: Économie, Staff, Sponsors, Salle, Supporters, Histoire du club",

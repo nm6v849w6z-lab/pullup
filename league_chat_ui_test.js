@@ -1,8 +1,9 @@
 // Chat de la ligue — côté navigateur (voir lgcOpen/lgcRender dans
 // moteurbasket3.html et server/leagueChat.js). Ligue partagée à 2 clubs
 // humains : pastille de non-lus sur le bouton « Chat de la ligue » (en haut
-// à droite de la page Ligue, plus de panneau dans la page), jamais dans le
-// menu, compteur relu seulement quand la page Ligue est affichée ; le chat s'ouvre par-dessus la page (tiroir),
+// à droite de la page Ligue, plus de panneau dans la page) ET, depuis le
+// 2026-10-04, sur l'entrée « Ligue » du menu (compteur relu depuis toutes
+// les pages) ; le chat s'ouvre par-dessus la page (tiroir),
 // messages automatiques, envoi (texte échappé), réactions, fermeture par
 // ✕ / Échap / fond, focus rendu ; les pastilles retombent à 0 à
 // l'ouverture et remontent à 1 quand l'autre manager écrit. Seul manager
@@ -46,9 +47,10 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
 
     const domA = await openGame(html, `${baseUrl}?m=${tA}`); doms.push(domA);
     const winA = domA.window, docA = winA.document;
-    check(winA.__lastLeagueChatCount === undefined, "hors page Ligue : aucun appel au chat");
+    await winA.__lastLeagueChatCount;
     const ligueTab = [...docA.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue");
-    check(!ligueTab.querySelector(".sidebar-badge") && !docA.getElementById("ligueChatBadge"), "aucune pastille sur l'entrée « Ligue » du menu");
+    check(await waitFor(() => badge(docA, "ligueChatBadge") === "9+", "pastille du menu"), "hors page Ligue : pastille « 9+ » sur l'entrée « Ligue » du menu");
+    check(ligueTab.contains(docA.getElementById("ligueChatBadge")), "pastille dans le bouton « Ligue » du menu");
 
     goLigue(docA);
     await winA.__lastLeagueChatCount;
@@ -56,7 +58,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     const openBtn = docA.querySelector("#standingsContent .lg-head #lgcOpenBtn");
     check(!!openBtn && /Chat de la ligue/.test(openBtn.textContent), "bouton « Chat de la ligue » dans l'en-tête de la page Ligue");
     check(await waitFor(() => badge(docA, "lgcOpenBadge") === "9+", "pastille du bouton"), "bouton : pastille rouge « 9+ » (résultats et transfert non lus)");
-    check(!docA.getElementById("mTabMenu") || !docA.getElementById("mTabMenu").classList.contains("lgc-has-unread"), "pas de point sur « Menu » (mobile) pour le chat");
+    check(!docA.getElementById("mTabMenu") || docA.getElementById("mTabMenu").classList.contains("lgc-has-unread"), "point sur « Menu » (mobile) tant qu'il y a des non-lus");
     check(!drawerOpen(docA), "chat fermé au départ");
 
     // Ouverture.
@@ -68,6 +70,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     check(chat.getAttribute("role") === "dialog" && chat.getAttribute("aria-modal") === "true", "fenêtre modale (role=dialog)");
     check(chat.contains(docA.activeElement), "focus déplacé dans le chat");
     check(badge(docA, "lgcOpenBadge") === "", "ouvert : la pastille retombe à 0");
+    check(badge(docA, "ligueChatBadge") === "", "ouvert : la pastille du menu disparaît aussi");
     check(chat.querySelectorAll(".lgc-sys--result").length === 10, "10 messages « Résultat » (2 journées)");
     const res0 = chat.querySelector(".lgc-sys--result");
     check(res0.querySelector(".lgc-kind").textContent === "Résultat" && / bat /.test(res0.querySelector(".lgc-sys-text").textContent), "carte « Résultat » : « X bat Y »");

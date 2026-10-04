@@ -5977,4 +5977,5 @@ window.HM_I18N_DE = {
   "Licencier": "Entlassen:",
   "? Indemnité :": "? Abfindung:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30 % des noch geschuldeten Gehalts). Er wird vereinslos.",
+  "Nouveaux messages dans le chat de la ligue": "Neue Nachrichten im Liga-Chat",
 };
