@@ -6161,6 +6161,10 @@ class Team {
     this.trainingHistory = [];
     // Marché (Premium) : liste de suivi et alertes, voir MARKET_WATCHLIST_MAX.
     this.marketWatchlist = []; // [{ playerId, since }]
+    // Signets du manager (2026-10-04) : n'importe quel joueur du jeu, par son
+    // id unique ; leagueId = dernier championnat connu (le serveur le met à
+    // jour s'il est transféré ailleurs, voir server/bookmarks.js).
+    this.bookmarks = []; // [{ playerId, leagueId, since }]
     this.marketAlerts = []; // [{ id, createdAt, pos, age, pot, price, crit }]
     this.marketAlertSeen = {}; // { listingId: 1 (annonce signalée) | 2 (fin proche signalée) }
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
@@ -7431,6 +7435,21 @@ class Team {
   // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
   // la tactique de cet emplacement, ou l'ajoute à la suite.
   // Nombre de tactiques enregistrables : 6 en Premium, 3 sinon.
+  // Signets (tous les joueurs, sans Premium) — voir BOOKMARKS_MAX.
+  isBookmarked(playerId) {
+    return (this.bookmarks || []).some(b => String(b.playerId) === String(playerId));
+  }
+  setBookmark(playerId, on, leagueId = null, now = Date.now()) {
+    if (!Array.isArray(this.bookmarks)) this.bookmarks = [];
+    const exists = this.isBookmarked(playerId);
+    if (on && !exists) {
+      if (this.bookmarks.length >= BOOKMARKS_MAX) return { ok: false, error: `${BOOKMARKS_MAX} joueurs en signets au maximum.` };
+      this.bookmarks.push({ playerId, leagueId: leagueId || null, since: now });
+    } else if (!on && exists) {
+      this.bookmarks = this.bookmarks.filter(b => String(b.playerId) !== String(playerId));
+    }
+    return { ok: true, bookmarked: this.isBookmarked(playerId) };
+  }
   // Marché — liste de suivi (Premium). Renvoie { ok, watching } ou { ok:false, error }.
   isWatchingPlayer(playerId) {
     return (this.marketWatchlist || []).some(w => String(w.playerId) === String(playerId));
@@ -16422,6 +16441,8 @@ function playerHistoryEntries(p) {
 // League.checkMarketAlerts, appelée par le serveur à chaque passage.
 // ---------------------------------------------------------------------
 const MARKET_WATCHLIST_MAX = 30;
+// Signets (voir Team.bookmarks) : plafond large, juste un garde-fou.
+const BOOKMARKS_MAX = 300;
 const MARKET_ALERTS_MAX = 3;
 // Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
 // potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
@@ -16809,6 +16830,7 @@ function serializeTeam(team) {
     lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
     trainingHistory: cloneTrainingHistory(team.trainingHistory),
     marketWatchlist: (team.marketWatchlist || []).map(w => ({ playerId: w.playerId, since: w.since })),
+    bookmarks: (team.bookmarks || []).map(b => ({ playerId: b.playerId, leagueId: b.leagueId || null, since: b.since })),
     marketAlerts: (team.marketAlerts || []).map(a => ({ ...a, crit: (a.crit || []).map(c => ({ ...c })) })),
     marketAlertSeen: { ...(team.marketAlertSeen || {}) },
     // Décisions manager en attente pour un jeune de 18 ans (voir
@@ -17148,6 +17170,9 @@ function teamFromSave(data) {
   // été jouée.
   team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
   team.trainingHistory = cloneTrainingHistory(data.trainingHistory);
+  team.bookmarks = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+    .filter(b => b && b.playerId != null).slice(0, BOOKMARKS_MAX)
+    .map(b => ({ playerId: b.playerId, leagueId: typeof b.leagueId === "string" ? b.leagueId : null, since: typeof b.since === "number" ? b.since : 0 }));
   team.marketWatchlist = (Array.isArray(data.marketWatchlist) ? data.marketWatchlist : [])
     .filter(w => w && w.playerId != null).slice(0, MARKET_WATCHLIST_MAX)
     .map(w => ({ playerId: w.playerId, since: typeof w.since === "number" ? w.since : 0 }));
@@ -19700,7 +19725,7 @@ return {
   // Connaissance tactique (voir le grand commentaire au-dessus de
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
-  MARKET_WATCHLIST_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel, marketAlertParts, marketAlertRanges,
+  MARKET_WATCHLIST_MAX, BOOKMARKS_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel, marketAlertParts, marketAlertRanges,
   TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory, pushOrdersHistory,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,

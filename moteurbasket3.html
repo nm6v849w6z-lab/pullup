@@ -8017,6 +8017,19 @@
   .fr-cancel{color:var(--danger); border-color:rgba(226,105,79,.55);}
   .fr-tag-ok{color:var(--ok); border-color:rgba(51,180,161,.55);}
   .fr-tag-youth{color:#8fb9f0; border-color:rgba(57,135,229,.5); margin-left:6px;}
+  /* Signets (2026-10-04) : étoile de la fiche joueur, page Signets, toast. */
+  .pdp2-btn.pdp2-bm{display:inline-flex; align-items:center; gap:6px;}
+  .pdp2-btn.pdp2-bm.is-on{color:var(--amber); border-color:rgba(240,162,60,.55);}
+  .bm-intro{margin:-6px 0 14px;}
+  .bm-empty{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px;}
+  .bm-empty p{margin:0 0 6px;}
+  .bm-table .bm-club{white-space:nowrap;}
+  .bm-table .bm-club small{display:block; font-size:11px;}
+  .bm-remove{background:none; border:0; color:var(--amber); cursor:pointer; padding:4px; border-radius:6px; line-height:0;}
+  .bm-remove:hover{background:rgba(240,162,60,.12);}
+  .hm-toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); transform:translate(-50%, 20px); background:var(--panel-2, #151f33); color:var(--ink); border:1px solid var(--amber); border-radius:12px; padding:10px 18px; font-weight:700; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:9999; max-width:calc(100% - 32px);}
+  .hm-toast.show{opacity:1; transform:translate(-50%, 0);}
+  @media (max-width:1024px){ .hm-toast{bottom:calc(84px + env(safe-area-inset-bottom, 0px));} }
   .fr-tag-injured{color:var(--danger); border-color:rgba(226,105,79,.55); margin-left:6px;}
   .fr-invites{border-color:rgba(240,162,60,.55); box-shadow:inset 3px 0 0 var(--amber);}
   .fr-rules-off li::before{content:"–"; color:var(--ink-faint);}
@@ -8209,6 +8222,8 @@
       <!-- Planète Hoop (retour utilisateur 2026-09-28) : les championnats et
            les chiffres de tous les pays, en lecture seule. -->
       <button class="tab-btn sidebar-link" data-tab="planete"><span class="sidebar-label">Planète Hoop</span></button>
+      <!-- Signets (2026-10-04) : joueurs mis de côté depuis leur fiche. -->
+      <button class="tab-btn sidebar-link" data-tab="signets"><span class="sidebar-label">Signets</span></button>
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
       <!-- Personnalisation : plus d'onglet dans la barre latérale (retour
            utilisateur 2026-09-30), petit bouton sur le tableau de bord à
@@ -9216,6 +9231,13 @@
        dessous de guide [...] on y laissera le bouton passer en version
        payante (gratuitement) tout doit se passer par là maintenant") — voir
        renderPremiumSection. -->
+  <div id="signetsSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Signets</h2>
+      <p class="sub bm-intro">Les joueurs que vous avez mis en signet depuis leur fiche (☆). Ils y restent même s'ils changent de club ou de championnat.</p>
+      <div id="signetsContent"></div>
+    </div>
+  </div>
   <div id="planeteSection" class="hidden">
     <div class="section ph">
       <h2 class="page-title">Planète Hoop</h2>
@@ -16365,6 +16387,10 @@ class Team {
     this.trainingHistory = [];
     // Marché (Premium) : liste de suivi et alertes, voir MARKET_WATCHLIST_MAX.
     this.marketWatchlist = []; // [{ playerId, since }]
+    // Signets du manager (2026-10-04) : n'importe quel joueur du jeu, par son
+    // id unique ; leagueId = dernier championnat connu (le serveur le met à
+    // jour s'il est transféré ailleurs, voir server/bookmarks.js).
+    this.bookmarks = []; // [{ playerId, leagueId, since }]
     this.marketAlerts = []; // [{ id, createdAt, pos, age, pot, price, crit }]
     this.marketAlertSeen = {}; // { listingId: 1 (annonce signalée) | 2 (fin proche signalée) }
     // Entraînement hebdomadaire à la BuzzerBeater : UNE compétence pour tout
@@ -17208,6 +17234,21 @@ class Team {
   // Tactiques enregistrées (voir TACTIC_PRESETS_MAX). `slot` 0..2 : remplace
   // la tactique de cet emplacement, ou l'ajoute à la suite.
   // Nombre de tactiques enregistrables : 6 en Premium, 3 sinon.
+  // Signets (tous les joueurs, sans Premium) — voir BOOKMARKS_MAX.
+  isBookmarked(playerId) {
+    return (this.bookmarks || []).some(b => String(b.playerId) === String(playerId));
+  }
+  setBookmark(playerId, on, leagueId = null, now = Date.now()) {
+    if (!Array.isArray(this.bookmarks)) this.bookmarks = [];
+    const exists = this.isBookmarked(playerId);
+    if (on && !exists) {
+      if (this.bookmarks.length >= BOOKMARKS_MAX) return { ok: false, error: `${BOOKMARKS_MAX} joueurs en signets au maximum.` };
+      this.bookmarks.push({ playerId, leagueId: leagueId || null, since: now });
+    } else if (!on && exists) {
+      this.bookmarks = this.bookmarks.filter(b => String(b.playerId) !== String(playerId));
+    }
+    return { ok: true, bookmarked: this.isBookmarked(playerId) };
+  }
   // Marché — liste de suivi (Premium). Renvoie { ok, watching } ou { ok:false, error }.
   isWatchingPlayer(playerId) {
     return (this.marketWatchlist || []).some(w => String(w.playerId) === String(playerId));
@@ -23867,6 +23908,8 @@ const TRAINING_HISTORY_MAX = 13;
 // League.checkMarketAlerts, appelée par le serveur à chaque passage.
 // ---------------------------------------------------------------------
 const MARKET_WATCHLIST_MAX = 30;
+// Signets (voir Team.bookmarks) : plafond large, juste un garde-fou.
+const BOOKMARKS_MAX = 300;
 const MARKET_ALERTS_MAX = 3;
 // Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
 // potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
@@ -24243,6 +24286,7 @@ function serializeTeam(team) {
     lastTrainingReport: cloneTrainingReport(team.lastTrainingReport),
     trainingHistory: cloneTrainingHistory(team.trainingHistory),
     marketWatchlist: (team.marketWatchlist || []).map(w => ({ playerId: w.playerId, since: w.since })),
+    bookmarks: (team.bookmarks || []).map(b => ({ playerId: b.playerId, leagueId: b.leagueId || null, since: b.since })),
     marketAlerts: (team.marketAlerts || []).map(a => ({ ...a, crit: (a.crit || []).map(c => ({ ...c })) })),
     marketAlertSeen: { ...(team.marketAlertSeen || {}) },
     // Décisions manager en attente pour un jeune de 18 ans (voir
@@ -24555,6 +24599,9 @@ function teamFromSave(data) {
   // été jouée.
   team.lastTrainingReport = cloneTrainingReport(data.lastTrainingReport);
   team.trainingHistory = cloneTrainingHistory(data.trainingHistory);
+  team.bookmarks = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+    .filter(b => b && b.playerId != null).slice(0, BOOKMARKS_MAX)
+    .map(b => ({ playerId: b.playerId, leagueId: typeof b.leagueId === "string" ? b.leagueId : null, since: typeof b.since === "number" ? b.since : 0 }));
   team.marketWatchlist = (Array.isArray(data.marketWatchlist) ? data.marketWatchlist : [])
     .filter(w => w && w.playerId != null).slice(0, MARKET_WATCHLIST_MAX)
     .map(w => ({ playerId: w.playerId, since: typeof w.since === "number" ? w.since : 0 }));
@@ -27707,7 +27754,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "premiumSection", "planeteSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  "guideSection", "premiumSection", "planeteSection", "signetsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
   // Profil du manager (2026-09-30) : page à part, hors barre latérale (voir
   // showManagerProfile).
   "managerProfileSection",
@@ -32378,6 +32425,8 @@ document.getElementById("playerDetailContent").addEventListener("input", (e) => 
   hint.textContent = h.label;
 });
 document.getElementById("playerDetailContent").addEventListener("click", (e) => {
+  const bmBtn = e.target.closest("[data-pdp-bookmark]");
+  if (bmBtn) { window.__lastBookmarkToggle = toggleDetailBookmark(bmBtn); return; }
   const mg = e.target.closest("[data-pdp-market-goto]");
   if (mg) {
     const id = Number(mg.dataset.pdpMarketGoto);
@@ -33345,7 +33394,8 @@ function renderPlayerDetail(teamIdx, playerId) {
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
   html += `<div class="pdp2-actions">` +
-    (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`);
+    (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`) +
+    pdpBookmarkBtnHtml(player);
   if (isOwnTeam) {
     html += onMarket
       ? `<span class="pdp2-btn pdp2-btn--static">Aux enchères</span>`
@@ -33620,6 +33670,189 @@ function pdpTransferCardHtml(l, player) {
     `<p class="training-intro" style="margin-top:10px;"><button type="button" class="secondary" data-pdp-market-goto="${l.id}">${mkHasAgreement(l) ? "Enchérir sur le Marché" : "Voir l'annonce sur le Marché"}</button></p>` +
     `</div>`;
 }
+
+// ---------------------------------------------------------------------
+// SIGNETS (retour utilisateur 2026-10-04) : n'importe quel joueur dont la
+// fiche s'ouvre (son effectif, un adversaire, un autre championnat…) se met
+// de côté d'un clic (☆/★), et se retrouve dans Menu → Signets. Stockés sur
+// le club (Team.bookmarks, par id unique de joueur), enregistrés par le
+// serveur (POST /api/bookmarks) ; la page relit leur position actuelle
+// (GET /api/bookmarks, voir server/bookmarks.js) : un joueur transféré,
+// même dans un autre championnat, reste dans les signets.
+// ---------------------------------------------------------------------
+const BM_STAR = on => `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+function pdpBookmarkBtnHtml(player) {
+  if (!teamA || !player) return "";
+  const on = teamA.isBookmarked(player.id);
+  return `<button type="button" class="pdp2-btn pdp2-bm${on ? " is-on" : ""}" data-pdp-bookmark aria-pressed="${on}" title="${on ? "Retirer des signets" : "Ajouter aux signets"}">${BM_STAR(on)}<span>${on ? "Dans mes signets" : "Signet"}</span></button>`;
+}
+function setDetailBookmarkBtn(btn, on) {
+  btn.classList.toggle("is-on", on);
+  btn.setAttribute("aria-pressed", String(on));
+  btn.title = on ? "Retirer des signets" : "Ajouter aux signets";
+  btn.innerHTML = `${BM_STAR(on)}<span>${on ? "Dans mes signets" : "Signet"}</span>`;
+}
+// Ajout / retrait : affiché tout de suite, enregistré par le serveur, annulé
+// s'il refuse (joueur introuvable, plafond…).
+async function setPlayerBookmark(playerId, on, leagueId = null) {
+  const before = (teamA.bookmarks || []).map(b => ({ ...b }));
+  teamA.setBookmark(playerId, on, leagueId);
+  try {
+    const res = await fetchApi("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId, on, leagueId }) });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || "Signet non enregistré.");
+    if (Array.isArray(data.bookmarks)) teamA.bookmarks = data.bookmarks;
+    return { ok: true };
+  } catch (e) {
+    teamA.bookmarks = before;
+    return { ok: false, error: e.message || "Serveur indisponible, réessayez." };
+  }
+}
+async function toggleDetailBookmark(btn) {
+  const ref = currentPlayerDetailRef;
+  if (!ref || !teamA) return;
+  const leagueId = playerDetailForeign ? playerDetailForeign.leagueId : (league && league.leagueId) || null;
+  const on = !teamA.isBookmarked(ref.playerId);
+  setDetailBookmarkBtn(btn, on);
+  showToast(on ? "Joueur ajouté aux signets." : "Joueur retiré des signets.");
+  const r = await setPlayerBookmark(ref.playerId, on, leagueId);
+  if (!r.ok) { setDetailBookmarkBtn(btn, teamA.isBookmarked(ref.playerId)); showToast(r.error); }
+}
+
+// Petite confirmation en bas de l'écran (signets, licenciement…).
+let hmToastTimer = null;
+function showToast(text) {
+  let el = document.getElementById("hmToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "hmToast";
+    el.className = "hm-toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(hmToastTimer);
+  hmToastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+// Page Signets.
+const bmUi = { items: null, error: "" };
+async function renderSignetsSection() {
+  const holder = document.getElementById("signetsContent");
+  if (!holder) return;
+  if (!bmUi.items) holder.innerHTML = `<p class="training-empty">Chargement des signets…</p>`;
+  else holder.innerHTML = signetsListHtml(bmUi.items);
+  try {
+    const res = await fetchApi("/api/bookmarks");
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || "Signets indisponibles pour l'instant.");
+    bmUi.items = data.items || [];
+    bmUi.error = "";
+    if (Array.isArray(data.bookmarks)) teamA.bookmarks = data.bookmarks;
+  } catch (e) {
+    // Hors ligne : signets de son propre championnat, depuis la partie chargée.
+    bmUi.error = e.message;
+    if (!bmUi.items) bmUi.items = (teamA.bookmarks || []).map(b => ({ playerId: b.playerId, leagueId: b.leagueId, mine: !b.leagueId || b.leagueId === league.leagueId, local: true, since: b.since }));
+  }
+  if (document.getElementById("signetsContent")) document.getElementById("signetsContent").innerHTML = signetsListHtml(bmUi.items);
+}
+// Joueur de son championnat : { player, teamIdx, status } d'après la partie chargée.
+function bmLocalPlayer(id) {
+  for (let i = 0; i < league.teams.length; i++) {
+    const p = league.teams[i].players.find(x => String(x.id) === String(id));
+    if (p) return { player: p, teamIdx: i, status: "club" };
+  }
+  const y = (teamA.youthPlayers || []).find(x => String(x.id) === String(id));
+  if (y) return { player: y, teamIdx: myTeamIndex, status: "youth" };
+  const fa = league.freeAgentById ? league.freeAgentById(id) : null;
+  if (fa) return { player: fa, teamIdx: null, status: "fa" };
+  return null;
+}
+function signetsListHtml(items) {
+  const list = (items || []).slice().sort((a, b) => (b.since || 0) - (a.since || 0));
+  if (!list.length) {
+    return `<div class="bm-empty"><p><b>Aucun joueur en signet.</b></p><p class="sub">Ouvrez la fiche de n'importe quel joueur (votre effectif, un adversaire, le marché, un autre championnat) et cliquez sur « ☆ Signet ».</p></div>`;
+  }
+  const ratingHead = ratingDisplayMode() === "tc" ? "TC" : "GEN";
+  let html = `<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general bm-table"><thead><tr>` +
+    `<th class="eff-th-name">Nom</th><th>Club</th><th>Poste</th><th>${ratingHead}</th><th>Potentiel</th><th>Âge</th><th>Taille</th><th>Salaire/sem.</th><th>Statut</th><th class="eff-th-actions"><span class="eff-sr">Retirer</span></th>` +
+    `</tr></thead><tbody>`;
+  list.forEach(it => {
+    const removeBtn = `<td class="eff-td-actions"><button type="button" class="bm-remove" data-bm-remove="${escapeHtml(String(it.playerId))}" title="Retirer des signets" aria-label="Retirer des signets">${BM_STAR(true)}</button></td>`;
+    if (it.missing) {
+      html += `<tr class="eff-row bm-missing"><td class="eff-td-name" colspan="9"><span class="sub">Joueur momentanément introuvable</span></td>${removeBtn}</tr>`;
+      return;
+    }
+    let p, teamIdx = it.teamIdx, status = it.status, clubHtml, nameHtml, team = null, vis = null;
+    if (it.mine) {
+      const loc = bmLocalPlayer(it.playerId);
+      if (!loc) { html += `<tr class="eff-row bm-missing"><td class="eff-td-name" colspan="9"><span class="sub">Joueur momentanément introuvable</span></td>${removeBtn}</tr>`; return; }
+      p = loc.player; teamIdx = loc.teamIdx; status = loc.status;
+      team = teamIdx != null ? league.teams[teamIdx] : null;
+      vis = computePlayerVisibility(teamIdx == null ? -1 : teamIdx, p);
+      const listing = vis.openListing;
+      clubHtml = status === "fa" ? `<span class="sub">Agent libre</span>` : teamIdx === myTeamIndex ? `<b>Votre équipe</b>` : teamLinkHtml(teamIdx, team.name);
+      nameHtml = status === "club" ? playerLinkHtml(teamIdx, p.id, p.name)
+        : status === "fa" && listing ? `<button type="button" class="player-link" data-bm-market="${listing.id}">${escapeHtml(p.name)}</button>`
+        : status === "youth" ? `<button type="button" class="player-link" data-tab="academie">${escapeHtml(p.name)}</button>`
+        : escapeHtml(p.name);
+    } else {
+      try { p = playerFromSave(it.player); } catch (e) { p = null; }
+      if (!p) return;
+      clubHtml = `${nationFlagHtml(it.country || "fr")} ${status === "fa" ? `<span class="sub">Agent libre</span>` : escapeHtml(it.teamName || "")}${it.label ? ` <small class="sub">${escapeHtml(it.label)}</small>` : ""}`;
+      nameHtml = status === "club"
+        ? `<button type="button" class="player-link" data-bm-foreign="${escapeHtml(it.leagueId)}|${teamIdx}|${p.id}">${escapeHtml(p.name)}</button>`
+        : escapeHtml(p.name);
+    }
+    const fully = vis ? vis.fullyVisible : false;
+    const rating = fully
+      ? `<span class="attr-cell eff-attr ${attrColorTier(effAttrAverage(p))}"><span class="attr-val">${rosterRatingValue(p)}</span></span>`
+      : `<span class="sub" title="Caractéristiques pas encore scoutées">?</span>`;
+    // Potentiel : seulement pour ses propres joueurs (caché ailleurs, comme
+    // sur la fiche et dans le comparateur).
+    const pot = it.mine && teamIdx === myTeamIndex && typeof p.potential === "number" ? effPotentialHtml(p) : `<span class="sub">–</span>`;
+    const listing = vis && vis.openListing;
+    const statusHtml = status === "youth" ? `<span class="lp-tag fr-tag-youth">U18</span>`
+      : listing ? `<span class="market-listed-badge">Aux enchères</span>`
+      : status === "fa" ? `<span class="sub">Agent libre</span>`
+      : `<span class="sub">–</span>`;
+    html += `<tr class="eff-row">` +
+      `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${nameHtml}</span></td>` +
+      `<td class="bm-club">${clubHtml}</td>` +
+      `<td>${effPosBadgeHtml(p.position)}</td>` +
+      `<td class="eff-td-rating">${rating}</td>` +
+      `<td>${pot}</td>` +
+      `<td class="eff-num">${p.age}</td>` +
+      `<td class="eff-num">${p.height ? `${p.height} cm` : "–"}</td>` +
+      `<td class="eff-num">${typeof p.salary === "number" ? formatMoney(p.salary) : "–"}</td>` +
+      `<td>${statusHtml}</td>` + removeBtn + `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+document.getElementById("signetsContent").addEventListener("click", (e) => {
+  const rm = e.target.closest("[data-bm-remove]");
+  if (rm) {
+    const id = rm.dataset.bmRemove;
+    const item = (bmUi.items || []).find(x => String(x.playerId) === id);
+    const pid = item ? item.playerId : (/^-?\d+$/.test(id) ? Number(id) : id);
+    bmUi.items = (bmUi.items || []).filter(x => String(x.playerId) !== id);
+    document.getElementById("signetsContent").innerHTML = signetsListHtml(bmUi.items);
+    showToast("Joueur retiré des signets.");
+    window.__lastBookmarkToggle = setPlayerBookmark(pid, false).then(r => { if (!r.ok) { showToast(r.error); renderSignetsSection(); } });
+    return;
+  }
+  const fb = e.target.closest("[data-bm-foreign]");
+  if (fb) {
+    const [lid, tIdx, pid] = fb.dataset.bmForeign.split("|");
+    window.__lastForeignPlayer = showForeignPlayerDetail(lid, Number(tIdx), Number(pid));
+    return;
+  }
+  const mk = e.target.closest("[data-bm-market]");
+  if (mk) { TAB_HANDLERS.marche(); mkGotoListing(Number(mk.dataset.bmMarket)); }
+});
 
 // Classements du joueur (retour utilisateur 2026-10-03, façon BuzzerBeater) :
 // /api/world/player-ranks renvoie ses rangs par 40 minutes dans son
@@ -56459,6 +56692,7 @@ const TAB_HANDLERS = {
   premium: () => { renderPremiumSection(); showPage("premiumSection"); setActiveTab("premium"); },
   personnalisation: () => { renderPersonnalisationSection(); showPage("personnalisationSection"); setActiveTab("personnalisation"); },
   planete: () => { showPage("planeteSection"); setActiveTab("planete"); renderPlaneteSection(); },
+  signets: () => { showPage("signetsSection"); setActiveTab("signets"); window.__lastSignets = renderSignetsSection(); },
   club: () => { renderClubSection(); showPage("clubSection"); setActiveTab("club"); },
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },

@@ -61,6 +61,7 @@ const Accounts = require("./accounts.js");
 const I18n = require("./i18n.js");
 const Push = require("./push.js");
 const PublicPlayers = require("./publicPlayers.js");
+const Bookmarks = require("./bookmarks.js");
 const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
@@ -1875,7 +1876,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           (out.teams || []).forEach(t => {
             if (!t) return;
             t.managerLinkToken = null; t.pushSubscriptions = []; t.pushKickoffKeys = []; t.pushAuctionKeys = [];
-            t.plannedTactics = null; t.tacticPresets = []; t.marketWatchlist = []; t.marketAlerts = [];
+            t.plannedTactics = null; t.tacticPresets = []; t.marketWatchlist = []; t.marketAlerts = []; t.bookmarks = [];
           });
           delete out.liveMatches;
           out.liveMatch = null;
@@ -2761,6 +2762,32 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         ctx.league.worldPrivateLeagueTimes = PrivateLeague.busyTimesByIdx(ctx.lpStore, ctx.leagueId);
         const lpv = privateLeaguesForViewer(ctx, now);
         sendJson(res, 200, { ...result, privateLeagues: lpv.privateLeagues, guestTeams: lpv.guests, state: buildStateSnapshot(ctx.league, ctx.teamIndex, now) });
+        return;
+      }
+
+      // Signets du manager (2026-10-04, voir server/bookmarks.js) : GET =
+      // liste résolue (position actuelle de chaque joueur, même transféré
+      // dans un autre championnat), POST { playerId, on, leagueId? }.
+      if (route.pathname === "/api/bookmarks" && (req.method === "GET" || req.method === "POST")) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const opts = {
+          Engine, world: ctx.world || null,
+          loadLeague: id => World.loadLeague(ctx.world, id, multiSavePath),
+          labelOf: e => World.divisionLabel(e.level, e.group),
+        };
+        if (req.method === "GET") {
+          const out = await Bookmarks.resolveBookmarks(ctx, opts);
+          if (out.changed) await persistContext(ctx);
+          sendJson(res, 200, { ok: true, items: out.items, removed: out.removed, bookmarks: ctx.league.teams[ctx.teamIndex].bookmarks });
+          return;
+        }
+        let body;
+        try { body = req.__parsedBody !== undefined ? req.__parsedBody : await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const out = await Bookmarks.toggleBookmark(ctx, body, opts, now);
+        if (!out.ok) { sendJson(res, out.status || 400, { ok: false, error: out.error }); return; }
+        await persistContext(ctx);
+        sendJson(res, 200, out);
         return;
       }
 

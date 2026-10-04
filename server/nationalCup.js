@@ -165,7 +165,7 @@ function guestForTeam(Engine, team, ref) {
   // Historique hebdomadaire des joueurs (permaliens) : inutile ici, et privé.
   (data.players || []).forEach(p => { delete p.weeklyHistory; });
   // Données privées du club invité (ordres préparés, marché, sponsors…).
-  ["plannedTactics", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen",
+  ["plannedTactics", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen", "bookmarks",
     "sponsorOffers", "sponsorContracts", "sponsorHistory", "scoutingAdTickets", "scoutingUnlocks", "scoutingAdWatchLog",
     "scoutedAttrs", "pendingInterviews", "pendingYouthDecisions", "youthCandidates", "trainingHistory", "lastTrainingReport",
     "collectiveTrainingLog"].forEach(k => { delete data[k]; });

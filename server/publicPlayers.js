@@ -46,6 +46,8 @@ const PRIVATE_TEAM_FIELDS = [
   "scoutedAttrs", "scoutingUnlocks", "scoutingAdWatchLog", "scoutingAdTickets",
   "youthCandidates", "youthPlayers", "pendingYouthDecisions",
   "feed", "pendingInterviews", "pendingRecapEvents", "marketAlertSeen", "ordersHistory",
+  // Signets du manager (2026-10-04) : personnels.
+  "bookmarks",
 ];
 const FOREIGN_PRIVATE_TEAM_FIELDS = [
   ...PRIVATE_TEAM_FIELDS,
