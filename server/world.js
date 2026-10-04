@@ -718,13 +718,13 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   // Feuilles de match vidées par des départs antérieurs à l'archivage au
   // départ (retour utilisateur 2026-10-04) : restauration unique pour le
   // monde, quand toutes les ligues sont lues. Les ajouts sont d'abord
-  // sauvegardés à part (« departed-matchlog-restore ») pour pouvoir être
+  // sauvegardés à part (« departedrestore ») pour pouvoir être
   // relus ou annulés ; rien d'existant n'est modifié.
   if (allRead && !world.departedMatchLogsRestoredAt) {
     try {
       const restored = Engine.restoreDepartedMatchLogs([...allLeagues.values()]);
       if (restored.length) {
-        await store.saveWorldAuxRaw("departed-matchlog-restore", { at: now, additions: restored }, savePath);
+        await store.saveWorldAuxRaw("departedrestore", { at: now, additions: restored }, savePath, { strict: true });
         events.push({ type: "departed-matchlog-restored", clubs: restored.length, rows: restored.reduce((n, r) => n + r.rows.length, 0) });
       }
       world.departedMatchLogsRestoredAt = now;
