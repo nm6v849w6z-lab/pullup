@@ -75,7 +75,7 @@ async function until(fn, n = 60) { for (let i = 0; i < n; i++) { if (fn()) retur
   const inp = doc.querySelector("#pdpExtSalary");
   if (!sel || sel.options.length !== 5 || sel.value !== "3") fail("durée : 1 à 5 saisons, 3 par défaut.");
   const asked = Number(inp.dataset.asked);
-  if (Number(inp.max) !== asked || Number(inp.min) !== Engine.contractOfferFloor(asked)) fail(`bornes du salaire : ${inp.min}-${inp.max} (demandé ${asked})`);
+  if (Number(inp.max) !== asked || inp.hasAttribute("min")) fail(`bornes du salaire : min=${inp.getAttribute("min")} max=${inp.max} (demandé ${asked}) — plus de borne basse affichée (2026-10-04)`);
   if (!card.textContent.includes("Salaire demandé")) fail("salaire demandé non indiqué.");
   if (!/Salaire demandé/.test(card.querySelector(".pdp-contract-asked").textContent)) fail("salaire demandé absent.");
   inp.value = String(Engine.contractOfferFloor(asked));

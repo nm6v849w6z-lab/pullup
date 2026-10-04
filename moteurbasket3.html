@@ -33614,11 +33614,13 @@ function playerContractCardHtml(team, player) {
       `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 1 semaine, il le prendra comme un refus.</p>` +
       `<div class="pdp-contract-form">` +
       `<button type="button" class="secondary" data-raise-accept="${player.id}">Accepter (${formatMoney(player.raiseRequest.asked)})</button>` +
-      `<label>Contre-offre (€ / sem.)<input type="number" id="pdpRaiseSalary" min="${contractOfferFloor(player.raiseRequest.asked)}" max="${player.raiseRequest.asked}" step="10" value="${contractOfferFloor(player.raiseRequest.asked)}" data-asked="${player.raiseRequest.asked}"></label>` +
+      `<label>Contre-offre (€ / sem.)<input type="number" id="pdpRaiseSalary" max="${player.raiseRequest.asked}" step="10" value="${player.raiseRequest.asked}" data-asked="${player.raiseRequest.asked}"></label>` +
       `<button type="button" class="secondary" data-raise-counter="${player.id}">Faire une contre-offre</button>` +
       `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div>` +
-      `<div><span class="pdp-contract-hint ${contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).key}" id="pdpRaiseHint">${escapeHtml(contractOfferHint(player.raiseRequest.asked, contractOfferFloor(player.raiseRequest.asked)).label)}</span></div>` +
-      `<p class="sub">Contre-offre : jusqu'à 10 % de moins que sa demande (${formatMoney(contractOfferFloor(player.raiseRequest.asked))} au minimum). S'il la refuse, les négociations sont terminées.</p></div>`;
+      `<div><span class="pdp-contract-hint sure" id="pdpRaiseHint">${escapeHtml(contractOfferHint(player.raiseRequest.asked, player.raiseRequest.asked).label)}</span></div>` +
+      // Pas de fourchette affichée (retour utilisateur 2026-10-04 : « enlever
+      // la fourchette sur la négo salaire ») : la limite basse reste, à deviner.
+      `<p class="sub">S'il refuse votre contre-offre, les négociations sont terminées.</p></div>`;
   }
   if (last && !player.retiringAfterSeason) {
     const asked = askedSalary(player);
@@ -33634,7 +33636,7 @@ function playerContractCardHtml(team, player) {
           : refusals > 0 ? `<p class="sub">Offres refusées : ${refusals}. Chaque refus fait monter sa demande et lui coûte de la motivation ; à ${CONTRACT_FIRM_AFTER_REFUSALS} refus, il ne négociera plus.</p>` : "") +
         `<div class="pdp-contract-form">` +
         `<label>Durée<select id="pdpExtSeasons">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === CONTRACT_DEFAULT_SEASONS ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label>` +
-        `<label>Salaire (€ / sem.)<input type="number" id="pdpExtSalary" min="${floor}" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
+        `<label>Salaire (€ / sem.)<input type="number" id="pdpExtSalary" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
         `<button type="button" class="secondary" data-contract-extend="${player.id}">Proposer la prolongation</button></div>` +
         `<div><span class="pdp-contract-hint sure" id="pdpExtHint">${escapeHtml(contractOfferHint(asked, asked).label)}</span></div>`;
     }
@@ -33662,7 +33664,7 @@ async function contractExtensionAction(playerId) {
   const asked = askedSalary(player);
   const floor = contractExtensionFloor(player, asked);
   if (!(salary >= floor && salary <= asked)) {
-    pdpContractFeedback(`Proposez un salaire entre ${formatMoney(floor)} et ${formatMoney(asked)} par semaine.`, false);
+    pdpContractFeedback(salary > asked ? "Inutile de proposer plus que sa demande." : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.", false);
     return;
   }
   let data = null;
@@ -33704,7 +33706,7 @@ async function raiseResponseAction(playerId, accept, counter = null) {
   if (!player || !player.raiseRequest) return;
   if (counter != null) {
     const asked = player.raiseRequest.asked, floor = contractOfferFloor(asked);
-    if (!(counter >= floor && counter <= asked)) { pdpContractFeedback(`Contre-offre entre ${formatMoney(floor)} et ${formatMoney(asked)} / sem.`, false); return; }
+    if (!(counter >= floor && counter <= asked)) { pdpContractFeedback(counter > asked ? "Inutile de proposer plus que sa demande." : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.", false); return; }
   }
   let data = null;
   try {
@@ -48191,7 +48193,7 @@ function mkNegotiationHtml(l, asked) {
   return `<div class="mk-nego">` +
     `<div class="mk-step"><span>1 · Contrat avec le joueur</span><span>${firm ? "dernier mot" : `essai ${Math.min(refusals + 1, CONTRACT_FIRM_AFTER_REFUSALS)}/${CONTRACT_FIRM_AFTER_REFUSALS}`}</span></div>` +
     (fb && fb.text ? `<div class="mk-nego-msg ${fb.ok ? "ok" : "no"}">${fb.html || escapeHtml(fb.text)}</div>` : "") +
-    `<div class="mk-nego-row"><label>Salaire proposé<input type="number" id="negoSalary_${l.id}" value="${salary}" min="${firm ? demand : contractOfferFloor(demand)}" max="${demand}" step="10"${firm ? " readonly" : ""}></label>` +
+    `<div class="mk-nego-row"><label>Salaire proposé<input type="number" id="negoSalary_${l.id}" value="${salary}" max="${demand}" step="10"${firm ? " readonly" : ""}></label>` +
       `<label>Durée<select id="negoSeasons_${l.id}">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === seasons ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label></div>` +
     `<button type="button" class="mk-btn mk-btn--primary" data-mk-negotiate="${l.id}">Proposer au joueur</button>` +
     // Texte d'explication et cadenas retirés (retour utilisateur 2026-10-03).

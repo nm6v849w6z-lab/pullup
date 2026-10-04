@@ -5978,4 +5978,7 @@ window.HM_I18N_PL = {
   "? Indemnité :": "? Odprawa:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% pozostałej należnej pensji). Zostanie wolnym agentem.",
   "Nouveaux messages dans le chat de la ligue": "Nowe wiadomości na czacie ligi",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Oferta zbyt niska: nawet jej nie rozważy. Zbliż się do jego żądania.",
+  "Inutile de proposer plus que sa demande.": "Nie trzeba oferować więcej, niż żąda.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Jeśli odrzuci twoją kontrofertę, negocjacje się kończą.",
 };

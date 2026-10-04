@@ -5978,4 +5978,7 @@ window.HM_I18N_ZH = {
   "? Indemnité :": "？解约金：",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "（剩余应付薪水的30%）。他将成为自由球员。",
   "Nouveaux messages dans le chat de la ligue": "联赛聊天有新消息",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "报价太低：他连考虑都不考虑。请接近他的要求。",
+  "Inutile de proposer plus que sa demande.": "无需高于他的要求。",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "如果他拒绝你的还价，谈判即告结束。",
 };

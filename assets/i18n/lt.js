@@ -5978,4 +5978,7 @@ window.HM_I18N_LT = {
   "? Indemnité :": "? Išeitinė išmoka:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30 % likusio mokėtino atlyginimo). Jis taps laisvuoju agentu.",
   "Nouveaux messages dans le chat de la ligue": "Nauji pranešimai lygos pokalbyje",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Per mažas pasiūlymas: jis net nesvarsto. Priartėk prie jo prašymo.",
+  "Inutile de proposer plus que sa demande.": "Nereikia siūlyti daugiau, nei jis prašo.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Jei jis atmes tavo priešpasiūlymą, derybos baigsis.",
 };

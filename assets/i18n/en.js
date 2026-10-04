@@ -6003,4 +6003,7 @@ window.HM_I18N_EN = {
   "? Indemnité :": "? Severance:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% of the remaining salary owed). He will become a free agent.",
   "Nouveaux messages dans le chat de la ligue": "New messages in the league chat",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Offer too low: he won't even consider it. Get closer to his demand.",
+  "Inutile de proposer plus que sa demande.": "No need to offer more than his demand.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "If he refuses your counter-offer, negotiations are over.",
 };

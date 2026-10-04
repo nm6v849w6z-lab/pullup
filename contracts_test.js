@@ -369,7 +369,7 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   cp.salary = Math.round(askedSalary(cp) / 2);
   cp.raiseRequestSeason = null;
   lg.weeklyContractsTick(T0 + 20);
-  assert.strictEqual(cp.nextSalary, askedSalary(cp), "IA : augmentation accordée");
+  assert.strictEqual(cp.nextSalary, askedSalary(cp, cp.salaryGrid !== 2), "IA : augmentation accordée (contrat d'avant la grille du 2026-10-04 : ancienne grille)");
   ok("augmentation de mi-saison : message, accord (saison suivante), refus/silence (motivation, sans demande de transfert), IA");
 }
 

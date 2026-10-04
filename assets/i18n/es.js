@@ -5978,4 +5978,7 @@ window.HM_I18N_ES = {
   "? Indemnité :": "? Indemnización:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30 % del salario pendiente). Quedará como agente libre.",
   "Nouveaux messages dans le chat de la ligue": "Nuevos mensajes en el chat de la liga",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Oferta demasiado baja: ni siquiera la estudia. Acércate a su petición.",
+  "Inutile de proposer plus que sa demande.": "No hace falta ofrecer más de lo que pide.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Si rechaza tu contraoferta, las negociaciones se acaban.",
 };

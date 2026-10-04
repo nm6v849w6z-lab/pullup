@@ -5978,4 +5978,7 @@ window.HM_I18N_EL = {
   "? Indemnité :": "; Αποζημίωση:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% του υπόλοιπου οφειλόμενου μισθού). Θα γίνει ελεύθερος.",
   "Nouveaux messages dans le chat de la ligue": "Νέα μηνύματα στη συνομιλία της λίγκας",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Πολύ χαμηλή προσφορά: ούτε καν την εξετάζει. Πλησίασε το αίτημά του.",
+  "Inutile de proposer plus que sa demande.": "Δεν χρειάζεται να προσφέρεις περισσότερα από όσα ζητά.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Αν απορρίψει την αντιπρόταση, οι διαπραγματεύσεις τελειώνουν.",
 };

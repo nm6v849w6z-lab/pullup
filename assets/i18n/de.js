@@ -5978,4 +5978,7 @@ window.HM_I18N_DE = {
   "? Indemnité :": "? Abfindung:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30 % des noch geschuldeten Gehalts). Er wird vereinslos.",
   "Nouveaux messages dans le chat de la ligue": "Neue Nachrichten im Liga-Chat",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Angebot zu niedrig: Er prüft es nicht einmal. Nähere dich seiner Forderung.",
+  "Inutile de proposer plus que sa demande.": "Mehr als seine Forderung musst du nicht bieten.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Lehnt er dein Gegenangebot ab, sind die Verhandlungen beendet.",
 };

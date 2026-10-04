@@ -792,7 +792,7 @@ function negotiateTransfer(team, teamIndex, league, body, now) {
   if (!result.ok) {
     if (result.reason === "invalid-salary") return fail(result.floor != null && result.floor === result.demand
       ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(result.demand).toLocaleString("fr-FR")} €).`
-      : `Proposez entre ${Math.round(result.floor || 0).toLocaleString("fr-FR")} € et ${Math.round(result.demand || 0).toLocaleString("fr-FR")} € par semaine.`);
+      : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.");
     return fail(NEGOTIATION_REASONS[result.reason] || "Négociation impossible.");
   }
   const listing = (league.transferListings || []).find(l => l.id === listingId);
@@ -1247,7 +1247,7 @@ function offerContractExtension(team, teamIndex, league, body, now) {
       "invalid-seasons": "Durée de contrat invalide (1 à 5 saisons).",
       "invalid-salary": result.floor === result.asked
         ? "Après trois refus, il ne signera qu'au salaire qu'il demande."
-        : "Le salaire proposé doit être compris entre le salaire demandé -10 % et le salaire demandé.",
+        : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.",
     };
     return { ...fail(reasons[result.reason] || "Offre refusée."), reason: result.reason };
   }
@@ -1266,7 +1266,7 @@ function respondToRaiseRequest(team, teamIndex, league, body, now) {
   const counter = body.counter == null || body.counter === "" ? null : Number(body.counter);
   const result = team.respondToRaiseRequest(playerId, !!body.accept, counter);
   if (!result.ok) {
-    if (result.reason === "invalid-salary") return fail("Contre-offre hors limites (entre le salaire demandé -10 % et le salaire demandé).");
+    if (result.reason === "invalid-salary") return fail("Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.");
     return fail(result.reason === "no-request" ? "Aucune demande d'augmentation en attente." : "Joueur introuvable dans cet effectif.");
   }
   return { ok: true, accepted: result.accepted, salary: result.salary || null, countered: !!result.countered };

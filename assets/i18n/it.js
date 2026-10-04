@@ -6041,4 +6041,7 @@ window.HM_I18N_IT = {
   "? Indemnité :": "? Indennità:",
   "(30 % du salaire restant dû). Il deviendra agent libre.": "(30% dello stipendio residuo dovuto). Diventerà svincolato.",
   "Nouveaux messages dans le chat de la ligue": "Nuovi messaggi nella chat della lega",
+  "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Offerta troppo bassa: non la prende nemmeno in considerazione. Avvicinati alla sua richiesta.",
+  "Inutile de proposer plus que sa demande.": "Inutile offrire più della sua richiesta.",
+  "S'il refuse votre contre-offre, les négociations sont terminées.": "Se rifiuta la tua controfferta, le trattative sono chiuse.",
 };
