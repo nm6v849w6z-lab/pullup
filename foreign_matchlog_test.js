@@ -16,5 +16,6 @@ recruit.matchLog = [0, 1, 2].map(round => ({ round, competition: "championship",
 const reloaded = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(lg))));
 const t2 = reloaded.teams[0];
 assert.strictEqual(t2.players.find(p => p.id === recruit.id).matchLog.length, 0, "lignes d'un autre championnat retirées");
+assert.strictEqual(t2.players.find(p => p.id === recruit.id).archivedMatchLog.length, 3, "mises de côté, pas supprimées");
 assert.strictEqual(t2.players.find(p => p.id === native.id).matchLog.length, nativeCount, "lignes de cette ligue gardées");
 console.log("✅ Matchs d'un autre championnat retirés au chargement, ceux de la ligue gardés");

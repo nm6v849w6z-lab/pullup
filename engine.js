@@ -9484,6 +9484,8 @@ class Team {
       ...(plan.lineup.minutes ? { minutes: Object.fromEntries(Object.entries(plan.lineup.minutes).map(([pos, m]) => [pos, { ...m }])) } : {}),
       ...(Array.isArray(plan.lineup.convoked) ? { convoked: [...plan.lineup.convoked] } : {}),
     };
+    // Plan écrit avant le départ d'un joueur (ancienne sauvegarde) : réparé.
+    this.repairLineupDepartures(this.lineup);
     delete this.plannedTactics[key];
   }
 
@@ -9536,7 +9538,36 @@ class Team {
   // autoAssignLineup() (qui reconsidère TOUS les postes et pourrait déloger
   // d'autres choix déjà faits manuellement) : seul le poste du titulaire
   // parti est concerné.
+  // Titulaires absents de l'effectif (joueur vendu/libéré depuis que la
+  // feuille a été écrite) dans `lineup` : le remplaçant désigné à ce poste
+  // prend la place s'il est toujours là, sinon le poste reste vide.
+  repairLineupDepartures(lineup) {
+    if (!lineup || !lineup.starters) return;
+    const ids = new Set(this.players.map(p => p.id));
+    const taken = new Set(Object.values(lineup.starters).filter(id => ids.has(id)));
+    POSITIONS.forEach(pos => {
+      const id = lineup.starters[pos];
+      if (id == null || ids.has(id)) return;
+      const backup = this.players
+        .filter(p => !taken.has(p.id) && ((lineup.backupPositions || {})[p.id] || []).includes(pos))
+        .sort((a, b) => b.overall() - a.overall())[0];
+      lineup.starters[pos] = backup ? backup.id : null;
+      if (backup) {
+        taken.add(backup.id);
+        delete lineup.backupPositions[backup.id];
+      }
+    });
+    Object.keys(lineup.backupPositions || {}).forEach(id => { if (!ids.has(Number(id))) delete lineup.backupPositions[id]; });
+    if (Array.isArray(lineup.convoked)) {
+      lineup.convoked = lineup.convoked.filter(id => ids.has(id));
+      Object.values(lineup.starters).forEach(id => { if (id != null && !lineup.convoked.includes(id)) lineup.convoked.push(id); });
+    }
+  }
+
   handleStarterDeparture(playerId) {
+    // Ordres préparés à l'avance (retour utilisateur 2026-10-04) : un joueur
+    // parti ne doit pas y rester titulaire (forfait au coup d'envoi sinon).
+    Object.values(this.plannedTactics || {}).forEach(plan => { if (plan && plan.lineup) this.repairLineupDepartures(plan.lineup); });
     const vacatedPos = this.starterPosition(playerId);
     if (!vacatedPos) return; // le joueur parti n'était pas titulaire : rien à faire sur la feuille de match
     const backup = this.designatedBackupForPosition(vacatedPos) || this.anyDesignatedBackup();
@@ -16086,6 +16117,9 @@ function serializePlayerRecord(p) {
     // porter isMvp/mvpQuote (voir awardMatchMvp) : déjà inclus par ce spread
     // superficiel, aucun champ à lister explicitement.
     matchLog: Array.isArray(p.matchLog) ? p.matchLog.map(m => ({ ...m })) : [],
+    // Lignes de match d'un autre championnat (voir pruneForeignMatchLogs) :
+    // jamais supprimées, seulement mises de côté.
+    ...(Array.isArray(p.archivedMatchLog) && p.archivedMatchLog.length ? { archivedMatchLog: p.archivedMatchLog.map(m => ({ ...m })) } : {}),
     // Bonus temporaire de MVP (voir Player.pendingMatchBoost/MVP_ATTR_BONUS/
     // awardMatchMvp) : DOIT survivre au rechargement, sinon un redémarrage
     // serveur entre l'élection au MVP et le prochain match de ce joueur lui
@@ -16723,6 +16757,7 @@ function playerFromSave(pdata) {
   // absent = sauvegarde d'avant cette fonctionnalité, on garde `[]` (déjà
   // posé par le constructeur Player) plutôt que de crasher.
   if (Array.isArray(pdata.matchLog)) p.matchLog = pdata.matchLog.map(m => ({ ...m }));
+  if (Array.isArray(pdata.archivedMatchLog)) p.archivedMatchLog = pdata.archivedMatchLog.map(m => ({ ...m }));
   // Bonus temporaire de MVP (voir serializePlayerRecord ci-dessus) : absent
   // = sauvegarde d'avant cette fonctionnalité, on garde 0 (déjà posé par le
   // constructeur Player).
@@ -17483,6 +17518,9 @@ function leagueFromSave(data, userTeam = null) {
 // l'ancienne). Une ligne de championnat n'est gardée que si son score par
 // quart-temps correspond à un résultat de CETTE ligue à la même journée
 // (les lignes sans score par quart-temps, très anciennes, sont gardées).
+// Les lignes écartées ne sont JAMAIS supprimées : elles passent dans
+// p.archivedMatchLog (feuilles de match de l'ancien club, voir
+// restoreDepartedMatchLogs côté serveur).
 function pruneForeignMatchLogs(league) {
   if (!league || !Array.isArray(league.results) || !league.results.length) return 0;
   const known = new Set(league.results.map(r => `${r.round}:${r.scoreHome}-${r.scoreAway}`));
@@ -17498,7 +17536,11 @@ function pruneForeignMatchLogs(league) {
       return known.has(`${e.round}:${sum(q.home)}-${sum(q.away)}`);
     });
     removed += p.matchLog.length - kept.length;
-    if (kept.length !== p.matchLog.length) p.matchLog = kept;
+    if (kept.length !== p.matchLog.length) {
+      const moved = p.matchLog.filter(e => !kept.includes(e));
+      p.archivedMatchLog = (Array.isArray(p.archivedMatchLog) ? p.archivedMatchLog : []).concat(moved);
+      p.matchLog = kept;
+    }
   }));
   return removed;
 }

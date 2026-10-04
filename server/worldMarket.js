@@ -277,7 +277,11 @@ function resolveForeignTransfers(leagues, now, events = []) {
       if (res.result === "sold") {
         // Autre championnat : ses matchs de la saison ne comptent pas dans
         // les statistiques de sa nouvelle ligue (leaders, fiche, feuilles).
-        if (res.player && id !== ref.leagueId) res.player.matchLog = [];
+        if (res.player && id !== ref.leagueId && Array.isArray(res.player.matchLog) && res.player.matchLog.length) {
+          // Mises de côté, jamais supprimées (feuilles de match de l'ancien club).
+          res.player.archivedMatchLog = (res.player.archivedMatchLog || []).concat(res.player.matchLog.map(e => ({ ...e, team: e.team || (seller ? seller.name : null), leagueId: id })));
+          res.player.matchLog = [];
+        }
         l.finalPrice = l.currentBid;
         if (seller && seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
         // Chat de la ligue de l'acheteur (voir League.logTransferNews).
