@@ -559,6 +559,29 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
   };
   let worldDirty = false;
   let nextDeadlineAt = null;
+  // Fusionne `data` (engine.js:buildSeasonArchive) dans l'archive stockée
+  // de ce championnat pour cette saison : matchs déjà archivés jamais
+  // réécrits ni dupliqués ; index des clubs par pays mis à jour.
+  const mergeSeasonArchive = async (id, lg, data) => {
+    if (!data || !data.matches || !data.matches.length) return;
+    const season = data.season;
+    const prev = await store.loadSeasonArchive(id, season, savePath);
+    const key = m => `${m.competition}|${m.round}|${m.home.team}|${m.away.team}`;
+    const known = new Set(((prev && prev.matches) || []).map(key));
+    const fresh = data.matches.filter(m => !known.has(key(m)));
+    if (prev && !fresh.length) return;
+    const merged = prev
+      ? { ...prev, matches: prev.matches.concat(fresh).sort((x, y) => ((x.at || 0) - (y.at || 0)) || (x.round - y.round)), teams: [...new Set([...(prev.teams || []), ...(data.teams || [])])] }
+      : { ...data, leagueId: id, label: labelOfId(id) };
+    await store.saveSeasonArchive(id, season, merged, savePath);
+    const entry = world.leagues.find(x => x.id === id);
+    const country = entry ? entry.country : "fr";
+    world.seasonArchives = world.seasonArchives || {};
+    const byCountry = world.seasonArchives[country] = world.seasonArchives[country] || {};
+    const idx = byCountry[season] = byCountry[season] || {};
+    idx[id] = merged.teams;
+    worldDirty = true;
+  };
   // Ligues privées « monde » (server/privateLeague.js) : `null` si la
   // lecture a échoué — rien n'y est alors ni joué ni réécrit ce passage-ci.
   let lpStore = await PrivateLeague.loadStore(savePath);
@@ -608,6 +631,16 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
         (tick(lg, now) || []).forEach(ev => events.push({ leagueId: id, ...ev }));
       }
       useLeagueTimeZone(null);
+      // Archives de saison préparées par la fin de saison (voir
+      // AutoSim.runWeeklyEconomyTick) : écrites tout de suite, à part.
+      for (const [id, lg] of leagues) {
+        if (!lg.pendingSeasonArchive) continue;
+        try {
+          await mergeSeasonArchive(id, lg, lg.pendingSeasonArchive);
+          events.push({ type: "season-archived", country, leagueId: id, seasonNumber: lg.pendingSeasonArchive.season });
+          delete lg.pendingSeasonArchive;
+        } catch (e) { console.warn("[archives de saison]", id, e.message); }
+      }
       // Coupe nationale du pays (voir server/nationalCup.js).
       const refEntry = leaguesOfCountry(world, country)[0];
       const refLeague = refEntry && leagues.get(refEntry.id);
@@ -665,6 +698,14 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, flu
         }
       }
       if (ecoAt == null || ecoAt > now) break;
+      // Archives de saison : lignes encore présentes avant la reprise
+      // (Supercoupe, jouée pendant l'intersaison, après la fin de saison)
+      // fusionnées dans l'archive de la saison écoulée.
+      for (const [id, lg] of leagues) {
+        try {
+          await mergeSeasonArchive(id, lg, Engine.buildSeasonArchive(lg, { leagueId: id, now }));
+        } catch (e) { console.warn("[archives de saison]", id, e.message); }
+      }
       // Chat de la ligue : derniers résultats, play-offs et champion écrits
       // avant que la nouvelle saison ne vide league.results (et avant les
       // échanges de clubs entre divisions, qui changent les index).

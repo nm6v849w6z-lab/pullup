@@ -425,6 +425,19 @@ function runWeeklyEconomyTick(league, tick, ecoAt, seasonEnd, events) {
       if (Engine.archiveSeasonForTeam) Engine.archiveSeasonForTeam(league, i, ecoAt);
     });
   }
+  // Archives de saison (feuilles de match figées, voir
+  // engine.js:buildSeasonArchive) : construites ICI, juste avant les
+  // retraites et Team.trainWeek({ seasonEnd }) qui vident les journaux de
+  // match ; enregistrées à part par server/world.js (pendingSeasonArchive).
+  if (seasonEnd && Engine.buildSeasonArchive) {
+    try {
+      const arch = Engine.buildSeasonArchive(league, {
+        now: ecoAt,
+        timeOf: (comp, round) => (comp === "championship" ? scheduledTimeForLeagueRound(league, round) : null),
+      });
+      Object.defineProperty(league, "pendingSeasonArchive", { value: arch, writable: true, configurable: true, enumerable: false });
+    } catch (e) { console.warn("[archives de saison]", e.message); }
+  }
   // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE côté moteur) : les
   // joueurs qui avaient annoncé leur dernière saison partent AVANT le
   // vieillissement de fin de saison.

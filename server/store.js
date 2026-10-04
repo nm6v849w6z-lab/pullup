@@ -618,6 +618,37 @@ async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath(), 
   fs.renameSync(tmp, where.file);
 }
 
+// Archives de saison (feuilles de match figées, voir
+// engine.js:buildSeasonArchive) : une clé/fichier par championnat et par
+// saison, lue seulement à la demande (jamais avec la ligue).
+function seasonArchiveStorage(leagueId, season, savePath) {
+  if (!/^[a-z0-9.-]+$/i.test(String(leagueId)) || !Number.isInteger(season) || season < 1) throw new Error(`Archive de saison invalide : ${leagueId}/${season}`);
+  return { redis: `${redisPrefix()}pullup:world:archive:${leagueId}:${season}`, file: savePath.replace(/\.json$/, "") + `.world.archive.${leagueId}.${season}.json` };
+}
+async function saveSeasonArchive(leagueId, season, data, savePath = defaultMultiLeaguePath()) {
+  const where = seasonArchiveStorage(leagueId, season, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+async function loadSeasonArchive(leagueId, season, savePath = defaultMultiLeaguePath()) {
+  const where = seasonArchiveStorage(leagueId, season, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? null : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return null;
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    console.warn(`Archive de saison ${leagueId}/${season} illisible :`, e.message);
+    return null;
+  }
+}
+
 // Permaliens des joueurs (server/playerLinks.js, 2026-10-01) : un seul bloc
 // JSON { codes: { code: { leagueId, teamIdx, playerId, name, createdAt } } },
 // clé "pullup:playerlinks" / fichier "<multi-league>.playerlinks.json".
@@ -806,7 +837,7 @@ module.exports = {
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
-  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw,
+  HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw, saveSeasonArchive, loadSeasonArchive,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :

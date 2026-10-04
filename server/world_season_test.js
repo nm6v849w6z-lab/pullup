@@ -91,7 +91,16 @@ const fmt = (ms, tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday
   const evs = await World.catchUpWorld(multi, restart + 60 * 1000);
   assert.ok(evs.some(e => e.type === "country-new-season" && e.country === "fr" && e.seasonNumber === 2));
   assert.ok(evs.some(e => e.type === "country-new-season" && e.country === "us" && e.seasonNumber === 2));
+  // Archives de saison : écrites AVANT la remise à zéro, avec les matchs.
+  const arch = await require("./store.js").loadSeasonArchive("fr-1", 1, multi);
+  // Un club de l'IA repris en cours de saison (assignClub, effectif neuf)
+  // n'a plus les lignes de l'ancien effectif : seul l'autre côté est connu,
+  // rien n'est inventé.
+  assert.ok(arch && arch.matches.length > 0 && arch.matches.every(m => m.home.rows.length || m.away.rows.length), "archive fr-1 saison 1 avec feuilles de match");
+  assert.ok(arch.matches.filter(m => m.home.rows.length && m.away.rows.length).length >= arch.matches.length / 3, "la plupart des matchs avec les deux équipes");
+  assert.ok(arch.matches.some(m => m.competition === "championship" && m.round >= arch.totalRounds), "play-offs archivés");
   const w2 = await World.loadWorld(multi, restart + 60 * 1000);
+  assert.ok(w2.seasonArchives && w2.seasonArchives.fr && w2.seasonArchives.fr[1] && w2.seasonArchives.fr[1]["fr-1"], "index des archives");
   const after = new Map();
   for (const e of w2.leagues) after.set(e.id, await World.loadLeague(w2, e.id, multi));
   [...after.values()].forEach(lg => { assert.strictEqual(lg.seasonNumber, 2); assert.strictEqual(lg.round, 0); assert.strictEqual(lg.teams.length, 10); });

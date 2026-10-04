@@ -2085,6 +2085,8 @@
   .topbar-online b{font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap;}
   .topbar-online b::before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; vertical-align:1px; box-shadow:0 0 6px rgba(34,197,94,.7);}
   .topbar-online:empty{display:none;}
+  .cal-season{margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim);}
+  .cal-season select{background:var(--panel, #12192b); color:var(--ink); border:1px solid var(--line-soft); border-radius:8px; padding:6px 10px; font:inherit;}
   @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-online{display:none;} }
   @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-budget{display:none;} }
   .topbar-meta{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--ink-dim); text-align:right;}
@@ -48721,8 +48723,98 @@ function calendarApplyFilter() {
   if (empty) empty.classList.toggle("hidden", visibleTotal > 0);
 }
 
+// Archives de saison (retour utilisateur 2026-10-04) : feuilles de match
+// des saisons précédentes, figées en fin de saison côté serveur et lues à
+// la demande (GET /api/season-archive). `list` = saisons archivées du club
+// (null : pas encore demandé) ; `viewing` = saison affichée (null : en cours).
+const calArchive = { list: null, loading: false, viewing: null, data: null, error: null };
+function calArchiveFetchList() {
+  if (calArchive.list || calArchive.loading || typeof managerToken === "undefined" || !managerToken) return;
+  calArchive.loading = true;
+  window.__lastCalArchive = fetchApi("/api/season-archive").then(r => (r && r.ok ? r.json() : null)).then(d => {
+    calArchive.list = d && Array.isArray(d.seasons) ? d.seasons : [];
+    if (calArchive.list.length && !document.getElementById("calendrierSection").classList.contains("hidden")) renderCalendrierSection();
+  }).catch(() => { calArchive.list = []; }).finally(() => { calArchive.loading = false; });
+}
+function calSeasonSelectHtml() {
+  if (!calArchive.list || !calArchive.list.length) return "";
+  const cur = league.seasonNumber || 1;
+  return `<label class="cal-season">Saison <select id="calSeasonSelect" aria-label="Saison affichée">` +
+    `<option value=""${calArchive.viewing == null ? " selected" : ""}>Saison ${cur} (en cours)</option>` +
+    calArchive.list.filter(n => n !== cur).map(n => `<option value="${n}"${calArchive.viewing === n ? " selected" : ""}>Saison ${n}</option>`).join("") +
+    `</select></label>`;
+}
+function archiveMatchLabel(m, totalRounds) {
+  if (m.competition === "cup") return m.round === SUPERCUP_ROUND ? "Supercoupe" : `Coupe · tour ${m.round + 1}`;
+  return m.round < (totalRounds || 0) ? `Journée ${m.round + 1}` : "Play-offs";
+}
+function renderSeasonArchiveView(holder) {
+  const d = calArchive.data;
+  let html = `<div class="cal-layout"><div class="cal-main"><div class="cal-toolbar">${calSeasonSelectHtml()}</div>`;
+  if (calArchive.error) html += `<p class="training-empty">${escapeHtml(calArchive.error)}</p>`;
+  else if (!d) html += `<p class="training-empty">Chargement de la saison ${calArchive.viewing}…</p>`;
+  else if (!d.matches.length) html += `<p class="training-empty">Aucun match archivé pour votre club cette saison-là.</p>`;
+  else {
+    html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-result"><col class="cal-col-action"></colgroup>` +
+      `<thead><tr class="cal-month-head"><th colspan="5"><span class="cal-month-title">Saison ${d.season}${d.label ? ` · ${escapeHtml(d.label)}` : ""}</span></th></tr></thead><tbody>`;
+    d.matches.forEach((m, i) => {
+      const home = m.home.team === d.team;
+      const opp = home ? m.away.team : m.home.team;
+      const my = home ? m.scoreHome : m.scoreAway, them = home ? m.scoreAway : m.scoreHome;
+      const cls = my > them ? "result-win" : my < them ? "result-loss" : "";
+      html += `<tr class="${cls}"><td>${m.at ? `${escapeHtml(formatCalendarDayFr(m.at))}` : "–"}</td>` +
+        `<td>${escapeHtml(archiveMatchLabel(m, d.totalRounds))}</td>` +
+        `<td>${home ? "vs" : "@"} ${escapeHtml(opp)}</td>` +
+        `<td><b>${my} - ${them}</b></td>` +
+        `<td><button type="button" class="calendar-order-btn" data-arch-match="${i}">Feuille de match</button></td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div></div>`;
+  holder.innerHTML = html;
+}
+function calArchiveOpenSeason(season) {
+  calArchive.viewing = season;
+  calArchive.data = null;
+  calArchive.error = null;
+  renderCalendrierSection();
+  if (season == null) return;
+  window.__lastCalArchive = fetchApi(`/api/season-archive?season=${season}`).then(r => r.json().then(j => ({ ok: r.ok, j }))).then(({ ok, j }) => {
+    if (calArchive.viewing !== season) return;
+    if (!ok) calArchive.error = (j && j.error) || "Archive indisponible.";
+    else calArchive.data = j;
+    renderCalendrierSection();
+  }).catch(() => { calArchive.error = "Serveur indisponible."; renderCalendrierSection(); });
+}
+// Feuille de match d'une saison archivée : lignes figées (noms compris),
+// jamais relues dans l'effectif actuel.
+function showArchivedBoxscore(i) {
+  const d = calArchive.data;
+  const m = d && d.matches[i];
+  if (!m) return;
+  closeMatchBoxscore();
+  const cols = d.cols || [];
+  const toRow = arr => { const o = {}; cols.forEach((c, k) => { o[c] = arr[k]; }); o.isMvp = !!o.isMvp; o.starter = !!o.starter; return o; };
+  const teamFor = name => league.teams.find(t => t && t.name === name) || { name };
+  const idxFor = name => league.teams.findIndex(t => t && t.name === name);
+  const homeTeam = teamFor(m.home.team), awayTeam = teamFor(m.away.team);
+  matchBoxscoreState = {
+    rowsHome: m.home.rows.map(toRow), rowsAway: m.away.rows.map(toRow),
+    nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
+    quarterScores: m.quarterScores || null,
+  };
+  const ctx = {
+    kicker: `Saison ${d.season} · ${archiveMatchLabel(m, d.totalRounds)}`,
+    whenText: m.at ? `${formatCalendarDayFr(m.at)} · ${formatCalendarTimeFr(m.at)}` : "",
+    scoreHome: m.scoreHome, scoreAway: m.scoreAway,
+  };
+  openMatchBoxscoreModal(homeTeam, awayTeam, idxFor(m.home.team), idxFor(m.away.team), ctx);
+}
+
 function renderCalendrierSection() {
   const holder = document.getElementById("calendrierContent");
+  calArchiveFetchList();
+  if (calArchive.viewing != null) { renderSeasonArchiveView(holder); return; }
   const rows = [];
 
   for (let r = 0; r < league.totalRounds; r++) {
@@ -49057,6 +49149,7 @@ function renderCalendrierSection() {
   let html = `<div class="cal-layout"><div class="cal-main">`;
   html += `<div class="cal-toolbar" role="group" aria-label="Filtrer les matchs">` +
     filterBtn("all", "Tous") + filterBtn("home", "Domicile") + filterBtn("away", "Extérieur") + filterBtn("upcoming", "À venir") +
+    calSeasonSelectHtml() +
     `</div>`;
 
   groups.forEach(g => {
@@ -49086,7 +49179,12 @@ function renderCalendrierSection() {
   calendarApplyFilter();
 }
 
+document.getElementById("calendrierContent").addEventListener("change", (e) => {
+  if (e.target && e.target.id === "calSeasonSelect") calArchiveOpenSeason(e.target.value ? Number(e.target.value) : null);
+});
 document.getElementById("calendrierContent").addEventListener("click", (e) => {
+  const arch = e.target.closest && e.target.closest("[data-arch-match]");
+  if (arch) { showArchivedBoxscore(Number(arch.dataset.archMatch)); return; }
   // Filtres Tous/Domicile/Extérieur/À venir (refonte 2026-09-25, voir
   // calendarApplyFilter).
   const filterBtn = e.target.closest("[data-cal-filter]");

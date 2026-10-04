@@ -5477,6 +5477,95 @@ function restoreDepartedMatchLogs(leagues) {
   return out;
 }
 
+// ---------------------------------------------------------------------
+// ARCHIVES DE SAISON (retour utilisateur 2026-10-04 : « on aura toujours
+// accès aux matchs des saisons précédentes pour consulter les box
+// scores ? »). En fin de saison, AVANT la remise à zéro des journaux de
+// match, chaque match officiel (championnat, play-offs, coupe, supercoupe)
+// est figé : les deux équipes, le score par quart-temps et la ligne de
+// chaque joueur (nom compris), indépendamment des effectifs futurs. Les
+// lignes sont des tableaux (colonnes dans ARCHIVE_ROW_COLS) pour rester
+// légères ; stockées à part (server/store.js:saveSeasonArchive) et lues
+// seulement à la demande.
+const ARCHIVE_ROW_COLS = ["id", "name", "position", "starter", "isMvp", "min", "pts", "reb", "oreb", "ast", "stl", "blk", "tov", "pf", "fgm2", "fga2", "fgm3", "fga3", "ftm", "fta", "plusMinus"];
+function buildSeasonArchive(league, opts = {}) {
+  const qsKey = e => (e && e.quarterScores && Array.isArray(e.quarterScores.home) && Array.isArray(e.quarterScores.away)) ? JSON.stringify(e.quarterScores) : null;
+  const sum = a => a.reduce((x, y) => x + (y || 0), 0);
+  const groups = new Map();
+  (league.teams || []).forEach(t => {
+    if (!t) return;
+    const seen = new Set();
+    const entries = [];
+    (t.players || []).forEach(p => (p.matchLog || []).forEach(e => entries.push({ id: p.id, name: p.name, position: p.position, e })));
+    (t.departedMatchLog || []).forEach(r => entries.push({ id: r.playerId, name: r.name, position: r.position, e: r }));
+    entries.forEach(({ id, name, position, e }) => {
+      if (!e || e.competition === "friendly" || (e.team && e.team !== t.name)) return;
+      const q = qsKey(e);
+      if (!q) return;
+      const comp = e.competition || "championship";
+      const dk = `${id}|${comp}|${e.round}`;
+      if (seen.has(dk)) return;
+      seen.add(dk);
+      const key = `${comp}|${e.round}|${q}`;
+      if (!groups.has(key)) groups.set(key, { competition: comp, round: e.round, quarterScores: JSON.parse(q), sides: new Map() });
+      const g = groups.get(key);
+      if (!g.sides.has(t.name)) g.sides.set(t.name, { team: t.name, isHome: null, opponent: null, at: null, rows: [] });
+      const side = g.sides.get(t.name);
+      if (side.isHome == null && typeof e.isHome === "boolean") side.isHome = e.isHome;
+      if (!side.opponent && e.opponent) side.opponent = e.opponent;
+      if (side.at == null && typeof e.at === "number") side.at = e.at;
+      const row = { id, name, position, starter: !!e.starter, isMvp: !!e.isMvp, min: e.min, pts: e.pts, reb: e.reb, oreb: e.oreb || 0, ast: e.ast, stl: e.stl, blk: e.blk, tov: e.tov, pf: e.pf,
+        fgm2: e.fgm2, fga2: e.fga2, fgm3: e.fgm3, fga3: e.fga3, ftm: e.ftm, fta: e.fta, plusMinus: e.plusMinus || 0 };
+      side.rows.push(ARCHIVE_ROW_COLS.map(c => (row[c] === undefined ? null : row[c])));
+    });
+  });
+  const nameOf = idx => (league.teams[idx] || {}).name;
+  const resultHome = (round, a, b) => {
+    const r = (league.results || []).find(x => x.round === round && ((nameOf(x.home) === a && nameOf(x.away) === b) || (nameOf(x.home) === b && nameOf(x.away) === a)));
+    return r ? nameOf(r.home) : null;
+  };
+  const ptsOf = side => side.rows.reduce((n, r) => n + (r[ARCHIVE_ROW_COLS.indexOf("pts")] || 0), 0);
+  const matches = [];
+  groups.forEach(g => {
+    const totH = sum(g.quarterScores.home), totA = sum(g.quarterScores.away);
+    const sides = [...g.sides.values()];
+    const used = new Set();
+    const pushMatch = (home, away) => {
+      const at = (home && home.at) || (away && away.at) || (typeof opts.timeOf === "function" ? opts.timeOf(g.competition, g.round) : null);
+      const pack = s => ({ team: s.team, rows: s.rows.sort((x, y) => (y[3] - x[3]) || ((y[5] || 0) - (x[5] || 0))) });
+      matches.push({ competition: g.competition, round: g.round, at: at || null, quarterScores: g.quarterScores, scoreHome: totH, scoreAway: totA, home: pack(home), away: pack(away) });
+    };
+    sides.forEach(a => {
+      if (used.has(a)) return;
+      // Adversaire : par son nom (matchs récents), sinon le seul autre côté.
+      const b = sides.find(x => x !== a && !used.has(x) && (a.opponent ? x.team === a.opponent : (!x.opponent || x.opponent === a.team)));
+      used.add(a);
+      if (b) used.add(b);
+      let homeIsA;
+      if (a.isHome != null) homeIsA = a.isHome;
+      else if (b && b.isHome != null) homeIsA = !b.isHome;
+      else if (b && resultHome(g.round, a.team, b.team)) homeIsA = resultHome(g.round, a.team, b.team) === a.team;
+      else homeIsA = Math.abs(ptsOf(a) - totH) <= Math.abs(ptsOf(a) - totA);
+      // Autre côté sans lignes connues (club repris avec un effectif neuf,
+      // adversaire d'un autre championnat) : son nom seul, aucune ligne
+      // inventée. Nom relu dans les résultats de la ligue si besoin.
+      const res = !b && !a.opponent && g.competition === "championship"
+        ? (league.results || []).find(x => x.round === g.round && (nameOf(x.home) === a.team || nameOf(x.away) === a.team))
+        : null;
+      const resOpp = res ? (nameOf(res.home) === a.team ? nameOf(res.away) : nameOf(res.home)) : null;
+      if (res && a.isHome == null) homeIsA = nameOf(res.home) === a.team;
+      const other = b || { team: a.opponent || resOpp || "Adversaire", rows: [] };
+      pushMatch(homeIsA ? a : other, homeIsA ? other : a);
+    });
+  });
+  matches.sort((x, y) => ((x.at || 0) - (y.at || 0)) || (x.round - y.round));
+  return {
+    version: 1, leagueId: opts.leagueId || league.leagueId || null, label: opts.label || null,
+    season: league.seasonNumber || 1, totalRounds: league.totalRounds, archivedAt: opts.now || Date.now(),
+    cols: ARCHIVE_ROW_COLS, teams: (league.teams || []).filter(Boolean).map(t => t.name), matches,
+  };
+}
+
 function recordPlayerEvent(p, ev) {
   if (!p || !ev) return;
   if (!Array.isArray(p.historyLog)) p.historyLog = [];
@@ -12044,7 +12133,7 @@ function buildNextCupRound(prevRound, winners) {
 // pour tout appelant qui ne la fournit pas encore (aucune régression sur les
 // matchs déjà persistés avant ce correctif, ni sur les appels de test qui
 // ne s'en soucient pas).
-function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null, seed = null) {
+function recordMatchStatsForTeam(team, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null, seed = null, meta = null) {
   // Connaissance tactique (voir Team.updateTacticalKnowledge) : une seule
   // fois par match RÉELLEMENT joué (pas par joueur), compare la tactique de
   // ce match à celle du précédent.
@@ -12095,6 +12184,10 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // 2026-10-03 : une recrue apportait ses matchs de son ancien club
         // dans la feuille de match de la même journée de son nouveau club).
         team: team.name,
+        // Domicile/extérieur, adversaire et date (archives des saisons, voir
+        // buildSeasonArchive) : absents des matchs d'avant le 2026-10-04.
+        ...(meta ? { isHome: !!meta.isHome, opponent: meta.opponent || null } : null),
+        at: now,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         pts: p.stats.pts || 0, reb: p.stats.reb || 0, oreb: p.stats.oreb || 0, dreb: p.stats.dreb || 0,
         ast: p.stats.ast || 0, stl: p.stats.stl || 0, blk: p.stats.blk || 0, tov: p.stats.tov || 0, pf: p.stats.pf || 0,
@@ -12292,8 +12385,8 @@ function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.
   recordHumanRivalry(home, away, competition, now, quarterScores);
   recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
-  recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home, seed);
-  recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away, seed);
+  recordMatchStatsForTeam(home, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.home, seed, { isHome: true, opponent: away.name });
+  recordMatchStatsForTeam(away, round, competition, now, quarterScores, tacticsUsed && tacticsUsed.away, seed, { isHome: false, opponent: home.name });
   // Alchimie selon le résultat (voir Team.applyChemistryResult) : score par
   // quart-temps quand on l'a, sinon points des joueurs ayant joué.
   if (competition !== "friendly") {
@@ -12819,7 +12912,7 @@ class League {
           if (l.status === "open" && l.playerId === p.id) { l.status = "cancelled"; l.result = "retired"; }
         });
         const i = team.players.findIndex(x => x.id === p.id);
-        if (i !== -1) team.players.splice(i, 1);
+        if (i !== -1) { team.players.splice(i, 1); archiveDepartedMatchLog(team, p); }
         if (team.isHuman) team.handleStarterDeparture(p.id);
         retired.push({ teamIdx: idx, playerId: p.id, name: p.name, age: p.age, position: p.position });
         if (team.isHuman && team.feed) {
@@ -19596,7 +19689,7 @@ return {
   // consorts pour vérifier des accès directs (ex. round-trip de
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
-  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs,
+  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs, buildSeasonArchive, ARCHIVE_ROW_COLS,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus

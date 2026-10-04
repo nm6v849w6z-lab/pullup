@@ -1935,6 +1935,35 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Archives de saison (feuilles de match des saisons précédentes, voir
+      // engine.js:buildSeasonArchive) : sans `season`, les saisons archivées
+      // où le club a joué ; avec `season`, SES matchs de cette saison-là
+      // (le club a pu changer de division entre-temps : retrouvé par son nom
+      // dans l'index de son pays).
+      if (route.pathname === "/api/season-archive" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const me = ctx.league.teams[ctx.teamIndex];
+        const entry = ctx.world && (ctx.world.leagues || []).find(x => x.id === ctx.leagueId);
+        const byCountry = (ctx.world && ctx.world.seasonArchives && entry && ctx.world.seasonArchives[entry.country]) || {};
+        const leagueOf = season => Object.entries(byCountry[season] || {}).find(([, names]) => (names || []).includes(me.name));
+        const seasonParam = route.searchParams.get("season");
+        if (seasonParam == null) {
+          const seasons = Object.keys(byCountry).map(Number).filter(n => leagueOf(n)).sort((a, b) => b - a);
+          sendJson(res, 200, { ok: true, seasons, current: ctx.league.seasonNumber || 1 });
+          return;
+        }
+        const season = Number(seasonParam);
+        const found = Number.isInteger(season) ? leagueOf(season) : null;
+        if (!found) { sendJson(res, 404, { ok: false, error: "Aucune archive pour cette saison." }); return; }
+        const data = await store.loadSeasonArchive(found[0], season, multiSavePath);
+        if (!data) { sendJson(res, 404, { ok: false, error: "Archive illisible ou absente." }); return; }
+        sendJson(res, 200, {
+          ok: true, season, leagueId: found[0], label: data.label, totalRounds: data.totalRounds, cols: data.cols, team: me.name,
+          matches: (data.matches || []).filter(m => m.home.team === me.name || m.away.team === me.name),
+        });
+        return;
+      }
       // Managers connectés (barre du haut) : uniquement un nombre, aucune
       // donnée personnelle. La présence vient des requêtes authentifiées
       // (resolvePlayerContext) : un jeton non vérifié ne compte jamais.
