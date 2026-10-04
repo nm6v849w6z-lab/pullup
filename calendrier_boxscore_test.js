@@ -152,6 +152,23 @@ const recruitRows = [...doc2.querySelectorAll("#matchBoxscoreHolder table.boxsco
 if (recruitRows.some(t => t.includes("99"))) throw new Error(`❌ La ligne de ${recruit} avec son ancien club ne devrait pas figurer sur cette feuille de match.`);
 console.log("✅ Une recrue n'apporte pas son match de l'ancien club dans la feuille de match.");
 
+// --- Joueur vendu après le match (retour utilisateur 2026-10-04) : la
+// feuille de match ne doit pas bouger (lignes gardées par le club).
+const soldCheck = win2.eval(`
+  (function() {
+    const r0 = league.results.find(r => r.round === 0 && (r.home === myTeamIndex || r.away === myTeamIndex));
+    const home = league.teams[r0.home];
+    const p = home.players.find(x => (x.matchLog || []).some(m => m.round === 0 && m.competition === "championship" && !(m.pts === 99)));
+    home.departedMatchLog = (p.matchLog || []).map(e => ({ ...e, playerId: p.id, name: p.name, position: p.position }));
+    home.players = home.players.filter(x => x !== p);
+    showMatchBoxscore(0, "championship", r0.home, r0.away);
+    return p.name;
+  })()
+`);
+const soldRows = [...doc2.querySelectorAll("#matchBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)")].map(tr => tr.textContent);
+if (!soldRows.some(t => t.includes(soldCheck))) throw new Error(`❌ ${soldCheck}, vendu après le match, devrait rester sur la feuille de match.`);
+console.log("✅ Un joueur vendu après le match reste sur la feuille de match.");
+
 await flush(dom2);
 dom2.window.close();
 server.close();

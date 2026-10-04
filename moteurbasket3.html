@@ -24091,6 +24091,7 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
     arenaStyle: normalizeArenaStyle(team.arenaStyle),
@@ -24648,6 +24649,7 @@ function teamFromSave(data) {
   team.arenaStyle = normalizeArenaStyle(data.arenaStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
+  team.departedMatchLog = Array.isArray(data.departedMatchLog) ? data.departedMatchLog.map(r => ({ ...r })) : [];
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
@@ -42213,8 +42215,35 @@ function knownMatchScore(round, competition, homeIdx, awayIdx) {
   const res = (league.results || []).find(x => x.round === round && x.home === homeIdx && x.away === awayIdx);
   return res ? { home: res.scoreHome, away: res.scoreAway } : null;
 }
+// Joueurs partis depuis le match (vendus, licenciés…) : lignes gardées par
+// le club (team.departedMatchLog, voir engine.js:archiveDepartedMatchLog) ;
+// pour un départ antérieur à cet archivage, le joueur est cherché dans les
+// autres clubs du championnat et parmi les agents libres, quand son
+// historique montre qu'il a quitté CE club.
+function departedPlayersFor(team, round, competition, expect) {
+  const out = [];
+  const seen = new Set(team.players.map(p => p.id));
+  (team.departedMatchLog || []).forEach(r => {
+    if (seen.has(r.playerId)) return;
+    const fake = { id: r.playerId, name: r.name, position: r.position, matchLog: [r] };
+    if (matchLogEntryFor(fake, team, round, competition, expect)) { seen.add(r.playerId); out.push(fake); }
+  });
+  const others = [];
+  (league.teams || []).forEach(t => { if (t && t !== team) others.push(...(t.players || [])); });
+  others.push(...(league.freeAgents || []));
+  others.forEach(p => {
+    if (!p || seen.has(p.id)) return;
+    const left = (p.historyLog || []).some(ev => ev && ev.type === "transfer" && ev.from === team.name);
+    if (!left) return;
+    const e = matchLogEntryFor(p, team, round, competition, expect);
+    if (!e || (!e.team && !expect)) return;
+    seen.add(p.id);
+    out.push({ id: p.id, name: p.name, position: p.position, matchLog: [e] });
+  });
+  return out;
+}
 function boxscoreRowsFromMatchLog(team, round, competition, expect = null) {
-  return team.players
+  return team.players.concat(departedPlayersFor(team, round, competition, expect))
     .map(p => {
       const entry = matchLogEntryFor(p, team, round, competition, expect);
       if (!entry) return null;

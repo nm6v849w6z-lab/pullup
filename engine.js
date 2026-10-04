@@ -2200,6 +2200,7 @@ function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
   // rang du joueur DANS L'EFFECTIF VENDEUR, calculé AVANT le splice().
   const sellerImportance = chemistryRosterImportance(rosterRankOf(seller.players, playerId));
   const [player] = seller.players.splice(idx, 1);
+  archiveDepartedMatchLog(seller, player);
   // Titulaire vendu : club humain → le remplaçant désigné prend sa place
   // (voir Team.handleStarterDeparture) ; club CPU → feuille reconstruite.
   if (seller.isHuman) seller.handleStarterDeparture(playerId);
@@ -5403,6 +5404,22 @@ const BIG_GAME_THRESHOLDS = { pts: 25, reb: 14, ast: 10, stl: 6, blk: 6 };
 function teamSeasonNo(team) {
   return ((team && team.seasonHistory) || []).length + 1;
 }
+// Feuilles de match figées (retour utilisateur 2026-10-04 : « j'ai vendu des
+// joueurs et ils n'apparaissent plus sur la feuille ») : quand un joueur
+// quitte un club en cours de saison, ses lignes de match pour CE club sont
+// gardées par le club (team.departedMatchLog, remis à zéro chaque saison)
+// pour reconstituer les feuilles de match déjà jouées.
+const DEPARTED_MATCH_LOG_MAX = 600;
+function archiveDepartedMatchLog(team, p) {
+  if (!team || !p || !Array.isArray(p.matchLog) || !p.matchLog.length) return;
+  const rows = p.matchLog
+    .filter(e => e && e.competition !== "friendly" && (!e.team || e.team === team.name))
+    .map(e => ({ ...e, playerId: p.id, name: p.name, position: p.position }));
+  if (!rows.length) return;
+  const kept = (Array.isArray(team.departedMatchLog) ? team.departedMatchLog : []).filter(r => r.playerId !== p.id);
+  team.departedMatchLog = kept.concat(rows).slice(-DEPARTED_MATCH_LOG_MAX);
+}
+
 function recordPlayerEvent(p, ev) {
   if (!p || !ev) return;
   if (!Array.isArray(p.historyLog)) p.historyLog = [];
@@ -7682,6 +7699,7 @@ class Team {
     // malus uniquement pour ce club.
     const departureImportance = chemistryRosterImportance(rosterRankOf(this.players, playerId));
     const [p] = this.players.splice(idx, 1);
+    archiveDepartedMatchLog(this, p);
     this.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * departureImportance);
     this.recordTransaction(`Vente de ${p.name}`, p.salePrice || 0);
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
@@ -13301,6 +13319,7 @@ class League {
       // Stats de saison : la saison écoulée est déjà archivée (histoire du
       // club) ; les amicaux d'intersaison ne comptent pas dans la nouvelle.
       (t.players || []).forEach(p => { p.matchLog = []; });
+      t.departedMatchLog = [];
       if (!t.isHuman) t.autoAssignLineup();
     });
     assignSeasonObjectives(this);
@@ -13460,6 +13479,7 @@ class League {
     const i = team.players.findIndex(x => x.id === p.id);
     if (i === -1) return;
     team.players.splice(i, 1);
+    archiveDepartedMatchLog(team, p);
     (this.transferListings || []).forEach(l => {
       if (l.status === "open" && !l.freeAgent && l.playerId === p.id) { l.status = "cancelled"; l.result = "contract-ended"; }
     });
@@ -16514,6 +16534,7 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
     arenaStyle: normalizeArenaStyle(team.arenaStyle),
@@ -17157,6 +17178,7 @@ function teamFromSave(data) {
   team.arenaStyle = normalizeArenaStyle(data.arenaStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
+  team.departedMatchLog = Array.isArray(data.departedMatchLog) ? data.departedMatchLog.map(r => ({ ...r })) : [];
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
@@ -19470,7 +19492,7 @@ return {
   // consorts pour vérifier des accès directs (ex. round-trip de
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
-  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs,
+  serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, pruneForeignMatchLogs, archiveDepartedMatchLog,
   SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
