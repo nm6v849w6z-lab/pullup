@@ -6033,4 +6033,5 @@ window.HM_I18N_ES = {
   "{0} : code couleur": "{0}: código de color",
   "{0} : raccourcis": "{0}: atajos",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Elige un diseño abajo para una camiseta de dos colores.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Liso para un club gratuito. Los colores libres, los otros {0} diseños y las camisetas de dos colores son exclusivos de Premium.",
 };

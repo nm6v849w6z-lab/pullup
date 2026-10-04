@@ -7674,6 +7674,10 @@ class Team {
     if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
     const c = normalizeJerseyColor(color);
     if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    // Couleur libre (HEX) réservée au Premium (retour utilisateur
+    // 2026-10-04) : un club gratuit garde les 8 couleurs de JERSEY_COLORS
+    // (sa couleur actuelle reste acceptée telle quelle).
+    if (!JERSEY_COLORS[c] && c !== this.jerseyColor && !(typeof this.hasActivePremium === "function" ? this.hasActivePremium() : this.isPaying)) return { ok: false, error: "Couleur libre réservée au Premium." };
     this.jerseyShape = shape;
     this.jerseyColor = c;
     return { ok: true };
@@ -7761,6 +7765,10 @@ class Team {
   setAwayJerseyColor(color) {
     const c = normalizeJerseyColor(color);
     if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    // Couleur libre (HEX) réservée au Premium (retour utilisateur
+    // 2026-10-04) : un club gratuit garde les 8 couleurs de JERSEY_COLORS
+    // (sa couleur actuelle reste acceptée telle quelle).
+    if (!JERSEY_COLORS[c] && c !== this.awayJerseyColor && !(typeof this.hasActivePremium === "function" ? this.hasActivePremium() : this.isPaying)) return { ok: false, error: "Couleur libre réservée au Premium." };
     this.awayJerseyColor = c;
     return { ok: true };
   }

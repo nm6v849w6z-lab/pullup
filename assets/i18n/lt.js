@@ -6033,4 +6033,5 @@ window.HM_I18N_LT = {
   "{0} : code couleur": "{0}: spalvos kodas",
   "{0} : raccourcis": "{0}: greitieji pasirinkimai",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Pasirinkite raštą žemiau, kad marškinėliai būtų dviejų spalvų.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Vienspalviai nemokamam klubui. Laisvos spalvos, kiti {0} raštai ir dvispalviai marškinėliai skirti Premium.",
 };

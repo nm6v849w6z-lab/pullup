@@ -6096,4 +6096,5 @@ window.HM_I18N_IT = {
   "{0} : code couleur": "{0}: codice colore",
   "{0} : raccourcis": "{0}: scorciatoie",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Scegli un motivo qui sotto per una maglia a due colori.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Tinta unita per un club gratuito. Colori liberi, gli altri {0} motivi e le maglie a due colori sono riservati al Premium.",
 };

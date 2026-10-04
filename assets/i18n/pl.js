@@ -6033,4 +6033,5 @@ window.HM_I18N_PL = {
   "{0} : code couleur": "{0}: kod koloru",
   "{0} : raccourcis": "{0}: skróty",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wybierz wzór poniżej, aby mieć koszulkę w dwóch kolorach.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Jednolita dla darmowego klubu. Dowolne kolory, pozostałe {0} wzorów i koszulki dwukolorowe są dostępne w Premium.",
 };

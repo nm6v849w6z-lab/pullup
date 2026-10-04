@@ -6058,4 +6058,5 @@ window.HM_I18N_EN = {
   "{0} : code couleur": "{0}: color code",
   "{0} : raccourcis": "{0}: shortcuts",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Pick a pattern below for a two-color jersey.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Plain for a free club. Custom colors, the other {0} patterns and two-color jerseys are Premium.",
 };

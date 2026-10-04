@@ -6033,4 +6033,5 @@ window.HM_I18N_EL = {
   "{0} : code couleur": "{0}: κωδικός χρώματος",
   "{0} : raccourcis": "{0}: συντομεύσεις",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Επιλέξτε ένα μοτίβο παρακάτω για δίχρωμη φανέλα.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Μονόχρωμη για δωρεάν σύλλογο. Τα ελεύθερα χρώματα, τα άλλα {0} μοτίβα και οι δίχρωμες φανέλες είναι για Premium.",
 };

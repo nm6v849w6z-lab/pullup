@@ -6033,4 +6033,5 @@ window.HM_I18N_ZH = {
   "{0} : code couleur": "{0}：颜色代码",
   "{0} : raccourcis": "{0}：快捷选择",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "在下方选择图案，即可使用双色球衣。",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "免费俱乐部仅限纯色。自定义颜色、其余 {0} 种图案和双色球衣为 Premium 专享。",
 };

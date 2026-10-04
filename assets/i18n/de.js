@@ -6033,4 +6033,5 @@ window.HM_I18N_DE = {
   "{0} : code couleur": "{0}: Farbcode",
   "{0} : raccourcis": "{0}: Schnellauswahl",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wählen Sie unten ein Muster für ein zweifarbiges Trikot.",
+  "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Einfarbig für einen kostenlosen Club. Freie Farben, die anderen {0} Muster und zweifarbige Trikots sind Premium vorbehalten.",
 };

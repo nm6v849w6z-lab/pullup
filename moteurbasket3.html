@@ -17518,6 +17518,10 @@ class Team {
     if (!JERSEY_SHAPES.includes(shape)) return { ok: false, error: "Forme de maillot inconnue." };
     const c = normalizeJerseyColor(color);
     if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    // Couleur libre (HEX) réservée au Premium (retour utilisateur
+    // 2026-10-04) : un club gratuit garde les 8 couleurs de JERSEY_COLORS
+    // (sa couleur actuelle reste acceptée telle quelle).
+    if (!JERSEY_COLORS[c] && c !== this.jerseyColor && !(typeof this.hasActivePremium === "function" ? this.hasActivePremium() : this.isPaying)) return { ok: false, error: "Couleur libre réservée au Premium." };
     this.jerseyShape = shape;
     this.jerseyColor = c;
     return { ok: true };
@@ -17586,6 +17590,10 @@ class Team {
   setAwayJerseyColor(color) {
     const c = normalizeJerseyColor(color);
     if (!c) return { ok: false, error: "Couleur de maillot inconnue." };
+    // Couleur libre (HEX) réservée au Premium (retour utilisateur
+    // 2026-10-04) : un club gratuit garde les 8 couleurs de JERSEY_COLORS
+    // (sa couleur actuelle reste acceptée telle quelle).
+    if (!JERSEY_COLORS[c] && c !== this.awayJerseyColor && !(typeof this.hasActivePremium === "function" ? this.hasActivePremium() : this.isPaying)) return { ok: false, error: "Couleur libre réservée au Premium." };
     this.awayJerseyColor = c;
     return { ok: true };
   }
@@ -46225,13 +46233,19 @@ function persoJerseyCardHtml(side) {
   const pair = jerseyPair(savedTwoTone) || [jerseyHex(color) || "#3b6fd6", "#f2f2f0"];
   if (twoColors) {
     html += jerseyColorCtlHtml(`${side}-1`, pair[0], "Couleur 1") + jerseyColorCtlHtml(`${side}-2`, pair[1], "Couleur 2");
-  } else {
+  } else if (premium) {
     html += jerseyColorCtlHtml(`${side}-1`, jerseyHex(color) || "#3b6fd6", "Couleur");
+  } else {
+    // Club gratuit : les 8 couleurs d'origine, comme avant (retour
+    // utilisateur 2026-10-04 : "pour le mode non premium, laisse comme c'était").
+    html += `<p class="pz-label">Couleur</p><div class="jersey-color-picker">` + Object.keys(JERSEY_COLORS).map(key =>
+      `<button type="button" class="jersey-color-swatch${color === key ? " active" : ""}" ${attr}-color="${key}" style="background:${JERSEY_COLORS[key]}" title="${key}" aria-label="Couleur ${key}" aria-pressed="${color === key}"></button>`
+    ).join("") + `</div>`;
   }
   if (premium) {
     if (!twoColors) html += `<p class="pz-note">Choisissez un motif ci-dessous pour un maillot à deux couleurs.</p>`;
   } else {
-    html += `<p class="pz-note">Uni pour un club gratuit. Les ${JERSEY_PATTERNS.length - 1} autres motifs et les combinaisons de 2 couleurs sont réservés au Premium.</p>`;
+    html += `<p class="pz-note">Uni pour un club gratuit. Les couleurs libres, les ${JERSEY_PATTERNS.length - 1} autres motifs et les maillots à 2 couleurs sont réservés au Premium.</p>`;
   }
   html += `</div>`;
   // Grille de tous les motifs (retour utilisateur 2026-09-30, façon éditeur

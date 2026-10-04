@@ -77,16 +77,16 @@ console.log("✅ Le maillot extérieur affiche bien SA PROPRE couleur stockée, 
 // qui remplace l'ancienne fenêtre « Identité du club » (#clubIdentityPanel
 // y vit désormais en permanence).
 clickTab("personnalisation");
-// Couleurs libres (2026-10-04) : sélecteur + raccourcis (data-jc-preset).
-const awayColorBtns = doc.querySelectorAll('[data-jc-preset="away-1"]');
-console.log("Raccourcis de couleur extérieure trouvés :", awayColorBtns.length);
-if (!doc.querySelector('[data-jc-input="away-1"]') || awayColorBtns.length < 8) throw new Error(`❌ Le maillot extérieur devrait avoir un sélecteur de couleur libre et des raccourcis, obtenu ${awayColorBtns.length}.`);
+// Club gratuit : les 8 couleurs d'origine (couleurs libres = Premium, 2026-10-04).
+const awayColorBtns = doc.querySelectorAll("[data-away-jersey-color]");
+console.log("Couleurs extérieures trouvées :", awayColorBtns.length);
+if (awayColorBtns.length !== 8 || doc.querySelector('[data-jc-input="away-1"]')) throw new Error(`❌ Club gratuit : 8 couleurs extérieures, pas de couleur libre, obtenu ${awayColorBtns.length}.`);
 if (doc.querySelectorAll("[data-away-jersey-shape]").length !== 0) {
   throw new Error("❌ Le maillot extérieur ne devrait PAS avoir de sélecteur de forme propre (forme partagée avec le domicile).");
 }
 
 const someAwayColorBtn = awayColorBtns[4];
-const someAwayColorKey = someAwayColorBtn.dataset.color;
+const someAwayColorKey = someAwayColorBtn.dataset.awayJerseyColor;
 someAwayColorBtn.click();
 console.log("teamA.awayJerseyColor après clic :", win.eval("teamA.awayJerseyColor"), "(attendu", someAwayColorKey, ")");
 if (win.eval("teamA.awayJerseyColor") !== someAwayColorKey) throw new Error("❌ Cliquer sur une couleur de maillot extérieur devrait mettre à jour teamA.awayJerseyColor.");
@@ -96,7 +96,7 @@ if (win.eval("teamA.jerseyColor") === someAwayColorKey && win.eval("teamA.jersey
 console.log("✅ Le choix de couleur de maillot extérieur est bien appliqué, sans toucher au maillot domicile.");
 
 const homeColorBeforeAwayClick = win.eval("teamA.jerseyColor");
-const anotherAwayColorBtn = [...doc.querySelectorAll('[data-jc-preset="away-1"]')].find(b => b.dataset.color !== someAwayColorKey);
+const anotherAwayColorBtn = [...doc.querySelectorAll("[data-away-jersey-color]")].find(b => b.dataset.awayJerseyColor !== someAwayColorKey);
 anotherAwayColorBtn.click();
 console.log("teamA.jerseyColor inchangé après un clic sur le sélecteur extérieur :", win.eval("teamA.jerseyColor") === homeColorBeforeAwayClick);
 if (win.eval("teamA.jerseyColor") !== homeColorBeforeAwayClick) throw new Error("❌ Modifier le maillot extérieur ne devrait jamais affecter teamA.jerseyColor (maillot domicile).");

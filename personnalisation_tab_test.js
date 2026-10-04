@@ -122,16 +122,17 @@ function duplicateIds(doc) {
 
   // Saisie en cours préservée par un clic sur un maillot (cartes séparées).
   doc.getElementById("salleArenaNameInput").value = "brouillon";
-  const homeColor = [...doc.querySelectorAll('[data-jc-preset="home-1"]')].find(b => b.dataset.color !== win.eval("teamA.jerseyColor"));
+  const homeColor = [...doc.querySelectorAll("[data-jersey-color]")].find(b => b.dataset.jerseyColor !== win.eval("teamA.jerseyColor"));
   homeColor.click();
-  assert(win.eval("teamA.jerseyColor") === homeColor.dataset.color && called("/api/club/set-jersey"), "couleur domicile → /api/club/set-jersey");
+  assert(win.eval("teamA.jerseyColor") === homeColor.dataset.jerseyColor && called("/api/club/set-jersey"), "couleur domicile → /api/club/set-jersey");
   assert(doc.getElementById("salleArenaNameInput").value === "brouillon", "un clic sur un maillot n'efface pas la saisie en cours");
   doc.querySelector('[data-jersey-shape="B"]').click();
   assert(win.eval("teamA.jerseyShape") === "B" && doc.querySelector('[data-jersey-shape="B"]').classList.contains("active"), "coupe B appliquée et reflétée");
-  const awayColor = [...doc.querySelectorAll('[data-jc-preset="away-1"]')].find(b => b.dataset.color !== win.eval("teamA.awayJerseyColor"));
+  const awayColor = [...doc.querySelectorAll("[data-away-jersey-color]")].find(b => b.dataset.awayJerseyColor !== win.eval("teamA.awayJerseyColor"));
   awayColor.click();
-  assert(win.eval("teamA.awayJerseyColor") === awayColor.dataset.color && called("/api/club/set-away-jersey"), "couleur extérieure → /api/club/set-away-jersey");
-  assert(doc.querySelector('[data-jc-hex="away-1"]').value.toLowerCase() === awayColor.dataset.color && doc.querySelector('[data-pz-jersey="away"] .pz-jersey-stage svg').outerHTML.includes(awayColor.dataset.color), "aperçu extérieur redessiné");
+  assert(win.eval("teamA.awayJerseyColor") === awayColor.dataset.awayJerseyColor && called("/api/club/set-away-jersey"), "couleur extérieure → /api/club/set-away-jersey");
+  assert(doc.querySelector('[data-pz-jersey="away"] .jersey-color-swatch.active').dataset.awayJerseyColor === awayColor.dataset.awayJerseyColor, "aperçu extérieur redessiné");
+  assert(!doc.querySelector("[data-jc-input]"), "club gratuit : pas de couleur libre");
 
   // --- 4b) Premium.
   win.eval("renderPremiumSection()");

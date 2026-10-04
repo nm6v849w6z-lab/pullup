@@ -198,8 +198,8 @@ if (!doc.querySelector('[data-jersey-shape="B"]').classList.contains("active")) 
 }
 console.log("✅ Le choix de forme de maillot est bien appliqué et reflété visuellement.");
 
-const someColorBtn = doc.querySelectorAll('[data-jc-preset="home-1"]')[2];
-const someColorKey = someColorBtn.dataset.color;
+const someColorBtn = doc.querySelectorAll("[data-jersey-color]")[2];
+const someColorKey = someColorBtn.dataset.jerseyColor;
 someColorBtn.click();
 console.log("teamA.jerseyColor après clic sur une couleur :", win.eval("teamA.jerseyColor"), "(attendu", someColorKey, ")");
 if (win.eval("teamA.jerseyColor") !== someColorKey) throw new Error("❌ Cliquer sur une couleur de maillot devrait mettre à jour teamA.jerseyColor.");
