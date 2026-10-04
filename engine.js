@@ -11985,6 +11985,10 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // calendrier (classique/accéléré/ancré quotidien) : `team.week` est
         // déjà correct dans TOUS les modes, contrairement à un round/2.
         round, competition, week: team.week,
+        // Club pour lequel ce match a été joué (retour utilisateur
+        // 2026-10-03 : une recrue apportait ses matchs de son ancien club
+        // dans la feuille de match de la même journée de son nouveau club).
+        team: team.name,
         min: Math.max(1, Math.round(p.secondsPlayed / 60)),
         pts: p.stats.pts || 0, reb: p.stats.reb || 0, oreb: p.stats.oreb || 0, dreb: p.stats.dreb || 0,
         ast: p.stats.ast || 0, stl: p.stats.stl || 0, blk: p.stats.blk || 0, tov: p.stats.tov || 0, pf: p.stats.pf || 0,

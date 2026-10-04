@@ -42183,10 +42183,40 @@ function renderBoxScore(side) {
 // donc sa ligne manque dans cette reconstitution. matchLog reste attaché à
 // l'objet joueur, pas à l'équipe, mais cette modale ne parcourt que
 // l'effectif ACTUEL de chaque équipe.
-function boxscoreRowsFromMatchLog(team, round, competition) {
+// Entrée matchLog d'un joueur pour CE match (retour utilisateur
+// 2026-10-03 : une recrue arrivée après coup apportait la ligne de son
+// ancien club à la même journée). Le club inscrit sur l'entrée (matchs
+// récents) doit être celui-ci, et le score par quart-temps, recopié sur
+// chaque entrée, doit redonner le score final connu du match.
+function matchLogEntryFor(p, team, round, competition, expect) {
+  return (p.matchLog || []).find(e => {
+    if (e.round !== round || e.competition !== competition) return false;
+    if (e.team && team && e.team !== team.name) return false;
+    if (expect && e.quarterScores && e.quarterScores.home && e.quarterScores.away) {
+      const sum = a => a.reduce((x, y) => x + (y || 0), 0);
+      return sum(e.quarterScores.home) === expect.home && sum(e.quarterScores.away) === expect.away;
+    }
+    return true;
+  }) || null;
+}
+// Score final connu d'un match (mêmes sources que matchBoxscoreContext).
+function knownMatchScore(round, competition, homeIdx, awayIdx) {
+  if (competition === "cup" && round === SUPERCUP_ROUND && league.superCup) {
+    const sc = league.superCup;
+    return sc.resolved && sc.score ? { home: sc.score.home, away: sc.score.away } : null;
+  }
+  if (competition === "cup") {
+    const r = league.cup && league.cup.rounds.find(x => x.index === round);
+    const m = r && r.matches.find(x => x.home === homeIdx && x.away === awayIdx);
+    return m && m.resolved ? { home: m.scoreHome, away: m.scoreAway } : null;
+  }
+  const res = (league.results || []).find(x => x.round === round && x.home === homeIdx && x.away === awayIdx);
+  return res ? { home: res.scoreHome, away: res.scoreAway } : null;
+}
+function boxscoreRowsFromMatchLog(team, round, competition, expect = null) {
   return team.players
     .map(p => {
-      const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+      const entry = matchLogEntryFor(p, team, round, competition, expect);
       if (!entry) return null;
       return {
         // `id` : même raison additive que dans buildBoxScore (moteur) — voir
@@ -42220,9 +42250,9 @@ function boxscoreRowsFromMatchLog(team, round, competition) {
 // ce correctif) : boxscoreQuarterScoresHtml gère ce cas en n'affichant rien.
 // Tactiques jouées par une équipe sur un match (matchLog, voir
 // Engine.tacticsSnapshotFor : priorité offensive n° 1, défense, rythme).
-function matchTacticsFromTeam(team, round, competition) {
+function matchTacticsFromTeam(team, round, competition, expect = null) {
   for (const p of (team && team.players) || []) {
-    const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+    const entry = matchLogEntryFor(p, team, round, competition, expect);
     if (entry && entry.tacticsUsed) return entry.tacticsUsed;
   }
   return null;
@@ -42245,9 +42275,9 @@ function matchTacticsHtml(tactics, nameHome, nameAway) {
     `</tbody></table></div>`;
 }
 
-function matchQuarterScoresFromTeam(team, round, competition) {
+function matchQuarterScoresFromTeam(team, round, competition, expect = null) {
   for (const p of team.players) {
-    const entry = (p.matchLog || []).find(e => e.round === round && e.competition === competition);
+    const entry = matchLogEntryFor(p, team, round, competition, expect);
     if (entry && entry.quarterScores) return entry.quarterScores;
   }
   return null;
@@ -42377,20 +42407,21 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
   closeMatchBoxscore();
   const homeTeam = league.teams[homeIdx];
   const awayTeam = league.teams[awayIdx];
+  const expect = knownMatchScore(round, competition, homeIdx, awayIdx);
   matchBoxscoreState = {
-    rowsHome: boxscoreRowsFromMatchLog(homeTeam, round, competition),
-    rowsAway: boxscoreRowsFromMatchLog(awayTeam, round, competition),
+    rowsHome: boxscoreRowsFromMatchLog(homeTeam, round, competition, expect),
+    rowsAway: boxscoreRowsFromMatchLog(awayTeam, round, competition, expect),
     nameHome: homeTeam.name, nameAway: awayTeam.name,
     // teamHome/teamAway : les VRAIS objets Team, passés à matchMvpCalloutHtml
     // pour qu'elle retrouve le VRAI Player MVP (avatar : id + couleurs du club).
     teamHome: homeTeam, teamAway: awayTeam,
     // Score par quart-temps (voir matchQuarterScoresFromTeam) : domicile
     // d'abord, extérieur en repli (effectif sans plus aucun joueur de l'époque).
-    quarterScores: matchQuarterScoresFromTeam(homeTeam, round, competition) || matchQuarterScoresFromTeam(awayTeam, round, competition),
+    quarterScores: matchQuarterScoresFromTeam(homeTeam, round, competition, expect) || matchQuarterScoresFromTeam(awayTeam, round, competition, expect),
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
-  ctx.tactics = { home: matchTacticsFromTeam(homeTeam, round, competition), away: matchTacticsFromTeam(awayTeam, round, competition) };
+  ctx.tactics = { home: matchTacticsFromTeam(homeTeam, round, competition, expect), away: matchTacticsFromTeam(awayTeam, round, competition, expect) };
   // Premium « Revoir le direct » : tout match diffusé de son championnat
   // (retour utilisateur 2026-10-01 : « il faudrait pouvoir revoir les matchs
   // de tout le monde même en championnat, coupe, po ») — au moins un club

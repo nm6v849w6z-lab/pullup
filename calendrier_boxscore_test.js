@@ -133,6 +133,25 @@ closeBtn.click();
 if (doc2.getElementById("matchBoxscoreOverlay")) throw new Error("❌ Le bouton Fermer devrait fermer la feuille de statistiques.");
 console.log("✅ La feuille de statistiques se ferme bien via le bouton Fermer.");
 
+// --- Recrue arrivée après le match (retour utilisateur 2026-10-03) : sa
+// ligne de la même journée avec son ANCIEN club ne doit pas apparaître.
+const recruit = win2.eval(`
+  (function() {
+    const r0 = league.results.find(r => r.round === 0 && (r.home === myTeamIndex || r.away === myTeamIndex));
+    const home = league.teams[r0.home];
+    const p = home.players.find(x => !(x.matchLog || []).some(m => m.round === 0 && m.competition === "championship"))
+      || home.players.find(x => (x.matchLog || []).some(m => m.round === 0 && m.competition === "championship"));
+    p.matchLog = (p.matchLog || []).filter(m => !(m.round === 0 && m.competition === "championship"));
+    p.matchLog.push({ round: 0, competition: "championship", min: 40, pts: 99, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0,
+      team: "Ancien Club", quarterScores: { home: [1, 1, 1, 1], away: [2, 2, 2, 2] } });
+    showMatchBoxscore(0, "championship", r0.home, r0.away);
+    return p.name;
+  })()
+`);
+const recruitRows = [...doc2.querySelectorAll("#matchBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)")].map(tr => tr.textContent);
+if (recruitRows.some(t => t.includes("99"))) throw new Error(`❌ La ligne de ${recruit} avec son ancien club ne devrait pas figurer sur cette feuille de match.`);
+console.log("✅ Une recrue n'apporte pas son match de l'ancien club dans la feuille de match.");
+
 await flush(dom2);
 dom2.window.close();
 server.close();
