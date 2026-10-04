@@ -23,7 +23,12 @@ const { startTestServer, openGame, flush, readRawSave, patchDateNow, fastForward
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
-function clickTab(doc, key) { [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }
+// « Ordres » n'est plus un onglet du menu (2026-10-04) : bouton « Modifier
+// vos ordres » de la barre du haut.
+function clickTab(doc, key) {
+  if (key === "ordres") { doc.getElementById("topbarOrdersBtn").click(); return; }
+  [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click();
+}
 async function realDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 // Le bandeau "DIVISION I : 1 CHAMPIONNAT" de l'écran Ordres (#divisionBadge)
 // a été retiré (retour utilisateur, 2026-09 : "enlève tout ce texte en haut

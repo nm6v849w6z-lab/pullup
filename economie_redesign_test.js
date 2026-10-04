@@ -49,19 +49,19 @@ const weeks = [...doc.querySelectorAll("#economieTransactions .eco-week")];
 assert(weeks.length === 2, "Historique groupé en 2 blocs (semaines 2 et 1)");
 const head2 = norm(weeks[0].querySelector(".eco-week-head").textContent);
 const head1 = norm(weeks[1].querySelector(".eco-week-head").textContent);
-assert(head2.includes("Semaine 2") && head2.includes("+11 734 €") && head2.includes("+236 455 €") && head2.includes("−224 721 €"), "Semaine 2 : bilan net +11 734 €, revenus +236 455 €, dépenses −224 721 € (" + head2 + ")");
-assert(head1.includes("Semaine 1") && head1.includes("+262 213 €"), "Semaine 1 : bilan net +262 213 €");
+assert(head2.includes("Semaine 2") && head2.includes("+11 734 $") && head2.includes("+236 455 $") && head2.includes("−224 721 $"), "Semaine 2 : bilan net +11 734 $, revenus +236 455 $, dépenses −224 721 $ (" + head2 + ")");
+assert(head1.includes("Semaine 1") && head1.includes("+262 213 $"), "Semaine 1 : bilan net +262 213 $");
 
 const rows1 = [...weeks[1].querySelectorAll(".eco-row")].map(r => norm(r.textContent));
 const tutoRows = rows1.filter(t => t.includes("Tutoriel d'accueil"));
-assert(tutoRows.length === 1 && tutoRows[0].includes("8 étapes") && tutoRows[0].includes("+200 000 €"), "Les 8 lignes du tutoriel sont regroupées en une seule (+200 000 €)");
+assert(tutoRows.length === 1 && tutoRows[0].includes("8 étapes") && tutoRows[0].includes("+200 000 $"), "Les 8 lignes du tutoriel sont regroupées en une seule (+200 000 $)");
 assert(rows1[0].includes("Tutoriel"), "Les revenus sont triés du plus gros au plus petit (tutoriel en tête)");
 assert(!doc.querySelector("#economieTransactions .eco-subgrid"), "Détail du tutoriel replié par défaut");
 doc.querySelector('[data-eco-tuto="1"]').click();
 assert(doc.querySelectorAll("#economieTransactions .eco-subgrid span > b").length === 8, "Le bouton Détail déplie les 8 étapes du tutoriel");
 
 const rows2 = [...doc.querySelectorAll("#economieTransactions .eco-week")[0].querySelectorAll(".eco-row")].map(r => norm(r.textContent));
-assert(rows2.some(t => t.includes("Staff · Entraîneur") && t.includes("−3 072 €")), "\"Salaire du staff\" est affiché comme Staff · Entraîneur");
+assert(rows2.some(t => t.includes("Staff · Entraîneur") && t.includes("−3 072 $")), "\"Salaire du staff\" est affiché comme Staff · Entraîneur");
 assert(rows2.some(t => t.includes("Agrandissement de la salle") && t.includes("Exceptionnel")), "Les dépenses ponctuelles portent l'étiquette Exceptionnel");
 
 doc.querySelector('[data-eco-filter="in"]').click();
@@ -76,15 +76,15 @@ doc.querySelector('[data-eco-week="2"]').click();
 assert(!doc.querySelectorAll("#economieTransactions .eco-week")[0].classList.contains("open"), "Cliquer sur l'en-tête replie la semaine");
 
 const total = norm(doc.querySelector("#economieTransactions .gain-line-total").textContent);
-assert(total.includes("Budget initial : 300 000 €") && total.includes("+273 947 €"), "Pied d'historique : budget initial et total depuis le début");
+assert(total.includes("Budget initial : 300 000 $") && total.includes("+273 947 $"), "Pied d'historique : budget initial et total depuis le début");
 
 const charges = win.eval("teamA.players.reduce((s,p)=>s+p.salary,0) + teamA.trainerSalary() + teamA.videoAnalystSalary() + teamA.recruiterSalary()");
 assert(norm(doc.getElementById("economiePayroll").textContent).startsWith(charges.toLocaleString("fr-FR").replace(/[  ]/g, " ")), "Carte Masse salariale : total joueurs + staff");
 
 const arena = norm(doc.getElementById("economieArenaSummary").textContent);
-assert(arena.includes("159 455 €") && !arena.includes("%") && !arena.includes("Prix"), "Carte Salle : uniquement la dernière recette (" + arena + ")");
+assert(arena.includes("159 455 $") && !arena.includes("%") && !arena.includes("Prix"), "Carte Salle : uniquement la dernière recette (" + arena + ")");
 const shop = norm(doc.getElementById("economieFanShopSummary").textContent);
-assert(shop.includes("2 000 €") && shop.includes("Niveau 1/5") && shop.includes("Stand souvenirs") && !shop.includes("Amortissement") && !shop.includes("Niveau suivant"), "Carte Boutique : uniquement revenu + niveau (" + shop + ")");
+assert(shop.includes("2 000 $") && shop.includes("Niveau 1/5") && shop.includes("Stand souvenirs") && !shop.includes("Amortissement") && !shop.includes("Niveau suivant"), "Carte Boutique : uniquement revenu + niveau (" + shop + ")");
 
 assert(doc.getElementById("economieBudgetChart").querySelectorAll(".eco-chart-dot").length === 3, "Courbe du budget : départ + fin S1 + fin S2");
 const pageText = norm(doc.getElementById("economieSection").textContent);

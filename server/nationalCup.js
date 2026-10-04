@@ -387,7 +387,7 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
       Engine.pushEntry(team.feed, {
         key: `scup_${sc.season}_${ref.leagueId}_${ref.idx}`, category: "ligue", week: team.week, createdAt: now,
         title: pf > pa ? "Supercoupe remportée !" : "Supercoupe perdue",
-        text: `Supercoupe : ${isHome ? `${team.name} ${pf}-${pa} ${opp.name}` : `${opp.name} ${pa}-${pf} ${team.name}`}${pf > pa ? `. Prime de ${SUPERCUP_WIN_BONUS.toLocaleString("fr-FR")} €.` : "."}`,
+        text: `Supercoupe : ${isHome ? `${team.name} ${pf}-${pa} ${opp.name}` : `${opp.name} ${pa}-${pf} ${team.name}`}${pf > pa ? `. Prime de ${SUPERCUP_WIN_BONUS.toLocaleString("fr-FR")} $.` : "."}`,
         action: { label: "Coupe", href: "/coupe" },
       });
     }

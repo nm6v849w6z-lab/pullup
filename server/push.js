@@ -205,13 +205,15 @@ function mkNote(id, params, extra) {
 function pickLang(l) { return PUSH_LANGS.includes(l) ? l : "fr"; }
 function pickLangOrNull(l) { return PUSH_LANGS.includes(l) ? l : null; }
 
-// Montants du fil (« 120 000 € ») à la façon de la langue (comme le jeu :
-// 120,000 € en anglais / chinois, 120.000 € en italien, espagnol,
+// Montants du fil (« 120 000 $ ») à la façon de la langue (comme le jeu :
+// $120,000 en anglais / chinois, 120.000 $ en italien, espagnol,
 // portugais, allemand, grec ; espace insécable en polonais / lituanien).
 const GROUP_SEP = { en: ",", zh: ",", pl: "\u00a0", lt: "\u00a0" };
+const MONEY_PREFIX_LANGS = new Set(["en", "zh"]); // symbole devant : $120,000 (passage au dollar, 2026-10-04)
 function localizeAmounts(s, lang) {
   if (lang === "fr" || typeof s !== "string") return s;
-  return s.replace(/(\d{1,3}(?:[\s  ]\d{3})+)(?=\s?€)/g, m => m.replace(/[\s  ]/g, GROUP_SEP[lang] || "."));
+  const out = s.replace(/(\d{1,3}(?:[\s  ]\d{3})+)(?=\s?\$)/g, m => m.replace(/[\s  ]/g, GROUP_SEP[lang] || "."));
+  return MONEY_PREFIX_LANGS.has(lang) ? out.replace(/(\d[\d,.]*)[\s\u00a0\u202f]?\$(?!\{)/g, "$$$1") : out;
 }
 
 // Note prête à envoyer dans la langue voulue ({ title, body, url, tag }).
@@ -245,7 +247,10 @@ let engineMod = null;
 function Engine() { if (!engineMod) engineMod = require("../engine.js"); return engineMod; }
 
 const NUM_LOCALE = { fr: "fr-FR", en: "en-GB", it: "it-IT", es: "es-ES", pt: "pt-BR", de: "de-DE", pl: "pl-PL", el: "el-GR", lt: "lt-LT", zh: "zh-CN" };
-function euros(n, lang = "fr") { return `${Math.round(n || 0).toLocaleString(NUM_LOCALE[lang] || "fr-FR")} €`; }
+function euros(n, lang = "fr") {
+  const v = Math.round(n || 0).toLocaleString(NUM_LOCALE[lang] || "fr-FR");
+  return MONEY_PREFIX_LANGS.has(lang) ? `$${v}` : `${v} $`;
+}
 
 function leftLabel(ms, lang = "fr") {
   const w = WORDS[lang] || WORDS.fr;

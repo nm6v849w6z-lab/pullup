@@ -708,8 +708,8 @@ function listPlayer(team, teamIndex, league, body, now) {
   return { ok: true, listing };
 }
 
-// Vente forcée pour 1 € d'un joueur listé par la mise en vente forcée
-// (déficit prolongé, voir Team.sellPlayer) — bouton « Vendre pour 1 € » de
+// Vente forcée pour 1 $ d'un joueur listé par la mise en vente forcée
+// (déficit prolongé, voir Team.sellPlayer) — bouton « Vendre pour 1 $ » de
 // l'Effectif. Passait avant par la sauvegarde brute de la carrière solo.
 function sellListedPlayer(team, teamIndex, league, body) {
   if (!body || typeof body.playerId !== "number") return fail("playerId requis.");
@@ -791,7 +791,7 @@ function negotiateTransfer(team, teamIndex, league, body, now) {
   const result = league.negotiateTransferContract(listingId, teamIndex, { salary: body.salary, seasons: body.seasons }, now);
   if (!result.ok) {
     if (result.reason === "invalid-salary") return fail(result.floor != null && result.floor === result.demand
-      ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(result.demand).toLocaleString("fr-FR")} €).`
+      ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(result.demand).toLocaleString("fr-FR")} $).`
       : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.");
     return fail(NEGOTIATION_REASONS[result.reason] || "Négociation impossible.");
   }
@@ -1224,7 +1224,7 @@ function releasePlayer(team, teamIndex, league, body, now) {
   const result = league.releasePlayer(teamIndex, playerId, now);
   if (!result.ok) {
     return fail(result.reason === "budget"
-      ? `Budget insuffisant pour l'indemnité (${Math.round(result.fee).toLocaleString("fr-FR")} €).`
+      ? `Budget insuffisant pour l'indemnité (${Math.round(result.fee).toLocaleString("fr-FR")} $).`
       : "Joueur introuvable dans cet effectif.");
   }
   return { ok: true, fee: result.fee, playerName: result.playerName };

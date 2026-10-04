@@ -107,7 +107,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
     return l && l.currentBidderIdx === Engine.FOREIGN_BIDDER_IDX && l.currentBidderRef.name === lyon.name && l.currentBid === minBid;
   }, "enchère enregistrée dans le championnat américain");
   assert.ok(/Vous êtes en tête/.test(doc.getElementById(`marketCard_${-en.gid}`).textContent));
-  ok(`enchère de ${minBid} € posée depuis le marché de Lyon sur ${player.name} : enregistrée aux USA, « Vous êtes en tête »`);
+  ok(`enchère de ${minBid} $ posée depuis le marché de Lyon sur ${player.name} : enregistrée aux USA, « Vous êtes en tête »`);
   dom.window.close();
 
   // 3) Paris (même championnat que Lyon) voit Lyon en tête ; enchère trop basse refusée.
@@ -137,7 +137,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   assert.strictEqual(lClosed.result, "sold"); assert.strictEqual(lClosed.finalPrice, minBid);
   const idx2 = await store.loadWorldAuxRaw("market", multiSavePath);
   assert.ok(!idx2.entries.some(x => x.gid === en.gid), "annonce retirée de l'index");
-  ok(`clôture : ${player.name} passe de ${seller.name} (USA) à Lyon pour ${minBid} €, annonce retirée du marché mondial`);
+  ok(`clôture : ${player.name} passe de ${seller.name} (USA) à Lyon pour ${minBid} $, annonce retirée du marché mondial`);
 
   // 5) Rattrapage sans changement : aucune ligue réécrite.
   await World.catchUpWorld(multiSavePath, clock.now + 1000);

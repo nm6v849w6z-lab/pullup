@@ -55,7 +55,7 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
 // --- Cas concret signalé par l'utilisateur : un joueur à 97 en tir à 3
 // points (poste de carte Arrière), reste du profil ordinaire, touchait
-// seulement 1848 €/semaine avant correctif — le pic exceptionnel se noyait
+// seulement 1848 $/semaine avant correctif — le pic exceptionnel se noyait
 // dans la moyenne pondérée de tout le reste. Doit désormais toucher une
 // prime nette qui reflète un tir "parmi les meilleurs au monde", sans faire
 // exploser la masse salariale d'un effectif ordinaire (voir plus bas). ---
@@ -85,17 +85,17 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   const star = new Player({ name: "Star Test", position: "Arrière", height: 195, age: 24, attrs: starAttrs, aggressiveness: 0.5 });
-  console.log("\nJoueur à 97 en tir à 3pts (poste Arrière) → poste effectif :", star.effectivePosition, "| salaire :", star.salary, "€/sem.");
+  console.log("\nJoueur à 97 en tir à 3pts (poste Arrière) → poste effectif :", star.effectivePosition, "| salaire :", star.salary, "$/sem.");
   if (star.effectivePosition !== "Arrière") throw new Error("❌ Un profil Arrière typé 3pts devrait rester Arrière.");
-  if (star.salary < 5000) throw new Error("❌ Un pic à 97 dans la caractéristique signature du poste devrait nettement dépasser 5000 €/sem (obtenu : " + star.salary + ").");
-  console.log("✅ Le pic exceptionnel sur une seule caractéristique signature est désormais correctement récompensé (bien au-delà des 1848 € signalés).");
+  if (star.salary < 5000) throw new Error("❌ Un pic à 97 dans la caractéristique signature du poste devrait nettement dépasser 5000 $/sem (obtenu : " + star.salary + ").");
+  console.log("✅ Le pic exceptionnel sur une seule caractéristique signature est désormais correctement récompensé (bien au-delà des 1848 $ signalés).");
 }
 
 // --- La prime de pic est PLAFONNÉE : un joueur qui cumule par pur hasard
 // plusieurs caractéristiques déjà très hautes ET un pic extrême ne doit pas
 // voir son salaire s'envoler de façon absurde/imprévisible (repéré en
 // testant sur des effectifs générés réels : certains effectifs entiers
-// dépassaient 100 000 €/semaine de masse salariale par pur hasard de
+// dépassaient 100 000 $/semaine de masse salariale par pur hasard de
 // génération, avant plafonnement). ---
 {
   const freakAttrs = {
@@ -123,7 +123,7 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     composure: 50, determination: 50, discipline: 50, vision: 50,
   };
   const freak = new Player({ name: "Freak Test", position: "Pivot", height: 215, age: 24, attrs: freakAttrs, aggressiveness: 0.5 });
-  console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "€/sem.");
+  console.log("Profil extrême (4 carac fortes du Pivot à 99) → salaire :", freak.salary, "$/sem.");
   // Grille du 2026-10-04 : un profil exceptionnel coûte cher, mais la prime
   // de pic plafonnée (5 points) le garde sous le palier du niveau 90.
   if (freak.salary > 160000) throw new Error("❌ La prime de pic plafonnée devrait empêcher un salaire absurde même sur un profil extrême (obtenu : " + freak.salary + ").");
@@ -144,7 +144,7 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
     const tx = team.transactions.find(t => t.week === w && t.label === "Subvention de démarrage");
     if (tx) subsidyWeeksSeen.push(w);
     if (tx && tx.amount !== STARTUP_SUBSIDY_AMOUNT) {
-      throw new Error("❌ Le montant de la subvention de démarrage devrait être fixe (" + STARTUP_SUBSIDY_AMOUNT + " €), obtenu : " + tx.amount);
+      throw new Error("❌ Le montant de la subvention de démarrage devrait être fixe (" + STARTUP_SUBSIDY_AMOUNT + " $), obtenu : " + tx.amount);
     }
   }
   console.log("\nSemaines ayant touché la subvention de démarrage :", subsidyWeeksSeen.join(", "));
@@ -172,7 +172,7 @@ function clickTab(key) {
 // BuzzerBeater (retour utilisateur : "on est très loin des niveaux que tu
 // proposes") — voir SALARY_BASELINE_OVERALL dans engine.js pour le détail
 // de la calibration (masse salariale d'un effectif de Division II ~400-
-// 500 000 €/semaine). L'échelle couvre désormais un spectre bien plus
+// 500 000 $/semaine). L'échelle couvre désormais un spectre bien plus
 // large (du joueur de complément au profil quasi légendaire), donc l'écart
 // pertinent à vérifier est sur l'ÉTENDUE COMPLÈTE de la grille (30 à 130),
 // pas seulement sur un tronçon de 20 points. ---
@@ -197,12 +197,12 @@ console.log("✅ Grille salariale exponentielle et cohérente (un très fort jou
 // engine.js) couvre un spectre bien plus large, donc même un effectif de
 // départ (tier neutre) ordinaire peut, par variance de génération normale,
 // cumuler plusieurs profils au-dessus de la moyenne — vérifié sur 1000
-// effectifs générés, moins de 0.1% dépassent 200 000 €/semaine. Ce test
+// effectifs générés, moins de 0.1% dépassent 200 000 $/semaine. Ce test
 // vise à détecter un vrai bug d'emballement, pas la variance normale. ---
 await flush(dom);
 let saved = readRawSave(savePath);
 const totalPayroll = saved.team.players.reduce((s, p) => s + p.salary, 0);
-console.log("\nMasse salariale hebdo au départ :", totalPayroll, "€ | budget de départ :", saved.team.budget, "€");
+console.log("\nMasse salariale hebdo au départ :", totalPayroll, "$ | budget de départ :", saved.team.budget, "$");
 if (saved.team.players.some(p => !(p.salary > 0))) throw new Error("❌ Chaque joueur devrait avoir un salaire positif dès la génération.");
 if (totalPayroll > saved.team.budget * 0.75) throw new Error("❌ La masse salariale de départ semble disproportionnée par rapport au budget de départ.");
 console.log("✅ Masse salariale de départ raisonnable par rapport au budget de départ.");
@@ -218,7 +218,7 @@ console.log("✅ L'onglet Effectif affiche le salaire de chaque joueur.");
 clickTab("economie");
 const payrollText = doc.getElementById("economiePayroll").textContent;
 console.log("Masse salariale affichée (Économie) :", payrollText);
-if (!payrollText || payrollText === "0 €/sem.") throw new Error("❌ La carte Masse salariale devrait afficher un montant hebdomadaire.");
+if (!payrollText || payrollText === "0 $/sem.") throw new Error("❌ La carte Masse salariale devrait afficher un montant hebdomadaire.");
 
 // --- La masse salariale est bien déduite du budget à chaque semaine
 // d'entraînement, entraînement ou pas. Depuis le passage au calendrier réel
@@ -265,13 +265,13 @@ const payrollTx = newTxs.find(t => t.label === "Salaires des joueurs");
 if (!payrollTx || payrollTx.amount >= 0) throw new Error("❌ Une transaction \"Salaires des joueurs\" négative devrait être journalisée chaque semaine.");
 const subsidyTx = newTxs.find(t => t.label === "Subvention de démarrage");
 if (!subsidyTx || subsidyTx.amount <= 0) throw new Error("❌ La semaine 1 (dans les STARTUP_SUBSIDY_WEEKS premières semaines) devrait toucher la subvention de démarrage.");
-console.log("Subvention de démarrage journalisée :", subsidyTx.amount, "€");
+console.log("Subvention de démarrage journalisée :", subsidyTx.amount, "$");
 // Droits TV (retour utilisateur : "il faut aussi prévoir les droits TV") :
 // une nouvelle carrière démarre en Division I (voir promotion_test.js), donc
 // une transaction "Droits TV" est journalisée dès la semaine 1.
 const tvTx = newTxs.find(t => t.label && t.label.startsWith("Droits TV"));
 if (!tvTx || tvTx.amount <= 0) throw new Error("❌ Une transaction \"Droits TV\" positive devrait être journalisée chaque semaine (division actuelle du club).");
-console.log("Droits TV journalisés :", tvTx.amount, "€ (" + tvTx.label + ")");
+console.log("Droits TV journalisés :", tvTx.amount, "$ (" + tvTx.label + ")");
 
 const sumNewTxs = newTxs.reduce((s, t) => s + t.amount, 0);
 if (Math.round(budgetAfter - budgetBefore) !== Math.round(sumNewTxs)) {
@@ -365,7 +365,7 @@ win2.close();
   target.effectivePosition = "Arrière";
   const frozenPosition = "Arrière";
   const frozenSalary = target.salary;
-  console.log("Joueur ciblé pour la régression, poste de carte et poste effectif figés à :", frozenPosition, "| salaire figé :", frozenSalary, "€/sem.");
+  console.log("Joueur ciblé pour la régression, poste de carte et poste effectif figés à :", frozenPosition, "| salaire figé :", frozenSalary, "$/sem.");
 
   target.attrs = { ...pivotLikeAttrs };
   writeRawSave(savePath, regressionSave);
@@ -373,7 +373,7 @@ win2.close();
   const dom3 = await openGame(html, baseUrl);
   const win3 = dom3.window;
   const afterMutationReload = win3.eval("teamA.players[0]");
-  console.log("Après mutation des attributs + rechargement, poste effectif :", afterMutationReload.effectivePosition, "| salaire :", afterMutationReload.salary, "€/sem.");
+  console.log("Après mutation des attributs + rechargement, poste effectif :", afterMutationReload.effectivePosition, "| salaire :", afterMutationReload.salary, "$/sem.");
   if (afterMutationReload.effectivePosition !== frozenPosition) {
     throw new Error("❌ Le poste effectif ne devrait pas bouger en cours de saison même si les attributs changent (obtenu : " + afterMutationReload.effectivePosition + ", attendu : " + frozenPosition + ").");
   }

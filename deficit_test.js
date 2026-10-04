@@ -36,15 +36,15 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
 
   // --- Semaine 2 toujours sous le seuil (les salaires continuent d'être
   // payés, le budget reste sous le seuil) : mise en vente forcée de TOUT
-  // l'effectif à 1 €. ---
+  // l'effectif à 1 $. ---
   const w2 = team.trainWeek();
   console.log("\nSemaine 2 toujours sous le seuil — deficitWeeks:", w2.deficitWeeks, "| forcedFireSale:", w2.forcedFireSale);
   if (w2.deficitWeeks !== DEFICIT_GRACE_WEEKS) throw new Error("❌ deficitWeeks devrait valoir " + DEFICIT_GRACE_WEEKS + " après 2 semaines consécutives sous le seuil.");
   if (!w2.forcedFireSale) throw new Error("❌ La mise en vente forcée aurait dû se déclencher exactement à la " + DEFICIT_GRACE_WEEKS + "e semaine consécutive sous le seuil.");
   const allForSale = team.players.every(p => p.forSale && p.salePrice === 1);
-  console.log("Tous les joueurs listés à 1 € :", allForSale, `(${team.players.length} joueurs)`);
-  if (!allForSale) throw new Error("❌ Tout l'effectif devrait être listé à 1 € après " + DEFICIT_GRACE_WEEKS + " semaines de déficit non résolu.");
-  console.log("✅ Mise en vente forcée de tout l'effectif à 1 € déclenchée exactement à la " + DEFICIT_GRACE_WEEKS + "e semaine consécutive.");
+  console.log("Tous les joueurs listés à 1 $ :", allForSale, `(${team.players.length} joueurs)`);
+  if (!allForSale) throw new Error("❌ Tout l'effectif devrait être listé à 1 $ après " + DEFICIT_GRACE_WEEKS + " semaines de déficit non résolu.");
+  console.log("✅ Mise en vente forcée de tout l'effectif à 1 $ déclenchée exactement à la " + DEFICIT_GRACE_WEEKS + "e semaine consécutive.");
 
   // --- Semaine 3, toujours en déficit : le compteur continue de grimper,
   // mais la mise en vente ne se redéclenche pas (déjà faite). ---
@@ -122,8 +122,8 @@ const html = fs.readFileSync("moteurbasket3.html", "utf-8");
   if (team.players.length !== 0) throw new Error("❌ L'effectif entier devrait avoir pu être vendu, jusqu'à zéro joueur, obtenu : " + team.players.length);
   if (sold !== initialCount) throw new Error(`❌ Le nombre de ventes (${sold}) devrait correspondre exactement à l'effectif de départ (${initialCount}).`);
   const expectedBudget = budgetBeforeSelling + sold * 1;
-  if (team.budget !== expectedBudget) throw new Error(`❌ Le budget devrait avoir encaissé exactement ${sold} € (1 € par joueur vendu), attendu ${expectedBudget}, obtenu ${team.budget}.`);
-  console.log("✅ Aucun plancher d'effectif : le club a pu vendre l'intégralité de son effectif, jusqu'à zéro joueur, chaque vente encaissant exactement 1 €.");
+  if (team.budget !== expectedBudget) throw new Error(`❌ Le budget devrait avoir encaissé exactement ${sold} $ (1 $ par joueur vendu), attendu ${expectedBudget}, obtenu ${team.budget}.`);
+  console.log("✅ Aucun plancher d'effectif : le club a pu vendre l'intégralité de son effectif, jusqu'à zéro joueur, chaque vente encaissant exactement 1 $.");
 
   // Vendre un effectif déjà vide refuse simplement (plus aucun joueur listé
   // à trouver), sans planter.
@@ -167,7 +167,7 @@ const dom1 = await openGame(html, baseUrl);
 await flush(dom1);
 const saved = readRawSave(savePath);
 dom1.window.close();
-// Marge large sous le seuil (pas seulement 100 000 € comme dans la version
+// Marge large sous le seuil (pas seulement 100 000 $ comme dans la version
 // précédente de ce test, qui déclenchait l'entraînement hebdomadaire à la
 // main via validateTrainingBtn SANS jouer le moindre match) : depuis le
 // passage au calendrier réel (tâche #21), avancer de vraies semaines fait
@@ -247,7 +247,7 @@ await flush(dom2);
 const savedAfterSale = readRawSave(savePath);
 const countAfterSale = doc2.querySelectorAll("#rosterContent tbody tr.eff-row").length;
 console.log(`\nBudget avant/après vente : ${budgetBeforeSale} → ${savedAfterSale.team.budget} | Lignes du tableau avant/après : ${countBeforeSale} → ${countAfterSale}`);
-if (savedAfterSale.team.budget !== budgetBeforeSale + 1) throw new Error("❌ La vente d'un joueur listé devrait créditer exactement 1 € au budget.");
+if (savedAfterSale.team.budget !== budgetBeforeSale + 1) throw new Error("❌ La vente d'un joueur listé devrait créditer exactement 1 $ au budget.");
 if (countAfterSale !== countBeforeSale - 1) throw new Error("❌ Le tableau de l'effectif devrait perdre une ligne après la vente.");
 if (savedAfterSale.team.players.length !== countBeforeSale - 1) throw new Error("❌ L'effectif sauvegardé devrait avoir un joueur de moins après la vente.");
 console.log("✅ La vente via le bouton 'Vendre' met à jour le budget, l'effectif affiché ET la sauvegarde.");

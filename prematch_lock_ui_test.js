@@ -26,7 +26,7 @@ assert(typeof kickoff === "number" && win.eval("currentMatch.competition !== 'cu
 clock.now = kickoff - 6 * 60 * 1000;
 win.eval("startCountdown()");
 clickTab("economie"); clickTab("club");
-assert(!!hero().querySelector('[data-dash-href="/ordres"]') && !hero().querySelector('[data-dash-href="/emission-avant-match"]'), "À T-6 min : bandeau habituel, pas encore d'émission");
+assert(!!hero().querySelector('[data-order-target]') && !hero().querySelector('[data-dash-href="/emission-avant-match"]'), "À T-6 min : bandeau habituel, pas encore d'émission");
 assert(!/Émission/.test(doc.getElementById("topbarOrdersBtn").textContent), "À T-6 min : bouton du topbar habituel");
 
 // Franchit T-5 min SANS recharger : le compte à rebours (1 s) doit réagir.

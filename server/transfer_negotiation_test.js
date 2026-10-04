@@ -41,7 +41,7 @@ r = lg.negotiateTransferContract(listing.id, myIdx, { salary: r3.demand - 10, se
 assert.strictEqual(r.reason, "invalid-salary");
 r = lg.negotiateTransferContract(listing.id, myIdx, { salary: r3.demand, seasons: 4 }, T0 + 7000);
 assert.ok(r.ok && r.accepted && r.salary === r3.demand && r.seasons === 4, JSON.stringify(r));
-ok(`après 3 refus, accord au salaire demandé (${r3.demand} €, 4 saisons)`);
+ok(`après 3 refus, accord au salaire demandé (${r3.demand} $, 4 saisons)`);
 r = lg.negotiateTransferContract(listing.id, myIdx, { salary: r3.demand, seasons: 2 }, T0 + 8000);
 assert.strictEqual(r.reason, "already-agreed");
 ok("accord figé");
@@ -55,7 +55,7 @@ const signed = me.players.find(p => p.id === player.id);
 assert.ok(signed, "joueur arrivé");
 assert.strictEqual(signed.salary, Math.round(r3.demand * 0.93 / 10) * 10, `salaire après visite : ${signed.salary}`);
 assert.strictEqual(signed.contractUntilSeason - lg.contractSeason() + 1, 4);
-ok(`visite médicale : ${r3.demand} € → ${signed.salary} € (−7 %), 4 saisons`);
+ok(`visite médicale : ${r3.demand} $ → ${signed.salary} $ (−7 %), 4 saisons`);
 
 // 5) Barème de la visite médicale (12 semaines, blessures de 10 j et plus).
 const mc = (h, now = T0) => E.medicalCheckFor({ injuryHistory: h }, now).rate;

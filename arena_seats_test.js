@@ -32,7 +32,7 @@ if (!r1.ok || r1.cost !== 100 * SEAT_BUILD_COST_PER_SEAT.gradins || r2.cost !== 
 const mixed = t.buildSeats({ gradins: 1000, tribune: 500, loge: 100 });
 if (mixed.cost !== 1000 * 100 + 500 * 500 + 100 * 5000) throw new Error(`❌ Coût d'un lot mixte inattendu : ${mixed.cost}.`);
 if (t.arenaCapacity() !== 12000 + 200 + 1600) throw new Error("❌ La capacité devrait être la somme des places.");
-console.log(`✅ Prix fixe par place (100 / 500 / 5 000 €), lot mixte ${mixed.cost.toLocaleString("fr-FR")} €.`);
+console.log(`✅ Prix fixe par place (100 / 500 / 5 000 $), lot mixte ${mixed.cost.toLocaleString("fr-FR")} $.`);
 
 // 4) Plafond par type, tout ou rien ; budget insuffisant refusé.
 const before = JSON.stringify(t.currentSeats());
@@ -84,8 +84,8 @@ console.log("✅ Action serveur /api/arena/build-seats.");
     btn.click();
     await flush(dom);
     if (win.eval("teamA.arenaCapacity()") !== cap0 + 300) throw new Error("❌ Construire devrait ajouter les 300 places.");
-    if (win.eval("teamA.budget") !== 2000000 - 520000) throw new Error("❌ Le budget devrait être débité de 520 000 €.");
-    console.log("✅ Navigateur : bandeau sans bouton, brique sous la billetterie, +300 places construites pour 520 000 €.");
+    if (win.eval("teamA.budget") !== 2000000 - 520000) throw new Error("❌ Le budget devrait être débité de 520 000 $.");
+    console.log("✅ Navigateur : bandeau sans bouton, brique sous la billetterie, +300 places construites pour 520 000 $.");
     dom.window.close();
   } finally {
     server.close();

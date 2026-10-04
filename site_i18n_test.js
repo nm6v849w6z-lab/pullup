@@ -132,9 +132,9 @@ function frenchBlocks(html) {
       const staff = { msg: { id: "outbid", params: { what: { staff: "recruiter", level: 3 }, bid: { money: 125000 }, left: { ms: 3 * 3600e3 }, next: { money: 130000 } } } };
       const en = Push.localizeNote(staff, "en"), it = Push.localizeNote(staff, "it");
       assert.strictEqual(en.title, "Outbid: the scout (level 3)");
-      assert.ok(/New offer at 125,000 €, closing in 3 h\. Bid again from 130,000 €\./.test(en.body), en.body);
+      assert.ok(/New offer at \$125,000, closing in 3 h\. Bid again from \$130,000\./.test(en.body), en.body);
       assert.strictEqual(it.title, "Offerta superata: l'osservatore (livello 3)");
-      assert.ok(/Nuova offerta a 125\.000 €, chiusura tra 3 h\. Rilancia da 130\.000 €\./.test(it.body), it.body);
+      assert.ok(/Nuova offerta a 125\.000 \$, chiusura tra 3 h\. Rilancia da 130\.000 \$\./.test(it.body), it.body);
       const lost = { msg: { id: "lost", params: { what: { player: null }, price: { money: null } } } };
       assert.strictEqual(Push.localizeNote(lost, "it").title, "Asta persa: un giocatore");
       assert.strictEqual(Push.localizeNote(lost, "en").body, "Another club won the auction.");
@@ -163,8 +163,8 @@ function frenchBlocks(html) {
       assert.ok(got.en.every(n => !("msg" in n) && !("feed" in n)), "rien d'interne dans la charge envoyée");
       const text = l => got[l].slice(1).map(n => `${n.title} | ${n.body}`).join(" / ");
       assert.ok(/Léo Martin (injured|sidelined)/.test(text("en")) && /week\(s\)/.test(text("en")), text("en"));
-      assert.ok(/Nouveau Venu/.test(text("en")) && /120,000 €/.test(text("en")) && !/semaine|blessé|Arrivée|Transfert/.test(text("en")), text("en"));
-      assert.ok(/Léo Martin (infortunato|in infermeria)/.test(text("it")) && /settiman/.test(text("it")) && /120\.000 €/.test(text("it")), text("it"));
+      assert.ok(/Nouveau Venu/.test(text("en")) && /\$120,000/.test(text("en")) && !/semaine|blessé|Arrivée|Transfert/.test(text("en")), text("en"));
+      assert.ok(/Léo Martin (infortunato|in infermeria)/.test(text("it")) && /settiman/.test(text("it")) && /120\.000 \$/.test(text("it")), text("it"));
       assert.ok(/blessé|infirmerie/.test(text("fr")), text("fr"));
       // Langue du compte du club (Accounts.langFor, via setLangResolver) : elle
       // l'emporte sur celle de chaque appareil.

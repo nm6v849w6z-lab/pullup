@@ -13,14 +13,14 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
 {
   const a = E.sanitizeMarketAlert({ pos: "Pivot", age: "22-25", pot: 40, price: "150000" });
   check(a.ageMin === 22 && a.ageMax === 25 && a.potMin === E.potentialTierIndex(40) && a.potMax === null && a.priceMax === 150000 && a.priceMin === null && a.budget === false,
-    "ancienne alerte (22–25 ans, Starter et plus, 150 000 €) convertie en fourchettes");
+    "ancienne alerte (22–25 ans, Starter et plus, 150 000 $) convertie en fourchettes");
   const b = E.sanitizeMarketAlert({ age: "30+", price: "budget" });
   check(b.ageMin === 30 && b.ageMax === null && b.budget === true, "« 30 ans et plus » + « Dans mon budget » convertis");
   check(E.sanitizeMarketAlert({ age: "u21" }).ageMax === 21, "« 21 ans et moins » converti");
   check(E.sanitizeMarketAlert({ age: "all", pot: 0, price: "0" }) === null && E.sanitizeMarketAlert({ potMin: 1, potMax: 10 }) === null, "fourchettes complètes = aucune condition (alerte refusée)");
   const c = E.sanitizeMarketAlert({ ageMin: 28, ageMax: 20, potMin: 7, potMax: 3, priceMin: 5000, priceMax: 1000 });
   check(c.ageMin === 20 && c.ageMax === 28 && c.potMin === 3 && c.potMax === 7 && c.priceMin === 1000 && c.priceMax === 5000, "bornes inversées remises dans l'ordre");
-  check(E.marketAlertLabel(a).replace(/[\u00a0\u202f]/g, " ") === "Pivot · 22–25 ans · Potentiel : Starter et plus · Prix : jusqu'à 150 000 €", "libellé lisible des fourchettes");
+  check(E.marketAlertLabel(a).replace(/[\u00a0\u202f]/g, " ") === "Pivot · 22–25 ans · Potentiel : Starter et plus · Prix : jusqu'à 150 000 $", "libellé lisible des fourchettes");
 
   const T0 = Date.UTC(2026, 9, 1, 9);
   const lg = E.generateMultiManagerLeague(["A", "B"], 1, T0, { dailyAnchored: true });
@@ -150,14 +150,14 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     check(steps[0] === 0 && steps.every((v, k) => k === 0 || v > steps[k - 1]) && steps[steps.length - 1] >= maxNext && Number(rHi.max) === steps.length - 1, "prix : paliers croissants de 0 au prix le plus haut (arrondi)");
     // Paliers répartis selon les annonces (retour 2026-10-01) : aucun
     // intervalle ne concentre la majorité des annonces.
-    // (en prix distincts : plusieurs annonces à 1 € tombent forcément ensemble).
+    // (en prix distincts : plusieurs annonces à 1 $ tombent forcément ensemble).
     const uniq = [...new Set(nexts)];
     const per = steps.slice(1).map((v, k) => uniq.filter(n => n > steps[k] && n <= v).length);
     check(Math.max(...per) <= Math.max(3, Math.ceil(uniq.length * 0.35)), `prix : paliers répartis selon les annonces (max ${Math.max(...per)} / ${uniq.length} prix distincts par palier)`);
     const iHi = Math.floor(steps.length * 0.6), iLo = Math.floor(steps.length * 0.25);
     slide(rHi, iHi); await settle();
     check(shown().every(r => r.next <= steps[iHi]) && shown().length >= 1 && shown().length < total, "prix maximum : appliqué (prochaine enchère)");
-    check(/€/.test(range("price").querySelector(".mk-range-val").textContent), "prix : fourchette affichée avec le format monétaire du jeu");
+    check(/\$/.test(range("price").querySelector(".mk-range-val").textContent), "prix : fourchette affichée avec le format monétaire du jeu");
     slide(rLo, iLo); await settle();
     check(shown().every(r => r.next >= steps[iLo] && r.next <= steps[iHi]), "prix minimum + maximum");
     doc.getElementById("marketBudgetBtn").click();
@@ -170,7 +170,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     const al = win.eval("JSON.stringify(teamA.marketAlerts[0])");
     const alert = JSON.parse(al);
     check(alert.priceMin === steps[iLo] && alert.priceMax === steps[iHi] && alert.budget === true && alert.ageMin === null, "alerte enregistrée avec les fourchettes des barres");
-    check(/Prix : .+ € à .+ €/.test(doc.getElementById("marketAlertsBar").textContent.replace(/[\u00a0\u202f]/g, " ")), "alerte affichée avec sa fourchette de prix");
+    check(/Prix : .+ \$ à .+ \$/.test(doc.getElementById("marketAlertsBar").textContent.replace(/[\u00a0\u202f]/g, " ")), "alerte affichée avec sa fourchette de prix");
     doc.querySelector("[data-mk-alert-del]").click();
     await win.__lastMarketAlertSync;
     btn().click(); doc.querySelector('[data-mk-origin="it"]').click();

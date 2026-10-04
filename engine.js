@@ -1924,14 +1924,14 @@ function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8
 function merchandiseWeeklyRevenue(team, divisionLevel) {
   const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
   if (!base || !team) return 0;
-  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 € « fait trop propre »).
+  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 $ « fait trop propre »).
   return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige));
 }
 
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des transferts
 // (acheter/vendre des joueurs entre managers, pas juste la vente forcée à
-// 1€)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
+// 1$)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
 // Système D'ENCHÈRES (pas de vente à prix fixe, retour utilisateur : "systeme
 // d'enchere sur 3 jours c'est bien") : chaque joueur listé part aux enchères
 // pour TRANSFER_AUCTION_DURATION_MS, en temps RÉEL (Date.now()), pas en
@@ -1958,7 +1958,7 @@ const TRANSFER_MIN_INCREMENT_PCT = 0.20;
 // sur la durée d'une enchère de 3 jours.
 const TRANSFER_CPU_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const TRANSFER_CPU_LIST_CHANCE = 0.12; // par équipe CPU, par vérification
-const CPU_STAR_SELL_OVERALL = 50; // général à partir duquel un bot vend le joueur à 1 €
+const CPU_STAR_SELL_OVERALL = 50; // général à partir duquel un bot vend le joueur à 1 $
 const TRANSFER_CPU_BID_CHANCE = 0.35;  // par équipe CPU intéressée, par vérification
 
 // ---------------------------------------------------------------------
@@ -2438,7 +2438,7 @@ function trainingCenterInfo(level) {
 // Catégories de places, chacune avec son propre prix réglable : une salle
 // n'est pas un seul tarif unique, les gradins populaires, la tribune et les
 // loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
-// reste pleine à 70€ quand des gradins vident à 20€). shareOfCapacity se
+// reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
 // Prix par défaut calés sur le plafond de confort (comfortCeiling) de
@@ -3409,7 +3409,7 @@ const JERSEY_TWO_TONE_SETS = {
 // est terminé dans le tutoriel (voir TOUR_STEPS côté moteurbasket3.html,
 // seul endroit qui décide QUAND proposer chaque prime ; ce tableau-ci reste
 // la seule source de vérité sur COMBIEN chaque thème rapporte, mirroré à
-// l'identique côté client pour que l'affichage "+ X € à la validation" du
+// l'identique côté client pour que l'affichage "+ X $ à la validation" du
 // tutoriel ne puisse jamais diverger du montant réellement crédité). Un
 // thème absent d'ici, ou déjà présent dans Team.tutorialRewardsClaimed, ne
 // rapporte plus rien (voir claimTutorialReward) : protège contre un joueur
@@ -3486,20 +3486,20 @@ const MAX_TEAM_TROPHIES = 30;
 // un premier retour ("on est très loin des niveaux que tu proposes") :
 //   - le tout premier effectif d'une nouvelle carrière (voir
 //     generateStartingRoster, capé 10-50 sur toutes les caractéristiques —
-//     "12 joueurs entre 2 000 et 5 000 €, donc environ 50-60 000 €/semaine
+//     "12 joueurs entre 2 000 et 5 000 $, donc environ 50-60 000 $/semaine
 //     de masse salariale" en début de carrière BuzzerBeater) ;
 //   - un effectif de niveau Division II (tierMultiplier ~1.27, l'équivalent
-//     des ~320 000 à 600 000 €/semaine relevés sur de vrais effectifs
+//     des ~320 000 à 600 000 $/semaine relevés sur de vrais effectifs
 //     BuzzerBeater de ce niveau).
 // Les joueurs vedettes du marché des transferts BuzzerBeater (130 000 à
-// 300 000 €/semaine) et les joueurs de complément (quelques centaines
+// 300 000 $/semaine) et les joueurs de complément (quelques centaines
 // d'euros) ont servi à vérifier le haut et le bas de la courbe. Recalé en
 // simulant des effectifs réels générés à CHAQUE niveau de tierMultiplier
 // (voir DIVISIONS) et en cherchant les trois constantes qui satisfont LES
 // DEUX ancrages à la fois (une seule référence, comme avant, ne suffisait
 // pas : caler uniquement sur le petit effectif de départ sous-évaluait
 // largement une Division II, et l'inverse gonflait un effectif neuf bien
-// au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
+// au-delà de 60 000 $/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
 // Inchangé au passage au meilleur poste (2026-10-03) : salaires environ
@@ -3578,7 +3578,7 @@ const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peu
 const CONTRACT_RAISE_RESPONSE_MS = 7 * 24 * 60 * 60 * 1000; // sans réponse sous 1 semaine (retour 2026-10-01) : refus
 const CONTRACT_RAISE_REFUSED_MORALE_MALUS = 10;
 const YOUTH_PROMOTION_CONTRACT_SEASONS = 3;
-// Agents libres (fin de contrat sans prolongation) : enchère à 1 €, la mise
+// Agents libres (fin de contrat sans prolongation) : enchère à 1 $, la mise
 // gagnante est une prime de signature payée au joueur (sort de l'économie).
 const FREE_AGENT_AUCTION_DURATION_MS = 2 * 24 * 60 * 60 * 1000;
 const FREE_AGENT_RETIRE_AGE = 33;
@@ -3619,8 +3619,8 @@ function contractMoraleFactor(form) {
   return 1;
 }
 
-// Salaire demandé (€/semaine) : niveau actuel (grille salariale, bonus de
-// pic compris), âge et motivation. Arrondi à 10 €.
+// Salaire demandé ($/semaine) : niveau actuel (grille salariale, bonus de
+// pic compris), âge et motivation. Arrondi à 10 $.
 // `legacy` : ancienne grille (contrat signé avant le 2026-10-04) — sert
 // uniquement aux demandes d'augmentation de mi-saison, pour que le seul
 // changement de grille ne déclenche pas une vague de demandes : ces
@@ -5812,7 +5812,7 @@ function feedFromTemplate(type, vars, rng) {
 }
 
 function feedEuros(n) {
-  return `${n.toLocaleString("fr-FR")} €`;
+  return `${n.toLocaleString("fr-FR")} $`;
 }
 
 /**
@@ -7851,7 +7851,7 @@ class Team {
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
-  // D'URGENCE à 1 €, réservée à la mise en vente forcée en cas de déficit
+  // D'URGENCE à 1 $, réservée à la mise en vente forcée en cas de déficit
   // prolongé (voir trainWeek) — un mécanisme séparé et bien plus rapide que
   // le vrai marché des transferts aux enchères (voir League.listPlayerForSale
   // / placeBid / refreshMarket), pour un club qui n'a plus le temps d'attendre
@@ -8900,7 +8900,7 @@ class Team {
     // de semaines CONSÉCUTIVES où le budget (une fois toutes les
     // transactions de la semaine passées) reste sous le seuil, remis à zéro
     // dès qu'il repasse au-dessus. Au bout de DEFICIT_GRACE_WEEKS semaines
-    // sans redressement, tout l'effectif est listé à 1 € (voir
+    // sans redressement, tout l'effectif est listé à 1 $ (voir
     // Player.forSale/salePrice, Team.sellPlayer) — une seule fois, pas
     // reconduit chaque semaine tant que ça reste non résolu.
     let deficitAlert = false;
@@ -9120,7 +9120,7 @@ class Team {
 
   // Prolongation de contrat (demande du 2026-10-01) : pendant la DERNIÈRE
   // saison du contrat, offre de `terms.seasons` saisons (1 à 5, comptées à
-  // partir de la saison suivante) à `terms.salary` €/sem, entre le salaire
+  // partir de la saison suivante) à `terms.salary` $/sem, entre le salaire
   // demandé -10 % et le salaire demandé. Refus : motivation un peu en baisse,
   // nouvel essai possible la semaine de jeu suivante. Acceptée : nouveau
   // salaire à partir de la saison suivante (`nextSalary`). `season` = saison
@@ -10193,7 +10193,7 @@ function attrsForCardPosition(position, makeAttrs) {
 // poste (voir weightedRatingForPosition). Sinon, même une caractéristique
 // signature à 90+ finit noyée dans la moyenne pondérée de tout le reste du
 // profil (constaté sur le cas concret signalé par l'utilisateur : 97 en tir
-// à 3 points, reste du profil ordinaire → seulement 1848 € malgré un tir de
+// à 3 points, reste du profil ordinaire → seulement 1848 $ malgré un tir de
 // classe mondiale).
 //
 // Seuil volontairement très haut (90) : la génération normale d'un joueur
@@ -11834,7 +11834,7 @@ function sponsorNameForSlot(team, slotKey) {
   const c = sponsorActiveContractForSlot(team, slotKey);
   return c ? c.sponsorName : null;
 }
-// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 € (les
+// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 $ (les
 // petites primes du panneau publicitaire, 2026-09-30, finissaient
 // arrondies à la même valeur d'un profil à l'autre).
 function roundToHundred(v) { return v >= 1000 ? Math.round(v / 100) * 100 : Math.max(10, Math.round(v / 10) * 10); }
@@ -11933,7 +11933,7 @@ function terminateSponsorContract(team, contractId, now = Date.now()) {
   const contract = (team.sponsorContracts || []).find(c => c.id === contractId && c.status === "active");
   if (!contract) return { ok: false, error: "Contrat introuvable." };
   const fee = sponsorTerminationFee(contract);
-  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} €).` };
+  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} $).` };
   team.recordTransaction(`Clause de rupture ${contract.sponsorName}`, -fee);
   contract.status = "terminated"; contract.endedAt = now;
   team.sponsorHistory = [{ ...contract }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
@@ -13662,15 +13662,15 @@ class League {
       pushEntry(buyer.feed, {
         key: `contract_signed_${player.id}`, category: "marche", week: buyer.week, createdAt: now,
         title: `${player.name} a signé`,
-        text: `${player.name} rejoint le club pour ${seasons} saison${seasons > 1 ? "s" : ""}, à ${salary.toLocaleString("fr-FR")} €/sem.` +
-          (medical.rate ? ` Visite médicale : antécédents (${what}), salaire convenu de ${agreed.toLocaleString("fr-FR")} € revu de -${pct} %.` : " Visite médicale : rien à signaler."),
+        text: `${player.name} rejoint le club pour ${seasons} saison${seasons > 1 ? "s" : ""}, à ${salary.toLocaleString("fr-FR")} $/sem.` +
+          (medical.rate ? ` Visite médicale : antécédents (${what}), salaire convenu de ${agreed.toLocaleString("fr-FR")} $ revu de -${pct} %.` : " Visite médicale : rien à signaler."),
         action: { label: "Fiche joueur", href: `/joueur/${player.id}` },
       });
     }
     return result;
   }
 
-  // Annonce « agent libre » : départ à 1 €, la mise est une prime de
+  // Annonce « agent libre » : départ à 1 $, la mise est une prime de
   // signature payée au joueur. L'ancien club n'y a pas accès.
   createFreeAgentListing(player, formerTeamIdx, formerTeamName, now) {
     this.transferListings = this.transferListings || [];
@@ -13731,7 +13731,7 @@ class League {
         key: `contract_left_${p.id}`, category: "club", week: team.week, createdAt: now,
         title: opts && opts.released ? `${p.name} licencié` : `${p.name} quitte le club libre`,
         text: opts && opts.released
-          ? `${p.name} a été licencié (indemnité de ${Math.round(opts.fee || 0).toLocaleString("fr-FR")} €) et devient agent libre.`
+          ? `${p.name} a été licencié (indemnité de ${Math.round(opts.fee || 0).toLocaleString("fr-FR")} $) et devient agent libre.`
           : `Son contrat est arrivé à échéance sans prolongation : ${p.name} part libre et devient agent libre.`,
         action: { label: "Effectif", href: "/effectif" },
       });
@@ -13826,7 +13826,7 @@ class League {
           pushEntry(team.feed, {
             key: `contract_raise_${p.id}`, category: "club", week: team.week, createdAt: now,
             title: `${p.name} demande une augmentation`,
-            text: `${p.name} a beaucoup progressé et demande ${asked.toLocaleString("fr-FR")} €/sem. (contre ${p.salary.toLocaleString("fr-FR")} €/sem. aujourd'hui), à partir de la saison prochaine. Répondez sous 1 semaine sur sa fiche.`,
+            text: `${p.name} a beaucoup progressé et demande ${asked.toLocaleString("fr-FR")} $/sem. (contre ${p.salary.toLocaleString("fr-FR")} $/sem. aujourd'hui), à partir de la saison prochaine. Répondez sous 1 semaine sur sa fiche.`,
             action: { label: "Fiche joueur", href: `/joueur/${p.id}` },
           });
           sent++;
@@ -14313,7 +14313,7 @@ class League {
         const since = watch.get(String(player.id));
         if (since != null) {
           if (!seen[k] && (l.createdAt || 0) >= since) {
-            push(`mkt_watch_${k}`, `Joueur suivi en vente : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) est aux enchères, départ à ${Math.round(l.startPrice).toLocaleString("fr-FR")} €.`);
+            push(`mkt_watch_${k}`, `Joueur suivi en vente : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) est aux enchères, départ à ${Math.round(l.startPrice).toLocaleString("fr-FR")} $.`);
           }
           if (!seen[k]) seen[k] = 1;
           if (seen[k] < 2 && l.closesAt - now <= MARKET_ALERT_ENDING_MS && l.closesAt > now) {
@@ -14370,7 +14370,7 @@ class League {
     if (now - (this.lastCpuListingCheckAt || 0) >= TRANSFER_CPU_CHECK_INTERVAL_MS) {
       this.lastCpuListingCheckAt = now;
       // Joueurs à 50 de général ou plus détenus par un bot : tous mis en
-      // vente à 1 € (retour utilisateur 2026-10-01), sans descendre sous
+      // vente à 1 $ (retour utilisateur 2026-10-01), sans descendre sous
       // l'effectif minimum.
       this.teams.forEach((team, idx) => {
         if (team.isHuman) return;
@@ -14392,8 +14392,8 @@ class League {
         const sellable = team.players.filter(p => !this.contractSaleBlocked(p));
         if (!sellable.length) return;
         const weakest = sellable.reduce((w, p) => (p.overall() < w.overall() ? p : w), sellable[0]);
-        // Prix de départ à 1 € (retour utilisateur 2026-10-01 : « les bots
-        // qui vendent des joueurs doivent mettre 1 € comme prix »).
+        // Prix de départ à 1 $ (retour utilisateur 2026-10-01 : « les bots
+        // qui vendent des joueurs doivent mettre 1 $ comme prix »).
         this.listPlayerForSale(idx, weakest.id, 1, now);
       });
     }
@@ -16426,7 +16426,7 @@ const MARKET_ALERTS_MAX = 3;
 // Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
 // potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
 // potMin/potMax (index de palier 1-10, jamais le potentiel exact), priceMin/
-// priceMax (prochaine enchère, €), budget (bool) ; null = pas de borne.
+// priceMax (prochaine enchère, $), budget (bool) ; null = pas de borne.
 // Les anciennes alertes (age "u21"/"22-25"/"26-29"/"30+", pot = seuil de
 // potentiel, price "budget"/montant) sont converties ici.
 const MARKET_ALERT_LEGACY_AGES = { u21: [null, 21], "22-25": [22, 25], "26-29": [26, 29], "30+": [30, null] };
@@ -16484,7 +16484,7 @@ function marketAlertMatches(alert, player, listing, budget = Infinity) {
 function marketAlertParts(alert) {
   if (!alert) return [];
   const rg = marketAlertRanges(alert);
-  const eur = n => `${Number(n).toLocaleString("fr-FR")} €`;
+  const eur = n => `${Number(n).toLocaleString("fr-FR")} $`;
   const tierLabel = i => POTENTIAL_TIERS[i - 1].label;
   const parts = [];
   if (alert.pos && alert.pos !== "all") parts.push(alert.pos);

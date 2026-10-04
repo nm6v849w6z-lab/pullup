@@ -86,7 +86,7 @@ if (/spect|recette|%/i.test(ticketText)) throw new Error(`❌ La billetterie ne 
 const range = doc.getElementById("ticketPriceRange_gradins");
 range.value = String(gradinsBefore + 10);
 range.dispatchEvent(new win.Event("input"));
-if (txt("#seatPrice_gradins") !== `${gradinsBefore + 10} €`) throw new Error("❌ Le prix affiché devrait suivre le curseur pendant le glisser.");
+if (txt("#seatPrice_gradins") !== `${gradinsBefore + 10} $`) throw new Error("❌ Le prix affiché devrait suivre le curseur pendant le glisser.");
 if (win.eval("teamA.ticketPrices.gradins") !== gradinsBefore) throw new Error("❌ Un simple glisser (input) ne devrait PAS encore enregistrer le prix.");
 range.dispatchEvent(new win.Event("change"));
 await flush(dom);
@@ -99,8 +99,8 @@ logeRange.value = String(savedBefore.team.ticketPrices.loge + 1);
 logeRange.dispatchEvent(new win.Event("change"));
 await flush(dom);
 const logeAfter = win.eval("teamA.ticketPrices.loge");
-if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le curseur des loges devrait enregistrer +1 €, obtenu ${logeAfter}.`);
-if (txt("#seatPrice_loge") !== `${logeAfter} €`) throw new Error("❌ Le prix affiché en texte devrait suivre le curseur.");
+if (logeAfter !== savedBefore.team.ticketPrices.loge + 1) throw new Error(`❌ Le curseur des loges devrait enregistrer +1 $, obtenu ${logeAfter}.`);
+if (txt("#seatPrice_loge") !== `${logeAfter} $`) throw new Error("❌ Le prix affiché en texte devrait suivre le curseur.");
 console.log("✅ Billetterie épurée (places + prix), prix suivi au glisser, enregistré au relâcher.");
 
 // --- 3. Prix idéal ---
@@ -109,10 +109,10 @@ for (const key of ["gradins", "tribune", "loge"]) {
     let better = null; const rev = p => p * teamA.projectedAttendanceRateAtPrice("${key}", p);
     for (let p = cat.minPrice; p < z.red; p++) if (rev(p) > rev(z.ideal) + 1e-9) better = p;
     return { ideal: z.ideal, red: z.red, better, cRed: ticketPriceComfortFactor(z.red / f, "${key}"), max: cat.maxPrice }; })()`);
-  if (r.better !== null) throw new Error(`❌ ${key} : ${r.better} € rapporterait plus que le prix idéal annoncé (${r.ideal} €).`);
-  if (r.red < r.max && r.ideal >= r.red) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} €) ne devrait jamais être dans la zone rouge (${r.red} €).`);
-  console.log(`  ${key} : idéal ${r.ideal} €, zone rouge dès ${r.red} €`);
-  if (r.red < r.max && r.cRed >= 0.6) throw new Error(`❌ ${key} : la zone rouge (${r.red} €) devrait commencer sous 60% de confort.`);
+  if (r.better !== null) throw new Error(`❌ ${key} : ${r.better} $ rapporterait plus que le prix idéal annoncé (${r.ideal} $).`);
+  if (r.red < r.max && r.ideal >= r.red) throw new Error(`❌ ${key} : le prix idéal (${r.ideal} $) ne devrait jamais être dans la zone rouge (${r.red} $).`);
+  console.log(`  ${key} : idéal ${r.ideal} $, zone rouge dès ${r.red} $`);
+  if (r.red < r.max && r.cRed >= 0.6) throw new Error(`❌ ${key} : la zone rouge (${r.red} $) devrait commencer sous 60% de confort.`);
   // Plus de repère "idéal" affiché (retour utilisateur 2026-09-27 : "enlève
   // les prix idéal") ; le calcul reste utilisé pour la zone rouge.
   if (doc.querySelector(`[data-seat-key="${key}"] .sl-track-ideal-label, [data-seat-key="${key}"] .sl-track-ideal`)) throw new Error(`❌ ${key} : le repère "idéal" ne devrait plus être affiché.`);

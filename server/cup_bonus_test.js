@@ -1,5 +1,5 @@
 // Primes de Coupe (retour utilisateur 2026-09-28, inspiré de BuzzerBeater) :
-// finale 400 000 €, demie 200 000, quart 130 000, huitième 100 000,
+// finale 400 000 $, demie 200 000, quart 130 000, huitième 100 000,
 // seizième 80 000, 32e 65 000, 64e et avant 50 000 — versées au club humain qui gagne
 // son match de Coupe (un exempt ne rapporte rien). Recherche du monde :
 // raccourcis « D.I », « D2.1 », « USA ».
@@ -21,7 +21,7 @@ lg.recordCupMatchResult(idx, 90, 70, false);
 const stageFromEnd = E.CUP_STAGE_NAMES ? E.CUP_STAGE_NAMES.length - 1 - E.CUP_STAGE_NAMES.indexOf(round.name) : 3;
 assert.strictEqual(human.budget - before, E.cupWinBonusFor(stageFromEnd));
 assert.ok((human.transactions || human.transactionLog || []).length === 0 || JSON.stringify(human.transactions || human.transactionLog || []).includes("Prime de Coupe"));
-console.log(`✅ Prime de Coupe versée au vainqueur humain (${round.name} : ${E.cupWinBonusFor(stageFromEnd).toLocaleString("fr-FR")} €).`);
+console.log(`✅ Prime de Coupe versée au vainqueur humain (${round.name} : ${E.cupWinBonusFor(stageFromEnd).toLocaleString("fr-FR")} $).`);
 // Un club de l'IA vainqueur ne touche rien (et ne plante pas).
 const idx2 = round.matches.findIndex((x, i) => i !== idx && !x.bye);
 if (idx2 !== -1) { const t = lg.teams[round.matches[idx2].home]; const b = t.budget; lg.recordCupMatchResult(idx2, 80, 60, false); if (!t.isHuman) assert.strictEqual(t.budget, b); }

@@ -46,7 +46,7 @@ const POLO_PATH = "M41 86 Q48 92 58 95"; // pan de col du polo (voir renderPolo)
     const coach = sec.querySelector('.stf-card[data-staff-role="coach"]');
     assert.ok(coach.classList.contains("is-filled") && coach.querySelector('[data-staff-fire="coach"]') && coach.querySelector('[data-staff-recruit="coach"]'), "entraîneur en poste : Congédier + Changer");
     assert.ok(/Rendement ×1,18/.test(coach.textContent) && /4 places individuelles/.test(coach.textContent), "effet en clair : " + coach.textContent.replace(/\s+/g, " ").slice(0, 200));
-    assert.ok(/6 sem\./.test(coach.textContent) && /3\s\d{3} €/.test(coach.textContent) && /Sans échéance/.test(coach.textContent), "salaire, ancienneté, contrat");
+    assert.ok(/6 sem\./.test(coach.textContent) && /3\s\d{3} \$/.test(coach.textContent) && /Sans échéance/.test(coach.textContent), "salaire, ancienneté, contrat");
     const coachSvg = coach.querySelector(".staff-avatar svg");
     const clubColor = win.eval("teamAvatarColors(teamA)[0]");
     assert.ok(coachSvg && coachSvg.innerHTML.includes(POLO_PATH) && coachSvg.innerHTML.includes(`fill="${clubColor}"`), "avatar SVG en polo aux couleurs du club (" + clubColor + ")");
@@ -105,7 +105,7 @@ const POLO_PATH = "M41 86 Q48 92 58 95"; // pan de col du polo (voir renderPolo)
     doc.querySelector('[data-mk-range-reset="ssal"]').click();
     win.eval("teamA.budget = 1500;");
     doc.getElementById("marketStaffBudgetBtn").click();
-    assert.ok(staffCards().length < all && staffCards().every(c => priceOf(c) <= 1500), "dans mon budget (1 500 €)");
+    assert.ok(staffCards().length < all && staffCards().every(c => priceOf(c) <= 1500), "dans mon budget (1 500 $)");
     doc.getElementById("marketStaffBudgetBtn").click();
     win.eval("teamA.budget = 300000;");
     assert.strictEqual(staffCards().length, all);

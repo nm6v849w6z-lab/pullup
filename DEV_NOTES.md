@@ -173,7 +173,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   (`League.weeklyContractsTick`, réponse sous 3 jours sinon refus, -10 de
   motivation, jamais de demande de transfert ; IA : accordée), fin de
   contrat au lundi de clôture (`League.processContractExpiries` : départ
-  libre, annonce « agent libre » à 1 €, mise = prime de signature débitée
+  libre, annonce « agent libre » à 1 $, mise = prime de signature débitée
   sans contrepartie, catégorie « Primes de signature » du bilan ; ancien
   club exclu ; invendu → club IA de la ligue, ou retraite à 33 ans et plus ;
   IA : prolonge la plupart de ses joueurs, complète son effectif), vente
@@ -557,7 +557,7 @@ points réellement ouverts.
 
 - **✔ Valeurs validées par l'utilisateur (2026-09-29)** : club d'un manager
   inactif rendu à l'IA après **45 jours** (était 28 ; server/world.js,
-  textes jeu/site/en.js) ; prime de Supercoupe **200 000 €**.
+  textes jeu/site/en.js) ; prime de Supercoupe **200 000 $**.
 
 - **Limites connues (à reprendre si besoin)** :
   - Supercoupe : pas de stats de joueurs ni d'ordres préparés (ordres du

@@ -61,7 +61,7 @@ const T0 = Date.UTC(2026, 8, 22, 7, 0, 0);
     if (badAmount.status !== 400) throw new Error(`❌ Un montant nul/invalide devrait répondre 400, obtenu ${badAmount.status}.`);
     console.log("✅ Un montant nul ou invalide répond 400.");
 
-    // --- Crédit réel : 200 000 € pour Ariane FC, avec un motif explicite.
+    // --- Crédit réel : 200 000 $ pour Ariane FC, avec un motif explicite.
     const credit = await fetch(`${baseUrl}api/admin/credit-team`, {
       method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": "secret-admin-credit" },
       body: JSON.stringify({ teamName: "Ariane FC", amount: 200000, label: "Rattrapage primes tutoriel (bug historique)" }),
@@ -90,7 +90,7 @@ const T0 = Date.UTC(2026, 8, 22, 7, 0, 0);
     if (autreSaved.transactions[0] && autreSaved.transactions[0].label === "Rattrapage primes tutoriel (bug historique)") {
       throw new Error("❌ RÉGRESSION : le crédit ne devrait toucher QUE l'équipe nommée, jamais une autre équipe de la ligue.");
     }
-    console.log(`✅ Le crédit de 200 000 € est bien appliqué, persisté sur le serveur, journalisé dans les transactions d'Ariane FC uniquement (budget : ${budgetBefore} -> ${arianeSaved.budget}).`);
+    console.log(`✅ Le crédit de 200 000 $ est bien appliqué, persisté sur le serveur, journalisé dans les transactions d'Ariane FC uniquement (budget : ${budgetBefore} -> ${arianeSaved.budget}).`);
 
     // --- Sans conséquence sur onboardingTourCompleted (déjà à true, Ariane
     // ne doit toujours pas pouvoir relancer le tutoriel pour retoucher la

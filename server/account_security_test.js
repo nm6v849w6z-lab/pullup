@@ -84,11 +84,11 @@ const ok = m => console.log("✅ " + m);
   await store.saveMultiLeague(lg, paths.multi);
   const ac = await call("GET", "/api/admin/accounts/anticheat", null, { "X-Admin-Token": "admin-test-token" });
   assert.ok(ac.body.sharedIp.some(g => g.map(a => a.email).sort().join() === "double@test.fr,oubli@test.fr"), "comptes partageant une IP");
-  assert.ok(ac.body.suspiciousTransfers.some(x => x.playerName === star.name && /valeur estimée/.test(x.reason)), "vente à 1 € signalée");
+  assert.ok(ac.body.suspiciousTransfers.some(x => x.playerName === star.name && /valeur estimée/.test(x.reason)), "vente à 1 $ signalée");
   const accs = await Accounts.loadAccounts(paths.accounts);
   assert.ok(!JSON.stringify(accs).includes("10.0.0.7"), "l'adresse IP n'est jamais stockée en clair");
   assert.strictEqual((await call("GET", "/api/admin/accounts/anticheat")).status, 403);
-  ok(`anti-triche : 2 comptes depuis la même IP (empreinte seulement) et vente de ${star.name} à 1 € (${seller.name} → ${buyer.name}) signalés à l'administrateur`);
+  ok(`anti-triche : 2 comptes depuis la même IP (empreinte seulement) et vente de ${star.name} à 1 $ (${seller.name} → ${buyer.name}) signalés à l'administrateur`);
 
   // 3) Suppression du compte.
   const tok = (await call("POST", "/api/account/login", { email: "oubli@test.fr", password: "nouveaumotdepasse" })).body.managerToken;

@@ -1,8 +1,8 @@
 // Vérifie le marché des transferts (retour utilisateur : "un vrai marché des
 // transferts (acheter/vendre des joueurs entre managers, pas juste la vente
-// forcée à 1€)" — le "gros morceau" manquant) : système D'ENCHÈRES sur 3
+// forcée à 1$)" — le "gros morceau" manquant) : système D'ENCHÈRES sur 3
 // jours RÉELS (retour utilisateur : "systeme d'enchere sur 3 jours c'est
-// bien"), incrément minimum le plus grand de 1 000 € ou 20 % (retour
+// bien"), incrément minimum le plus grand de 1 000 $ ou 20 % (retour
 // utilisateur : "minimum de 1K à mettre pour enchérir ou 20%"), les 9
 // adversaires CPU participent aussi bien comme vendeurs que comme
 // enchérisseurs, plafond d'effectif acheteur (AUCUN plancher vendeur — voir
@@ -56,17 +56,17 @@ function makeOverpoweredPlayer(position) {
 {
   const young = estimateMarketValue({ salary: 10000, age: 20 });
   const old = estimateMarketValue({ salary: 10000, age: 35 });
-  console.log(`Valeur estimée (même salaire 10000€) — jeune (20 ans) : ${young} | fin de carrière (35 ans) : ${old}`);
+  console.log(`Valeur estimée (même salaire 10000$) — jeune (20 ans) : ${young} | fin de carrière (35 ans) : ${old}`);
   if (young <= old) throw new Error("❌ Un jeune joueur devrait valoir nettement plus qu'un joueur en fin de carrière, à salaire égal.");
   console.log("✅ La valeur marchande estimée valorise bien la jeunesse (marge de progression revendable).");
 }
 {
   const inc1 = transferMinIncrement(1000); // 20% = 200 < 1000 -> plancher 1000
   const inc2 = transferMinIncrement(50000); // 20% = 10000 > 1000
-  console.log(`\nIncrément minimum — sur 1000€ : ${inc1} (attendu ${TRANSFER_MIN_INCREMENT_FLAT}) | sur 50000€ : ${inc2} (attendu ${Math.round(50000 * TRANSFER_MIN_INCREMENT_PCT)})`);
-  if (inc1 !== TRANSFER_MIN_INCREMENT_FLAT) throw new Error("❌ En dessous du seuil, l'incrément minimum devrait être le plancher fixe de 1000€.");
+  console.log(`\nIncrément minimum — sur 1000$ : ${inc1} (attendu ${TRANSFER_MIN_INCREMENT_FLAT}) | sur 50000$ : ${inc2} (attendu ${Math.round(50000 * TRANSFER_MIN_INCREMENT_PCT)})`);
+  if (inc1 !== TRANSFER_MIN_INCREMENT_FLAT) throw new Error("❌ En dessous du seuil, l'incrément minimum devrait être le plancher fixe de 1000$.");
   if (inc2 !== Math.round(50000 * TRANSFER_MIN_INCREMENT_PCT)) throw new Error("❌ Au-dessus du seuil, l'incrément minimum devrait être 20% de l'enchère actuelle.");
-  console.log("✅ L'incrément minimum applique bien le plus grand des deux (1000€ ou 20%).");
+  console.log("✅ L'incrément minimum applique bien le plus grand des deux (1000$ ou 20%).");
 }
 {
   const noBidYet = minNextBidFor({ currentBid: null, startPrice: 5000 });
@@ -268,7 +268,7 @@ function makeOverpoweredPlayer(position) {
   const now = Date.now();
   const star = makeOverpoweredPlayer("Meneur");
   // Juste sous CPU_STAR_SELL_OVERALL : au-delà, aucun bot n'en veut (il
-  // devrait le revendre aussitôt à 1 €).
+  // devrait le revendre aussitôt à 1 $).
   for (let v = 99; v > 1 && star.overall() >= CPU_STAR_SELL_OVERALL; v--) Object.keys(star.attrs).forEach(a => { star.attrs[a] = v; });
   lg.teams[3].players[0] = star; // remplace un joueur CPU par la superstar
   const listing = lg.listPlayerForSale(3, star.id, 10000, now);
@@ -289,7 +289,7 @@ function makeOverpoweredPlayer(position) {
   // première vérification.
   const lg = freshLeague();
   const now = Date.now();
-  // Aucun joueur à 50+ (ceux-là sont tous vendus à 1 €, voir
+  // Aucun joueur à 50+ (ceux-là sont tous vendus à 1 $, voir
   // cpu_star_sale_test.js) : ce test vérifie l'annonce du plus faible.
   lg.teams.forEach(t => t.players.forEach(p => {
     while (p.overall() >= CPU_STAR_SELL_OVERALL) Object.keys(p.attrs).forEach(a => { p.attrs[a] = Math.max(1, p.attrs[a] - 3); });
@@ -304,8 +304,8 @@ function makeOverpoweredPlayer(position) {
   cpuListings.forEach(l => {
     const expectedPlayer = weakestByTeam[l.sellerIdx];
     if (l.playerId !== expectedPlayer.id) throw new Error(`❌ L'équipe ${l.sellerIdx} devrait mettre aux enchères son joueur le plus faible (overall le plus bas).`);
-    // Annonces des bots à 1 € (retour utilisateur 2026-10-01).
-    if (l.startPrice !== 1) throw new Error(`❌ Le prix de départ d'une annonce CPU devrait être 1 €, obtenu ${l.startPrice}.`);
+    // Annonces des bots à 1 $ (retour utilisateur 2026-10-01).
+    if (l.startPrice !== 1) throw new Error(`❌ Le prix de départ d'une annonce CPU devrait être 1 $, obtenu ${l.startPrice}.`);
   });
   console.log("✅ Les annonces CPU générées listent bien le joueur le plus faible de chaque équipe, au bon prix de départ.");
 }
@@ -379,7 +379,7 @@ console.log("\nChamp de prix vide par défaut (aucun prix suggéré) :", JSON.st
 console.log("✅ Le champ de prix de mise aux enchères ne contient plus de valeur suggérée pré-remplie.");
 
 // Cliquer sans avoir saisi de prix doit refuser (pas de repli silencieux
-// sur 1 €, qui braderait le joueur sans le vouloir) et l'expliquer.
+// sur 1 $, qui braderait le joueur sans le vouloir) et l'expliquer.
 listBtn.click();
 const emptyFeedback = doc.getElementById("rosterMarketFeedback").textContent;
 console.log("Message si aucun prix saisi :", emptyFeedback);
@@ -554,6 +554,6 @@ console.log("✅ Le marché se résout automatiquement au chargement de la page,
 
 win3.close();
 server.close();
-console.log("\n✅ Marché des transferts vérifié : valeur marchande estimée, incrément minimum (1000€ ou 20%), mise aux enchères (aucun plancher vendeur) et annulation, garde-fous d'enchère (propre annonce, budget, plafond acheteur, échéance), résolution déterministe (vente, invendu, surenchère CPU, nouvelles annonces CPU, échec de dernière minute), et intégration UI complète (mise en vente depuis l'Effectif avec prix choisi, marché affichant toutes les annonces de la ligue, persistance, résolution différée au rechargement).");
+console.log("\n✅ Marché des transferts vérifié : valeur marchande estimée, incrément minimum (1000$ ou 20%), mise aux enchères (aucun plancher vendeur) et annulation, garde-fous d'enchère (propre annonce, budget, plafond acheteur, échéance), résolution déterministe (vente, invendu, surenchère CPU, nouvelles annonces CPU, échec de dernière minute), et intégration UI complète (mise en vente depuis l'Effectif avec prix choisi, marché affichant toutes les annonces de la ligue, persistance, résolution différée au rechargement).");
 
 })().catch(e => { console.error(e); process.exit(1); });

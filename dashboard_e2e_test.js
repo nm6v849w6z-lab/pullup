@@ -116,7 +116,7 @@ console.log("✅ L'interview de début de saison n'est plus dupliquée dans le f
 // ---------------------------------------------------------------------
 // listing.currentBid est `null` à la génération (voir _makeStaffListing) —
 // la mise minimale est `listing.startPrice`, pas `listing.currentBid`
-// (aurait donné `null + 5000` = 5000 €, bien en-dessous du prix de départ
+// (aurait donné `null + 5000` = 5000 $, bien en-dessous du prix de départ
 // réel dès qu'un candidat de niveau un peu élevé est tiré au sort,
 // entraînant un placeCoachBid silencieusement refusé (mise trop basse) un
 // tirage sur N — même piège déjà évité dans dashboard_feed_test.js).

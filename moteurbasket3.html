@@ -742,6 +742,10 @@
   #prepSection .conv-name{min-width:0; font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   #prepSection .conv-pos{font-size:11px; font-weight:700; color:var(--ink-faint); text-align:center;}
   #prepSection .conv-row:not(.on) .conv-name{color:var(--ink-dim); font-weight:500;}
+  /* Jeune de l'académie (retour utilisateur 2026-10-04) : nom en bleu, repérable
+     même tronqué, et pastille « U18 » (même bleu que .fr-tag-youth). */
+  #prepSection .conv-row .conv-name.is-youth, .compo-table .conv-name.is-youth, .fr-lu-name.is-youth{color:#8fb9f0;}
+  html[data-theme="light"] #prepSection .conv-row .conv-name.is-youth, html[data-theme="light"] .compo-table .conv-name.is-youth, html[data-theme="light"] .fr-lu-name.is-youth{color:#2563c9;}
   #prepSection .conv-ovr{font-size:13px; font-weight:700; color:var(--ink-dim); text-align:right; font-variant-numeric:tabular-nums;}
   #prepSection .conv-role{display:inline-flex; align-items:center; gap:6px; min-width:0; font-size:12px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; justify-self:end;}
   #prepSection .conv-role::before{content:""; flex:none; width:7px; height:7px; border-radius:50%; background:var(--pos-c, transparent);}
@@ -9405,7 +9409,7 @@
         <p class="training-intro">Le <b>Calendrier</b> liste tous vos matchs de la saison, championnat et Coupe confondus, groupés par mois et triés par date et heure réelle. Filtres Tous, Domicile, Extérieur et À venir ; "vs" devant l'adversaire signifie à domicile, "@" à l'extérieur. À droite : la carte du prochain match (compte à rebours et bouton des ordres) et le bilan de la saison (bilan, classement, différence de points, domicile/extérieur, forme sur les 5 derniers matchs). Les horaires restent fixes, même au changement d'heure.</p>
         <p class="training-intro" style="margin-top:10px;">Les <b>play-offs</b> réunissent les 4 premiers : demi-finales puis finale, chacune en deux matchs gagnants, le mardi, le jeudi et le samedi à 20:00 pendant les 2 semaines qui suivent le championnat.</p>
         <p class="training-intro" style="margin-top:10px;">La <b>Coupe</b> (quand elle existe pour votre ligue) est un tableau à élimination directe, un tour chaque jeudi à 20:00. L'onglet Coupe montre votre parcours (tour atteint, victoires, pastille par tour), les matchs de chaque tour (boutons de tour en haut, filtres Tous et À jouer, votre match en premier, clubs exemptés résumés en une ligne) et l'arbre de la phase finale à partir des 8es de finale. Les ordres de Coupe se préparent comme ceux du championnat.</p>
-        <p class="training-intro" style="margin-top:10px;">Dans les championnats par pays, c'est la <b>Coupe nationale</b> : tous les clubs du pays (512 au plus), avec des exempts au premier tour pour les divisions les plus hautes si le tableau n'est pas plein. Le club de la division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), déjà au tableau d'affichage. Un adversaire d'un autre championnat se prépare comme les autres (Ordres, scouting) et sa fiche s'ouvre dans Planète Hoop. Chaque match de Coupe gagné rapporte une prime, de 50 000 € aux premiers tours à 400 000 € pour la finale. À l'intersaison, la <b>Supercoupe</b> oppose le samedi à 20:00 le champion de Division I au vainqueur de la Coupe (ou au finaliste si c'est le même club), en direct et avec le même handicap : 200 000 € pour le vainqueur.</p>
+        <p class="training-intro" style="margin-top:10px;">Dans les championnats par pays, c'est la <b>Coupe nationale</b> : tous les clubs du pays (512 au plus), avec des exempts au premier tour pour les divisions les plus hautes si le tableau n'est pas plein. Le club de la division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), déjà au tableau d'affichage. Un adversaire d'un autre championnat se prépare comme les autres (Ordres, scouting) et sa fiche s'ouvre dans Planète Hoop. Chaque match de Coupe gagné rapporte une prime, de 50 000 $ aux premiers tours à 400 000 $ pour la finale. À l'intersaison, la <b>Supercoupe</b> oppose le samedi à 20:00 le champion de Division I au vainqueur de la Coupe (ou au finaliste si c'est le même club), en direct et avec le même handicap : 200 000 $ pour le vainqueur.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="ligue" data-guide-group="Compétitions">
@@ -9458,7 +9462,7 @@
 
       <div class="guide-entry" data-guide-id="marche" data-guide-group="Club et finances">
         <h3>Marché des transferts</h3>
-        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 € ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
+        <p class="training-intro">Toutes les enchères en cours dans la ligue, les vôtres et celles des adversaires. Chaque enchère dure <b>1 jour réel</b>. Incrément minimum entre deux enchères : le plus grand de 1 000 $ ou 20 % de l'enchère actuelle. En haut : votre budget disponible (budget moins les enchères où vous êtes en tête) et vos places libres, puis <b>Mes enchères</b> (vos achats et vos ventes en cours, les enchères où vous avez été dépassé en premier).</p>
         <p class="training-intro" style="margin-top:10px;">Recherche par poste, âge, potentiel, prix (dont "dans mon budget") et jusqu'à 5 critères de caractéristiques, avec plusieurs tris (fin d'enchère, note, potentiel, prix, âge). Chaque annonce affiche la note du joueur, ses points forts et un bouton <b>Comparer</b> avec votre effectif ; on négocie d'abord le contrat avec le joueur, puis on enchérit. Pour vendre l'un de vos joueurs : menu ⋯ de l'Effectif ou bouton Vendre de sa fiche. L'identité de l'enchérisseur en tête reste privée.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Suivi et alertes</b> (<button type="button" class="gd-link" data-guide-goto="premium">Premium</button>) : « Suivre » sur une annonce ajoute le joueur à votre liste de suivi (filtre « Joueurs suivis ») ; « Créer une alerte avec ces filtres » enregistre une recherche. Le fil d'actualité vous prévient quand un joueur suivi est mis en vente, quand son enchère se termine bientôt, et quand une nouvelle annonce correspond à une de vos alertes.</p>
         <p class="training-intro" style="margin-top:10px;"><b>Marché mondial</b> : les annonces de tous les championnats, dans tous les pays, apparaissent aussi (drapeau et division du vendeur sur la carte ; filtre « Monde entier », « Mon championnat » ou le pays de votre choix, avec une recherche). On y enchérit de la même façon ; le joueur rejoint votre club à la clôture de l'enchère. Les annonces des autres championnats se mettent à jour toutes les quelques minutes : si quelqu'un a surenchéri entre-temps, votre enchère est refusée et le prix actualisé.</p>
@@ -9466,7 +9470,7 @@
 
       <div class="guide-entry" data-guide-id="economie" data-guide-group="Club et finances">
         <h3>Économie</h3>
-        <p class="training-intro">Budget du club et son évolution, masse salariale (joueurs et staff), revenus de la salle, de la boutique et des droits TV, et l'historique des transactions groupé par semaine. Un budget durablement sous le seuil d'alerte finit par mettre tout l'effectif en vente forcée à 1 € : surveillez la masse salariale.</p>
+        <p class="training-intro">Budget du club et son évolution, masse salariale (joueurs et staff), revenus de la salle, de la boutique et des droits TV, et l'historique des transactions groupé par semaine. Un budget durablement sous le seuil d'alerte finit par mettre tout l'effectif en vente forcée à 1 $ : surveillez la masse salariale.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="salle" data-guide-group="Club et finances">
@@ -11189,14 +11193,14 @@ function merchPrestigeMult(prestige) { return typeof prestige === "number" ? 0.8
 function merchandiseWeeklyRevenue(team, divisionLevel) {
   const base = MERCH_WEEKLY_BY_LEVEL[divisionLevel];
   if (!base || !team) return 0;
-  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 € « fait trop propre »).
+  // À l'euro près (retour utilisateur 2026-10-02 : un multiple de 100 $ « fait trop propre »).
   return Math.round(base * merchMoraleMult(team.fanMorale) * merchPrestigeMult(team.prestige));
 }
 
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des transferts
 // (acheter/vendre des joueurs entre managers, pas juste la vente forcée à
-// 1€)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
+// 1$)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
 // Système D'ENCHÈRES (pas de vente à prix fixe, retour utilisateur : "systeme
 // d'enchere sur 3 jours c'est bien") : chaque joueur listé part aux enchères
 // pour TRANSFER_AUCTION_DURATION_MS, en temps RÉEL (Date.now()), pas en
@@ -11219,7 +11223,7 @@ const TRANSFER_MIN_INCREMENT_PCT = 0.20;
 // sur la durée d'une enchère de 3 jours.
 const TRANSFER_CPU_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const TRANSFER_CPU_LIST_CHANCE = 0.12; // par équipe CPU, par vérification
-const CPU_STAR_SELL_OVERALL = 50; // général à partir duquel un bot vend le joueur à 1 €
+const CPU_STAR_SELL_OVERALL = 50; // général à partir duquel un bot vend le joueur à 1 $
 const TRANSFER_CPU_BID_CHANCE = 0.35;  // par équipe CPU intéressée, par vérification
 
 // ---------------------------------------------------------------------
@@ -11637,7 +11641,7 @@ function trainingCenterInfo(level) {
 // Catégories de places, chacune avec son propre prix réglable : une salle
 // n'est pas un seul tarif unique, les gradins populaires, la tribune et les
 // loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
-// reste pleine à 70€ quand des gradins vident à 20€). shareOfCapacity se
+// reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
 // Prix par défaut calés sur le plafond de confort (comfortCeiling) de
@@ -14340,20 +14344,20 @@ const MAX_TEAM_TROPHIES = 30;
 // un premier retour ("on est très loin des niveaux que tu proposes") :
 //   - le tout premier effectif d'une nouvelle carrière (voir
 //     generateStartingRoster, capé 10-50 sur toutes les caractéristiques —
-//     "12 joueurs entre 2 000 et 5 000 €, donc environ 50-60 000 €/semaine
+//     "12 joueurs entre 2 000 et 5 000 $, donc environ 50-60 000 $/semaine
 //     de masse salariale" en début de carrière BuzzerBeater) ;
 //   - un effectif de niveau Division II (tierMultiplier ~1.27, l'équivalent
-//     des ~320 000 à 600 000 €/semaine relevés sur de vrais effectifs
+//     des ~320 000 à 600 000 $/semaine relevés sur de vrais effectifs
 //     BuzzerBeater de ce niveau).
 // Les joueurs vedettes du marché des transferts BuzzerBeater (130 000 à
-// 300 000 €/semaine) et les joueurs de complément (quelques centaines
+// 300 000 $/semaine) et les joueurs de complément (quelques centaines
 // d'euros) ont servi à vérifier le haut et le bas de la courbe. Recalé en
 // simulant des effectifs réels générés à CHAQUE niveau de tierMultiplier
 // (voir DIVISIONS) et en cherchant les trois constantes qui satisfont LES
 // DEUX ancrages à la fois (une seule référence, comme avant, ne suffisait
 // pas : caler uniquement sur le petit effectif de départ sous-évaluait
 // largement une Division II, et l'inverse gonflait un effectif neuf bien
-// au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
+// au-delà de 60 000 $/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
 const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
@@ -14431,7 +14435,7 @@ const CONTRACT_RAISE_WEEK = 6;                // semaine de la saison où il peu
 const CONTRACT_RAISE_RESPONSE_MS = 7 * 24 * 60 * 60 * 1000; // sans réponse sous 1 semaine (retour 2026-10-01) : refus
 const CONTRACT_RAISE_REFUSED_MORALE_MALUS = 10;
 const YOUTH_PROMOTION_CONTRACT_SEASONS = 3;
-// Agents libres (fin de contrat sans prolongation) : enchère à 1 €, la mise
+// Agents libres (fin de contrat sans prolongation) : enchère à 1 $, la mise
 // gagnante est une prime de signature payée au joueur (sort de l'économie).
 const FREE_AGENT_AUCTION_DURATION_MS = 2 * 24 * 60 * 60 * 1000;
 const FREE_AGENT_RETIRE_AGE = 33;
@@ -14472,8 +14476,8 @@ function contractMoraleFactor(form) {
   return 1;
 }
 
-// Salaire demandé (€/semaine) : niveau actuel (grille salariale, bonus de
-// pic compris), âge et motivation. Arrondi à 10 €.
+// Salaire demandé ($/semaine) : niveau actuel (grille salariale, bonus de
+// pic compris), âge et motivation. Arrondi à 10 $.
 // `legacy` : ancienne grille (contrat signé avant le 2026-10-04) — sert
 // uniquement aux demandes d'augmentation de mi-saison, pour que le seul
 // changement de grille ne déclenche pas une vague de demandes : ces
@@ -16028,7 +16032,7 @@ function feedFromTemplate(type, vars, rng) {
 }
 
 function feedEuros(n) {
-  return `${n.toLocaleString("fr-FR")} €`;
+  return `${n.toLocaleString("fr-FR")} $`;
 }
 
 /**
@@ -17590,7 +17594,7 @@ class Team {
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
-  // D'URGENCE à 1 €, réservée à la mise en vente forcée en cas de déficit
+  // D'URGENCE à 1 $, réservée à la mise en vente forcée en cas de déficit
   // prolongé (voir trainWeek) — un mécanisme séparé et bien plus rapide que
   // le vrai marché des transferts aux enchères (voir League.listPlayerForSale
   // / placeBid / refreshMarket), pour un club qui n'a plus le temps d'attendre
@@ -18618,7 +18622,7 @@ class Team {
     // de semaines CONSÉCUTIVES où le budget (une fois toutes les
     // transactions de la semaine passées) reste sous le seuil, remis à zéro
     // dès qu'il repasse au-dessus. Au bout de DEFICIT_GRACE_WEEKS semaines
-    // sans redressement, tout l'effectif est listé à 1 € (voir
+    // sans redressement, tout l'effectif est listé à 1 $ (voir
     // Player.forSale/salePrice, Team.sellPlayer) — une seule fois, pas
     // reconduit chaque semaine tant que ça reste non résolu.
     let deficitAlert = false;
@@ -19675,7 +19679,7 @@ function attrsForCardPosition(position, makeAttrs) {
 // poste (voir weightedRatingForPosition). Sinon, même une caractéristique
 // signature à 90+ finit noyée dans la moyenne pondérée de tout le reste du
 // profil (constaté sur le cas concret signalé par l'utilisateur : 97 en tir
-// à 3 points, reste du profil ordinaire → seulement 1848 € malgré un tir de
+// à 3 points, reste du profil ordinaire → seulement 1848 $ malgré un tir de
 // classe mondiale).
 //
 // Seuil volontairement très haut (90) : la génération normale d'un joueur
@@ -20609,7 +20613,7 @@ function sponsorNameForSlot(team, slotKey) {
   const c = sponsorActiveContractForSlot(team, slotKey);
   return c ? c.sponsorName : null;
 }
-// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 € (les
+// Montants de sponsor : à la centaine, mais à la dizaine sous 1 000 $ (les
 // petites primes du panneau publicitaire, 2026-09-30, finissaient
 // arrondies à la même valeur d'un profil à l'autre).
 function roundToHundred(v) { return v >= 1000 ? Math.round(v / 100) * 100 : Math.max(10, Math.round(v / 10) * 10); }
@@ -20708,7 +20712,7 @@ function terminateSponsorContract(team, contractId, now = Date.now()) {
   const contract = (team.sponsorContracts || []).find(c => c.id === contractId && c.status === "active");
   if (!contract) return { ok: false, error: "Contrat introuvable." };
   const fee = sponsorTerminationFee(contract);
-  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} €).` };
+  if ((team.budget || 0) < fee) return { ok: false, error: `Budget insuffisant pour la clause de rupture (${fee.toLocaleString("fr-FR")} $).` };
   team.recordTransaction(`Clause de rupture ${contract.sponsorName}`, -fee);
   contract.status = "terminated"; contract.endedAt = now;
   team.sponsorHistory = [{ ...contract }, ...(team.sponsorHistory || [])].slice(0, SPONSOR_HISTORY_MAX);
@@ -22131,7 +22135,7 @@ class League {
         const since = watch.get(String(player.id));
         if (since != null) {
           if (!seen[k] && (l.createdAt || 0) >= since) {
-            push(`mkt_watch_${k}`, `Joueur suivi en vente : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) est aux enchères, départ à ${Math.round(l.startPrice).toLocaleString("fr-FR")} €.`);
+            push(`mkt_watch_${k}`, `Joueur suivi en vente : ${player.name}`, `${player.name} (${player.position}, ${player.age} ans) est aux enchères, départ à ${Math.round(l.startPrice).toLocaleString("fr-FR")} $.`);
           }
           if (!seen[k]) seen[k] = 1;
           if (seen[k] < 2 && l.closesAt - now <= MARKET_ALERT_ENDING_MS && l.closesAt > now) {
@@ -22184,7 +22188,7 @@ class League {
     if (now - (this.lastCpuListingCheckAt || 0) >= TRANSFER_CPU_CHECK_INTERVAL_MS) {
       this.lastCpuListingCheckAt = now;
       // Joueurs à 50 de général ou plus détenus par un bot : tous mis en
-      // vente à 1 € (retour utilisateur 2026-10-01), sans descendre sous
+      // vente à 1 $ (retour utilisateur 2026-10-01), sans descendre sous
       // l'effectif minimum.
       this.teams.forEach((team, idx) => {
         if (team.isHuman) return;
@@ -22204,8 +22208,8 @@ class League {
         if (this.transferListings.some(l => l.status === "open" && l.sellerIdx === idx)) return; // une annonce à la fois par CPU
         if (Math.random() >= TRANSFER_CPU_LIST_CHANCE) return;
         const weakest = team.players.reduce((w, p) => (p.overall() < w.overall() ? p : w), team.players[0]);
-        // Prix de départ à 1 € (retour utilisateur 2026-10-01 : « les bots
-        // qui vendent des joueurs doivent mettre 1 € comme prix »).
+        // Prix de départ à 1 $ (retour utilisateur 2026-10-01 : « les bots
+        // qui vendent des joueurs doivent mettre 1 $ comme prix »).
         this.listPlayerForSale(idx, weakest.id, 1, now);
       });
     }
@@ -23865,7 +23869,7 @@ const MARKET_ALERTS_MAX = 3;
 // Filtres en FOURCHETTES (retour utilisateur 2026-10-01 : « pour l'âge, le
 // potentiel et le prix, mets un système de barres ») : ageMin/ageMax (ans),
 // potMin/potMax (index de palier 1-10, jamais le potentiel exact), priceMin/
-// priceMax (prochaine enchère, €), budget (bool) ; null = pas de borne.
+// priceMax (prochaine enchère, $), budget (bool) ; null = pas de borne.
 // Les anciennes alertes (age "u21"/"22-25"/"26-29"/"30+", pot = seuil de
 // potentiel, price "budget"/montant) sont converties ici.
 const MARKET_ALERT_LEGACY_AGES = { u21: [null, 21], "22-25": [22, 25], "26-29": [26, 29], "30+": [30, null] };
@@ -23923,7 +23927,7 @@ function marketAlertMatches(alert, player, listing, budget = Infinity) {
 function marketAlertParts(alert) {
   if (!alert) return [];
   const rg = marketAlertRanges(alert);
-  const eur = n => `${Number(n).toLocaleString("fr-FR")} €`;
+  const eur = n => `${Number(n).toLocaleString("fr-FR")} $`;
   const tierLabel = i => POTENTIAL_TIERS[i - 1].label;
   const parts = [];
   if (alert.pos && alert.pos !== "all") parts.push(alert.pos);
@@ -32408,7 +32412,7 @@ document.getElementById("playerDetailContent").addEventListener("click", (e) => 
   const input = document.getElementById("playerDetailListPrice");
   const raw = input ? input.value.trim() : "";
   if (!raw || !(Number(raw) > 0)) {
-    playerDetailMarketFeedback("Indiquez un prix de départ (en €) avant de mettre ce joueur aux enchères.", false);
+    playerDetailMarketFeedback("Indiquez un prix de départ (en $) avant de mettre ce joueur aux enchères.", false);
     return;
   }
   const price = Math.max(1, Math.round(Number(raw)));
@@ -33524,7 +33528,7 @@ function renderPlayerDetail(teamIdx, playerId) {
       const bidLine = openListing.currentBid
         ? `Enchère actuelle : <b>${formatMoney(openListing.currentBid)}</b>${bidderLinkHtml(openListing) ? ` par ${bidderLinkHtml(openListing)}` : ""}`
         : `Aucune enchère pour l'instant (prix de départ ${formatMoney(openListing.startPrice)})`;
-      // Durée restante dans son propre <span> : sinon « … (prix de départ 1 €) · 1 j 0 h »
+      // Durée restante dans son propre <span> : sinon « … (prix de départ 1 $) · 1 j 0 h »
       // formait un seul texte que la traduction ne reconnaissait pas (2026-10-04).
       html += `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> <span>${bidLine}</span> · <span>${escapeHtml(timeLeftLabel(openListing.closesAt, Date.now()))}</span></p>`;
     } else {
@@ -33534,7 +33538,7 @@ function renderPlayerDetail(teamIdx, playerId) {
       } else {
         html += `<p class="sub">Pas assez de ventes comparables (même poste, note globale proche) ces 60 derniers jours pour une estimation.</p>`;
       }
-      html += `<p class="training-intro"><input type="number" class="market-price-input" id="playerDetailListPrice" placeholder="Prix (€)" min="1" step="100"> ` +
+      html += `<p class="training-intro"><input type="number" class="market-price-input" id="playerDetailListPrice" placeholder="Prix ($)" min="1" step="100"> ` +
         `<button type="button" class="secondary" data-list-player-detail="${player.id}">Mettre aux enchères</button></p>`;
     }
     html += `<div id="playerDetailMarketFeedback"></div>`;
@@ -33673,7 +33677,7 @@ function playerContractCardHtml(team, player) {
       `<p class="sub">${escapeHtml(player.name)} a beaucoup progressé et demande <b>${formatMoney(player.raiseRequest.asked)}</b> / sem. (contre ${formatMoney(player.salary)} aujourd'hui), à partir de la saison ${season + 1}. La durée de son contrat ne change pas. Sans réponse sous 1 semaine, il le prendra comme un refus.</p>` +
       `<div class="pdp-contract-form">` +
       `<button type="button" class="secondary" data-raise-accept="${player.id}">Accepter (${formatMoney(player.raiseRequest.asked)})</button>` +
-      `<label>Contre-offre (€ / sem.)<input type="number" id="pdpRaiseSalary" max="${player.raiseRequest.asked}" step="10" value="${player.raiseRequest.asked}" data-asked="${player.raiseRequest.asked}"></label>` +
+      `<label>Contre-offre ($ / sem.)<input type="number" id="pdpRaiseSalary" max="${player.raiseRequest.asked}" step="10" value="${player.raiseRequest.asked}" data-asked="${player.raiseRequest.asked}"></label>` +
       `<button type="button" class="secondary" data-raise-counter="${player.id}">Faire une contre-offre</button>` +
       `<button type="button" class="secondary" data-raise-refuse="${player.id}">Refuser</button></div>` +
       `<div><span class="pdp-contract-hint sure" id="pdpRaiseHint">${escapeHtml(contractOfferHint(player.raiseRequest.asked, player.raiseRequest.asked).label)}</span></div>` +
@@ -33695,7 +33699,7 @@ function playerContractCardHtml(team, player) {
           : refusals > 0 ? `<p class="sub">Offres refusées : ${refusals}. Chaque refus fait monter sa demande et lui coûte de la motivation ; à ${CONTRACT_FIRM_AFTER_REFUSALS} refus, il ne négociera plus.</p>` : "") +
         `<div class="pdp-contract-form">` +
         `<label>Durée<select id="pdpExtSeasons">${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === CONTRACT_DEFAULT_SEASONS ? " selected" : ""}>${n} saison${n > 1 ? "s" : ""}</option>`).join("")}</select></label>` +
-        `<label>Salaire (€ / sem.)<input type="number" id="pdpExtSalary" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
+        `<label>Salaire ($ / sem.)<input type="number" id="pdpExtSalary" max="${asked}" step="10" value="${asked}" data-asked="${asked}"></label>` +
         `<button type="button" class="secondary" data-contract-extend="${player.id}">Proposer la prolongation</button></div>` +
         `<div><span class="pdp-contract-hint sure" id="pdpExtHint">${escapeHtml(contractOfferHint(asked, asked).label)}</span></div>`;
     }
@@ -40124,9 +40128,9 @@ function renderLineupEditor(team, container, opts = {}) {
     sorted.forEach(d => {
       const row = el("label", "conv-row" + (d.on ? " on" : "") + (d.injured ? " injured" : ""));
       row.dataset.playerId = d.p.id;
-      const name = el("span", "conv-name");
+      const name = el("span", "conv-name" + (d.youth ? " is-youth" : ""));
       name.appendChild(document.createTextNode(d.p.name));
-      if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
+      if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "U18"));
       if (d.crossHtml) name.insertAdjacentHTML("beforeend", d.crossHtml);
       const cond = el("span", "conv-cond " + d.condTier);
       cond.title = `Forme physique : ${d.condLabel} (${d.cond}/100)`;
@@ -40287,10 +40291,10 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
     const td = (cls, child) => { const c = el("td", cls); if (child != null) { if (typeof child === "string") c.innerHTML = child; else c.appendChild(child); } tr.appendChild(c); return c; };
     td("ct-conv", convBox(d));
     const nameCell = td("ct-name");
-    const name = el("span", "conv-name");
+    const name = el("span", "conv-name" + (d.youth ? " is-youth" : ""));
     if (d.linkable) name.insertAdjacentHTML("beforeend", playerLinkHtml(myTeamIndex, d.p.id, d.p.name));
     else name.appendChild(document.createTextNode(d.p.name));
-    if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "Jeune"));
+    if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "U18"));
     if (d.crossHtml) name.insertAdjacentHTML("beforeend", d.crossHtml);
     nameCell.appendChild(name);
     const posCell = td("ct-pos", effPosBadgeHtml(d.best));
@@ -42958,7 +42962,7 @@ function catchupTrainingHtml(weekResult) {
     html += `</div>`;
   }
   if (w.forcedFireSale) {
-    html += `<div class="cu-alert danger">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${w.deficitWeeks} semaines sans redressement : tout l'effectif a été mis en vente forcée à 1 € (onglet Effectif).</div>`;
+    html += `<div class="cu-alert danger">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${w.deficitWeeks} semaines sans redressement : tout l'effectif a été mis en vente forcée à 1 $ (onglet Effectif).</div>`;
   } else if (w.deficitAlert) {
     html += `<div class="cu-alert">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${w.deficitWeeks} semaine(s) : sans redressement, mise en vente forcée de l'effectif dans ${Math.max(0, DEFICIT_GRACE_WEEKS - w.deficitWeeks)} semaine(s).</div>`;
   }
@@ -43831,7 +43835,7 @@ document.addEventListener("change", (e) => {
 });
 
 function formatMoney(n) {
-  return Math.round(n).toLocaleString("fr-FR") + " €";
+  return Math.round(n).toLocaleString("fr-FR") + " $";
 }
 
 // ---------------------------------------------------------------------
@@ -44300,7 +44304,7 @@ function trainingReportHtml(weekResult, opts = {}) {
   // en continu sur le tableau de bord et l'onglet Économie) : un rappel
   // immédiat ici aussi, juste après la validation de la semaine.
   if (weekResult.forcedFireSale) {
-    html += `<div class="gain-line gain-down">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${weekResult.deficitWeeks} semaines sans redressement : tout l'effectif a été mis en vente forcée à 1 € (onglet Effectif).</div>`;
+    html += `<div class="gain-line gain-down">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${weekResult.deficitWeeks} semaines sans redressement : tout l'effectif a été mis en vente forcée à 1 $ (onglet Effectif).</div>`;
   } else if (weekResult.deficitAlert) {
     html += `<div class="gain-note">Budget sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${weekResult.deficitWeeks} semaine(s) : sans redressement, mise en vente forcée de l'effectif dans ${Math.max(0, DEFICIT_GRACE_WEEKS - weekResult.deficitWeeks)} semaine(s).</div>`;
   }
@@ -44405,7 +44409,7 @@ function dashEsc(value) {
 }
 
 function dashFormatEuros(n) {
-  return `${Math.round(n).toLocaleString("fr-FR").replace(/ | /g, " ")} €`;
+  return `${Math.round(n).toLocaleString("fr-FR").replace(/ | /g, " ")} $`;
 }
 
 function dashMoodLabel(value, kind) {
@@ -44816,7 +44820,7 @@ const MERCH_ITEMS = [
   { key: "cap", label: "Casquettes", price: 24, share: 0.12 },
   { key: "tee", label: "T-shirts", price: 22, share: 0.10 },
   { key: "goodies", label: "Ballons et goodies", price: 14, share: 0.09 },
-  // Dernier article à 1 € : absorbe l'arrondi → total exact.
+  // Dernier article à 1 $ : absorbe l'arrondi → total exact.
   { key: "sticker", label: "Autocollants", price: 1, share: 0.02 },
 ];
 // Petit aléa stable pour une semaine donnée (même affichage à chaque
@@ -45659,7 +45663,7 @@ function renderClubSection() {
   // même bandeau critique que l'onglet Économie (renderEconomieSection),
   // conservé ici indépendamment de mountDashboard() (la tâche générique
   // "Budget dans le rouge" du tableau de bord, elle, ne mentionne pas la
-  // mise en vente forcée à 1 € — ce bandeau reste le seul endroit à le
+  // mise en vente forcée à 1 $ — ce bandeau reste le seul endroit à le
   // faire, voir deficit_test.js).
   document.getElementById("clubDeficitBanner").innerHTML = deficitBannerHtml();
   const data = dashboardDataFromGameState();
@@ -46536,7 +46540,7 @@ document.addEventListener("change", async (e) => {
 // League.listPlayerForSale) se fait donc directement ici, colonne "Marché",
 // plutôt que sur une table séparée de l'onglet Marché (qui n'affiche
 // désormais que les enchères en cours — voir renderMarcheSection plus bas).
-// La mise en vente forcée à 1 € (déficit économique prolongé) reste, elle,
+// La mise en vente forcée à 1 $ (déficit économique prolongé) reste, elle,
 // affichée à part dans la colonne Nom (badge + bouton dédié) : c'est un
 // mécanisme distinct et non négociable (voir Team.sellPlayer).
 // Tri des colonnes de l'onglet Effectif (retour utilisateur, 2026-09 : "il
@@ -46690,7 +46694,7 @@ function rosterHeaderCellHtml(key, label) {
 //    rôle signalé discrètement (voir effRosterDefaultCmp) ; poste en pastille
 //    colorée, potentiel en 5 segments + nom du palier, forme en mini-barre,
 //    motivation en pastille ; les actions (fiche, mise aux enchères, vente
-//    forcée à 1 €) passent dans un menu "⋯" en bout de ligne au lieu d'une
+//    forcée à 1 $) passent dans un menu "⋯" en bout de ligne au lieu d'une
 //    colonne "Marché" toujours dépliée.
 //  - Caractéristiques : 13 fondamentaux regroupés Tir / Jeu / Défense +
 //    Condition (moyennes Physique/Mental), colonne "Moy." (moyenne des 15
@@ -46804,7 +46808,7 @@ function effMotivationHtml(p) {
 }
 
 // Menu "⋯" d'une ligne : fiche joueur, mise aux enchères (prix libre, même
-// #listPrice_<id>/[data-list-player] qu'avant) et vente forcée à 1 € quand le
+// #listPrice_<id>/[data-list-player] qu'avant) et vente forcée à 1 $ quand le
 // club est en déficit prolongé. Rendu d'avance mais `hidden` : ouvert/fermé
 // par l'écouteur délégué de #rosterContent (voir [data-eff-menu]).
 // Contrats (demande du 2026-10-01) : cellule « Contrat » de l'Effectif
@@ -46826,11 +46830,11 @@ function effActionsMenuHtml(p, isListed) {
     body += `<div class="eff-menu-note eff-menu-blocked">${escapeHtml(CONTRACT_SALE_BLOCKED_MSG)}</div>`;
   } else {
     body += `<label class="eff-menu-label" for="listPrice_${p.id}">Mettre aux enchères</label>` +
-      `<div class="eff-menu-row"><input type="number" class="market-price-input" id="listPrice_${p.id}" placeholder="Prix de départ (€)" min="1" step="100">` +
+      `<div class="eff-menu-row"><input type="number" class="market-price-input" id="listPrice_${p.id}" placeholder="Prix de départ ($)" min="1" step="100">` +
       `<button type="button" class="eff-menu-cta" data-list-player="${p.id}" data-player-name="${name}">Lister</button></div>`;
   }
   if (p.forSale) {
-    body += `<button type="button" class="sell-btn eff-menu-item eff-menu-danger" data-sell-player="${p.id}" title="Vendre ${name} pour 1 €">Vendre pour 1 €</button>`;
+    body += `<button type="button" class="sell-btn eff-menu-item eff-menu-danger" data-sell-player="${p.id}" title="Vendre ${name} pour 1 $">Vendre pour 1 $</button>`;
   }
   return `<button type="button" class="eff-menu-btn" data-eff-menu="${p.id}" aria-haspopup="true" aria-expanded="false" aria-controls="effMenu_${p.id}" aria-label="Actions pour ${name}">` +
     `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>` +
@@ -46980,7 +46984,7 @@ function renderEffectifSection() {
       // Blessure PERSISTANTE (voir injuryCrossHtml) : ligne teintée de rouge.
       const cross = injuryCrossHtml(p, now);
       const badges = (cross || "") + (transferRequestBadgeHtml(p) || "") + retirementBadgeHtml(p) +
-        (p.forSale ? `<span class="forsale-badge">En vente : 1 €</span>` : "") +
+        (p.forSale ? `<span class="forsale-badge">En vente : 1 $</span>` : "") +
         // Pastille « $ » au lieu du texte « Aux enchères », qui débordait sur
         // la colonne Poste (retour utilisateur 2026-09-29 : "mettre un $ à
         // la place qui prend moins de place, mets un beau dollar").
@@ -47087,9 +47091,9 @@ document.getElementById("rosterContent").addEventListener("click", (e) => {
     const raw = input.value.trim();
     // Retour utilisateur : plus de prix suggéré pré-rempli — le champ est
     // vide par défaut, donc on exige explicitement une saisie plutôt que de
-    // retomber silencieusement sur 1 € (qui brade le joueur sans le vouloir).
+    // retomber silencieusement sur 1 $ (qui brade le joueur sans le vouloir).
     if (!raw || !(Number(raw) > 0)) {
-      rosterMarketFeedback("Indiquez un prix de départ (en €) avant de mettre ce joueur aux enchères.", false);
+      rosterMarketFeedback("Indiquez un prix de départ (en $) avant de mettre ce joueur aux enchères.", false);
       return;
     }
     const price = Math.max(1, Math.round(Number(raw)));
@@ -47112,7 +47116,7 @@ document.getElementById("rosterContent").addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des
 // transferts (acheter/vendre des joueurs entre managers, pas juste la vente
-// forcée à 1€)") — voir League.listPlayerForSale/placeBid/refreshMarket
+// forcée à 1$)") — voir League.listPlayerForSale/placeBid/refreshMarket
 // côté moteur. Cet onglet affiche UNIQUEMENT les enchères en cours — les
 // vôtres ET celles des 9 adversaires, sur lesquelles vous pouvez enchérir
 // (retour utilisateur : "le marché des transferts doit permettre de voir
@@ -47728,7 +47732,7 @@ function mkCloseOriginPicker(focusBtn) {
 }
 
 // Prix : paliers « ronds » (100, 150, 200, 250, 300, 400, 500, 600, 750,
-// 1 000 €…) répartis d'après les prix des annonces ouvertes (retour
+// 1 000 $…) répartis d'après les prix des annonces ouvertes (retour
 // utilisateur 2026-10-01 : « pour un prix entre 50 et 500 k on est tout à
 // gauche ») : chaque palier correspond à peu près au même nombre
 // d'annonces, la barre s'étale donc là où sont les joueurs.
@@ -47742,7 +47746,7 @@ function mkPriceLadder(maxPrice) {
   return steps;
 }
 function mkPriceSteps(prices) {
-  // Prix distincts : les nombreuses annonces de bots à 1 € ne doivent pas
+  // Prix distincts : les nombreuses annonces de bots à 1 $ ne doivent pas
   // accaparer les paliers.
   const sorted = [...new Set(prices.filter(v => Number.isFinite(v) && v >= 0))].sort((a, b) => a - b);
   const ladder = mkPriceLadder(sorted.length ? sorted[sorted.length - 1] : 0);
@@ -48430,7 +48434,7 @@ function mkListingCardHtml(l, player, now) {
         `</div>` +
         (badge ? `<div>${badge}</div>` : "") +
         // Valeur estimée et « Bonne affaire » retirées (retour utilisateur 2026-10-03).
-        (fa ? `<div class="mk-value"><span class="mk-fa-note">Prime versée au joueur à la signature, départ à 1 €.</span></div>` : "") +
+        (fa ? `<div class="mk-value"><span class="mk-fa-note">Prime versée au joueur à la signature, départ à 1 $.</span></div>` : "") +
         `<div class="market-card-action">${action}</div>` +
       `</div>` +
     `</div>` +
@@ -50087,7 +50091,7 @@ function renderCoupeSection() {
 // Bandeau d'alerte de déficit économique (voir DEFICIT_ALERT_THRESHOLD /
 // DEFICIT_GRACE_WEEKS / Team.trainWeek côté moteur) : rien tant que le
 // budget reste au-dessus du seuil, un avertissement les premières semaines
-// sous le seuil, puis un message "critique" une fois l'effectif listé à 1 €
+// sous le seuil, puis un message "critique" une fois l'effectif listé à 1 $
 // (voir renderEffectifSection pour la mise en vente elle-même). Affiché à
 // la fois sur le tableau de bord du club et sur l'onglet Économie.
 // ---------------------------------------------------------------------
@@ -50095,10 +50099,10 @@ function deficitBannerHtml() {
   if (teamA.budget >= DEFICIT_ALERT_THRESHOLD) return "";
   const anyForSale = teamA.players.some(p => p.forSale);
   if (anyForSale) {
-    return `<div class="deficit-banner critical">Le club est en quasi-faillite (budget : ${formatMoney(teamA.budget)}, sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${teamA.deficitWeeks} semaine(s)) : tout l'effectif a été mis en vente forcée à 1 €. Direction l'onglet <b>Effectif</b> pour vendre des joueurs et alléger la masse salariale.</div>`;
+    return `<div class="deficit-banner critical">Le club est en quasi-faillite (budget : ${formatMoney(teamA.budget)}, sous ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${teamA.deficitWeeks} semaine(s)) : tout l'effectif a été mis en vente forcée à 1 $. Direction l'onglet <b>Effectif</b> pour vendre des joueurs et alléger la masse salariale.</div>`;
   }
   const remaining = Math.max(0, DEFICIT_GRACE_WEEKS - teamA.deficitWeeks);
-  return `<div class="deficit-banner warn">Déficit économique important : budget à ${formatMoney(teamA.budget)}, sous le seuil de ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${teamA.deficitWeeks} semaine(s). Sans redressement, tout l'effectif sera mis en vente forcée à 1 € dans ${remaining} semaine${remaining > 1 ? "s" : ""}.</div>`;
+  return `<div class="deficit-banner warn">Déficit économique important : budget à ${formatMoney(teamA.budget)}, sous le seuil de ${formatMoney(DEFICIT_ALERT_THRESHOLD)} depuis ${teamA.deficitWeeks} semaine(s). Sans redressement, tout l'effectif sera mis en vente forcée à 1 $ dans ${remaining} semaine${remaining > 1 ? "s" : ""}.</div>`;
 }
 
 // ---------------------------------------------------------------------
@@ -50137,7 +50141,7 @@ function ecoIconSvg(key, size) {
 
 // formatMoney utilise l'espace fine insécable (U+202F) de toLocaleString,
 // que la police des gros chiffres n'affiche pas toujours (retour utilisateur
-// sur capture : "573947 €" collé) : espace insécable classique à la place.
+// sur capture : "573947 $" collé) : espace insécable classique à la place.
 function ecoMoney(n) {
   return formatMoney(n).replace(/[  ]/g, " ");
 }
@@ -50299,7 +50303,7 @@ function ecoFanShopHtml() {
   const level = teamA.fanShopLevel || 0;
   const maxLevel = FAN_SHOP_LEVELS[FAN_SHOP_LEVELS.length - 1].level;
   if (level <= 0) {
-    return `<div class="eco-num lg">0 €<span class="unit">/sem</span></div><span class="eco-pill-tag">Aucune boutique</span>`;
+    return `<div class="eco-num lg">0 $<span class="unit">/sem</span></div><span class="eco-pill-tag">Aucune boutique</span>`;
   }
   const info = fanShopInfo(level);
   return `<div class="eco-num lg">${ecoMoney(info.weeklyRevenue)}<span class="unit">/sem</span></div>` +
@@ -51182,7 +51186,7 @@ function showUpgradeConfirm({ title, icon, beforeLabel, afterLabel, effectLabel,
 // de mettre des fleches qui monte pour améliorer les infrastructures ou la
 // salle, ce serait pas mieux un plus ? ou autre chose, tu peux proposer
 // (idem sur l'onglet academie des jeunes)" — option retenue : un vrai
-// bouton texte "Améliorer 80 000 €" / "Construire …" / "Agrandir"
+// bouton texte "Améliorer 80 000 $" / "Construire …" / "Agrandir"
 // (plus de "·" avant le montant depuis le 2026-09-26, retour utilisateur)
 // (`btnOpts` = { label, cost?, solid? }), plus de flèche. La classe
 // .facility-upgrade-arrow est conservée comme ancre des tests et du tutoriel.
@@ -51251,11 +51255,11 @@ function salleIcon(name, size = 20) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SALLE_ICON_PATHS[name] || ""}</svg>`;
 }
 
-// Montant compact pour les chiffres clés/le graphique ("159 k€").
+// Montant compact pour les chiffres clés/le graphique ("159 k$").
 function formatMoneyCompact(n) {
   const v = Math.round(n || 0);
-  if (Math.abs(v) >= 1000000) return `${(v / 1000000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M€`;
-  if (Math.abs(v) >= 10000) return `${Math.round(v / 1000).toLocaleString("fr-FR")} k€`;
+  if (Math.abs(v) >= 1000000) return `${(v / 1000000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M$`;
+  if (Math.abs(v) >= 10000) return `${Math.round(v / 1000).toLocaleString("fr-FR")} k$`;
   return formatMoney(v);
 }
 
@@ -51888,7 +51892,7 @@ function renderSalleHero(info, stats) {
     // domicile reste affiché quand il y en a un.
     (nm && nm.isHome ? `<div class="sl-hero-sub">Prochain match à domicile <b>vs ${escapeHtml(nm.name)}</b></div>` : "");
   // Sponsor de la salle : plus d'encart dans le bandeau (retour utilisateur,
-  // 2026-09-26 : "enlève [...] Sponsor de la salle · Transports Roux · 6 000 €
+  // 2026-09-26 : "enlève [...] Sponsor de la salle · Transports Roux · 6 000 $
   // / sem [...]") ; seul le panneau dessiné par ArenaGen (options.sponsor)
   // sur le mur latéral le montre.
 
@@ -51972,7 +51976,7 @@ function renderArenaBuild(feedback) {
     const room = max - cur[c.key];
     const pct = cur[c.key] / max * 100, addPct = n / max * 100;
     html += `<div class="sl-build-row" data-build-row="${c.key}">` +
-      `<div><b>${escapeHtml(c.name)}</b><small>${fmt(SEAT_BUILD_COST_PER_SEAT[c.key])} € la place</small></div>` +
+      `<div><b>${escapeHtml(c.name)}</b><small>${fmt(SEAT_BUILD_COST_PER_SEAT[c.key])} $ la place</small></div>` +
       `<div><div class="sl-build-bar"><i style="width:${pct.toFixed(2)}%; background:${SEAT_CATEGORY_COLORS[c.key]}"></i>` +
       `<i class="add" style="left:${pct.toFixed(2)}%; width:${addPct.toFixed(2)}%; background-color:${SEAT_CATEGORY_COLORS[c.key]}"></i></div>` +
       `<div class="sl-build-count">${fmt(cur[c.key] + n)} / ${fmt(max)} places</div></div>` +
@@ -51988,7 +51992,7 @@ function renderArenaBuild(feedback) {
   const spendable = teamA.spendableBudget();
   const tooExpensive = cost > spendable;
   html += `<div class="sl-build-foot"><div>${summary ? `<small>${escapeHtml(summary)}</small>` : ""}` +
-    `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} €</b> <span class="sl-build-budget">· disponible ${fmt(spendable)} €${spendable < teamA.budget ? " (enchères en cours déduites)" : ""}</span></div>` +
+    `<b class="${tooExpensive ? "is-bad" : ""}">${fmt(cost)} $</b> <span class="sl-build-budget">· disponible ${fmt(spendable)} $${spendable < teamA.budget ? " (enchères en cours déduites)" : ""}</span></div>` +
     `<button type="button" class="stf-bid-btn" id="arenaBuildBtn"${!added || tooExpensive ? " disabled" : ""}>Construire</button></div>` +
     `<div id="arenaBuildFeedback" role="status">${feedback || ""}</div>`;
   holder.innerHTML = html;
@@ -52108,7 +52112,7 @@ function updateSalleTicketingPreview() {
     if (!row) return;
     const price = parseInt(row.querySelector("input[type=range]").value, 10);
     const pct = ((price - cat.minPrice) / (cat.maxPrice - cat.minPrice)) * 100;
-    row.querySelector(`#seatPrice_${cat.key}`).textContent = `${price} €`;
+    row.querySelector(`#seatPrice_${cat.key}`).textContent = `${price} $`;
     row.querySelector("[data-track-fill]").style.width = `${pct}%`;
     row.querySelector("[data-knob]").style.left = `${pct}%`;
     comfortSum += seatPreview(cat, price).comfort; count++;
@@ -52260,7 +52264,7 @@ function salleAttendanceChartSvg(history) {
     const cx = (x + bw / 2).toFixed(1);
     if (!dense || b.proj) s += `<text x="${cx}" y="${(y(b.total) - 6).toFixed(1)}" text-anchor="middle" class="sl-chart-total">${b.total.toLocaleString("fr-FR")}</text>`;
     s += `<text x="${cx}" y="${H - bottom + 15}" text-anchor="middle" class="sl-chart-label${b.proj ? " sl-chart-label-proj" : ""}">${b.label}</text>`;
-    s += `<text x="${cx}" y="${H - bottom + 30}" text-anchor="middle" class="sl-chart-rev${b.proj ? " sl-chart-rev-proj" : ""}">${formatMoneyCompact(b.revenue).replace(" €", "€")}</text>`;
+    s += `<text x="${cx}" y="${H - bottom + 30}" text-anchor="middle" class="sl-chart-rev${b.proj ? " sl-chart-rev-proj" : ""}">${formatMoneyCompact(b.revenue).replace(" $", "$")}</text>`;
     s += `<title>${b.proj ? "Prévision" : b.label} : ${b.total.toLocaleString("fr-FR")} spectateurs, ${formatMoney(b.revenue)}</title>`;
   });
   return s + `</svg>`;
@@ -55095,7 +55099,7 @@ function frLineupEditorHtml(f) {
     const cond = currentCondition(p, now);
     const role = roles[p.id] || "-";
     return `<div class="fr-lu-row${role === "S" ? " is-starter" : role === "B" ? " is-bench" : ""}">` +
-      `<span class="fr-lu-name">${escapeHtml(p.name)}${youth ? `<span class="lp-tag fr-tag-youth">Jeune</span>` : ""}${injured ? `<span class="lp-tag fr-tag-injured">Blessé</span>` : ""}</span>` +
+      `<span class="fr-lu-name${youth ? " is-youth" : ""}">${escapeHtml(p.name)}${youth ? `<span class="lp-tag fr-tag-youth">U18</span>` : ""}${injured ? `<span class="lp-tag fr-tag-injured">Blessé</span>` : ""}</span>` +
       `<span class="fr-lu-pos">${effPosBadgeHtml(p.position)}</span>` +
       `<span class="fr-lu-age">${p.age} ans</span>` +
       `<span class="fr-lu-cond">${escapeHtml(conditionStateFor(cond).label)}</span>` +
@@ -56469,7 +56473,7 @@ const TAB_HANDLERS = {
 // Montant par thème (voir Team.claimTutorialReward côté moteur pour la
 // version faisant foi et la protection anti-doublon) : copie EXACTE de
 // engine.js:TOUR_REWARD_BY_TOPIC, mêmes clés que `topic` ci-dessous, pour
-// que l'affichage "+ X € à la validation" ne puisse jamais raconter un
+// que l'affichage "+ X $ à la validation" ne puisse jamais raconter un
 // montant différent de celui réellement crédité côté serveur.
 const TOUR_REWARD_BY_TOPIC = {
   "Effectif": 15000,
@@ -56505,7 +56509,7 @@ const TOUR_STEPS = [
   // la jauge d'alchimie). La prime du thème "Effectif" est déplacée ICI, sur
   // la DERNIÈRE étape du groupe (même convention que tous les autres thèmes
   // à plusieurs étapes, voir "Ordres" plus bas) : montant inchangé, prime
-  // totale du tutoriel toujours 200 000 € (retour utilisateur antérieur :
+  // totale du tutoriel toujours 200 000 $ (retour utilisateur antérieur :
   // "il faut que le tuto permette de gagne 200K en tout").
   {
     kind: "spotlight", topic: "Effectif", page: "effectif",
@@ -56650,7 +56654,7 @@ const TOUR_STEPS = [
   // renderCollectivePlan). Prime du thème "Entraînement"
   // déplacée ICI, sur la DERNIÈRE étape du groupe (même convention que
   // "Effectif" plus haut) : montant inchangé, prime totale du tutoriel
-  // toujours 200 000 €.
+  // toujours 200 000 $.
   {
     kind: "spotlight", topic: "Entraînement", page: "entrainement",
     target: "#collectiveTrainingConfig",
@@ -56708,7 +56712,7 @@ const TOUR_STEPS = [
   // "humeur", voir TOUR_PAGE_KEY_TO_TAB plus bas), SANS prime (absent de
   // TOUR_REWARD_BY_TOPIC, comme "Salle" au moment de sa création avant
   // qu'elle en gagne une) : la prime totale du tutoriel reste exactement
-  // 200 000 € (retour utilisateur antérieur), et ce thème n'y ajoute rien.
+  // 200 000 $ (retour utilisateur antérieur), et ce thème n'y ajoute rien.
   { kind: "spotlight", topic: "Humeur des supporters", page: "humeur", target: "#moraleValue",
     title: "L'ambiance du club",
     text: "Une jauge de 0 à 100, neutre à 50 en début de carrière. Elle bouge à chaque résultat de match, selon le prix du billet pratiqué, le ton choisi en interview de jalon, et une demande de transfert d'un joueur (jusqu'à son issue).",
@@ -56785,7 +56789,7 @@ let tourStepIdx = 0;
 let tourEarnedRewards = []; // { title, reward }, remis à zéro à chaque lancement
 let tourRootEl = null, tourToastEl = null;
 
-function tourFmtEuro(n) { return n.toLocaleString("fr-FR") + " €"; }
+function tourFmtEuro(n) { return n.toLocaleString("fr-FR") + " $"; }
 function tourTotalReward() { return tourEarnedRewards.reduce((sum, r) => sum + r.reward, 0); }
 
 function tourShowToast(text) {
@@ -57191,6 +57195,11 @@ document.getElementById("newMatchBtn").addEventListener("click", goToOrdresTab);
 // bouton est masqué). Seul point d'entrée « prochain match » depuis la
 // suppression de l'onglet Ordres (retour utilisateur 2026-10-04).
 function openTopbarOrders() {
+  // Direct précédent terminé côté serveur mais pas encore relu : on le
+  // finalise d'abord (comme l'ancien onglet « Ordres », voir goToOrdresTab),
+  // sinon l'émission d'avant-match passait devant et le résultat, les
+  // interviews de jalon… restaient en attente.
+  if (league && league.liveMatch && liveMatchReadyForServerCatchup(league.liveMatch)) { goToOrdresTab(); return; }
   if (prematchShowAvailable()) { openHoopShow("prematch"); return; }
   // Match de ligue privée en direct : le bouton ouvre le direct.
   const n = nextNonOfficialMatch();

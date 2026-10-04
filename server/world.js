@@ -398,7 +398,7 @@ function computeCountryMoves(world, country, leagues, now) {
           key: "division_move", category: "ligue", week: upTeam.week, createdAt: now,
           title: `Montée en ${m.up.toLabel} !`,
           text: bonus
-            ? `Champion de sa ligue, ${upTeam.name} jouera en ${m.up.toLabel} la saison prochaine (prime de montée : ${bonus.amount.toLocaleString("fr-FR")} €). Profitez de l'intersaison pour renforcer l'effectif.`
+            ? `Champion de sa ligue, ${upTeam.name} jouera en ${m.up.toLabel} la saison prochaine (prime de montée : ${bonus.amount.toLocaleString("fr-FR")} $). Profitez de l'intersaison pour renforcer l'effectif.`
             : `Champion de sa ligue, ${upTeam.name} jouera en ${m.up.toLabel} la saison prochaine. Profitez de l'intersaison pour renforcer l'effectif.`,
           action: { label: "Marché", href: "/marche" },
         });

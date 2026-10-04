@@ -42,11 +42,11 @@ const hist = [
   check(labels.join() === "Supporters,Alchimie,Renommée", "Pouls du club : 3 jauges dont Renommée");
   const btn = doc.querySelector("[data-prestige-open]");
   check(btn && /Renommée : \d+ sur 100/.test(btn.getAttribute("aria-label")), "jauge Prestige cliquable");
-  check(!/%|×|€/.test(doc.querySelector(".hm-pulse").textContent), "aucun chiffre économique affiché");
+  check(!/%|×|\$/.test(doc.querySelector(".hm-pulse").textContent), "aucun chiffre économique affiché");
   btn.click();
   const ov = doc.getElementById("prestigeModalOverlay");
   check(ov && ov.querySelectorAll(".pr-table tbody tr").length === 5 && /Champion/.test(ov.textContent), "fenêtre de détail : 5 saisons");
-  check(!/%|€|affluence|boutique/i.test(ov.textContent), "fenêtre sans effets économiques");
+  check(!/%|\$|affluence|boutique/i.test(ov.textContent), "fenêtre sans effets économiques");
   server.close();
   console.log("\n🏁 prestige_test.js : tout est vert");
   process.exit(0);

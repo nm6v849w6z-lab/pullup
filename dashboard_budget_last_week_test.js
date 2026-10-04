@@ -43,7 +43,7 @@ assert(lw.revenue === 236455 && lw.expenses === 224721 && lw.net === 11734, "Chi
 
 clickTab("economie"); clickTab("club");
 const card = flat(budgetCard());
-assert(card.includes("Revenus+236455€") && card.includes("Dépenses−224721€") && card.includes("Revenunet+11734€"), "Brique Budget : revenus, dépenses et revenu net de la semaine précédente (" + budgetCard().replace(/\s+/g, " ").trim() + ")");
+assert(card.includes("Revenus+236455$") && card.includes("Dépenses−224721$") && card.includes("Revenunet+11734$"), "Brique Budget : revenus, dépenses et revenu net de la semaine précédente (" + budgetCard().replace(/\s+/g, " ").trim() + ")");
 assert(card.includes("Semaine2"), "Brique Budget : semaine concernée indiquée");
 assert(!card.includes("Moyenne"), "Plus aucune moyenne affichée");
 

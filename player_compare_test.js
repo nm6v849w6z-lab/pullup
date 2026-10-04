@@ -193,7 +193,7 @@ function escapeForCheck(s) { return s.replace(/[&<>"']/g, () => ""); } // approx
   const salaireTile = tiles.find(t => t.querySelector(".cpt-label").textContent.trim() === "Salaire");
   const salaireVals = [...salaireTile.querySelectorAll(".cpt-val")].map(el => el.textContent.trim());
   if (!salaireVals[0].includes("/sem.") || !salaireVals[1].includes("/sem.")) {
-    throw new Error(`❌ Le salaire réel des deux joueurs (propre effectif) devrait être affiché ("X €/sem."), obtenu ${JSON.stringify(salaireVals)}.`);
+    throw new Error(`❌ Le salaire réel des deux joueurs (propre effectif) devrait être affiché ("X $/sem."), obtenu ${JSON.stringify(salaireVals)}.`);
   }
   console.log("✅ Potentiel et Salaire sont bien visibles (non verrouillés) pour deux joueurs de son propre effectif.");
 

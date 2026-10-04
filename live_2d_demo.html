@@ -877,7 +877,7 @@ const TV_RIGHTS_WEEKLY_BY_LEVEL = {
 // ---------------------------------------------------------------------
 // Marché des transferts (retour utilisateur : "un vrai marché des transferts
 // (acheter/vendre des joueurs entre managers, pas juste la vente forcée à
-// 1€)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
+// 1$)") — voir League.listPlayerForSale / placeBid / refreshMarket plus bas.
 // Système D'ENCHÈRES (pas de vente à prix fixe, retour utilisateur : "systeme
 // d'enchere sur 3 jours c'est bien") : chaque joueur listé part aux enchères
 // pour TRANSFER_AUCTION_DURATION_MS — en temps RÉEL (Date.now()), pas en
@@ -1092,7 +1092,7 @@ function trainingCenterInfo(level) {
 // Catégories de places, chacune avec son propre prix réglable : une salle
 // n'est pas un seul tarif unique, les gradins populaires, la tribune et les
 // loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
-// reste pleine à 70€ quand des gradins vident à 20€). shareOfCapacity se
+// reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
 // Prix par défaut calés sur le plafond de confort (comfortCeiling) de
@@ -1195,20 +1195,20 @@ function moraleLabel(morale) {
 // un premier retour ("on est très loin des niveaux que tu proposes") :
 //   - le tout premier effectif d'une nouvelle carrière (voir
 //     generateStartingRoster, capé 10-50 sur toutes les caractéristiques —
-//     "12 joueurs entre 2 000 et 5 000 €, donc environ 50-60 000 €/semaine
+//     "12 joueurs entre 2 000 et 5 000 $, donc environ 50-60 000 $/semaine
 //     de masse salariale" en début de carrière BuzzerBeater) ;
 //   - un effectif de niveau Division II (tierMultiplier ~1.27, l'équivalent
-//     des ~320 000 à 600 000 €/semaine relevés sur de vrais effectifs
+//     des ~320 000 à 600 000 $/semaine relevés sur de vrais effectifs
 //     BuzzerBeater de ce niveau).
 // Les joueurs vedettes du marché des transferts BuzzerBeater (130 000 à
-// 300 000 €/semaine) et les joueurs de complément (quelques centaines
+// 300 000 $/semaine) et les joueurs de complément (quelques centaines
 // d'euros) ont servi à vérifier le haut et le bas de la courbe. Recalé en
 // simulant des effectifs réels générés à CHAQUE niveau de tierMultiplier
 // (voir DIVISIONS) et en cherchant les trois constantes qui satisfont LES
 // DEUX ancrages à la fois (une seule référence, comme avant, ne suffisait
 // pas : caler uniquement sur le petit effectif de départ sous-évaluait
 // largement une Division II, et l'inverse gonflait un effectif neuf bien
-// au-delà de 60 000 €/semaine). Recalé une seconde fois après l'ajout de
+// au-delà de 60 000 $/semaine). Recalé une seconde fois après l'ajout de
 // generateStartingRoster (effectif de départ nettement plus faible qu'avant
 // — voir plus bas — donc une référence plus basse que le premier passage).
 const SALARY_BASELINE_OVERALL = 5; // overall de référence (bas de l'échelle, calibré sur la masse salariale globale, pas un joueur isolé)
@@ -1641,7 +1641,7 @@ class Team {
   }
 
   // Vend un joueur LISTÉ (voir Player.forSale/salePrice) : liquidation
-  // D'URGENCE à 1 €, réservée à la mise en vente forcée en cas de déficit
+  // D'URGENCE à 1 $, réservée à la mise en vente forcée en cas de déficit
   // prolongé (voir trainWeek) — un mécanisme séparé et bien plus rapide que
   // le vrai marché des transferts aux enchères (voir League.listPlayerForSale
   // / placeBid / refreshMarket), pour un club qui n'a plus le temps d'attendre
@@ -2225,7 +2225,7 @@ class Team {
     // de semaines CONSÉCUTIVES où le budget (une fois toutes les
     // transactions de la semaine passées) reste sous le seuil, remis à zéro
     // dès qu'il repasse au-dessus. Au bout de DEFICIT_GRACE_WEEKS semaines
-    // sans redressement, tout l'effectif est listé à 1 € (voir
+    // sans redressement, tout l'effectif est listé à 1 $ (voir
     // Player.forSale/salePrice, Team.sellPlayer) — une seule fois, pas
     // reconduit chaque semaine tant que ça reste non résolu.
     let deficitAlert = false;
@@ -2730,7 +2730,7 @@ function inferPosition(attrs, cardPosition) {
 // poste (voir weightedRatingForPosition). Sinon, même une caractéristique
 // signature à 90+ finit noyée dans la moyenne pondérée de tout le reste du
 // profil (constaté sur le cas concret signalé par l'utilisateur : 97 en tir
-// à 3 points, reste du profil ordinaire → seulement 1848 € malgré un tir de
+// à 3 points, reste du profil ordinaire → seulement 1848 $ malgré un tir de
 // classe mondiale).
 //
 // Seuil volontairement très haut (90) : la génération normale d'un joueur

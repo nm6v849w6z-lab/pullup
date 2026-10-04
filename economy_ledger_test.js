@@ -32,7 +32,8 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   // produits dérivés, contrats de sponsors en cours), jamais 0.
   win.eval(`teamA.week = 4; teamA.sponsorContracts = [{ id: "s1", status: "active", weekly: 12345, sponsorName: "Test", slotLabel: "Maillot" }]; teamA.recordTransaction("Billetterie vs C (3000 spect.)", 50000);`);
   win.eval("ecoRenderLedger()");
-  const fmt = n => win.eval(`ecoMoney(${n})`).replace(/\u202f|\u00a0/g, " ").replace(/^[-−+]/, "");
+  // Montant inséré dans une RegExp : « $ » (monnaie du jeu) échappé.
+  const fmt = n => win.eval(`ecoMoney(${n})`).replace(/\u202f|\u00a0/g, " ").replace(/^[-−+]/, "").replace(/\$/g, "\\$");
   const t4 = txt().replace(/\u202f|\u00a0/g, " ");
   const wages = win.eval("teamA.players.reduce((s, p) => s + p.salary, 0)");
   const merch = win.eval("ecoRecurring().merch");

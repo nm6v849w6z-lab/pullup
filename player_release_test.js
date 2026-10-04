@@ -37,7 +37,7 @@ const ok = m => console.log("✅ " + m);
   assert.ok(!after.players.some(x => x.id === victim.id));
   assert.ok(Math.abs((budgetBefore - fee) - after.budget) < 1e-6 || after.budget <= budgetBefore - fee + 1, `budget débité (${budgetBefore} → ${after.budget}, indemnité ${fee})`);
   assert.ok((r.body.league.freeAgents || []).some(x => x.id === victim.id), "devient agent libre");
-  ok(`licenciement : indemnité ${fee} € débitée, joueur agent libre`);
+  ok(`licenciement : indemnité ${fee} $ débitée, joueur agent libre`);
 
   r = await api("/api/player/release", { playerId: victim.id });
   assert.strictEqual(r.status, 400);

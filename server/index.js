@@ -2696,7 +2696,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           });
           if (!out.ok) {
             const msg = out.reason === "invalid-salary"
-              ? (out.floor != null && out.floor === out.demand ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(out.demand).toLocaleString("fr-FR")} €).` : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.")
+              ? (out.floor != null && out.floor === out.demand ? `Après trois refus, il ne signe qu'au salaire demandé (${Math.round(out.demand).toLocaleString("fr-FR")} $).` : "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.")
               : out.reason === "already-agreed" ? "Accord déjà conclu avec ce joueur." : out.reason === "former-club" ? "Votre ancien joueur ne veut pas revenir." : "Négociation impossible.";
             sendJson(res, 400, { ok: false, error: msg, reason: out.reason }); return;
           }

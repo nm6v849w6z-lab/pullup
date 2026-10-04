@@ -51,7 +51,7 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   assert.ok(askedSalary(p) <= Math.round(base * 1.1 / 10) * 10 + 10, "au plus +10 %");
   p.form = 95;
   assert.ok(askedSalary(p) < base, "un joueur très motivé demande un peu moins");
-  assert.strictEqual(askedSalary(p) % 10, 0, "arrondi à 10 €");
+  assert.strictEqual(askedSalary(p) % 10, 0, "arrondi à 10 $");
   assert.strictEqual(contractOfferFloor(10000), 9000);
   assert.strictEqual(contractAcceptanceChance(10000, 10000, 55, 50), 1, "au salaire demandé : toujours");
   const atFloor = contractAcceptanceChance(10000, 9000, 55, 50);
@@ -226,7 +226,7 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   ok("transfert : durée choisie avec l'enchère (et l'enchère auto), signature au salaire demandé, message, vendeur libéré");
 }
 
-// 7) Fin de contrat : départ libre (club humain), annonce agent libre à 1 €,
+// 7) Fin de contrat : départ libre (club humain), annonce agent libre à 1 $,
 // ancien club exclu, prime de signature = argent qui sort de l'économie.
 {
   const lg = freshLeague();
@@ -268,7 +268,7 @@ const cpuIdx = lg => lg.teams.findIndex(t => !t.isHuman);
   assert.strictEqual(p.contractUntilSeason, lg.contractSeason() + 1);
   assert.strictEqual(p.salary, fa.askedSalary);
   assert.ok(!lg.freeAgents.includes(p));
-  ok("fin de contrat : départ libre, agent libre à 1 €, ancien club exclu, prime de signature hors économie, contrat signé");
+  ok("fin de contrat : départ libre, agent libre à 1 $, ancien club exclu, prime de signature hors économie, contrat signé");
 }
 
 // 8) Agent libre invendu : un club de l'IA le signe ; 33 ans et plus : retraite.

@@ -118,7 +118,7 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   assert.ok(!(lgHome.liveMatches || {})[NC.superCupLiveKey(done)], "diffusion retirée");
   const cupChampLg = await World.loadLeague(ww, ww.cups.fr.champion.leagueId, multiSavePath);
   assert.ok((cupChampLg.teams[ww.cups.fr.champion.idx].trophies || []).some(tr => tr.type === "national-cup"), "trophée de Coupe nationale");
-  ok(`fin : ${winRef.name} remporte la Supercoupe (trophée${winner.isHuman ? `, prime de ${NC.SUPERCUP_WIN_BONUS} €` : ""}), palmarès du pays mis à jour ; trophée du vainqueur de la Coupe nationale`);
+  ok(`fin : ${winRef.name} remporte la Supercoupe (trophée${winner.isHuman ? `, prime de ${NC.SUPERCUP_WIN_BONUS} $` : ""}), palmarès du pays mis à jour ; trophée du vainqueur de la Coupe nationale`);
 
   // 4bis) Stats des joueurs (2026-09-30) : journal de matchs (tour
   // SUPERCUP_ROUND, comme la Coupe) des deux côtés, feuille de match.

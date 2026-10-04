@@ -64,7 +64,7 @@ transactionsText = doc3.getElementById("economieTransactions").textContent.repla
 console.log("\nJournal des transactions (annonce AVEC enchère) :", transactionsText.slice(0, 250));
 const playerName = win3.eval(`league.playerById(${myPlayerId}).name`);
 if (!transactionsText.includes("Enchère en cours") || !transactionsText.includes(playerName) || !transactionsText.includes("45 000")) {
-  throw new Error("❌ Une ligne 'Enchère en cours' devrait apparaître avec le nom du joueur et le montant de l'enchère (45 000 €), obtenu : " + transactionsText);
+  throw new Error("❌ Une ligne 'Enchère en cours' devrait apparaître avec le nom du joueur et le montant de l'enchère (45 000 $), obtenu : " + transactionsText);
 }
 console.log("✅ La ligne 'Enchère en cours' apparaît avec le nom du joueur et le montant exact de l'enchère.");
 

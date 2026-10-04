@@ -92,7 +92,7 @@ if (!sawAcademie) throw new Error("❌ La page Académie de jeunes n'a jamais é
 if (!sawConfirmedBlockRevealed) throw new Error("❌ Le bloc tactique confirmée n'a jamais été révélé pendant le tutoriel.");
 console.log("✅ Ordres, Salle et Académie de jeunes s'ouvrent bien pour de vrai, et la tactique confirmée est révélée pour l'expliquer.");
 
-// --- Écran de fin : récap + total, 200 000 € au total, exactement comme
+// --- Écran de fin : récap + total, 200 000 $ au total, exactement comme
 // convenu (retour utilisateur, 2026-09 : "il faut que le tuto permette de
 // gagne 200K en tout"). ---
 const recapRows = [...doc.querySelectorAll(".tour-recap-row")];
@@ -110,7 +110,7 @@ for (const topic of expectedTopics) {
 }
 const totalRewardVal = win.eval("tourTotalReward()");
 if (totalRewardVal !== 200000) throw new Error(`❌ Le total des primes devrait être 200000, obtenu ${totalRewardVal}.`);
-console.log(`✅ Écran de fin correct : 8 thèmes, total des primes = ${totalRewardVal} €.`);
+console.log(`✅ Écran de fin correct : 8 thèmes, total des primes = ${totalRewardVal} $.`);
 
 // --- Retour utilisateur (2026-09) : "Mets les vrais primes sur le
 // tutoriel" : le vrai budget du club (team.budget) doit avoir augmenté

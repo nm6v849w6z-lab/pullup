@@ -418,11 +418,29 @@
       var cls = (p.getAttribute("class") || "") + " " + ((p.parentNode && p.parentNode.getAttribute && p.parentNode.getAttribute("class")) || "");
       return p.nodeName === "TD" || /pos/i.test(cls) ? POS_EN[c] : null;
     }
+    // Monnaie du jeu en dollars (2026-10-04) : le jeu écrit « 300 000 $ »
+    // (usage français) ; en anglais et en chinois, symbole devant et virgules
+    // de milliers : « $300,000 », « $56,043/wk », « $159k ».
+    var MONEY_PRE = lang === "en" || lang === "zh";
+    var MONEY_RE = /(^|[^\w$.,])(-?\d{1,3}(?:[ \u00a0\u202f,.]\d{3})+|-?\d+)(?:[.,](\d+))?(\s?[kM])?[ \u00a0\u202f]?\$(?!\{)/g;
+    function moneyPrefix(t) {
+      if (!MONEY_PRE || t.indexOf("$") < 0) return t;
+      return t.replace(MONEY_RE, function (m0, pre, int, dec, unit) {
+        var neg = int.charAt(0) === "-";
+        var digits = (neg ? int.slice(1) : int).replace(/[ \u00a0\u202f,.]/g, "");
+        var grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return pre + (neg ? "-" : "") + "$" + grouped + (dec != null ? "." + dec : "") + (unit ? unit.trim() : "");
+      });
+    }
     function doText(node) {
       var v = node.nodeValue;
       if (!v) return;
       var p = node.parentNode;
       if (!p || p.nodeType !== 1) return;
+      if (MONEY_PRE && v.indexOf("$") >= 0 && !skipEl(p)) {
+        var mv = moneyPrefix(FRENCH.test(v) ? tr(v) : v);
+        if (mv !== v) { node.nodeValue = mv; return; }
+      }
       // (écrire la même valeur relancerait l'observateur à l'infini : en
       // italien, V(ictoire) reste « V »)
       if (v.length <= 3) { var pc = posCell(v, p); if (pc) { var nv = v.replace(v.trim(), pc); if (nv !== v) node.nodeValue = nv; return; } }
@@ -436,7 +454,7 @@
         var a = ATTRS[i];
         if (!el.hasAttribute(a)) continue;
         var v = el.getAttribute(a);
-        var t = tr(v);
+        var t = moneyPrefix(tr(v));
         if (t !== v) el.setAttribute(a, t);
       }
       if (el.nodeName === "INPUT" && /^(button|submit|reset)$/i.test(el.type) && el.value) {

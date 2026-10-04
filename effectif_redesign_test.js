@@ -17,7 +17,7 @@ try {
   // En-tête.
   const sub = doc.getElementById("rosterSubtitle").textContent;
   if (!/15 joueurs$/.test(sub)) throw new Error(`❌ Sous-titre attendu "<club>, 15 joueurs", obtenu "${sub}".`);
-  if (!/€/.test(doc.getElementById("rosterPayrollValue").textContent)) throw new Error("❌ La masse salariale devrait être affichée dans l'en-tête.");
+  if (!/\$/.test(doc.getElementById("rosterPayrollValue").textContent)) throw new Error("❌ La masse salariale devrait être affichée dans l'en-tête.");
   console.log("✅ En-tête : sous-titre + masse salariale.");
 
   // Un seul bloc de joueurs (retour utilisateur 2026-09-30 : plus de blocs

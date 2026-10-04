@@ -39,7 +39,7 @@ function freePort() {
     console.log("✅ ligue écrite et relue sur Redis (REDIS_URL)");
 
     // Texte accentué et grosse valeur : longueurs en octets correctes.
-    const big = JSON.stringify({ t: "é€😀".repeat(50000) });
+    const big = JSON.stringify({ t: "é$😀".repeat(50000) });
     await store.redisSet("test:big", big);
     store.clearRedisCache();
     assert.strictEqual(await store.redisGet("test:big"), big);

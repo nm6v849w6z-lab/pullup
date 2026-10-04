@@ -646,7 +646,7 @@ function withMockedRandom(value, fn) {
 // upgradeTrainingCenter/nextTrainingCenterLevel/trainingCenterGrowthMultiplier.
 // ---------------------------------------------------------------------
 {
-  console.log("\nTRAINING_CENTER_LEVELS :", TRAINING_CENTER_LEVELS.map(t => `${t.level}:${t.name} (${t.upgradeCost}€, ×${t.growthMultiplier})`).join(" | "));
+  console.log("\nTRAINING_CENTER_LEVELS :", TRAINING_CENTER_LEVELS.map(t => `${t.level}:${t.name} (${t.upgradeCost}$, ×${t.growthMultiplier})`).join(" | "));
   if (TRAINING_CENTER_LEVELS.length !== 5) throw new Error("❌ Le Centre de formation devrait avoir exactement 5 paliers.");
   if (TRAINING_CENTER_LEVELS[0].upgradeCost !== 0) throw new Error("❌ Le palier 1 devrait être gratuit (déjà acquis au démarrage).");
   for (let i = 1; i < TRAINING_CENTER_LEVELS.length; i++) {

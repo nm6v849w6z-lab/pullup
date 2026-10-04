@@ -1,4 +1,4 @@
-// Bots : tout joueur à 50 de général ou plus est mis en vente à 1 €
+// Bots : tout joueur à 50 de général ou plus est mis en vente à 1 $
 // (retour utilisateur 2026-10-01), sans descendre sous l'effectif minimum,
 // et un bot n'enchérit jamais sur un tel joueur.
 const E = require("./engine.js");
@@ -16,7 +16,7 @@ lg.transferListings = [];
 lg.lastCpuListingCheckAt = 0;
 lg.refreshMarket(NOW);
 const open = lg.transferListings.filter(l => l.status === "open" && l.sellerIdx === cpuIdx);
-assert(stars.every(p => open.some(l => l.playerId === p.id && l.startPrice === 1)), "les trois joueurs du bot sont en vente à 1 €");
+assert(stars.every(p => open.some(l => l.playerId === p.id && l.startPrice === 1)), "les trois joueurs du bot sont en vente à 1 $");
 assert(lg.teams.every((t, i) => t.isHuman || t.players.every(p => p.overall() < E.CPU_STAR_SELL_OVERALL || lg.transferListings.some(l => l.status === "open" && l.playerId === p.id) || lg.contractSaleBlocked(p) || t.players.length <= E.MIN_ROSTER_SIZE)), "aucun bot ne garde un joueur à 50+ hors marché");
 
 // Pas de doublon à la vérification suivante.

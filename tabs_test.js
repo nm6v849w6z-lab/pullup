@@ -110,14 +110,14 @@ const gradinsRange = doc.getElementById("ticketPriceRange_gradins");
 const logeRange = doc.getElementById("ticketPriceRange_loge");
 if (!gradinsRange || !logeRange) throw new Error("❌ Chaque catégorie de places devrait avoir son propre curseur de prix.");
 if (gradinsRange.max === logeRange.max) throw new Error("❌ Les catégories de places ne devraient pas avoir la même fourchette de prix (gradins vs loges VIP).");
-console.log(`✅ 3 catégories de places, chacune avec sa propre fourchette de prix (gradins jusqu'à ${gradinsRange.max} €, loges jusqu'à ${logeRange.max} €).`);
+console.log(`✅ 3 catégories de places, chacune avec sa propre fourchette de prix (gradins jusqu'à ${gradinsRange.max} $, loges jusqu'à ${logeRange.max} $).`);
 
 // Change le prix des loges VIP et vérifie la persistance.
 logeRange.value = "90";
 logeRange.dispatchEvent(new win.Event("change"));
 await flush(dom);
 let saved = readRawSave(savePath);
-console.log("Prix des loges VIP après réglage à 90 € :", saved.team.ticketPrices.loge);
+console.log("Prix des loges VIP après réglage à 90 $ :", saved.team.ticketPrices.loge);
 if (saved.team.ticketPrices.loge !== 90) throw new Error("❌ Le prix des loges VIP n'a pas été mis à jour : " + saved.team.ticketPrices.loge);
 if (saved.team.ticketPrices.gradins === 90) throw new Error("❌ Changer le prix des loges ne devrait pas affecter le prix des gradins (catégories indépendantes).");
 console.log("✅ Chaque catégorie de places a un prix indépendant, et c'est bien persisté.");
