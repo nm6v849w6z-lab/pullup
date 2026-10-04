@@ -6076,4 +6076,17 @@ window.HM_I18N_IT = {
   "Signet non enregistré.": "Preferito non salvato.",
   "{0} joueurs en signets au maximum.": "{0} giocatori tra i preferiti al massimo.",
   "Joueur introuvable.": "Giocatore non trovato.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Fedeltà",
+  "Garder un joueur dans son effectif trois saisons.": "Tenere un giocatore in rosa per tre stagioni.",
+  "Pilier du vestiaire": "Pilastro dello spogliatoio",
+  "Garder un joueur dans son effectif cinq saisons.": "Tenere un giocatore in rosa per cinque stagioni.",
+  "Une vie au club": "Una vita nel club",
+  "Garder un joueur dans son effectif dix saisons.": "Tenere un giocatore in rosa per dieci stagioni.",
+  "Noyau dur": "Zoccolo duro",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Avere cinque giocatori in rosa da almeno tre stagioni.",
+  "Succès débloqué : Fidélité": "Traguardo sbloccato: Fedeltà",
+  "Succès débloqué : Pilier du vestiaire": "Traguardo sbloccato: Pilastro dello spogliatoio",
+  "Succès débloqué : Une vie au club": "Traguardo sbloccato: Una vita nel club",
+  "Succès débloqué : Noyau dur": "Traguardo sbloccato: Zoccolo duro",
 };

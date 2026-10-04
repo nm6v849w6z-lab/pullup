@@ -88,7 +88,7 @@ async function waitFor(fn, label, tries = 200) {
     const kpis = page.querySelector(".mp-kpis").textContent;
     const cur = league.standings().find(r => r.idx === iA);
     check(kpis.includes(`${14 + cur.wins} V – ${4 + cur.losses} D`) && /Titres\s*1/.test(kpis) && /Montées\s*1/.test(kpis), "bilan : victoires/défaites en carrière, titres, montées");
-    check(page.querySelectorAll("#mpAchievements .ach").length === 14 && page.querySelectorAll("#mpAchievements .ach.on").length === 1, "succès du manager (grille complète, 1 débloqué)");
+    check(page.querySelectorAll("#mpAchievements .ach").length === 16 && page.querySelectorAll("#mpAchievements .ach.on").length === 1, "succès du manager (grille complète, 1 débloqué)");
     check(page.querySelectorAll(".mp-table tbody tr").length === 2, "saison par saison : en cours + archivée");
     check(/aszat\s*a déclaré/.test(page.querySelector(".mp-quotes").textContent) && /Théophile Cosset/.test(page.textContent), "interviews relues attribuées au pseudo");
     check(!/@|antony/i.test(page.textContent), "aucun email");

@@ -6013,4 +6013,17 @@ window.HM_I18N_LT = {
   "Signet non enregistré.": "Žymė neišsaugota.",
   "{0} joueurs en signets au maximum.": "Daugiausia {0} pažymėtų žaidėjų.",
   "Joueur introuvable.": "Žaidėjas nerastas.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Ištikimybė",
+  "Garder un joueur dans son effectif trois saisons.": "Išlaikyk žaidėją sudėtyje tris sezonus.",
+  "Pilier du vestiaire": "Rūbinės ramstis",
+  "Garder un joueur dans son effectif cinq saisons.": "Išlaikyk žaidėją sudėtyje penkis sezonus.",
+  "Une vie au club": "Visas gyvenimas klube",
+  "Garder un joueur dans son effectif dix saisons.": "Išlaikyk žaidėją sudėtyje dešimt sezonų.",
+  "Noyau dur": "Tvirtas branduolys",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Turėk penkis žaidėjus sudėtyje bent tris sezonus.",
+  "Succès débloqué : Fidélité": "Pasiekimas atrakintas: Ištikimybė",
+  "Succès débloqué : Pilier du vestiaire": "Pasiekimas atrakintas: Rūbinės ramstis",
+  "Succès débloqué : Une vie au club": "Pasiekimas atrakintas: Visas gyvenimas klube",
+  "Succès débloqué : Noyau dur": "Pasiekimas atrakintas: Tvirtas branduolys",
 };

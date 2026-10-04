@@ -6013,4 +6013,17 @@ window.HM_I18N_EL = {
   "Signet non enregistré.": "Ο σελιδοδείκτης δεν αποθηκεύτηκε.",
   "{0} joueurs en signets au maximum.": "Έως {0} παίκτες σε σελιδοδείκτες.",
   "Joueur introuvable.": "Ο παίκτης δεν βρέθηκε.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Πίστη",
+  "Garder un joueur dans son effectif trois saisons.": "Κράτα έναν παίκτη στο ρόστερ τρεις σεζόν.",
+  "Pilier du vestiaire": "Πυλώνας των αποδυτηρίων",
+  "Garder un joueur dans son effectif cinq saisons.": "Κράτα έναν παίκτη στο ρόστερ πέντε σεζόν.",
+  "Une vie au club": "Μια ζωή στον σύλλογο",
+  "Garder un joueur dans son effectif dix saisons.": "Κράτα έναν παίκτη στο ρόστερ δέκα σεζόν.",
+  "Noyau dur": "Σκληρός πυρήνας",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Να έχεις πέντε παίκτες στο ρόστερ εδώ και τουλάχιστον τρεις σεζόν.",
+  "Succès débloqué : Fidélité": "Επίτευγμα: Πίστη",
+  "Succès débloqué : Pilier du vestiaire": "Επίτευγμα: Πυλώνας των αποδυτηρίων",
+  "Succès débloqué : Une vie au club": "Επίτευγμα: Μια ζωή στον σύλλογο",
+  "Succès débloqué : Noyau dur": "Επίτευγμα: Σκληρός πυρήνας",
 };

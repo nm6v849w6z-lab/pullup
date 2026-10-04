@@ -6013,4 +6013,17 @@ window.HM_I18N_DE = {
   "Signet non enregistré.": "Lesezeichen nicht gespeichert.",
   "{0} joueurs en signets au maximum.": "Höchstens {0} Spieler in den Lesezeichen.",
   "Joueur introuvable.": "Spieler nicht gefunden.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Treue",
+  "Garder un joueur dans son effectif trois saisons.": "Einen Spieler drei Saisons im Kader halten.",
+  "Pilier du vestiaire": "Stütze der Kabine",
+  "Garder un joueur dans son effectif cinq saisons.": "Einen Spieler fünf Saisons im Kader halten.",
+  "Une vie au club": "Ein Leben im Verein",
+  "Garder un joueur dans son effectif dix saisons.": "Einen Spieler zehn Saisons im Kader halten.",
+  "Noyau dur": "Harter Kern",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Fünf Spieler seit mindestens drei Saisons im Kader haben.",
+  "Succès débloqué : Fidélité": "Erfolg freigeschaltet: Treue",
+  "Succès débloqué : Pilier du vestiaire": "Erfolg freigeschaltet: Stütze der Kabine",
+  "Succès débloqué : Une vie au club": "Erfolg freigeschaltet: Ein Leben im Verein",
+  "Succès débloqué : Noyau dur": "Erfolg freigeschaltet: Harter Kern",
 };

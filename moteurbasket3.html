@@ -8018,7 +8018,9 @@
   .fr-tag-ok{color:var(--ok); border-color:rgba(51,180,161,.55);}
   .fr-tag-youth{color:#8fb9f0; border-color:rgba(57,135,229,.5); margin-left:6px;}
   /* Signets (2026-10-04) : étoile de la fiche joueur, page Signets, toast. */
-  .pdp2-btn.pdp2-bm{display:inline-flex; align-items:center; gap:6px;}
+  .pdp2-btn.pdp2-bm{display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; width:auto; min-height:30px; padding:0 12px; font-size:12.5px; border-radius:999px;}
+  .pdp2-btn.pdp2-bm svg{width:14px; height:14px; flex:0 0 auto;}
+  .pdp2-id-share{display:flex; flex-direction:column; align-items:center; gap:8px;}
   .pdp2-btn.pdp2-bm.is-on{color:var(--amber); border-color:rgba(240,162,60,.55);}
   .bm-intro{margin:-6px 0 14px;}
   .bm-empty{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px;}
@@ -9234,7 +9236,6 @@
   <div id="signetsSection" class="hidden">
     <div class="section">
       <h2 class="page-title">Signets</h2>
-      <p class="sub bm-intro">Les joueurs que vous avez mis en signet depuis leur fiche (☆). Ils y restent même s'ils changent de club ou de championnat.</p>
       <div id="signetsContent"></div>
     </div>
   </div>
@@ -24679,7 +24680,10 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
-  team.achievements = Array.isArray(data.achievements) ? data.achievements.map(a => ({ ...a })) : [];
+  // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
+  // (Liste déclarée plus bas dans le fichier : garde-fou si appelé avant.)
+  const knownAch = (() => { try { return new Set(MANAGER_ACHIEVEMENTS_CLIENT.map(d => d[0])); } catch (e) { return null; } })();
+  team.achievements = Array.isArray(data.achievements) ? data.achievements.filter(a => a && (!knownAch || knownAch.has(a.key))).map(a => ({ ...a })) : [];
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir engine.js, miroir identique.
@@ -33306,7 +33310,9 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `<div class="pdp2-infos">${tiles.join("")}`;
   html += `</div></div>`; // infos, id-text
   // « Partager » en haut à droite de l'en-tête (retour utilisateur 2026-10-03).
-  if (isOwnTeam && !playerDetailForeign) html += `<div class="pdp2-id-share">${pdpShareHtml(player)}</div>`;
+  // Signet juste en dessous (retour utilisateur 2026-10-04 : à côté de
+  // « Comparer », il prenait trop de place et décalait tout à gauche).
+  html += `<div class="pdp2-id-share">${isOwnTeam && !playerDetailForeign ? pdpShareHtml(player) : ""}${pdpBookmarkBtnHtml(player)}</div>`;
   html += `</div>`; // id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
@@ -33394,8 +33400,7 @@ function renderPlayerDetail(teamIdx, playerId) {
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
   html += `<div class="pdp2-actions">` +
-    (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`) +
-    pdpBookmarkBtnHtml(player);
+    (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`);
   if (isOwnTeam) {
     html += onMarket
       ? `<span class="pdp2-btn pdp2-btn--static">Aux enchères</span>`
@@ -33684,13 +33689,13 @@ const BM_STAR = on => `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidd
 function pdpBookmarkBtnHtml(player) {
   if (!teamA || !player) return "";
   const on = teamA.isBookmarked(player.id);
-  return `<button type="button" class="pdp2-btn pdp2-bm${on ? " is-on" : ""}" data-pdp-bookmark aria-pressed="${on}" title="${on ? "Retirer des signets" : "Ajouter aux signets"}">${BM_STAR(on)}<span>${on ? "Dans mes signets" : "Signet"}</span></button>`;
+  return `<button type="button" class="pdp2-btn pdp2-bm${on ? " is-on" : ""}" data-pdp-bookmark aria-pressed="${on}" title="${on ? "Retirer des signets" : "Ajouter aux signets"}">${BM_STAR(on)}<span>${on ? "Signets" : "Signet"}</span></button>`;
 }
 function setDetailBookmarkBtn(btn, on) {
   btn.classList.toggle("is-on", on);
   btn.setAttribute("aria-pressed", String(on));
   btn.title = on ? "Retirer des signets" : "Ajouter aux signets";
-  btn.innerHTML = `${BM_STAR(on)}<span>${on ? "Dans mes signets" : "Signet"}</span>`;
+  btn.innerHTML = `${BM_STAR(on)}<span>${on ? "Signets" : "Signet"}</span>`;
 }
 // Ajout / retrait : affiché tout de suite, enregistré par le serveur, annulé
 // s'il refuse (joueur introuvable, plafond…).
@@ -55664,8 +55669,10 @@ const MANAGER_ACHIEVEMENTS_CLIENT = [
   ["unbeatenHome", "Forteresse", "Gagner tous ses matchs à domicile en saison régulière."],
   ["mvpPlayer", "Faiseur de MVP", "Avoir le MVP de la saison dans son effectif."],
   ["youngTalent", "Dénicheur de talents", "Avoir le meilleur jeune de la saison dans son effectif."],
-  ["seasons3", "Fidèle au poste", "Diriger le même club trois saisons."],
-  ["seasons10", "Monument du club", "Diriger le même club dix saisons."],
+  ["keep3", "Fidélité", "Garder un joueur dans son effectif trois saisons."],
+  ["keep5", "Pilier du vestiaire", "Garder un joueur dans son effectif cinq saisons."],
+  ["keep10", "Une vie au club", "Garder un joueur dans son effectif dix saisons."],
+  ["core5", "Noyau dur", "Avoir cinq joueurs dans son effectif depuis au moins trois saisons."],
   ["wins100", "Centenaire", "Atteindre 100 victoires de championnat avec son club."],
 ];
 

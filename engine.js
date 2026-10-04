@@ -5594,6 +5594,9 @@ function buildSeasonArchive(league, opts = {}) {
 
 function recordPlayerEvent(p, ev) {
   if (!p || !ev) return;
+  // Saison d'arrivée dans son club actuel (succès « garder un joueur N
+  // saisons », 2026-10-04) : tout transfert / signature / promotion passe ici.
+  if ((ev.type === "transfer" || ev.type === "promotion") && typeof ev.season === "number") p.clubSinceSeason = ev.season;
   if (!Array.isArray(p.historyLog)) p.historyLog = [];
   p.historyLog.unshift(ev);
   if (p.historyLog.length > PLAYER_HISTORY_LOG_MAX) p.historyLog.length = PLAYER_HISTORY_LOG_MAX;
@@ -11178,8 +11181,12 @@ const MANAGER_ACHIEVEMENTS = [
   { key: "unbeatenHome", label: "Forteresse", description: "Gagner tous ses matchs à domicile en saison régulière." },
   { key: "mvpPlayer", label: "Faiseur de MVP", description: "Avoir le MVP de la saison dans son effectif." },
   { key: "youngTalent", label: "Dénicheur de talents", description: "Avoir le meilleur jeune de la saison dans son effectif." },
-  { key: "seasons3", label: "Fidèle au poste", description: "Diriger le même club trois saisons." },
-  { key: "seasons10", label: "Monument du club", description: "Diriger le même club dix saisons." },
+  // « Diriger le même club 3 / 10 saisons » remplacés (retour utilisateur
+  // 2026-10-04) par des succès de fidélité des joueurs.
+  { key: "keep3", label: "Fidélité", description: "Garder un joueur dans son effectif trois saisons." },
+  { key: "keep5", label: "Pilier du vestiaire", description: "Garder un joueur dans son effectif cinq saisons." },
+  { key: "keep10", label: "Une vie au club", description: "Garder un joueur dans son effectif dix saisons." },
+  { key: "core5", label: "Noyau dur", description: "Avoir cinq joueurs dans son effectif depuis au moins trois saisons." },
   { key: "wins100", label: "Centenaire", description: "Atteindre 100 victoires de championnat avec son club." },
 ];
 const MANAGER_ACHIEVEMENT_BY_KEY = Object.fromEntries(MANAGER_ACHIEVEMENTS.map(a => [a.key, a]));
@@ -11202,6 +11209,15 @@ function unlockAchievement(team, key, seasonNumber, now) {
   return true;
 }
 
+// Saison (numéro de saison du club, voir teamSeasonNo) depuis laquelle le
+// joueur est dans ce club : Player.clubSinceSeason ; à défaut (sauvegarde
+// d'avant ce champ), sa dernière arrivée dans l'historique ; sinon il est
+// là depuis la première saison (effectif de départ).
+function playerClubSinceSeason(p, team) {
+  if (p && typeof p.clubSinceSeason === "number") return p.clubSinceSeason;
+  const ev = ((p && p.historyLog) || []).find(e => e && (e.type === "transfer" || e.type === "promotion") && e.to === (team && team.name));
+  return ev && typeof ev.season === "number" ? ev.season : 1;
+}
 function evaluateManagerAchievements(league, teamIdx, awards, now) {
   const team = league.teams[teamIdx];
   const seasonNumber = league.seasonNumber || 1;
@@ -11222,8 +11238,14 @@ function evaluateManagerAchievements(league, teamIdx, awards, now) {
   if (awards.some(a => a.key === "mvp" && a.teamIdx === teamIdx)) u("mvpPlayer");
   if (awards.some(a => a.key === "youngPlayer" && a.teamIdx === teamIdx)) u("youngTalent");
   const seasons = (team.seasonHistory || []).length + (team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : 1);
-  if (seasons >= 3) u("seasons3");
-  if (seasons >= 10) u("seasons10");
+  // Ancienneté des joueurs : saisons passées au club, saison en cours comprise
+  // (voir playerClubSinceSeason).
+  const tenures = (team.players || []).map(p => seasons - playerClubSinceSeason(p, team) + 1);
+  const longest = tenures.length ? Math.max(...tenures) : 0;
+  if (longest >= 3) u("keep3");
+  if (longest >= 5) u("keep5");
+  if (longest >= 10) u("keep10");
+  if (tenures.filter(t => t >= 3).length >= 5) u("core5");
   const pastWins = (team.seasonHistory || []).reduce((a, h) => a + (h.wins || 0), 0);
   const curWins = team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : row.wins;
   if (pastWins + curWins >= 100) u("wins100");
@@ -16359,6 +16381,7 @@ function serializePlayerRecord(p) {
     // pushPlayerHistory. Suit le joueur d'un club à l'autre.
     weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],
     ...(Array.isArray(p.historyLog) && p.historyLog.length ? { historyLog: p.historyLog.map(e => ({ ...e })) } : {}),
+    ...(typeof p.clubSinceSeason === "number" ? { clubSinceSeason: p.clubSinceSeason } : {}),
     ...(Array.isArray(p.injuryHistory) && p.injuryHistory.length ? { injuryHistory: p.injuryHistory.map(e => ({ ...e })) } : {}),
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
@@ -16994,6 +17017,7 @@ function playerFromSave(pdata) {
   p.progressLog = Array.isArray(pdata.progressLog) ? pdata.progressLog.map(x => ({ ...x })) : [];
   p.weeklyHistory = Array.isArray(pdata.weeklyHistory) ? pdata.weeklyHistory.filter(e => Array.isArray(e)).map(e => e.slice()) : [];
   p.historyLog = Array.isArray(pdata.historyLog) ? pdata.historyLog.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
+  p.clubSinceSeason = typeof pdata.clubSinceSeason === "number" ? pdata.clubSinceSeason : null;
   p.injuryHistory = Array.isArray(pdata.injuryHistory) ? pdata.injuryHistory.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
@@ -17255,7 +17279,8 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
-  team.achievements = Array.isArray(data.achievements) ? data.achievements.map(a => ({ ...a })) : [];
+  // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
+  team.achievements = Array.isArray(data.achievements) ? data.achievements.filter(a => a && MANAGER_ACHIEVEMENT_BY_KEY[a.key]).map(a => ({ ...a })) : [];
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   team.pendingRecapEvents = Array.isArray(data.pendingRecapEvents) ? data.pendingRecapEvents : [];

@@ -6013,4 +6013,17 @@ window.HM_I18N_ES = {
   "Signet non enregistré.": "Marcador no guardado.",
   "{0} joueurs en signets au maximum.": "{0} jugadores en marcadores como máximo.",
   "Joueur introuvable.": "Jugador no encontrado.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Fidelidad",
+  "Garder un joueur dans son effectif trois saisons.": "Mantener a un jugador en la plantilla tres temporadas.",
+  "Pilier du vestiaire": "Pilar del vestuario",
+  "Garder un joueur dans son effectif cinq saisons.": "Mantener a un jugador en la plantilla cinco temporadas.",
+  "Une vie au club": "Toda una vida en el club",
+  "Garder un joueur dans son effectif dix saisons.": "Mantener a un jugador en la plantilla diez temporadas.",
+  "Noyau dur": "Núcleo duro",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Tener cinco jugadores en la plantilla desde hace al menos tres temporadas.",
+  "Succès débloqué : Fidélité": "Logro desbloqueado: Fidelidad",
+  "Succès débloqué : Pilier du vestiaire": "Logro desbloqueado: Pilar del vestuario",
+  "Succès débloqué : Une vie au club": "Logro desbloqueado: Toda una vida en el club",
+  "Succès débloqué : Noyau dur": "Logro desbloqueado: Núcleo duro",
 };

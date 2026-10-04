@@ -6038,4 +6038,17 @@ window.HM_I18N_EN = {
   "Signet non enregistré.": "Bookmark not saved.",
   "{0} joueurs en signets au maximum.": "{0} bookmarked players maximum.",
   "Joueur introuvable.": "Player not found.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Loyalty",
+  "Garder un joueur dans son effectif trois saisons.": "Keep a player in your squad for three seasons.",
+  "Pilier du vestiaire": "Locker-room pillar",
+  "Garder un joueur dans son effectif cinq saisons.": "Keep a player in your squad for five seasons.",
+  "Une vie au club": "A life at the club",
+  "Garder un joueur dans son effectif dix saisons.": "Keep a player in your squad for ten seasons.",
+  "Noyau dur": "Core group",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Have five players in your squad for at least three seasons.",
+  "Succès débloqué : Fidélité": "Achievement unlocked: Loyalty",
+  "Succès débloqué : Pilier du vestiaire": "Achievement unlocked: Locker-room pillar",
+  "Succès débloqué : Une vie au club": "Achievement unlocked: A life at the club",
+  "Succès débloqué : Noyau dur": "Achievement unlocked: Core group",
 };

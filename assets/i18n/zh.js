@@ -6013,4 +6013,17 @@ window.HM_I18N_ZH = {
   "Signet non enregistré.": "收藏未保存。",
   "{0} joueurs en signets au maximum.": "最多收藏{0}名球员。",
   "Joueur introuvable.": "找不到球员。",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "忠诚",
+  "Garder un joueur dans son effectif trois saisons.": "让一名球员在阵中效力三个赛季。",
+  "Pilier du vestiaire": "更衣室支柱",
+  "Garder un joueur dans son effectif cinq saisons.": "让一名球员在阵中效力五个赛季。",
+  "Une vie au club": "一生一队",
+  "Garder un joueur dans son effectif dix saisons.": "让一名球员在阵中效力十个赛季。",
+  "Noyau dur": "核心班底",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "阵中有五名球员效力至少三个赛季。",
+  "Succès débloqué : Fidélité": "成就解锁：忠诚",
+  "Succès débloqué : Pilier du vestiaire": "成就解锁：更衣室支柱",
+  "Succès débloqué : Une vie au club": "成就解锁：一生一队",
+  "Succès débloqué : Noyau dur": "成就解锁：核心班底",
 };

@@ -6013,4 +6013,17 @@ window.HM_I18N_PL = {
   "Signet non enregistré.": "Zakładka nie została zapisana.",
   "{0} joueurs en signets au maximum.": "Maksymalnie {0} zawodników w zakładkach.",
   "Joueur introuvable.": "Nie znaleziono zawodnika.",
+  // Succès de fidélité des joueurs (2026-10-04).
+  "Fidélité": "Lojalność",
+  "Garder un joueur dans son effectif trois saisons.": "Utrzymaj zawodnika w składzie przez trzy sezony.",
+  "Pilier du vestiaire": "Filar szatni",
+  "Garder un joueur dans son effectif cinq saisons.": "Utrzymaj zawodnika w składzie przez pięć sezonów.",
+  "Une vie au club": "Całe życie w klubie",
+  "Garder un joueur dans son effectif dix saisons.": "Utrzymaj zawodnika w składzie przez dziesięć sezonów.",
+  "Noyau dur": "Twardy trzon",
+  "Avoir cinq joueurs dans son effectif depuis au moins trois saisons.": "Miej pięciu zawodników w składzie od co najmniej trzech sezonów.",
+  "Succès débloqué : Fidélité": "Osiągnięcie odblokowane: Lojalność",
+  "Succès débloqué : Pilier du vestiaire": "Osiągnięcie odblokowane: Filar szatni",
+  "Succès débloqué : Une vie au club": "Osiągnięcie odblokowane: Całe życie w klubie",
+  "Succès débloqué : Noyau dur": "Osiągnięcie odblokowane: Twardy trzon",
 };
