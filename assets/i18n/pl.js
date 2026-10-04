@@ -5981,4 +5981,13 @@ window.HM_I18N_PL = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Oferta zbyt niska: nawet jej nie rozważy. Zbliż się do jego żądania.",
   "Inutile de proposer plus que sa demande.": "Nie trzeba oferować więcej, niż żąda.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "Jeśli odrzuci twoją kontrofertę, negocjacje się kończą.",
+  "Liste des transferts": "Lista transferowa",
+  "Accord conclu avec le joueur :": "Porozumienie z zawodnikiem:",
+  "Enchérir sur le Marché": "Licytuj na Rynku",
+  "Voir l'annonce sur le Marché": "Zobacz ogłoszenie na Rynku",
+  "Prix de départ :": "Cena wywoławcza:",
+  "Prime de signature actuelle :": "Aktualna premia za podpis:",
+  "Prime de signature (départ) :": "Premia za podpis (start):",
+  "/ sem. · {0} saisons": "/ tydz. · {0} sezony",
+  "/ sem. · {0} saison": "/ tydz. · {0} sezon",
 };

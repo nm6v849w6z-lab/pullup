@@ -5981,4 +5981,13 @@ window.HM_I18N_ES = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Oferta demasiado baja: ni siquiera la estudia. Acércate a su petición.",
   "Inutile de proposer plus que sa demande.": "No hace falta ofrecer más de lo que pide.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "Si rechaza tu contraoferta, las negociaciones se acaban.",
+  "Liste des transferts": "Lista de transferibles",
+  "Accord conclu avec le joueur :": "Acuerdo alcanzado con el jugador:",
+  "Enchérir sur le Marché": "Pujar en el Mercado",
+  "Voir l'annonce sur le Marché": "Ver el anuncio en el Mercado",
+  "Prix de départ :": "Precio de salida:",
+  "Prime de signature actuelle :": "Prima de fichaje actual:",
+  "Prime de signature (départ) :": "Prima de fichaje (salida):",
+  "/ sem. · {0} saisons": "/ sem. · {0} temporadas",
+  "/ sem. · {0} saison": "/ sem. · {0} temporada",
 };

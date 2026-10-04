@@ -5981,4 +5981,13 @@ window.HM_I18N_ZH = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "报价太低：他连考虑都不考虑。请接近他的要求。",
   "Inutile de proposer plus que sa demande.": "无需高于他的要求。",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "如果他拒绝你的还价，谈判即告结束。",
+  "Liste des transferts": "转会名单",
+  "Accord conclu avec le joueur :": "已与球员达成协议：",
+  "Enchérir sur le Marché": "在市场出价",
+  "Voir l'annonce sur le Marché": "在市场查看挂牌",
+  "Prix de départ :": "起拍价：",
+  "Prime de signature actuelle :": "当前签字费：",
+  "Prime de signature (départ) :": "签字费（起价）：",
+  "/ sem. · {0} saisons": "/周 · {0}个赛季",
+  "/ sem. · {0} saison": "/周 · {0}个赛季",
 };

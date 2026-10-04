@@ -5981,4 +5981,13 @@ window.HM_I18N_EL = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Πολύ χαμηλή προσφορά: ούτε καν την εξετάζει. Πλησίασε το αίτημά του.",
   "Inutile de proposer plus que sa demande.": "Δεν χρειάζεται να προσφέρεις περισσότερα από όσα ζητά.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "Αν απορρίψει την αντιπρόταση, οι διαπραγματεύσεις τελειώνουν.",
+  "Liste des transferts": "Λίστα μεταγραφών",
+  "Accord conclu avec le joueur :": "Συμφωνία με τον παίκτη:",
+  "Enchérir sur le Marché": "Πλειοδότησε στην Αγορά",
+  "Voir l'annonce sur le Marché": "Δες την αγγελία στην Αγορά",
+  "Prix de départ :": "Τιμή εκκίνησης:",
+  "Prime de signature actuelle :": "Τρέχον μπόνους υπογραφής:",
+  "Prime de signature (départ) :": "Μπόνους υπογραφής (αρχή):",
+  "/ sem. · {0} saisons": "/ εβδ. · {0} σεζόν",
+  "/ sem. · {0} saison": "/ εβδ. · {0} σεζόν",
 };

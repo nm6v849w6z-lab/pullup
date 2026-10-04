@@ -5981,4 +5981,13 @@ window.HM_I18N_DE = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Angebot zu niedrig: Er prüft es nicht einmal. Nähere dich seiner Forderung.",
   "Inutile de proposer plus que sa demande.": "Mehr als seine Forderung musst du nicht bieten.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "Lehnt er dein Gegenangebot ab, sind die Verhandlungen beendet.",
+  "Liste des transferts": "Transferliste",
+  "Accord conclu avec le joueur :": "Einigung mit dem Spieler:",
+  "Enchérir sur le Marché": "Auf dem Markt bieten",
+  "Voir l'annonce sur le Marché": "Angebot auf dem Markt ansehen",
+  "Prix de départ :": "Startpreis:",
+  "Prime de signature actuelle :": "Aktuelles Handgeld:",
+  "Prime de signature (départ) :": "Handgeld (Start):",
+  "/ sem. · {0} saisons": "/ Wo. · {0} Saisons",
+  "/ sem. · {0} saison": "/ Wo. · {0} Saison",
 };

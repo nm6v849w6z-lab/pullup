@@ -6006,4 +6006,13 @@ window.HM_I18N_EN = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Offer too low: he won't even consider it. Get closer to his demand.",
   "Inutile de proposer plus que sa demande.": "No need to offer more than his demand.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "If he refuses your counter-offer, negotiations are over.",
+  "Liste des transferts": "Transfer list",
+  "Accord conclu avec le joueur :": "Agreement reached with the player:",
+  "Enchérir sur le Marché": "Bid on the Market",
+  "Voir l'annonce sur le Marché": "See the listing on the Market",
+  "Prix de départ :": "Starting price:",
+  "Prime de signature actuelle :": "Current signing bonus:",
+  "Prime de signature (départ) :": "Signing bonus (start):",
+  "/ sem. · {0} saisons": "/ wk · {0} seasons",
+  "/ sem. · {0} saison": "/ wk · {0} season",
 };

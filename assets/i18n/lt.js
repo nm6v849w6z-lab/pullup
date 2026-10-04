@@ -5981,4 +5981,13 @@ window.HM_I18N_LT = {
   "Offre trop basse : il refuse même de l'étudier. Rapprochez-vous de sa demande.": "Per mažas pasiūlymas: jis net nesvarsto. Priartėk prie jo prašymo.",
   "Inutile de proposer plus que sa demande.": "Nereikia siūlyti daugiau, nei jis prašo.",
   "S'il refuse votre contre-offre, les négociations sont terminées.": "Jei jis atmes tavo priešpasiūlymą, derybos baigsis.",
+  "Liste des transferts": "Perėjimų sąrašas",
+  "Accord conclu avec le joueur :": "Susitarta su žaidėju:",
+  "Enchérir sur le Marché": "Statyti Rinkoje",
+  "Voir l'annonce sur le Marché": "Žiūrėti skelbimą Rinkoje",
+  "Prix de départ :": "Pradinė kaina:",
+  "Prime de signature actuelle :": "Dabartinė pasirašymo premija:",
+  "Prime de signature (départ) :": "Pasirašymo premija (pradinė):",
+  "/ sem. · {0} saisons": "/ sav. · {0} sezonai",
+  "/ sem. · {0} saison": "/ sav. · {0} sezonas",
 };

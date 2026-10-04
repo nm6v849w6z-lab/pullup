@@ -32348,6 +32348,14 @@ document.getElementById("playerDetailContent").addEventListener("input", (e) => 
   hint.textContent = h.label;
 });
 document.getElementById("playerDetailContent").addEventListener("click", (e) => {
+  const mg = e.target.closest("[data-pdp-market-goto]");
+  if (mg) {
+    const id = Number(mg.dataset.pdpMarketGoto);
+    TAB_HANDLERS.marche();
+    if (marketUi.expanded) marketUi.expanded.add(id); // téléphone : bloc d'enchère déplié
+    mkGotoListing(id);
+    return;
+  }
   // En-tête de la fiche (refonte 2026-09-25) : "Comparer" = même action que
   // le bouton "⇄ Comparer" de la barre du haut ; "Vendre" descend à la
   // carte "Mise en vente" et place le curseur dans le champ de prix.
@@ -33536,6 +33544,14 @@ function renderPlayerDetail(teamIdx, playerId) {
     // Partager tout en bas, sans cadre (retour 2026-10-03).
     html = mainHtml;
   }
+  // Joueur d'un autre club sur la liste des transferts (retour utilisateur
+  // 2026-10-04 : « pouvoir négocier avec le joueur sur la TL directement
+  // depuis son profil […] éviter les allers-retours ») : même négociation
+  // que la carte du Marché (mkNegotiationHtml / mkNegotiate), puis lien
+  // vers l'enchère.
+  if (!isOwnTeam && onMarket && openListing && openListing.sellerIdx !== myTeamIndex && !playerDetailForeign) {
+    sideCards = `<div class="pdp-contract-sale pdp2-side-cards">${pdpTransferCardHtml(openListing, player)}</div>`;
+  }
   // Personnalisation (Premium), Historique du joueur et Blessures côte à
   // côte (historique et blessures pour tout joueur, comme sur BuzzerBeater).
   bottomCards = `<div class="pdp-contract-sale pdp2-bottom-cards">${bottomCards}${playerHistoryCardHtml(player)}${playerInjuryCardHtml(player, team)}</div>${shareBottom}`;
@@ -33551,6 +33567,28 @@ function renderPlayerDetail(teamIdx, playerId) {
 
   holder.innerHTML = html;
   loadPlayerRankings(teamIdx, playerId, playerDetailForeign ? playerDetailForeign.leagueId : null);
+}
+
+// Carte « Liste des transferts » de la fiche d'un joueur d'un autre club en
+// vente : enchère en cours, négociation du contrat (ou accord conclu) et
+// bouton vers l'annonce du Marché pour enchérir.
+function pdpTransferCardHtml(l, player) {
+  const now = Date.now();
+  const asked = typeof l.askedSalary === "number" ? l.askedSalary : askedSalary(player);
+  const fa = l.sellerIdx == null;
+  const price = l.currentBid
+    ? `${fa ? "Prime de signature actuelle" : "Enchère actuelle"} : <b>${escapeHtml(formatMoney(l.currentBid))}</b>`
+    : `${fa ? "Prime de signature (départ)" : "Prix de départ"} : <b>${escapeHtml(formatMoney(l.startPrice))}</b>`;
+  const deal = l.myAgreement;
+  const body = mkHasAgreement(l)
+    ? `<div class="mk-deal-ok">Accord conclu avec le joueur : <b>${escapeHtml(formatMoney(deal && typeof deal.salary === "number" ? deal.salary : asked))}</b> / sem.${deal && deal.seasons ? ` · ${deal.seasons} saison${deal.seasons > 1 ? "s" : ""}` : ""}</div>`
+    : mkNegotiationHtml(l, asked);
+  return `<div class="pdp-card" id="pdpTransferCard"><h3>Liste des transferts</h3>` +
+    `<p class="training-intro"><span class="market-listed-badge">Aux enchères</span> <span>${price}</span> · <span>${escapeHtml(timeLeftLabel(l.closesAt, now))}</span></p>` +
+    `<p class="sub">Salaire demandé : <b>${escapeHtml(formatMoney(asked))}</b> / sem.</p>` +
+    body +
+    `<p class="training-intro" style="margin-top:10px;"><button type="button" class="secondary" data-pdp-market-goto="${l.id}">${mkHasAgreement(l) ? "Enchérir sur le Marché" : "Voir l'annonce sur le Marché"}</button></p>` +
+    `</div>`;
 }
 
 // Classements du joueur (retour utilisateur 2026-10-03, façon BuzzerBeater) :
@@ -48219,6 +48257,18 @@ function mkNegotiationHtml(l, asked) {
     (firm ? `<div class="mk-hint">Après trois refus, il ne signe qu'au salaire demandé (${escapeHtml(formatMoney(demand))}).</div>` : "") +
     `</div>`;
 }
+// Après une proposition : fiche joueur rafraîchie si c'est depuis elle qu'on
+// a négocié (voir pdpTransferCardHtml), sinon la carte du Marché.
+function mkNegotiationRerender(l) {
+  const sec = document.getElementById("playerDetailSection");
+  if (sec && !sec.classList.contains("hidden") && document.getElementById("pdpTransferCard") && currentPlayerDetailRef && currentPlayerDetailRef.playerId === l.playerId) {
+    renderPlayerDetail(currentPlayerDetailRef.teamIdx, currentPlayerDetailRef.playerId);
+    const card = document.getElementById("pdpTransferCard");
+    if (card && card.scrollIntoView) card.scrollIntoView({ block: "nearest" });
+    return;
+  }
+  renderMarcheSectionKeeping(`marketCard_${l.id}`);
+}
 async function mkNegotiate(listingId) {
   const l = (league.transferListings || []).find(x => String(x.id) === String(listingId));
   if (!l) return;
@@ -48229,8 +48279,8 @@ async function mkNegotiate(listingId) {
   try {
     const res = await fetchApi("/api/market/negotiate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId: l.id, salary, seasons }) });
     data = await res.json().catch(() => null);
-    if (!res.ok || !data || !data.ok) { marketUi.nego[l.id] = { ok: false, text: (data && data.error) || "Négociation impossible pour l'instant.", salary, seasons }; renderMarcheSectionKeeping(`marketCard_${l.id}`); return; }
-  } catch (e) { marketUi.nego[l.id] = { ok: false, text: "Serveur indisponible, réessayez.", salary, seasons }; renderMarcheSectionKeeping(`marketCard_${l.id}`); return; }
+    if (!res.ok || !data || !data.ok) { marketUi.nego[l.id] = { ok: false, text: (data && data.error) || "Négociation impossible pour l'instant.", salary, seasons }; mkNegotiationRerender(l); return; }
+  } catch (e) { marketUi.nego[l.id] = { ok: false, text: "Serveur indisponible, réessayez.", salary, seasons }; mkNegotiationRerender(l); return; }
   if (data.accepted) {
     l.myAgreement = { salary: data.salary, seasons: data.seasons };
     delete l.myNegotiation;
@@ -48239,7 +48289,7 @@ async function mkNegotiate(listingId) {
     l.myNegotiation = { refusals: data.refusals, demand: data.demand };
     marketUi.nego[l.id] = { ok: false, text: `Refusé : il trouve l'offre trop basse. Sa demande passe à ${formatMoney(data.demand)} / sem.`, html: `Refusé : il trouve l'offre trop basse. Sa demande passe à <b>${escapeHtml(formatMoney(data.demand))}</b> / sem.`, salary: null, seasons };
   }
-  renderMarcheSectionKeeping(`marketCard_${l.id}`);
+  mkNegotiationRerender(l);
 }
 document.addEventListener("click", e => {
   const b = e.target.closest && e.target.closest("[data-mk-negotiate]");
