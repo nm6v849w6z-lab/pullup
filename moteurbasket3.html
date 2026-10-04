@@ -57276,7 +57276,9 @@ window.addEventListener("popstate", (e) => {
 // syncTopbarBack (appelée par showPage).
 // Pages « principales » = les 4 onglets de la barre du bas du téléphone ;
 // toutes les autres (ouvertes depuis le menu ou un lien) ont le « Retour ».
-const NAV_MAIN_TABS = new Set(["club", "ordres", "calendrier", "economie"]);
+// Plus d'« Ordres » dans la barre du bas (2026-10-04) : la page Ordres a
+// donc son « ‹ Retour ».
+const NAV_MAIN_TABS = new Set(["club", "calendrier", "economie"]);
 function syncTopbarBack(id) {
   const b = document.getElementById("topbarBackBtn");
   if (!b) return;

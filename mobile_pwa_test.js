@@ -45,7 +45,7 @@ for (let i = 0; i < 50 && !doc.getElementById("mTabbar"); i++) await new Promise
 const tabbar = doc.getElementById("mTabbar");
 assert(!!tabbar, "Barre d'onglets du bas construite par mobile.js");
 const tabs = [...tabbar.querySelectorAll(".tab-btn")].map(b => b.dataset.tab);
-assert(JSON.stringify(tabs) === JSON.stringify(["club", "ordres", "calendrier", "economie"]), "Onglets : Accueil, Ordres, Calendrier, Économie (" + tabs.join(", ") + ")");
+assert(JSON.stringify(tabs) === JSON.stringify(["club", "calendrier", "economie"]), "Onglets : Accueil, Calendrier, Économie, plus d'Ordres (" + tabs.join(", ") + ")");
 tabbar.querySelector('[data-tab="economie"]').click();
 assert(!doc.getElementById("economieSection").classList.contains("hidden"), "L'onglet Économie du bas ouvre bien la page Économie");
 assert(tabbar.querySelector('[data-tab="economie"]').classList.contains("active") && doc.querySelector('.sidebar .tab-btn[data-tab="economie"]').classList.contains("active"), "Onglet actif synchronisé entre barre du bas et menu latéral");

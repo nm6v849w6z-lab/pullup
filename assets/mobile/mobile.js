@@ -3,7 +3,9 @@
    code" (choix : PWA + Capacitor, écrans du quotidien d'abord).
    Tout le mobile vit ici et dans mobile.css, à part de moteurbasket3.html,
    pour ne pas se mélanger au reste du jeu :
-   - barre d'onglets en bas (Accueil, Ordres, Calendrier, Économie, Menu) :
+   - barre d'onglets en bas (Accueil, Calendrier, Économie, Menu — plus
+     d'« Ordres » depuis le 2026-10-04 : ordres d'un match = son bouton dans
+     le Calendrier ou sur l'Accueil) :
      de VRAIS .tab-btn[data-tab], donc la navigation existante (délégation
      [data-tab] sur document + setActiveTab) les gère sans rien de plus ;
    - le menu latéral devient un tiroir (bouton Menu, fond cliquable, Échap) ;
@@ -24,7 +26,6 @@
   }
   var ICONS = {
     club: "M3 11l9-7 9 7 M5 10v10h14V10 M10 20v-6h4v6",
-    ordres: "M9 5h10 M9 12h10 M9 19h10 M4.5 5h.01 M4.5 12h.01 M4.5 19h.01",
     calendrier: "M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4",
     economie: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M12 7v10 M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5",
     menu: "M4 7h16 M4 12h16 M4 17h16",
@@ -68,7 +69,6 @@
     if (document.getElementById("mTabbar")) return;
     var tabs = [
       ["club", "Accueil"],
-      ["ordres", "Ordres"],
       ["calendrier", "Calendrier"],
       ["economie", "Économie"],
     ];
