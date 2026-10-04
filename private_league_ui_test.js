@@ -155,7 +155,9 @@ async function waitFor(fn, label, tries = 60) {
     w.eval("TAB_HANDLERS.calendrier()");
     // Carte "Prochain match" du Calendrier : elle suit l'ordre chronologique
     // réel des lignes ; rendue ici directement pour une ligne de ligue privée.
-    const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: n.dueAt, isLive: false, lpId: n.lp.id, lpOrdered: false }); })()`);
+    const card = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: Date.now() + 3600 * 1000, isLive: false, lpId: n.lp.id, lpOrdered: false }); })()`);
+    const lockedCard = w.eval(`(() => { const n = lpMyNextMatch(); return calendarNextMatchCardHtml({ competition: "lp", label: "x", shortLabel: "J1", isHome: n.isHome, opponentIdx: n.oppIdx, location: "Domicile", scheduledAt: Date.now() + 60 * 1000, isLive: false, lpId: n.lp.id, lpOrdered: true }); })()`);
+    check(/Ordres verrouillés/.test(lockedCard) && !/Modifier les ordres/.test(lockedCard), "carte Prochain match de LP à moins de 5 min : « Ordres verrouillés »");
     check(/Prochain match · Ligue privée · J1/.test(card) && /data-order-target="lp:/.test(card) && /Donner les ordres/.test(card) && !/data-tab="ordres"/.test(card), "Calendrier : carte « Prochain match · Ligue privée · J1 » avec bouton Donner les ordres");
     d.getElementById("topbarOrdersBtn").click();
     check(!d.getElementById("prepSection").classList.contains("hidden") && w.eval("tqEdit && tqEdit.kind") === "lp", "le bouton de la barre du haut ouvre les ordres de la ligue privée");

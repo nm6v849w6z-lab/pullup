@@ -2085,8 +2085,10 @@
   .topbar-online b{font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap;}
   .topbar-online b::before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; vertical-align:1px; box-shadow:0 0 6px rgba(34,197,94,.7);}
   .topbar-online:empty{display:none;}
-  .cal-season{margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim);}
-  .cal-season select{background:var(--panel, #12192b); color:var(--ink); border:1px solid var(--line-soft); border-radius:8px; padding:6px 10px; font:inherit;}
+  /* Sélecteur de saison (archives) — classe distincte de .cal-season, qui
+     est la carte « Saison » du calendrier (collision corrigée 2026-10-04). */
+  .cal-season-pick{margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim);}
+  .cal-season-pick select{background:var(--panel, #12192b); color:var(--ink); border:1px solid var(--line-soft); border-radius:8px; padding:6px 10px; font:inherit;}
   @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-online{display:none;} }
   @media (max-width:1024px), (max-height:520px) and (pointer:coarse){ .topbar-budget{display:none;} }
   .topbar-meta{display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:12px; color:var(--ink-dim); text-align:right;}
@@ -48677,7 +48679,10 @@ function calendarNextMatchCardHtml(row) {
     // Ligue privée et amical : le bouton ouvre leurs ordres, comme pour un
     // match officiel (retour utilisateur 2026-10-02).
     : row.competition === "lp" && row.lpId
-    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("lp", row.lpId, row.lpRound))}>${row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
+    // Verrou à T − 5 min (retour 2026-10-04 : la carte disait encore
+    // « Modifier les ordres » quand la barre du haut affichait « Ordres
+    // verrouillés »).
+    ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor("lp", row.lpId, row.lpRound))}>${typeof row.scheduledAt === "number" && Date.now() >= row.scheduledAt - 5 * 60 * 1000 ? "Ordres verrouillés" : row.lpOrdered ? "Modifier les ordres" : "Donner les ordres"}</button>`
     : row.competition === "lp"
     ? `<button type="button" class="cal-next-btn" data-tab="lp">Voir la ligue privée</button>`
     : row.competition === "fr" && row.frId && !row.frPending
@@ -48780,7 +48785,7 @@ function calArchiveFetchList() {
 function calSeasonSelectHtml() {
   if (!calArchive.list || !calArchive.list.length) return "";
   const cur = league.seasonNumber || 1;
-  return `<label class="cal-season">Saison <select id="calSeasonSelect" aria-label="Saison affichée">` +
+  return `<label class="cal-season-pick">Saison <select id="calSeasonSelect" aria-label="Saison affichée">` +
     `<option value=""${calArchive.viewing == null ? " selected" : ""}>Saison ${cur} (en cours)</option>` +
     calArchive.list.filter(n => n !== cur).map(n => `<option value="${n}"${calArchive.viewing === n ? " selected" : ""}>Saison ${n}</option>`).join("") +
     `</select></label>`;
@@ -54092,11 +54097,16 @@ async function lpRefreshFromServer() {
     return true;
   } catch (e) { return false; } finally { lpKickoffPollBusy = false; }
 }
-setInterval(async () => {
+// Coup d'envoi passé et direct pas encore reçu : relecture auprès du
+// serveur toutes les 15 s pendant 3 h (durée d'un direct, marge comprise),
+// et tout de suite au retour sur l'onglet (retour 2026-10-04 : « le match
+// de LP de 10h n'a pas commencé » — fenêtre limitée à 15 min, et rien
+// tant que l'onglet était en arrière-plan à l'heure du coup d'envoi).
+async function lpKickoffTick() {
   if (typeof document === "undefined" || document.visibilityState === "hidden" || !teamA || !league) return;
   let n = null;
   try { n = nextNonOfficialMatch(); } catch (e) { return; }
-  if (n && n.kind === "lp" && !n.lpNext.live && Date.now() >= n.at && Date.now() - n.at < 15 * 60 * 1000) {
+  if (n && n.kind === "lp" && !n.lpNext.live && Date.now() >= n.at && Date.now() - n.at < 3 * 60 * 60 * 1000) {
     await lpRefreshFromServer();
     try { n = nextNonOfficialMatch(); } catch (e) { return; }
   }
@@ -54111,7 +54121,9 @@ setInterval(async () => {
   try { if (visible("calendrierSection")) renderCalendrierSection(); } catch (e) { /* rien */ }
   try { if (visible("lpSection")) renderLpSection(); } catch (e) { /* rien */ }
   try { if (tqEdit && tqEdit.kind === "lp" && visible("prepSection")) renderTacticEditorBar(); } catch (e) { /* rien */ }
-}, 15000);
+}
+setInterval(lpKickoffTick, 15000);
+if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") lpKickoffTick(); });
 
 // Ouvre les ordres du prochain match (onglet Ordres, bouton du topbar).
 function openNextMatchOrders() {
