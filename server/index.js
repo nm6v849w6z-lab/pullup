@@ -1660,13 +1660,40 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         let out;
         if (body && body.action === "dismiss") out = NationalTeams.adminDismiss(natStore, body.teamId, now, null);
         else if (body && body.action === "cancel-election") out = NationalTeams.adminCancelElection(natStore, body.electionId, now);
+        // Nommer un sélectionneur sans élection (essais) : body { action:
+        // "appoint", teamId: "fr-A", club: "Nom exact du club" }. Le club
+        // doit avoir un manager ; son vivier est calculé tout de suite.
+        else if (body && body.action === "appoint") {
+          const NationalCoach = require("./nationalCoach.js");
+          const world = await World.loadWorld(multiSavePath, now);
+          if (!world) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée." }); return; }
+          const leagues = new Map();
+          let me = null, season = 1;
+          const wanted = String((body && body.club) || "").trim().toLowerCase();
+          for (const entry of world.leagues) {
+            const lg = await World.loadLeague(world, entry.id, multiSavePath);
+            if (!lg) continue;
+            leagues.set(entry.id, lg);
+            const idx = lg.teams.findIndex(t => t && t.isHuman && String(t.name || "").trim().toLowerCase() === wanted);
+            if (idx >= 0 && !me) { me = NationalTeams.managerOf(entry.id, lg, idx, world); season = lg.seasonNumber || 1; }
+          }
+          out = NationalCoach.adminAppoint(natStore, body.teamId, me, season, now, null);
+          if (out.ok) {
+            const team = natStore.teams[body.teamId];
+            const pool = NationalCoach.buildPool(natStore, team, leagues, world, now);
+            await NationalCoach.savePool(body.teamId, pool, multiSavePath);
+            natStore.poolAt = natStore.poolAt || {};
+            natStore.poolAt[body.teamId] = now;
+            out.eligible = pool.eligible;
+          }
+        }
         else if (body && body.action === "config" && body.config && typeof body.config === "object") {
           const allowed = Object.keys(NationalTeams.DEFAULT_CONFIG);
           const patch = {};
           Object.keys(body.config).forEach(k => { if (allowed.includes(k)) patch[k] = body.config[k]; });
           natStore.config = { ...(natStore.config || {}), ...patch };
           out = { ok: true, config: NationalTeams.configOf(natStore) };
-        } else out = { ok: false, error: "action : dismiss | cancel-election | config." };
+        } else out = { ok: false, error: "action : dismiss | cancel-election | config | appoint." };
         if (!out.ok) { sendJson(res, out.status || 400, out); return; }
         await NationalTeams.saveStore(natStore, multiSavePath);
         sendJson(res, 200, out);
@@ -2828,6 +2855,39 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const el = natStore.elections.find(e => e.id === route.searchParams.get("id"));
           if (!el) { sendJson(res, 404, { ok: false, error: "Élection introuvable." }); return; }
           sendJson(res, 200, { ok: true, election: NationalTeams.publicElection(natStore, el, me, true), coach: NationalTeams.publicMandate(NationalTeams.activeMandate(natStore, el.teamId)) });
+          return;
+        }
+        // Phase B (server/nationalCoach.js) : espace du sélectionneur.
+        // GET /api/national/coach?id= ; POST /api/national/coach/{list,
+        // convocation,replace,tactics} — réservés au sélectionneur en poste.
+        if (route.pathname === "/api/national/coach" || route.pathname.startsWith("/api/national/coach/")) {
+          const NationalCoach = require("./nationalCoach.js");
+          let body = null;
+          if (req.method === "POST") {
+            try { body = req.__parsedBody !== undefined ? req.__parsedBody : await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+          }
+          const teamId = req.method === "GET" ? route.searchParams.get("id") : body && body.teamId;
+          const coachCtx = { pool: await NationalCoach.loadPool(teamId, multiSavePath), season, calendarStartAt: ctx.league.calendarStartAt };
+          if (req.method === "POST") {
+            const COACH_ACTIONS = {
+              "/api/national/coach/list": NationalCoach.setListMember,
+              "/api/national/coach/convocation": NationalCoach.setConvocation,
+              "/api/national/coach/replace": NationalCoach.replaceConvoked,
+              "/api/national/coach/tactics": NationalCoach.setTactics,
+            };
+            const fnC = COACH_ACTIONS[route.pathname];
+            if (!fnC) { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
+            const outC = fnC(natStore, me, body || {}, now, coachCtx);
+            if (!outC.ok) { sendJson(res, outC.status || 400, { ok: false, error: outC.error }); return; }
+            try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
+            // Notifications en attente : envoyées au prochain passage du monde.
+            if (Array.isArray(natStore.outbox) && natStore.outbox.length) {
+              const cur = nextWorldDeadlineAt.get(multiSavePath);
+              if (cur == null || now + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, now + 1000);
+            }
+          } else if (req.method !== "GET" || route.pathname !== "/api/national/coach") { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
+          const view = NationalCoach.coachView(natStore, me, teamId, now, coachCtx);
+          sendJson(res, view.ok ? 200 : (view.status || 400), view);
           return;
         }
         const NAT_ACTIONS = {

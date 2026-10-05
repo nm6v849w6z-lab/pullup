@@ -77,11 +77,11 @@ const DEFAULT_CONFIG = {
   // restants), recalculé au plus toutes les heures (forme, stats à jour).
   squadSize: 12,
   squadRefreshMs: 3600 * 1000,
-  // Calendrier (retour utilisateur 2026-10-05) : 3 fenêtres internationales
-  // le dimanche (semaines 3, 7 et 10 : jamais le dimanche de l'All-Star,
-  // semaine 5) ; phase finale pendant la dernière semaine, du lundi (jour
-  // 76 de la saison) au dimanche (jour 82), à 20h.
-  windowWeeks: [3, 7, 10],
+  // Calendrier (retour utilisateur 2026-10-05, définitif) : 3 fenêtres
+  // internationales le dimanche des semaines 2, 4 et 6 (la semaine 5 est
+  // celle de l'All-Star) ; phase finale pendant la dernière semaine, du
+  // lundi (jour 76 de la saison) au dimanche (jour 82), à 20h.
+  windowWeeks: [2, 4, 6],
   finalFirstDay: 76,
   matchHour: 20,
 };
@@ -393,9 +393,14 @@ function step(store, leagues, world, now) {
   if (seasonStart != null && now < seasonStart) due(seasonStart);
   // Groupes (intérim) : recalculés au plus toutes les heures.
   if (refreshSquads(store, leagues, world, now)) changed = true;
+  // Phase B (server/nationalCoach.js) : vivier des sélectionneurs, gel des
+  // convocations 3 jours avant le premier match, notifications en attente.
+  const coach = require("./nationalCoach.js").step(store, leagues, world, now, season, seasonStart);
+  if (coach.changed) changed = true;
+  coach.due.forEach(due);
   // Historique borné : élections closes de plus de 2 cycles.
   if (store.elections.length > 400) { store.elections.splice(0, store.elections.length - 400); changed = true; }
-  return { changed, nextDeadlineAt };
+  return { changed, nextDeadlineAt, pools: coach.pools };
 }
 
 // --- Groupe et calendrier ----------------------------------------------
@@ -508,6 +513,8 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     ok: true, season,
     team: { id: team.id, country: team.country, countryName: countryName(team.country), cat: team.cat },
     coach: publicMandate(activeMandate(store, team.id)),
+    // Phase B : bouton « Gérer la sélection » pour le sélectionneur en poste.
+    isCoach: !!(me && activeMandate(store, team.id) && activeMandate(store, team.id).key === me.key),
     election: el ? publicElection(store, el, me, false) : null,
     phase: pos >= 0 ? cfg.cycle[pos] : null,
     squad: sq ? { at: sq.at, source: sq.source, players: sq.players, eligible: sq.eligible, leagues: sq.leagues } : null,
@@ -641,7 +648,7 @@ function overview(store, me, season, now) {
 module.exports = {
   STORE_NAME, CATEGORIES, DEFAULT_CONFIG, emptyStore, isValidStore, configOf, loadStore, saveStore,
   teamIdOf, teamLabel, countryName, intlSeasonOf, cyclePos, isElectionSeason, mandateEndSeason, seasonStartOf, ensureTeams,
-  managerOf, managerAt, evalRule, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
+  managerOf, managerAt, notify, evalRule, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
   openElection, currentElection, closeElection, breakTie, step,
   runForElection, withdrawCandidacy, castVote, resign, adminDismiss, adminCancelElection,
   publicElection, publicMandate, overview,

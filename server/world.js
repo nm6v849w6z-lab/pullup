@@ -811,6 +811,11 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     if (natStore) {
       const r = NationalTeams.step(natStore, allLeagues, world, now);
       if (r.changed) await NationalTeams.saveStore(natStore, savePath);
+      // Viviers des sélectionneurs (phase B), rangés à part.
+      const NationalCoach = require("./nationalCoach.js");
+      for (const [teamId, pool] of Object.entries(r.pools || {})) {
+        try { await NationalCoach.savePool(teamId, pool, savePath); } catch (e) { console.warn("[sélections] vivier non enregistré :", e.message); }
+      }
       if (r.nextDeadlineAt != null && (nextDeadlineAt == null || r.nextDeadlineAt < nextDeadlineAt)) nextDeadlineAt = r.nextDeadlineAt;
     }
   } catch (e) { console.warn("[sélections]", e.message); }
