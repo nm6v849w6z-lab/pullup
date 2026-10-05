@@ -1105,11 +1105,14 @@ function trainingCenterInfo(level) {
 // recalés sur des données réelles de BuzzerBeater.
 const SEAT_CATEGORIES = [
   // Ordre d'affichage partout : de la place la plus éloignée du terrain à la
-  // plus exclusive.
-  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.53, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
-  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
-  { key: "courtside", name: "Courtside", shareOfCapacity: 0.02, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
-  { key: "loge", name: "Loges VIP", shareOfCapacity: 0.15, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
+  // plus exclusive. Plus une catégorie est exclusive, moins elle a de places
+  // (retour utilisateur 2026-10-05 : « pas cohérent d'avoir plus de VIP que
+  // de courtside ») ; recette d'une salle pleine quasi identique à l'ancienne
+  // répartition 55/30/15.
+  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.50, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
+  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.28, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  { key: "courtside", name: "Courtside", shareOfCapacity: 0.12, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
+  { key: "loge", name: "Loges VIP", shareOfCapacity: 0.10, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
 ];
 
 function seatCategoryInfo(key) {

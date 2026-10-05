@@ -2390,10 +2390,10 @@ function managerDisplayName(team) {
 // ---------------------------------------------------------------------
 // Courtside (retour utilisateur 2026-10-05 : 4 catégories, Tribune
 // Supérieure, Tribune Centrale, Courtside, Loges VIP) : quelques centaines de
-// places au bord du parquet, plus chères à construire que la Tribune Centrale
+// places au bord du parquet (toujours plus que de Loges VIP), plus chères à construire que la Tribune Centrale
 // mais moins que les Loges VIP. Les clés internes (gradins, tribune, loge)
 // restent celles des sauvegardes existantes, seuls les noms affichés changent.
-const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 1000, loge: 2500 };
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 3000, loge: 2500 };
 const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, courtside: 2000, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
 const ARENA_MAX_CAPACITY = Object.values(SEAT_CATEGORY_MAX_SEATS).reduce((s, n) => s + n, 0);
 // Palier (et donc nom par défaut) correspondant à une capacité totale : le
@@ -2456,11 +2456,14 @@ function trainingCenterInfo(level) {
 // recalés sur des données réelles de BuzzerBeater.
 const SEAT_CATEGORIES = [
   // Ordre d'affichage partout : de la place la plus éloignée du terrain à la
-  // plus exclusive.
-  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.53, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
-  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
-  { key: "courtside", name: "Courtside", shareOfCapacity: 0.02, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
-  { key: "loge", name: "Loges VIP", shareOfCapacity: 0.15, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
+  // plus exclusive. Plus une catégorie est exclusive, moins elle a de places
+  // (retour utilisateur 2026-10-05 : « pas cohérent d'avoir plus de VIP que
+  // de courtside ») ; recette d'une salle pleine quasi identique à l'ancienne
+  // répartition 55/30/15.
+  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.50, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
+  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.28, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  { key: "courtside", name: "Courtside", shareOfCapacity: 0.12, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
+  { key: "loge", name: "Loges VIP", shareOfCapacity: 0.10, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
 ];
 
 function seatCategoryInfo(key) {
@@ -17658,7 +17661,10 @@ function teamFromSave(data) {
   // d'une ancienne sauvegarde -> répartition du palier (currentSeats). Une
   // catégorie absente d'une sauvegarde d'avant son introduction (Courtside,
   // 2026-10-05) reçoit la part du palier de la salle, sans toucher aux places
-  // déjà construites dans les autres catégories.
+  // déjà construites dans les autres catégories. Le Courtside reste au-dessus
+  // des Loges VIP (centaine supérieure) ; une sauvegarde passée par la toute
+  // première version (2 % du palier, souvent moins que les loges) est
+  // reprise de la même façon.
   const savedSeats = data.seats && typeof data.seats === "object" ? data.seats : null;
   const validSeat = v => Number.isInteger(v) && v >= 0;
   if (savedSeats && Object.keys(savedSeats).every(k => validSeat(savedSeats[k])) && SEAT_CATEGORIES.some(c => validSeat(savedSeats[c.key]))) {
@@ -17668,6 +17674,12 @@ function teamFromSave(data) {
       const n = validSeat(savedSeats[c.key]) ? savedSeats[c.key] : Math.round(cap * c.shareOfCapacity);
       team.seats[c.key] = Math.min(n, SEAT_CATEGORY_MAX_SEATS[c.key]);
     });
+    const loge = team.seats.loge || 0;
+    const firstMigration = savedSeats.courtside === Math.round(cap * 0.02) && savedSeats.courtside <= loge;
+    if (!validSeat(savedSeats.courtside) || firstMigration) {
+      const n = Math.max(Math.round(cap * seatCategoryInfo("courtside").shareOfCapacity), Math.ceil((loge + 1) / 100) * 100);
+      team.seats.courtside = Math.min(n, SEAT_CATEGORY_MAX_SEATS.courtside);
+    }
   }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne

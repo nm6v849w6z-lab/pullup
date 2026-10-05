@@ -14,19 +14,21 @@ const actions = require("./server/actions.js");
 const { generateTeam, serializeTeam, teamFromSave, SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaInfo } = E;
 
 // 1) Plafonds et prix fixes.
-if (SEAT_CATEGORY_MAX_SEATS.loge !== 2500 || SEAT_CATEGORY_MAX_SEATS.courtside !== 1000 || ARENA_MAX_CAPACITY !== 46000) throw new Error("❌ Plafonds attendus : 1 000 Courtside, 2 500 Loges VIP, 46 000 places au total.");
+if (SEAT_CATEGORY_MAX_SEATS.loge !== 2500 || SEAT_CATEGORY_MAX_SEATS.courtside !== 3000 || ARENA_MAX_CAPACITY !== 48000) throw new Error("❌ Plafonds attendus : 3 000 Courtside, 2 500 Loges VIP, 48 000 places au total.");
+// Plus une catégorie est exclusive, moins elle a de places (part et plafond).
+E.SEAT_CATEGORIES.forEach((c, i, all) => { const n = all[i + 1]; if (n && (n.shareOfCapacity >= c.shareOfCapacity || SEAT_CATEGORY_MAX_SEATS[n.key] >= SEAT_CATEGORY_MAX_SEATS[c.key])) throw new Error(`❌ ${n.name} devrait avoir moins de places que ${c.name}.`); });
 // 4 catégories, dans l'ordre d'affichage (2026-10-05).
 const names = E.SEAT_CATEGORIES.map(c => c.name).join(" / ");
 if (names !== "Tribune Supérieure / Tribune Centrale / Courtside / Loges VIP") throw new Error(`❌ Catégories inattendues : ${names}.`);
 if (Math.abs(E.SEAT_CATEGORIES.reduce((s, c) => s + c.shareOfCapacity, 0) - 1) > 1e-9) throw new Error("❌ Les parts de capacité doivent faire 100 %.");
-console.log("✅ Plafonds : 27 500 Tribune Supérieure, 15 000 Tribune Centrale, 1 000 Courtside, 2 500 Loges VIP (46 000 au total).");
+console.log("✅ Plafonds : 27 500 Tribune Supérieure, 15 000 Tribune Centrale, 3 000 Courtside, 2 500 Loges VIP (48 000 au total), places décroissantes avec l'exclusivité.");
 
 // 2) Salle existante (palier 3 = 12 000 places) : répartition conservée.
 const t = generateTeam("Test", 1);
 t.arenaLevel = 3;
 const s0 = t.currentSeats();
-if (s0.gradins !== 6360 || s0.tribune !== 3600 || s0.courtside !== 240 || s0.loge !== 1800 || t.arenaCapacity() !== 12000) throw new Error(`❌ Une salle de palier 3 devrait avoir 6 360/3 600/240/1 800 places (${JSON.stringify(s0)}).`);
-console.log("✅ Salle de palier : 12 000 places réparties (6 360 / 3 600 / 240 / 1 800).");
+if (s0.gradins !== 6000 || s0.tribune !== 3360 || s0.courtside !== 1440 || s0.loge !== 1200 || t.arenaCapacity() !== 12000) throw new Error(`❌ Une salle de palier 3 devrait avoir 6 000/3 360/1 440/1 200 places (${JSON.stringify(s0)}).`);
+console.log("✅ Salle de palier : 12 000 places réparties (6 000 / 3 360 / 1 440 / 1 200).");
 
 // 3) Prix fixe : même coût par place, quelle que soit la taille de la tribune.
 t.budget = 10000000;
@@ -65,12 +67,21 @@ console.log(`✅ Nom de la salle selon la capacité (${t.arenaCapacity().toLocal
   save.seats = { gradins: 12000, tribune: 4000, loge: 900 };
   save.ticketPrices = { gradins: 18, tribune: 33, loge: 90 };
   const m = teamFromSave(save);
-  const exp = Math.round(arenaInfo(4).capacity * 0.02);
+  const exp = Math.round(arenaInfo(4).capacity * 0.12);
   if (m.seats.gradins !== 12000 || m.seats.tribune !== 4000 || m.seats.loge !== 900 || m.seats.courtside !== exp) throw new Error(`❌ Migration des places inattendue : ${JSON.stringify(m.seats)}.`);
   if (m.ticketPrices.gradins !== 18 || m.ticketPrices.loge !== 90 || m.ticketPrices.courtside !== 45) throw new Error(`❌ Migration des prix inattendue : ${JSON.stringify(m.ticketPrices)}.`);
   const res = m.simulateHomeAttendance("X");
   if (res.breakdown.map(b => b.key).join(",") !== "gradins,tribune,courtside,loge") throw new Error("❌ La recette doit couvrir les 4 catégories.");
-  console.log(`✅ Ancienne sauvegarde : places et prix gardés, +${exp} places Courtside, recette sur 4 catégories.`);
+  // Sauvegarde passée par la première version (2 % du palier, moins que les loges).
+  const first = teamFromSave({ ...save, seats: { gradins: 12000, tribune: 4000, courtside: Math.round(arenaInfo(4).capacity * 0.02), loge: 900 } });
+  if (first.seats.courtside !== exp) throw new Error(`❌ Première migration non reprise : ${JSON.stringify(first.seats)}.`);
+  // Beaucoup de loges : le Courtside passe quand même au-dessus.
+  const vip = teamFromSave({ ...save, seats: { gradins: 12000, tribune: 4000, loge: 2500 } });
+  if (vip.seats.courtside !== 2600) throw new Error(`❌ Le Courtside devrait dépasser les loges : ${JSON.stringify(vip.seats)}.`);
+  // Courtside construit par le joueur (même sous les loges) : jamais touché.
+  const built = teamFromSave({ ...save, seats: { gradins: 12000, tribune: 4000, courtside: 500, loge: 900 } });
+  if (built.seats.courtside !== 500) throw new Error("❌ Des places Courtside sauvegardées ne doivent pas changer.");
+  console.log(`✅ Ancienne sauvegarde : places et prix gardés, +${exp} places Courtside (toujours plus que les Loges VIP), recette sur 4 catégories.`);
 }
 
 // 6) Action serveur.
