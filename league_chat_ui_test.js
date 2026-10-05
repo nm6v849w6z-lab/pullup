@@ -31,7 +31,9 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
   const servers = [];
   try {
     // ------------------------------------------------------------------
-    // 1) Ligue à deux managers, deux journées jouées, un transfert.
+    // 1) Ligue à deux managers, deux journées jouées, un transfert conclu,
+    //    Bravo a écrit un message. Le chat n'affiche QUE ce message
+    //    (2026-10-05 : plus de résultats, transferts ni classement).
     // ------------------------------------------------------------------
     const now = Date.now();
     const names = ["Alpha CHAT", "Bravo CHAT"];
@@ -39,17 +41,18 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     const [iA, iB] = league.teams.map((t, i) => (t.isHuman ? i : -1)).filter(i => i >= 0);
     for (let r = 0; r < 2; r++) league.matchesForRound(r).forEach((m, k) => league.recordResult(r, m.home, m.away, 80 + k, 70 + k));
     league.round = 2;
-    league.logTransferNews({ id: "ui-1", at: now, playerName: "Jean <Test>", buyerIdx: iB, buyerName: "Bravo CHAT", sellerName: league.teams[5].name, fee: 150000 });
     const { server, multiSavePath, baseUrl } = await startTestServer(() => Date.now());
     servers.push(server);
     await store.saveMultiLeague(league, multiSavePath);
     const tA = league.teams[iA].managerLinkToken, tB = league.teams[iB].managerLinkToken;
+    const pre = await fetch(new URL("/api/league-chat/send", baseUrl), { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": tB }, body: JSON.stringify({ text: "Salut de Bravo" }) });
+    check(pre.status === 200, "Bravo écrit un message");
 
     const domA = await openGame(html, `${baseUrl}?m=${tA}`); doms.push(domA);
     const winA = domA.window, docA = winA.document;
     await winA.__lastLeagueChatCount;
     const ligueTab = [...docA.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "ligue");
-    check(await waitFor(() => badge(docA, "ligueChatBadge") === "9+", "pastille du menu"), "hors page Ligue : pastille « 9+ » sur l'entrée « Ligue » du menu");
+    check(await waitFor(() => badge(docA, "ligueChatBadge") === "1", "pastille du menu"), "hors page Ligue : pastille « 1 » sur l'entrée « Ligue » du menu (le message de Bravo, pas les résultats)");
     check(ligueTab.contains(docA.getElementById("ligueChatBadge")), "pastille dans le bouton « Ligue » du menu");
 
     goLigue(docA);
@@ -57,7 +60,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     check(!docA.querySelector("#standingsContent #leagueChat, #standingsContent .lgc"), "plus de panneau de chat dans la page Ligue");
     const openBtn = docA.querySelector("#standingsContent .lg-head #lgcOpenBtn");
     check(!!openBtn && /Chat de la ligue/.test(openBtn.textContent), "bouton « Chat de la ligue » dans l'en-tête de la page Ligue");
-    check(await waitFor(() => badge(docA, "lgcOpenBadge") === "9+", "pastille du bouton"), "bouton : pastille rouge « 9+ » (résultats et transfert non lus)");
+    check(await waitFor(() => badge(docA, "lgcOpenBadge") === "1", "pastille du bouton"), "bouton : pastille rouge « 1 » (seulement le message de Bravo)");
     check(!docA.getElementById("mTabMenu") || docA.getElementById("mTabMenu").classList.contains("lgc-has-unread"), "point sur « Menu » (mobile) tant qu'il y a des non-lus");
     check(!drawerOpen(docA), "chat fermé au départ");
 
@@ -71,11 +74,9 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     check(chat.contains(docA.activeElement), "focus déplacé dans le chat");
     check(badge(docA, "lgcOpenBadge") === "", "ouvert : la pastille retombe à 0");
     check(badge(docA, "ligueChatBadge") === "", "ouvert : la pastille du menu disparaît aussi");
-    check(chat.querySelectorAll(".lgc-sys--result").length === 10, "10 messages « Résultat » (2 journées)");
-    const res0 = chat.querySelector(".lgc-sys--result");
-    check(res0.querySelector(".lgc-kind").textContent === "Résultat" && / bat /.test(res0.querySelector(".lgc-sys-text").textContent), "carte « Résultat » : « X bat Y »");
-    const tr = chat.querySelector(".lgc-sys--transfer");
-    check(tr && tr.querySelector(".lgc-kind").textContent === "Transfert" && tr.textContent.includes("Jean <Test>") && !tr.querySelector("test"), "carte « Transfert » (nom échappé)");
+    const items = [...chat.querySelectorAll("#lgcList > *")].filter(el => !el.classList.contains("lgc-day") && !el.classList.contains("lgc-new"));
+    check(items.length === 1 && items[0].classList.contains("lgc-msg") && /Salut de Bravo/.test(items[0].textContent), "2 journées jouées : seul le message de Bravo est affiché");
+    check(!chat.querySelector(".lgc-sys, .lgc-kind") && !/ bat |Résultat|Transfert|Classement/.test(chat.querySelector("#lgcList").textContent), "aucun résultat, transfert ni classement dans le chat");
     const form = docA.getElementById("lgcForm");
     const input = docA.getElementById("lgcInput");
     check(!form.hidden && input.tagName === "INPUT" && docA.querySelector('label[for="lgcInput"]'), "champ de saisie avec son <label>");
@@ -134,10 +135,10 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     const winB = domB.window, docB = winB.document;
     goLigue(docB);
     await winB.__lastLeagueChatCount;
-    check(await waitFor(() => badge(docB, "lgcOpenBadge") === "9+", "pastille B"), "B : « 9+ » non lus");
+    check(await waitFor(() => badge(docB, "lgcOpenBadge") === "1", "pastille B"), "B : « 1 » non lu (le message d'Alpha)");
     docB.getElementById("lgcOpenBtn").click();
     await winB.__lastLeagueChat;
-    const other = docB.querySelector("#leagueChat .lgc-msg");
+    const other = docB.querySelector("#leagueChat .lgc-msg:not(.mine)");
     check(other && !other.classList.contains("mine") && other.querySelector(".lgc-by small").textContent === "Alpha CHAT", "B voit le message d'Alpha");
     check(badge(docB, "lgcOpenBadge") === "", "B a ouvert le chat : 0 non-lu");
     docB.getElementById("lgcClose").click();
@@ -165,7 +166,7 @@ function esc(win, doc) { doc.dispatchEvent(new win.KeyboardEvent("keydown", { ke
     await domS.window.__lastLeagueChat;
     check(d.getElementById("lgcForm").hidden, "seul manager : pas de champ de saisie");
     check(!d.getElementById("lgcNote").hidden && /seul manager/.test(d.getElementById("lgcNote").textContent), "seul manager : note « les autres managers apparaîtront ici »");
-    check(!!d.querySelector("#lgcList .lgc-empty"), "aucune journée jouée : message d'attente");
+    check(!!d.querySelector("#lgcList .lgc-empty"), "aucun message : invitation à lancer la discussion");
     check(d.activeElement === d.getElementById("lgcClose"), "seul manager : focus sur ✕");
     console.log("\n🏁 Chat de la ligue (navigateur) conforme.");
   } finally {

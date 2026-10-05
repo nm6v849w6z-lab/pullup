@@ -334,9 +334,6 @@ function acquireSaveLock() {
 // sous le verrou de sauvegarde (requête avec jeton, ou minuterie de
 // startServer).
 const WORLD_CATCHUP_INTERVAL_MS = 10 * 60 * 1000;
-// Chat de la ligue de chaque fichier de ligue (voir createHandler) : le
-// rattrapage de fond y écrit les messages automatiques dus.
-const leagueChatServices = new Map();
 const lastWorldCatchUpAt = new Map();
 // Échéance de Coupe nationale (coup d'envoi du jeudi 20:00, fin de
 // diffusion) : rattrapage forcé dès qu'elle est passée, pour que le direct
@@ -349,11 +346,8 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath
   if (!force && !due && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
   lastWorldCatchUpAt.set(multiSavePath, now);
   try {
-    const chat = leagueChatServices.get(multiSavePath);
     const events = await World.catchUpWorld(multiSavePath, now, {
       tickLeague: (lg, t) => { const evs = tick(lg, t).events; stashRecapEvents(lg, evs); return evs; },
-      // Chat de la ligue : messages automatiques écrits même sans lecteur.
-      flushLeague: chat ? (id, lg, world) => chat.flushSystem({ league: lg, leagueId: id, world }, now) : null,
     });
     nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
     // Clubs rendus à l'IA (managers inactifs) : le compte garde la trace du
@@ -1306,19 +1300,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       return lg;
     },
   });
-  // Chat de la ligue (voir server/leagueChat.js) : fin de diffusion de
-  // chaque journée (horodatage des résultats) et zones du championnat. Le
-  // nom des managers est leur pseudo (Team.managerPseudo), lu dans la ligue.
-  const leagueChat = LeagueChat.createService(multiSavePath, {
-    systemOpts: (ctx) => ({
-      relegations: ctx.world ? World.divisionMovesFor(ctx.world, ctx.leagueId).relegations : 0,
-      roundEndAt: (r) => {
-        const at = scheduledTimeForLeagueRound(ctx.league, r);
-        return typeof at === "number" ? at + Calendar.MATCH_BROADCAST_DURATION_MS : null;
-      },
-    }),
-  });
-  leagueChatServices.set(multiSavePath, leagueChat);
+  // Chat de la ligue (voir server/leagueChat.js) : messages des managers
+  // uniquement. Le nom des managers est leur pseudo (Team.managerPseudo).
+  const leagueChat = LeagueChat.createService(multiSavePath);
   const handleAccountRoutes = AccountRoutes.createAccountRouter({
     sendJson, readJsonBody, getManagerToken, originFor, isAdminAuthorized, multiSavePath, accountsPath,
   });

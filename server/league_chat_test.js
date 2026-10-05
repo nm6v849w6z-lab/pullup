@@ -102,7 +102,9 @@ async function main() {
     r = await react(M.Lyon.h, 99999, "🔥");
     check(r.status === 404, "réaction sur un message inconnu : 404");
 
-    // --- Messages automatiques : résultats, classement, transfert.
+    // --- Plus AUCUN message automatique (2026-10-05) : matchs joués,
+    // transfert conclu, classement qui bouge → le chat ne contient que les
+    // messages des managers.
     const loaded = await store.loadMultiLeague(multiSavePath);
     const lg = loaded.league;
     const scores = [[87, 65], [70, 81], [90, 88], [77, 72], [64, 69]];
@@ -113,31 +115,35 @@ async function main() {
       });
     }
     lg.round = 3;
-    lg.logTransferNews({ id: "tr-test-1", at: now, playerName: "Jean Test", buyerIdx: M.Nice.idx, buyerName: "Nice", sellerName: lg.teams[5].name, fee: 125000 });
     await store.saveMultiLeague(lg, multiSavePath);
     now += 5000;
     r = await get(M.Nice.h);
-    const results = r.body.messages.filter(x => x.kind === "result");
-    const transfers = r.body.messages.filter(x => x.kind === "transfer");
-    const standings = r.body.messages.filter(x => x.kind === "standings");
-    check(results.length === 15, `un message « Résultat » par match joué (${results.length})`);
-    const r0 = lg.results.find(x => x.round === 0);
-    const wName = lg.teams[r0.scoreHome > r0.scoreAway ? r0.home : r0.away].name;
-    check(results.some(x => x.text === `${wName} bat ${lg.teams[r0.scoreHome > r0.scoreAway ? r0.away : r0.home].name} ${Math.max(r0.scoreHome, r0.scoreAway)}-${Math.min(r0.scoreHome, r0.scoreAway)}`), "texte « X bat Y 87-65 »");
-    check(transfers.length === 1 && transfers[0].data.player === "Jean Test" && transfers[0].data.buyer === "Nice" && transfers[0].data.fee === 125000, "message « Transfert » quand un club de la ligue achète un joueur");
-    check(standings.length >= 1 && standings.every(x => ["leader", "playoffs", "relegation"].includes(x.data.event)), `messages « Classement » (${standings.length})`);
-    r = await get(M.Lyon.h);
-    check(r.body.messages.filter(x => x.kind === "result").length === 15 && r.body.messages.filter(x => x.kind === "transfer").length === 1, "aucun doublon à la lecture suivante");
-    const resId = results[0].id;
-    r = await react(M.Lyon.h, resId, "👏");
-    check(r.status === 200 && r.body.messages.find(x => x.id === resId).reactions[0].emoji === "👏", "on peut réagir à un message automatique");
+    check(r.body.messages.length === 3 && r.body.messages.every(x => x.kind === "user" && x.author && typeof x.text === "string"), `après 3 journées jouées : seulement les 3 messages des managers (${r.body.messages.map(x => x.kind).join(",")})`);
+
+    // Ancien fichier de chat contenant des messages automatiques : effacés
+    // à la première lecture, jamais renvoyés, jamais comptés en non-lus.
+    const chatFile = path.join(dir, "multi-league.chat.fr-1.json");
+    const legacy = JSON.parse(fs.readFileSync(chatFile, "utf8"));
+    legacy.system = [
+      { id: legacy.nextId++, kind: "result", key: "r:1:0", at: now - 1000, data: { winner: "Lyon", loser: "Paris", winnerPts: 80, loserPts: 70 }, reactions: {} },
+      { id: legacy.nextId++, kind: "transfer", key: "t:x", at: now - 900, data: { buyer: "Nice", player: "Jean Test", fee: 1000 }, reactions: {} },
+      { id: legacy.nextId++, kind: "standings", key: "s:x", at: now - 800, data: { event: "leader", team: "Lyon" }, reactions: {} },
+    ];
+    legacy.sync = { season: 1, round: 2, transfers: ["x"] };
+    fs.writeFileSync(chatFile, JSON.stringify(legacy));
+    r = await get(M.Nice.h);
+    check(r.body.messages.length === 3 && r.body.messages.every(x => x.kind === "user"), "anciens messages automatiques jamais renvoyés");
+    const purged = JSON.parse(fs.readFileSync(chatFile, "utf8"));
+    check(!purged.system && !purged.sync && purged.messages.length === 3, "anciens messages automatiques supprimés du fichier");
+    r = await react(M.Lyon.h, legacy.system[0].id, "👏");
+    check(r.status === 404, "réaction sur un ancien message automatique : introuvable");
 
     // --- Non-lus + repère de lecture (côté serveur, par manager).
     const readChat = (h, upTo) => request(server, "POST", "/api/league-chat/read", upTo === undefined ? {} : { upTo }, h);
     const summary = h => request(server, "GET", "/api/league-chat?summary=1", undefined, h);
     r = await get(M.Paris.h);
     const expectedParis = r.body.messages.filter(x => !(x.kind === "user" && x.mine)).length;
-    check(r.body.unreadCount === expectedParis && r.body.lastReadId === 0, `Paris : ${expectedParis} non-lus (messages des autres + automatiques, pas les siens)`);
+    check(r.body.unreadCount === expectedParis && expectedParis > 0 && r.body.lastReadId === 0, `Paris : ${expectedParis} non-lus (messages des autres managers, pas les siens)`);
     let s = await summary(M.Paris.h);
     check(s.status === 200 && s.body.unreadCount === expectedParis && !s.body.messages, "?summary=1 : juste le nombre de non-lus");
     const lastId = Math.max(...r.body.messages.map(x => x.id)); // ids croissants, pas forcément dans l'ordre d'affichage
@@ -177,7 +183,7 @@ async function main() {
     await new Promise(res => server2.listen(0, "127.0.0.1", res));
     try {
       r = await request(server2, "GET", "/api/league-chat", undefined, M.Paris.h);
-      check(r.body.messages.filter(x => x.kind === "user").length === 5 && r.body.messages.filter(x => x.kind === "result").length === 15, "l'historique survit au redémarrage du serveur");
+      check(r.body.messages.length === 5 && r.body.messages.every(x => x.kind === "user"), "l'historique survit au redémarrage du serveur");
       check(r.body.unreadCount === 2 && r.body.lastReadId > 0, "le repère de lecture aussi (Paris : 2 non-lus)");
     } finally { server2.close(); }
 
@@ -190,7 +196,7 @@ async function main() {
   } finally {
     server.close();
   }
-  // --- Moteur : une enchère conclue alimente League.transferNews.
+  // --- Moteur : une enchère conclue n'alimente plus aucun fil pour le chat.
   {
     const lg = store.createMultiManagerCareer(["Lyon", "Paris"], now).league;
     const buyerIdx = lg.teams.findIndex(t => t.isHuman);
@@ -200,11 +206,11 @@ async function main() {
     lg.teams[buyerIdx].budget = 10000000;
     const bid = lg.placeBid(listing.id, buyerIdx, 5000, now);
     lg._resolveListing(listing, listing.closesAt);
-    const news = lg.transferNews || [];
-    check(bid.ok && listing.result === "sold" && news.length === 1 && news[0].playerName === player.name && news[0].buyerIdx === buyerIdx && news[0].fee === 5000,
-      "une enchère conclue est notée dans League.transferNews (source des messages « Transfert »)");
-    const round = store.deserializeMultiLeague(store.serializeMultiLeague(lg)).league;
-    check((round.transferNews || []).length === 1, "transferNews survit à la sauvegarde");
+    check(bid.ok && listing.result === "sold" && lg.transferNews === undefined && typeof lg.logTransferNews === "undefined", "transfert conclu : rien n'est noté pour le chat");
+    const old = store.serializeMultiLeague(lg);
+    old.transferNews = [{ id: "x", playerName: "Ancien" }];
+    const round = store.deserializeMultiLeague(old).league;
+    check(round.transferNews === undefined && !("transferNews" in store.serializeMultiLeague(round)), "ancien fil de transferts abandonné au rechargement");
   }
   console.log("\nTous les tests du chat de la ligue sont passés.");
 }

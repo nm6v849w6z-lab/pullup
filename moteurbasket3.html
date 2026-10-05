@@ -4419,30 +4419,15 @@
   .lgc-by small{font-size:12px; color:var(--ink-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
   .lgc-time{margin-left:auto; flex:none; font-size:11px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
   .lgc-text{margin:2px 0 0 25px; font-size:14px; line-height:1.45; color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap;}
-  .lgc-sys{position:relative; margin:2px 0; padding:7px 10px; border-radius:10px; background:var(--panel-2);}
-  .lgc-sys-top{display:flex; align-items:center; gap:8px;}
-  .lgc-kind{font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--amber);}
-  .lgc-sys-text{margin:2px 0 0; font-size:13px; line-height:1.4; color:var(--ink-dim); overflow-wrap:anywhere;}
-  .lgc-sys-text b{color:var(--ink); font-weight:700;}
-  .lgc-sys-text b.me{color:var(--amber);}
-  .lgc-sys-text .lgc-score{font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink);}
-  .lgc-sys-text small{color:var(--ink-faint); font-size:12px;}
-  .lgc-sys-text .lgc-link{background:none; border:0; padding:0; margin:0; font:inherit; color:var(--ink); font-weight:700; cursor:pointer; text-align:left;}
-  .lgc-sys-text .lgc-link.lgc-loser{font-weight:400; color:inherit;}
-  .lgc-sys-text .lgc-link.me{color:var(--amber);}
-  .lgc-sys-text .lgc-link:hover, .lgc-sys-text .lgc-link:focus-visible{text-decoration:underline; text-underline-offset:2px;}
-  .lgc-sys-text small .lgc-link{font-weight:600;}
-  .lgc-ai{display:inline-block; padding:0 5px; border-radius:4px; font-size:10px; font-weight:800; letter-spacing:.04em; color:var(--ink-dim); background:var(--panel-2); border:1px solid var(--line); vertical-align:1px;}
   .lgc-reacts{display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:5px;}
   .lgc-msg .lgc-reacts{margin-left:25px;}
   .lgc-reacts:empty{display:none;}
   .lgc-r{display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 8px; border-radius:999px; border:1px solid transparent; background:var(--line-soft); color:var(--ink-dim); font:inherit; font-size:12px; font-variant-numeric:tabular-nums; cursor:pointer;}
-  .lgc-sys .lgc-r{background:var(--panel);}
   .lgc-r[aria-pressed="true"]{background:rgba(240,162,60,.14); border-color:rgba(240,162,60,.55); color:var(--ink);}
   .lgc-add{position:absolute; top:4px; right:4px; width:28px; height:24px; border-radius:8px; border:0; background:var(--panel); color:var(--ink-faint); cursor:pointer; opacity:0; display:grid; place-items:center; box-shadow:0 1px 3px rgba(0,0,0,.18);}
-  .lgc-msg:hover .lgc-add, .lgc-sys:hover .lgc-add, .lgc-add:focus-visible, .lgc-add[aria-expanded="true"]{opacity:1;}
-  @media (hover:none){ .lgc-add{opacity:.7;} .lgc-msg .lgc-time, .lgc-sys .lgc-time{margin-right:30px;} }
-  .lgc-msg:hover .lgc-time, .lgc-sys:hover .lgc-time, .lgc-msg:focus-within .lgc-time, .lgc-sys:focus-within .lgc-time, .picking .lgc-time{margin-right:30px;}
+  .lgc-msg:hover .lgc-add, .lgc-add:focus-visible, .lgc-add[aria-expanded="true"]{opacity:1;}
+  @media (hover:none){ .lgc-add{opacity:.7;} .lgc-msg .lgc-time{margin-right:30px;} }
+  .lgc-msg:hover .lgc-time, .lgc-msg:focus-within .lgc-time, .picking .lgc-time{margin-right:30px;}
   .lgc-msg .lgc-add{top:2px;}
   .lgc-pick{display:flex; gap:2px; padding:3px; margin-top:5px; width:max-content; max-width:100%; flex-wrap:wrap; border-radius:999px; background:var(--panel); box-shadow:0 4px 14px -6px rgba(0,0,0,.35); border:1px solid var(--line-soft);}
   .lgc-msg .lgc-pick{margin-left:25px;}
@@ -30688,15 +30673,14 @@ document.getElementById("standingsSection").addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 // CHAT DE LA LIGUE (2026-09-30) — retour utilisateur : le chat de
 // compétition de BuzzerBeater, « en plus moderne ». Fil public des managers
-// humains du championnat + messages automatiques du serveur (Résultat,
-// Transfert, Classement : voir server/leagueChat.js), réactions rapides.
+// humains du championnat, et rien d'autre (2026-10-05 : plus de messages
+// automatiques, voir server/leagueChat.js), réactions rapides.
 // S'ouvre PAR-DESSUS la page (retour utilisateur 2026-09-30 : plus de
 // panneau dans la page Ligue, qui laissait un vide) depuis le bouton
 // « Chat de la ligue » en haut à droite de la page Ligue : tiroir à droite
 // sur PC, plein écran sur mobile ; ✕, Échap ou clic sur le fond pour
 // fermer, focus rendu au bouton. Pastille rouge de non-lus (messages des
-// autres managers ET messages automatiques plus récents que la dernière
-// ouverture, repère stocké côté serveur : suit le manager d'un appareil à
+// autres managers plus récents que la dernière ouverture, repère stocké côté serveur : suit le manager d'un appareil à
 // l'autre) sur ce bouton seulement (pas dans le menu). Compteur
 // (?summary=1) relu à l'ouverture de la page Ligue puis toutes les 60 s
 // tant qu'elle est affichée, fil complet toutes les 15 s tant que le
@@ -30707,7 +30691,6 @@ document.getElementById("standingsSection").addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 const LGC_POLL_MS = 15000;
 const LGC_COUNT_POLL_MS = 60000;
-const LGC_KIND_LABELS = { result: "Résultat", playoffs: "Play-offs", transfer: "Transfert", standings: "Classement" };
 const lgcUi = { data: null, sig: "", sending: false, error: "", pickFor: null, loading: null, open: false, unread: 0, returnFocus: null, marking: null };
 
 function lgcBadgeText(n) { return n > 9 ? "9+" : String(n); }
@@ -30864,74 +30847,6 @@ function lgcClose() {
   if (back && back.focus) back.focus();
 }
 
-// Texte d'un message automatique (noms en gras, votre club en ambre). Les
-// morceaux fixes sont des nœuds texte à part (traduits par assets/i18n).
-function lgcSystemHtml(m) {
-  const d = m.data || {};
-  // Équipes, joueurs et scores cliquables (retour d'un testeur 2026-09-30 :
-  // « Équipes et joueurs cliquables ? voir les scores aussi pour accéder aux
-  // boxscores ? ») : voir l'écouteur de #lgcList (lgcLinkClick).
-  const hasTeam = idx => typeof idx === "number" && league && league.teams && league.teams[idx];
-  const team = (name, idx) => hasTeam(idx)
-    ? `<button type="button" class="lgc-link lgc-team${idx === myTeamIndex ? " me" : ""}" data-lgc-team="${idx}" data-no-i18n>${escapeHtml(name || "?")}</button>`
-    : `<b data-no-i18n${idx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(name || "?")}</b>`;
-  const loserTeam = (name, idx) => hasTeam(idx)
-    ? `<button type="button" class="lgc-link lgc-team lgc-loser${idx === myTeamIndex ? " me" : ""}" data-lgc-team="${idx}" data-no-i18n>${escapeHtml(name || "?")}</button>`
-    : `<span data-no-i18n${idx === myTeamIndex ? ` class="me"` : ""}>${escapeHtml(name || "?")}</span>`;
-  if (m.kind === "result") {
-    const homeIdx = typeof d.homeIdx === "number" ? d.homeIdx : (d.home === d.winner ? d.winnerIdx : d.loserIdx);
-    const awayIdx = typeof d.awayIdx === "number" ? d.awayIdx : (d.home === d.winner ? d.loserIdx : d.winnerIdx);
-    const scoreTxt = `${Number(d.winnerPts) || 0}-${Number(d.loserPts) || 0}`;
-    const score = hasTeam(homeIdx) && hasTeam(awayIdx) && Number(d.round)
-      ? `<button type="button" class="lgc-link lgc-score" data-lgc-box="${Number(d.round) - 1}:${homeIdx}:${awayIdx}" title="Feuille de match">${scoreTxt}</button>`
-      : `<span class="lgc-score">${scoreTxt}</span>`;
-    return `${team(d.winner, d.winnerIdx)} <span>bat</span> ${loserTeam(d.loser, d.loserIdx)} ${score} <small>· J${Number(d.round) || ""}</small>`;
-  }
-  // Play-offs (jamais la Coupe) : chaque match avec le score de la série,
-  // puis le champion.
-  if (m.kind === "playoffs") {
-    if (d.stage === "champion") return `${team(d.team, d.teamIdx)} <span>est champion !</span>`;
-    const stage = d.stage === "final" ? "Finale" : "Demi-finale";
-    const series = d.decided ? (d.stage === "final" ? "remporte le titre" : "qualifié pour la finale") : "";
-    return `${team(d.winner, d.winnerIdx)} <span>bat</span> ${loserTeam(d.loser, d.loserIdx)} ` +
-      `<span class="lgc-score">${Number(d.winnerPts) || 0}-${Number(d.loserPts) || 0}</span> ` +
-      `<small><span>${stage}</span> · ${Number(d.seriesWinner) || 0}-${Number(d.seriesLoser) || 0}${series ? ` · <span>${series}</span>` : ""}</small>`;
-  }
-  if (m.kind === "transfer") {
-    const player = d.playerId != null && hasTeam(d.buyerIdx)
-      ? `<button type="button" class="lgc-link lgc-player" data-lgc-player="${d.buyerIdx}" data-lgc-player-id="${escapeHtml(String(d.playerId))}" data-no-i18n>${escapeHtml(d.player || "?")}</button>`
-      : `<b data-no-i18n>${escapeHtml(d.player || "?")}</b>`;
-    // Agent libre (demande du 2026-10-01) : pas de club vendeur.
-    const seller = d.freeAgent ? `<span>(agent libre)</span>` : hasTeam(d.sellerIdx)
-      ? `(<button type="button" class="lgc-link lgc-team lgc-loser" data-lgc-team="${d.sellerIdx}" data-no-i18n>${escapeHtml(d.seller || "?")}</button>)`
-      : `<span data-no-i18n>(${escapeHtml(d.seller || "?")})</span>`;
-    return `${team(d.buyer, d.buyerIdx)}${d.buyerAi ? ` <span class="lgc-ai" title="Club dirigé par l'IA">IA</span>` : ""} <span>recrute</span> ${player} ` +
-      `<small>${seller} · ${escapeHtml(formatMoneyCompact(d.fee || 0))}</small>`;
-  }
-  if (m.kind === "standings") {
-    const label = { leader: "prend la tête du classement", playoffs: "entre dans le top 4 (play-offs)", relegation: "tombe en zone de relégation" }[d.event] || "";
-    return `${team(d.team, d.teamIdx)} <span>${label}</span>` + (d.event === "leader" ? ` <small>· ${Number(d.points) || 0} pts</small>` : "");
-  }
-  return escapeHtml(m.text || "");
-}
-
-// Liens du chat de ligue (équipe, joueur, feuille de match) : referme le
-// panneau puis ouvre la page (voir lgcSystemHtml).
-document.addEventListener("click", e => {
-  const el = e.target.closest("#lgcList [data-lgc-team], #lgcList [data-lgc-player], #lgcList [data-lgc-box]");
-  if (!el) return;
-  e.preventDefault();
-  lgcClose();
-  if (el.dataset.lgcTeam != null) { showTeamDetail(Number(el.dataset.lgcTeam)); return; }
-  if (el.dataset.lgcPlayer != null) {
-    const id = el.dataset.lgcPlayerId;
-    showPlayerDetail(Number(el.dataset.lgcPlayer), /^\d+$/.test(id) ? Number(id) : id);
-    return;
-  }
-  const [round, home, away] = el.dataset.lgcBox.split(":").map(Number);
-  showMatchBoxscore(round, "championship", home, away);
-});
-
 function lgcReactionsHtml(m) {
   const pills = m.reactions.map(r =>
     `<button type="button" class="lgc-r" data-lgc-react="${m.id}" data-emoji="${escapeHtml(r.emoji)}" aria-pressed="${r.mine ? "true" : "false"}" aria-label="${escapeHtml(r.emoji)} ${r.count}">` +
@@ -30963,7 +30878,9 @@ function lgcRender() {
   let newShown = false;
   let html = "";
   let lastDay = "";
-  data.messages.forEach(m => {
+  // Messages des managers uniquement (plus de messages automatiques depuis
+  // le 2026-10-05, voir server/leagueChat.js).
+  data.messages.filter(m => m.kind === "user").forEach(m => {
     const day = msgDayLabel(m.at);
     if (day !== lastDay) { html += `<div class="lgc-day">${escapeHtml(day)}</div>`; lastDay = day; }
     if (!newShown && lastRead && m.id > lastRead && !m.mine && data.unreadCount) { html += `<div class="lgc-new"><span>Nouveaux</span></div>`; newShown = true; }
@@ -30979,14 +30896,10 @@ function lgcRender() {
           : `<b>${managerLabelHtml(m.author && m.author.name, (m.author && m.author.club) || "?")}</b>`) +
         `<small data-no-i18n>${escapeHtml((m.author && m.author.club) || "")}</small>` + time + `</div>` +
         `<p class="lgc-text" data-no-i18n>${escapeHtml(m.text)}</p>` + lgcReactionsHtml(m) + `</div>`;
-    } else {
-      html += `<div class="lgc-sys lgc-sys--${escapeHtml(m.kind)}${picking}" data-lgc-id="${m.id}">` +
-        `<div class="lgc-sys-top"><span class="lgc-kind">${LGC_KIND_LABELS[m.kind] || ""}</span>${time}</div>` +
-        `<p class="lgc-sys-text">${lgcSystemHtml(m)}</p>` + lgcReactionsHtml(m) + `</div>`;
     }
   });
-  if (!data.messages.length) {
-    html = `<p class="lgc-empty">Aucun message pour l'instant. Les résultats, les transferts et les changements au classement s'afficheront ici.</p>`;
+  if (!html) {
+    html = `<p class="lgc-empty">Aucun message. Lancez la discussion !</p>`;
   }
   const prevTop = list.scrollTop;
   list.innerHTML = html;

@@ -284,10 +284,6 @@ function resolveForeignTransfers(leagues, now, events = []) {
         }
         l.finalPrice = l.currentBid;
         if (seller && seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
-        // Chat de la ligue de l'acheteur (voir League.logTransferNews).
-        if (typeof buyerLg.logTransferNews === "function") {
-          buyerLg.logTransferNews({ id: `w-${l.id}`, at: now, playerName: res.player.name, playerId: res.player.id, buyerIdx: ref.idx, buyerName: buyer.name, buyerAi: !buyer.isHuman, sellerName: seller ? seller.name : null, fee: l.currentBid, foreign: true, ...(l.freeAgent ? { freeAgent: true } : {}) });
-        }
         events.push({ type: "world-transfer", from: id, to: ref.leagueId, player: res.player.name, fee: l.currentBid });
       }
     });
