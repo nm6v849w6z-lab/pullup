@@ -35,16 +35,21 @@ const me = (w, id, idx) => N.managerOf(id, w.leagues.get(id), idx, w.world);
   const fra = st.elections.find(e => e.teamId === "fr-A");
   assert.strictEqual(fra.voteAt, start + 84 * DAY + 3 * DAY, "candidatures jusqu'au jour 3");
   assert.strictEqual(fra.closesAt, start + 84 * DAY + 6 * DAY, "vote jusqu'au jour 6 (avant le premier lundi)");
-  assert.deepStrictEqual(fra.mandate, { fromSeason: 2, toSeason: 4 });
+  assert.deepStrictEqual(fra.mandate, { fromSeason: 2, toSeason: 3 }, "mandat de 2 saisons : continentale puis Coupe du monde");
   // Saison 3 : les U21 (jamais la même saison que les A).
   const st3 = N.emptyStore(); st3.config = { cycleStartSeason: 2 };
   w.leagues.forEach(lg => { lg.seasonNumber = 3; lg.calendarStartAt = start + 168 * DAY; });
   N.step(st3, w.leagues, w.world, start + 168 * DAY + 3600e3);
   assert.ok(st3.elections.length === 17 && st3.elections.every(e => e.teamId.endsWith("-U21")), "saison 3 : élections U21 seulement");
-  assert.deepStrictEqual(st3.elections[0].mandate, { fromSeason: 3, toSeason: 5 });
+  assert.deepStrictEqual(st3.elections[0].mandate, { fromSeason: 3, toSeason: 4 });
+  // Alternance : A les saisons 2, 4, 6… ; U21 les saisons 3, 5, 7…
+  const c = N.configOf(st3);
+  assert.deepStrictEqual([2, 3, 4, 5, 6, 7].map(sn => N.isElectionSeason(c, sn, "A")), [true, false, true, false, true, false]);
+  assert.deepStrictEqual([2, 3, 4, 5, 6, 7].map(sn => N.isElectionSeason(c, sn, "U21")), [false, true, false, true, false, true]);
+  assert.deepStrictEqual([2, 3].map(sn => c.cycle[N.cyclePos(c, sn, "A")].kind), ["continental", "world"], "saison 1 du mandat : continentale, saison 2 : Coupe du monde / consolante");
   // Notification aux électeurs du pays.
   assert.ok(w.fr.teams[0].feed.entries.some(e => /Élection du sélectionneur : France U21/.test(e.title)));
-  ok("élections A et U21 en saisons différentes, pendant la 1re semaine (candidatures j0-j3, vote j3-j6), mandat jusqu'à la fin du demi-cycle");
+  ok("élections A et U21 en saisons différentes, pendant la 1re semaine (candidatures j0-j3, vote j3-j6), mandat de 2 saisons (continentale, puis Coupe du monde ou consolante), A et U21 en alternance");
 }
 
 // 2) Candidatures, vote, résultat, cas particuliers.
@@ -85,7 +90,7 @@ const me = (w, id, idx) => N.managerOf(id, w.leagues.get(id), idx, w.world);
   assert.strictEqual(elFr.result.winnerId, cLyon.id);
   assert.deepStrictEqual(elFr.result.counts.map(c => c.votes), [2, 1]);
   const m = N.activeMandate(st, "fr-A");
-  assert.ok(m && m.key === lyon.key && m.votes === 2 && m.fromSeason === 2 && m.toSeason === 4);
+  assert.ok(m && m.key === lyon.key && m.votes === 2 && m.fromSeason === 2 && m.toSeason === 3);
   assert.ok(w.fr.teams[0].feed.entries.some(e => /Vous êtes élu sélectionneur : France A/.test(e.title)));
   ok("candidatures (n'importe quel pays), vote unique et définitif, réservé aux clubs du pays, fermé hors période ; résultat, nomination, notification");
 
@@ -193,7 +198,7 @@ const me = (w, id, idx) => N.managerOf(id, w.leagues.get(id), idx, w.world);
   x = mk({ key: lyon2.key });
   w.leagues.forEach(lg => { lg.seasonNumber = 5; });
   N.step(st, w.leagues, w.world, start + 30 * DAY);
-  assert.strictEqual(x.endReason, "term", "fin du demi-cycle : terme");
+  assert.strictEqual(x.endReason, "term", "fin du mandat : terme");
   x = mk({ key: lyon2.key, toSeason: 7 });
   assert.ok(N.adminDismiss(st, "fr-A", start + 31 * DAY, w.leagues).ok && x.endReason === "dismissed");
   assert.ok(st.mandates.filter(y => y.endedAt).length >= 5, "historique des mandats conservé");

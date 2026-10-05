@@ -65,6 +65,8 @@
   function when(ts) {
     try { return new Date(ts).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; }
   }
+  // Fenêtres de confirmation (hors DOM, donc hors traduction automatique).
+  function t(msg) { return window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(msg) : msg; }
   function toast(msg) { var f = g("showToast"); if (f) f(msg); }
   function ensureCss() {
     if (document.getElementById("ntCss")) return;
@@ -76,10 +78,13 @@
   // Libellés.
   function catLabel(cat) { return cat === "U21" ? "U21" : "A"; }
   function teamName(t) { return (t.countryName || "") + " " + catLabel(t.cat); }
+  // Nom du pays dans son propre nœud (traduit tel quel), catégorie à côté.
+  function teamNameHtml(t) { return "<span>" + esc(t.countryName || "") + "</span> <span>" + esc(catLabel(t.cat)) + "</span>"; }
+  // Cycle (2 saisons = un mandat) : compétition continentale, puis Coupe
+  // du monde (qualifiés au classement continental) ou tournoi consolante.
   function phaseLabel(ph) {
     if (!ph) return "";
-    if (ph.comp === "world") return ph.kind === "major" ? "Coupe du monde" : "qualifications pour la Coupe du monde";
-    return ph.kind === "major" ? "championnat continental (Euro, AmeriCup, Coupe d'Asie)" : "qualifications continentales (Euro, AmeriCup, Coupe d'Asie)";
+    return ph.kind === "world" ? "Coupe du monde ou consolante" : "compétition continentale";
   }
   function statusTag(el) {
     if (!el) return "";
@@ -132,7 +137,7 @@
       btns += '<button type="button" class="nt-btn2" data-nt-open="' + esc(el.id) + '">Voir le résultat</button>';
     }
     var mine = el.country === myCountry();
-    return '<div class="nt-card' + (mine ? " is-mine" : "") + '"><div class="nt-row">' + flag(el.country) + "<b>" + esc(teamName(t)) + '</b><span class="nt-sp"></span>' + statusTag(el) + "</div>" +
+    return '<div class="nt-card' + (mine ? " is-mine" : "") + '"><div class="nt-row">' + flag(el.country) + "<b>" + teamNameHtml(t) + '</b><span class="nt-sp"></span>' + statusTag(el) + "</div>" +
       '<p class="nt-small">' + info + '</p><div class="nt-row">' + btns + "</div></div>";
   }
   function coachCell(t, season) {
@@ -144,10 +149,10 @@
     var ov = ui.overview, now = Date.now();
     if (!ov) return '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement des sélections…") + "</p>";
     var h = "";
-    var phase = ov.cycle && ov.cycle.phase;
-    var nCountries = {};
-    (ov.teams || []).forEach(function (t) { nCountries[t.country] = 1; });
-    h += '<p class="nt-sub">' + Object.keys(nCountries).length + " pays · sélections A et U21 · saison " + esc(ov.season) + (phase ? " : " + esc(phaseLabel(phase)) : "") + "</p>";
+    var nCountries = {}, phA = null, phU = null;
+    (ov.teams || []).forEach(function (t) { nCountries[t.country] = 1; if (t.cat === "A" && t.phase) phA = t.phase; if (t.cat === "U21" && t.phase) phU = t.phase; });
+    h += '<p class="nt-sub">' + Object.keys(nCountries).length + " pays · saison " + esc(ov.season) + "</p>";
+    if (phA || phU) h += '<p class="nt-sub">' + (phA ? "Sélections A : " + esc(phaseLabel(phA)) : "") + (phA && phU ? " · " : "") + (phU ? "U21 : " + esc(phaseLabel(phU)) : "") + "</p>";
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
     // Mes mandats.
     var active = ov.me && (ov.me.myMandates || []).filter(function (m) { return !m.endedAt; });
@@ -155,7 +160,7 @@
       h += '<div class="nt-h">Mon mandat</div><div class="nt-grid">';
       active.forEach(function (m) {
         var t = teamById(m.teamId) || { countryName: "", cat: "" };
-        h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(t.country) + "<b>Sélectionneur · " + esc(teamName(t)) + "</b></div>" +
+        h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(t.country) + "<b>Sélectionneur · " + teamNameHtml(t) + "</b></div>" +
           '<p class="nt-small">Mandat de la saison ' + esc(m.fromSeason) + " à la saison " + esc(m.toSeason) + " · élu avec " + esc(m.votes || 0) + " voix</p>" +
           '<div class="nt-row"><button type="button" class="nt-btn2" data-nt-resign="' + esc(m.teamId) + '">Démissionner</button></div></div>';
       });
@@ -176,7 +181,7 @@
     if (big.length) h += '<div class="nt-grid">' + big.map(function (el) { return electionCard(el, now); }).join("") + "</div>";
     if (small.length) {
       h += '<p class="nt-small" style="margin-top:12px">Élections en cours dans les autres pays (tout manager peut s\'y présenter) :</p><div class="nt-chips">' +
-        small.map(function (el) { var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat }; return '<button type="button" class="nt-chip" data-nt-open="' + esc(el.id) + '">' + flag(el.country) + " " + esc(teamName(t)) + ' <span class="nt-small">' + (el.status === "vote" ? "vote" : "candidatures") + " · " + esc(candCount((el.candidates || []).length)) + "</span></button>"; }).join("") + "</div>";
+        small.map(function (el) { var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat }; return '<button type="button" class="nt-chip" data-nt-open="' + esc(el.id) + '">' + flag(el.country) + " " + teamNameHtml(t) + ' <span class="nt-small">' + (el.status === "vote" ? "vote" : "candidatures") + " · " + esc(candCount((el.candidates || []).length)) + "</span></button>"; }).join("") + "</div>";
     }
     if (!all.length) {
       var nextA = null, nextU = null;
@@ -203,11 +208,11 @@
       h += '<div class="nt-h">Anciens sélectionneurs</div><div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Sélection</th><th>Sélectionneur</th><th>Saisons</th><th>Fin</th></tr></thead><tbody>';
       hist.forEach(function (m) {
         var t = teamById(m.teamId) || { countryName: m.teamId, cat: "" };
-        h += "<tr><td>" + flag(t.country) + " " + esc(teamName(t)) + "</td><td>" + clubBtn(m.ref, m.pseudo, m.clubName) + "</td><td>" + esc(m.fromSeason) + " – " + esc(m.toSeason) + "</td><td>" + esc(endReasonLabel(m.endReason)) + "</td></tr>";
+        h += "<tr><td>" + flag(t.country) + " " + teamNameHtml(t) + "</td><td>" + clubBtn(m.ref, m.pseudo, m.clubName) + "</td><td>" + esc(m.fromSeason) + " – " + esc(m.toSeason) + "</td><td>" + esc(endReasonLabel(m.endReason)) + "</td></tr>";
       });
       h += "</tbody></table></div>";
     }
-    h += '<p class="nt-rules">Chaque pays a deux sélections, A et U21 (joueurs de 21 ans au plus), élues des saisons différentes. L\'élection a lieu pendant la première semaine de la saison : 3 jours de candidatures, puis 3 jours de vote. Tout manager peut se présenter dans le pays de son choix ; seuls les managers d\'un club du pays votent, une fois, sans retour en arrière. Le mandat dure ' + esc(ov.cycle ? ov.cycle.mandateSeasons : 3) + " saisons (qualifications puis compétition). Sans sélectionneur, la sélection est dirigée par intérim jusqu'à l'élection suivante.</p>";
+    h += '<p class="nt-rules">Chaque pays a deux sélections, A et U21 (joueurs de 21 ans au plus), élues des saisons différentes. L\'élection a lieu pendant la première semaine de la saison : 3 jours de candidatures, puis 3 jours de vote. Tout manager peut se présenter dans le pays de son choix ; seuls les managers d\'un club du pays votent, une fois, sans retour en arrière. Le mandat dure 2 saisons : la première se termine par la compétition continentale (Euro, AmeriCup, Coupe d\'Asie), la seconde par la Coupe du monde pour les sélections qualifiées au classement continental, ou par un tournoi consolante pour les autres. Les phases finales se jouent à l\'intersaison. Sans sélectionneur, la sélection est dirigée par intérim jusqu\'à l\'élection suivante.</p>';
     return h;
   }
   function endReasonLabel(r) {
@@ -222,8 +227,8 @@
     var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat };
     var me = el.me || {};
     var h = back;
-    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px">' + esc(teamName(t)) + " — Élection du sélectionneur</b>" +
-      '<div class="nt-small" style="margin:2px 0 0">Mandat : saison ' + esc(el.mandate ? el.mandate.fromSeason : "") + " → saison " + esc(el.mandate ? el.mandate.toSeason : "") + "</div></div></div>";
+    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px">' + teamNameHtml(t) + " — <span>Élection du sélectionneur</span></b>" +
+      '<div class="nt-small" style="margin:2px 0 0">Mandat : saison ' + esc(el.mandate ? el.mandate.fromSeason : "") + " → saison " + esc(el.mandate ? el.mandate.toSeason : "") + "</div><div class=\"nt-small\" style=\"margin:2px 0 0\">Saison " + esc(el.mandate ? el.mandate.fromSeason : "") + " : compétition continentale · saison " + esc(el.mandate ? el.mandate.toSeason : "") + " : Coupe du monde ou consolante</div></div></div>";
     // Étapes.
     var st = el.status, closed = !(st === "candidacy" || st === "vote");
     function stp(label, state) { return '<span class="nt-step ' + state + '">' + label + "</span>"; }
@@ -263,7 +268,7 @@
     // Candidature.
     if (st === "candidacy" && me.canRun && !me.candidateId) {
       if (ui.formOpen) {
-        h += '<form class="nt-form" data-nt-form><b>Ma candidature · ' + esc(teamName(t)) + "</b>" +
+        h += '<form class="nt-form" data-nt-form><b>Ma candidature · ' + teamNameHtml(t) + "</b>" +
           '<input name="title" maxlength="90" placeholder="Titre de votre projet (une phrase)" required>' +
           '<textarea name="project" maxlength="2000" placeholder="Votre projet : style de jeu, joueurs, objectifs (20 caractères au moins)" required></textarea>' +
           '<div class="nt-row"><button type="submit" class="nt-btn"' + (ui.busy ? " disabled" : "") + '>Déposer ma candidature</button><button type="button" class="nt-btn2" data-nt-cancel-form>Annuler</button></div></form>';
@@ -342,17 +347,17 @@
     if (d.ntShowForm !== undefined) { ui.formOpen = true; paint(); return; }
     if (d.ntCancelForm !== undefined) { ui.formOpen = false; paint(); return; }
     if (d.ntVote) {
-      if (!window.confirm("Voter pour " + d.ntName + " ? Le vote est définitif.")) return;
+      if (!window.confirm(t("Voter pour " + d.ntName + " ? Le vote est définitif."))) return;
       act("/api/national/vote", { electionId: ui.electionId, candidateId: d.ntVote }, "Vote enregistré.");
       return;
     }
     if (d.ntWithdraw) {
-      if (!window.confirm("Retirer votre candidature ?")) return;
+      if (!window.confirm(t("Retirer votre candidature ?"))) return;
       act("/api/national/withdraw", { electionId: ui.electionId }, "Candidature retirée.");
       return;
     }
     if (d.ntResign) {
-      if (!window.confirm("Démissionner de votre poste de sélectionneur ? La sélection passera en intérim jusqu'à la prochaine élection.")) return;
+      if (!window.confirm(t("Démissionner de votre poste de sélectionneur ? La sélection passera en intérim jusqu'à la prochaine élection."))) return;
       act("/api/national/resign", { teamId: d.ntResign }, "Démission enregistrée.");
     }
   }

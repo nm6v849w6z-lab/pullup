@@ -35,13 +35,13 @@ const DAY = 24 * 3600 * 1000;
 // Réglages par défaut (surchargés par store.config, voir configOf).
 const DEFAULT_CONFIG = {
   u21MaxAge: 21,
-  // Cycle international : 6 saisons, 2 demi-cycles « qualifications ×2 →
-  // compétition majeure ». Un mandat = un demi-cycle (3 saisons).
-  cycle: [
-    { kind: "qualif", comp: "euro" }, { kind: "qualif", comp: "euro" }, { kind: "major", comp: "euro" },
-    { kind: "qualif", comp: "world" }, { kind: "qualif", comp: "world" }, { kind: "major", comp: "world" },
-  ],
-  mandateSeasons: 3,
+  // Cycle international (retour utilisateur 2026-10-05) : 2 saisons = un
+  // mandat. Saison 1 : compétition continentale (Euro en Europe, AmeriCup,
+  // Coupe d'Asie). Saison 2 : Coupe du monde pour les sélections qualifiées
+  // au classement de la compétition continentale de la saison 1, tournoi
+  // consolante pour les autres. Phases finales à l'intersaison (semaine 12).
+  cycle: [{ kind: "continental" }, { kind: "world" }],
+  mandateSeasons: 2,
   // Retour utilisateur 2026-10-05 : « l'élection nationale A et U21 ne doit
   // pas être la même saison » → cycle des U21 décalé d'une saison ; « doit
   // avoir lieu lors de la première semaine d'une saison » → candidatures du
@@ -103,22 +103,22 @@ function intlSeasonOf(leagues) {
   for (const lg of leagues.values()) if (lg && typeof lg.seasonNumber === "number" && lg.seasonNumber > s) s = lg.seasonNumber;
   return s;
 }
-// Position dans le cycle international d'une catégorie (0..5), décalage
+// Position dans le cycle international d'une catégorie (0..longueur-1), décalage
 // des U21 compris ; négative avant le début du cycle.
 function cyclePos(config, season, cat = "A") {
-  const n = config.cycle.length || 6;
+  const n = config.cycle.length || 2;
   const start = (config.cycleStartSeason || 1) + ((config.categoryOffset || {})[cat] || 0);
   const d = season - start;
   return d < 0 ? -1 : d % n;
 }
-// Saison d'élection d'une catégorie : 1re saison de chaque demi-cycle.
+// Saison d'élection d'une catégorie : 1re saison de chaque mandat.
 function isElectionSeason(config, season, cat) {
   const pos = cyclePos(config, season, cat);
-  return pos >= 0 && pos % (config.mandateSeasons || 3) === 0;
+  return pos >= 0 && pos % (config.mandateSeasons || 2) === 0;
 }
-// Dernière saison du mandat qui commence (fin du demi-cycle).
+// Dernière saison du mandat qui commence.
 function mandateEndSeason(config, season, cat = "A") {
-  const len = config.mandateSeasons || 3;
+  const len = config.mandateSeasons || 2;
   const pos = Math.max(0, cyclePos(config, season, cat)) % len;
   return season + (len - 1 - pos);
 }
