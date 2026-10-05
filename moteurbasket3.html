@@ -8194,6 +8194,7 @@
 <script src="assets/i18n/i18n.js" defer></script>
 <!-- Registre central des succès (partagé avec engine.js, voir son en-tête). -->
 <script src="assets/achievements.js" defer></script>
+<script src="assets/national.js" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
 <script>
 /* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
@@ -8310,6 +8311,8 @@
       <button class="tab-btn sidebar-link" data-tab="planete"><span class="sidebar-label">Planète Hoop</span></button>
       <!-- Signets (2026-10-04) : joueurs mis de côté depuis leur fiche. -->
       <button class="tab-btn sidebar-link" data-tab="signets"><span class="sidebar-label">Signets</span></button>
+      <!-- Sélections nationales (2026-10-05, voir assets/national.js). -->
+      <button class="tab-btn sidebar-link" data-tab="selections"><span class="sidebar-label">Sélections</span></button>
       <button class="tab-btn sidebar-link" data-tab="guide"><span class="sidebar-label">Guide</span></button>
       <!-- Personnalisation : plus d'onglet dans la barre latérale (retour
            utilisateur 2026-09-30), petit bouton sur le tableau de bord à
@@ -9321,6 +9324,12 @@
        dessous de guide [...] on y laissera le bouton passer en version
        payante (gratuitement) tout doit se passer par là maintenant") — voir
        renderPremiumSection. -->
+  <div id="selectionsSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Sélections nationales</h2>
+      <div id="nationalContent"></div>
+    </div>
+  </div>
   <div id="signetsSection" class="hidden">
     <div class="section">
       <h2 class="page-title">Signets</h2>
@@ -27923,7 +27932,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "premiumSection", "planeteSection", "signetsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  "guideSection", "premiumSection", "planeteSection", "signetsSection", "selectionsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
   // Profil du manager (2026-09-30) : page à part, hors barre latérale (voir
   // showManagerProfile).
   "managerProfileSection",
@@ -46123,6 +46132,7 @@ const DASH_ROUTE_TO_TAB = {
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
+  "/selections": "selections",
   "/amicaux": "amicaux",
   "/messagerie": "messages",
   "/sponsors": "sponsors",
@@ -57295,6 +57305,7 @@ const TAB_HANDLERS = {
   premium: () => { renderPremiumSection(); showPage("premiumSection"); setActiveTab("premium"); },
   personnalisation: () => { renderPersonnalisationSection(); showPage("personnalisationSection"); setActiveTab("personnalisation"); },
   planete: () => { showPage("planeteSection"); setActiveTab("planete"); renderPlaneteSection(); },
+  selections: () => { showPage("selectionsSection"); setActiveTab("selections"); if (window.HM_NATIONAL) window.__lastNational = window.HM_NATIONAL.render(); },
   signets: () => { showPage("signetsSection"); setActiveTab("signets"); window.__lastSignets = renderSignetsSection(); },
   club: () => { renderClubSection(); showPage("clubSection"); setActiveTab("club"); },
   ligue: showStandings,

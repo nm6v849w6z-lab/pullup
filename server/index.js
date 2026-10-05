@@ -62,6 +62,7 @@ const I18n = require("./i18n.js");
 const Push = require("./push.js");
 const PublicPlayers = require("./publicPlayers.js");
 const Bookmarks = require("./bookmarks.js");
+const NationalTeams = require("./nationalTeams.js");
 const MyAuctions = require("./myAuctions.js");
 const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
@@ -1647,6 +1648,30 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // { name, teams: ["Gotham Knights", "BC Dia", …], hours?: [10,12,…],
       //   days?: 5, startDate?: "AAAA-MM-JJ" (défaut : demain, heure de
       //   Paris) }. Clubs cherchés par nom exact dans tout le monde.
+      // Sélections nationales (administration) : body { action: "dismiss",
+      // teamId } | { action: "cancel-election", electionId } | { action:
+      // "config", config: { voterRules?, candidateRules?, tieBreak?, … } }.
+      if (route.pathname === "/api/admin/national" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const natStore = await NationalTeams.loadStore(multiSavePath);
+        if (!natStore) { sendJson(res, 503, { ok: false, error: "Stock indisponible." }); return; }
+        let out;
+        if (body && body.action === "dismiss") out = NationalTeams.adminDismiss(natStore, body.teamId, now, null);
+        else if (body && body.action === "cancel-election") out = NationalTeams.adminCancelElection(natStore, body.electionId, now);
+        else if (body && body.action === "config" && body.config && typeof body.config === "object") {
+          const allowed = Object.keys(NationalTeams.DEFAULT_CONFIG);
+          const patch = {};
+          Object.keys(body.config).forEach(k => { if (allowed.includes(k)) patch[k] = body.config[k]; });
+          natStore.config = { ...(natStore.config || {}), ...patch };
+          out = { ok: true, config: NationalTeams.configOf(natStore) };
+        } else out = { ok: false, error: "action : dismiss | cancel-election | config." };
+        if (!out.ok) { sendJson(res, out.status || 400, out); return; }
+        await NationalTeams.saveStore(natStore, multiSavePath);
+        sendJson(res, 200, out);
+        return;
+      }
       if (route.pathname === "/api/admin/special-private-league" && req.method === "POST") {
         if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
         let body;
@@ -2773,6 +2798,46 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Joueur de l'académie d'un AUTRE club : jamais révélé.
         if (hit && hit.status === "youth" && !(hit.leagueId === own && hit.teamIdx === ctx.teamIndex)) hit = { ...hit, status: "club-hidden" };
         sendJson(res, 200, hit ? { ok: true, found: true, mine: hit.leagueId === own, ...hit } : { ok: true, found: false });
+        return;
+      }
+
+      // Sélections nationales (phase A, voir server/nationalTeams.js) :
+      // GET /api/national/overview, GET /api/national/election?id=,
+      // POST /api/national/{candidacy,withdraw,vote,resign}.
+      if (route.pathname.startsWith("/api/national/")) {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (!ctx.world) { sendJson(res, 400, { ok: false, error: "Sélections nationales : réservé au monde partagé." }); return; }
+        const natStore = await NationalTeams.loadStore(multiSavePath);
+        if (!natStore) { sendJson(res, 503, { ok: false, error: "Sélections nationales momentanément indisponibles, réessayez dans quelques minutes." }); return; }
+        const me = NationalTeams.managerOf(ctx.leagueId, ctx.league, ctx.teamIndex, ctx.world);
+        const season = ctx.league.seasonNumber || 1;
+        if (req.method === "GET" && route.pathname === "/api/national/overview") {
+          sendJson(res, 200, NationalTeams.overview(natStore, me, season, now));
+          return;
+        }
+        if (req.method === "GET" && route.pathname === "/api/national/election") {
+          const el = natStore.elections.find(e => e.id === route.searchParams.get("id"));
+          if (!el) { sendJson(res, 404, { ok: false, error: "Élection introuvable." }); return; }
+          sendJson(res, 200, { ok: true, election: NationalTeams.publicElection(natStore, el, me, true), coach: NationalTeams.publicMandate(NationalTeams.activeMandate(natStore, el.teamId)) });
+          return;
+        }
+        const NAT_ACTIONS = {
+          "/api/national/candidacy": NationalTeams.runForElection,
+          "/api/national/withdraw": NationalTeams.withdrawCandidacy,
+          "/api/national/vote": NationalTeams.castVote,
+          "/api/national/resign": NationalTeams.resign,
+        };
+        const fn = req.method === "POST" ? NAT_ACTIONS[route.pathname] : null;
+        if (!fn) { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
+        let body;
+        try { body = req.__parsedBody !== undefined ? req.__parsedBody : await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        const leaguesForNotify = new Map([[ctx.leagueId, ctx.league]]);
+        const out = fn(natStore, me, body || {}, now, leaguesForNotify);
+        if (!out.ok) { sendJson(res, out.status || 400, { ok: false, error: out.error }); return; }
+        try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
+        if (route.pathname === "/api/national/resign") await persistContext(ctx);
+        sendJson(res, 200, { ...out, overview: NationalTeams.overview(natStore, me, season, now) });
         return;
       }
 

@@ -33,6 +33,7 @@ const NationalCup = require("./nationalCup.js");
 const WorldMarket = require("./worldMarket.js");
 const WorldFriendlies = require("./worldFriendlies.js");
 const PrivateLeague = require("./privateLeague.js");
+const NationalTeams = require("./nationalTeams.js");
 const Push = require("./push.js");
 
 const WORLD_VERSION = 1;
@@ -802,6 +803,17 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     const lpNext = PrivateLeague.nextDeadline(lpStore, now);
     if (lpNext != null && (nextDeadlineAt == null || lpNext < nextDeadlineAt)) nextDeadlineAt = lpNext;
   }
+  // Sélections nationales (server/nationalTeams.js) : élections et mandats
+  // avancés ici, toutes les ligues en main (notifications dans le fil des
+  // clubs, sauvegardées ci-dessous avec leur ligue).
+  try {
+    const natStore = await NationalTeams.loadStore(savePath);
+    if (natStore) {
+      const r = NationalTeams.step(natStore, allLeagues, world, now);
+      if (r.changed) await NationalTeams.saveStore(natStore, savePath);
+      if (r.nextDeadlineAt != null && (nextDeadlineAt == null || r.nextDeadlineAt < nextDeadlineAt)) nextDeadlineAt = r.nextDeadlineAt;
+    }
+  } catch (e) { console.warn("[sélections]", e.message); }
   const closing = WorldMarket.nextForeignClosing(index, now);
   if (closing != null && (nextDeadlineAt == null || closing < nextDeadlineAt)) nextDeadlineAt = closing + 1000;
   // Notifications (Premium, server/push.js) : envoyées avant la sauvegarde
