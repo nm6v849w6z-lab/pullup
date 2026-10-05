@@ -269,7 +269,7 @@ function resolveForeignTransfers(leagues, now, events = []) {
       const buyerSeason = typeof buyerLg.contractSeason === "function" ? buyerLg.contractSeason() : 1;
       // Agent libre (demande du 2026-10-01) : prime de signature, pas de vendeur.
       const res = l.freeAgent
-        ? lg.signFreeAgentFromListing(l, buyer, buyerSeason, now)
+        ? lg.signFreeAgentFromListing(l, buyer, buyerSeason, now, { leagueId: ref.leagueId, idx: ref.idx })
         : Engine.transferPlayerBetweenTeams(seller, buyer, l.playerId, l.currentBid, now);
       l.result = res.result;
       if (l.freeAgent && res.result === "buyer-failed" && typeof lg._placeUnsoldFreeAgent === "function") lg._placeUnsoldFreeAgent(l, now);
@@ -283,6 +283,15 @@ function resolveForeignTransfers(leagues, now, events = []) {
           res.player.matchLog = [];
         }
         l.finalPrice = l.currentBid;
+        // Historique des transferts : chez le vendeur (son championnat) et
+        // chez l'acheteur (l'autre championnat), même identifiant.
+        if (!l.freeAgent && typeof Engine.recordTeamTransfer === "function") {
+          const mvId = `w:${id}:L${l.id}`;
+          const fromRef = Engine.transferTeamRef(seller, id, l.sellerIdx);
+          const toRef = Engine.transferTeamRef(buyer, ref.leagueId, ref.idx);
+          Engine.recordTeamTransfer(buyer, { id: mvId, at: now, kind: "buy", player: res.player, from: fromRef, to: toRef, fee: l.currentBid, human: buyer.isHuman });
+          Engine.recordTeamTransfer(seller, { id: mvId, at: now, kind: "sell", player: res.player, from: fromRef, to: toRef, fee: l.currentBid, human: seller.isHuman });
+        }
         if (seller && seller.isHuman && buyer.isHuman && typeof lg.logHumanTransfer === "function") lg.logHumanTransfer(seller.name, `${buyer.name} (${ref.leagueId})`, res.player, l.currentBid, now);
         events.push({ type: "world-transfer", from: id, to: ref.leagueId, player: res.player.name, fee: l.currentBid });
       }

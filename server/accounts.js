@@ -326,6 +326,10 @@ function takeOverCpuClub(league, clubName) {
   team.managerLinkToken = Engine.randomHexToken(24);
   team.name = clubName;
   team.onboardingTourCompleted = false;
+  // Nouveau club (effectif remplacé, nouveau nom) : historique des
+  // transferts repart de zéro, et « Mon historique » commence ici.
+  team.transferHistory = [];
+  team.managerSince = Date.now();
   if (team.feed) {
     try {
       Engine.pushEntry(team.feed, {

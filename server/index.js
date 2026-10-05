@@ -2749,6 +2749,32 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Où est ce joueur aujourd'hui ? (historique des transferts, 2026-10-05 :
+      // un nom de joueur ouvre sa fiche, même s'il a changé de club ou de
+      // championnat depuis). GET ?id=&hint=<leagueId> → { leagueId, teamIdx,
+      // status: club|youth|fa } ou found:false (retiré du jeu). Même
+      // recherche que les signets (championnat indiqué, le sien, puis le monde).
+      if (route.pathname === "/api/world/locate-player" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        const q = route.searchParams;
+        const rawId = q.get("id");
+        const id = rawId != null && /^-?\d+$/.test(rawId) ? Number(rawId) : rawId;
+        const hint = q.get("hint") || null;
+        const own = ctx.leagueId || null;
+        const tryIn = async lid => {
+          const lg = !lid || lid === own ? ctx.league : await World.loadLeague(ctx.world, lid, multiSavePath).catch(() => null);
+          const r = Bookmarks.locatePlayer(lg, id);
+          return r ? { leagueId: lid || own, teamIdx: r.teamIdx, status: r.status } : null;
+        };
+        let hit = (hint && ctx.world && (ctx.world.leagues || []).some(e => e.id === hint) ? await tryIn(hint) : null) || await tryIn(own);
+        if (!hit && ctx.world) for (const e of ctx.world.leagues || []) { if (e.id === own || e.id === hint) continue; hit = await tryIn(e.id); if (hit) break; }
+        // Joueur de l'académie d'un AUTRE club : jamais révélé.
+        if (hit && hit.status === "youth" && !(hit.leagueId === own && hit.teamIdx === ctx.teamIndex)) hit = { ...hit, status: "club-hidden" };
+        sendJson(res, 200, hit ? { ok: true, found: true, mine: hit.leagueId === own, ...hit } : { ok: true, found: false });
+        return;
+      }
+
       // Signets du manager (2026-10-04, voir server/bookmarks.js) : GET =
       // liste résolue (position actuelle de chaque joueur, même transféré
       // dans un autre championnat), POST { playerId, on, leagueId? }.

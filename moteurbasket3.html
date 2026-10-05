@@ -7823,6 +7823,8 @@
   .msg-team-cta{display:flex; justify-content:flex-end; margin:0;}
   .td-topline{display:flex; align-items:center; justify-content:space-between; gap:10px 16px; flex-wrap:wrap; margin-bottom:16px;}
   .td-topline > .team-detail-subnav{margin:0;}
+  /* 5 onglets (Transferts, 2026-10-05) : retour à la ligne sur téléphone plutôt que coupés. */
+  .team-detail-subnav{flex-wrap:wrap; row-gap:6px;}
   .msg-team-cta button{background:var(--panel-2); border:1px solid rgba(240,162,60,.45); color:var(--amber); border-radius:9px; padding:8px 14px; font:inherit; font-weight:700; cursor:pointer;}
   .msg-team-cta button:hover{background:rgba(240,162,60,.12);}
   /* Barre du bas (mobile, voir assets/mobile/mobile.js) : pastille sur
@@ -8066,6 +8068,44 @@
   .settings-lang button[aria-pressed="true"]{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
   .settings-lang-code{display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:22px; padding:0 6px; border-radius:6px; background:var(--line); color:var(--ink); font-size:11px; font-weight:800; letter-spacing:.8px;}
   .settings-lang button[aria-pressed="true"] .settings-lang-code{background:var(--amber); color:#1a1206;}
+
+  /* Historique des transferts (2026-10-05) : fiche équipe → Transferts, Marché → Mon historique. */
+  .th-wrap{--th-in:#FF8A8F; --th-out:#4FD18B; --th-free:#6FB6FF; --th-loan:#C79BFF; margin-top:6px;}
+  .th-filters{display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 12px;}
+  .th-chip{padding:5px 12px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--ink-dim); font:inherit; font-size:13px; cursor:pointer;}
+  .th-chip.on{background:var(--amber); color:#1A0F02; border-color:var(--amber); font-weight:700;}
+  .th-season{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); margin:16px 0 6px; font-weight:700;}
+  .th-list{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .th-row{display:grid; grid-template-columns:90px minmax(0,1fr) auto; gap:12px; align-items:center; padding:11px 14px; border-top:1px solid var(--line); border-left:4px solid transparent;}
+  .th-row:first-child{border-top:0;}
+  .th-row.in{border-left-color:var(--th-in);} .th-row.out{border-left-color:var(--th-out);} .th-row.free{border-left-color:var(--th-free);} .th-row.loan{border-left-color:var(--th-loan);}
+  .th-date{color:var(--ink-faint); font-variant-numeric:tabular-nums; font-size:13px;}
+  .th-main{min-width:0;}
+  .th-tag{display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:5px; margin-right:8px; vertical-align:1px;}
+  .th-tag.in{background:rgba(255,138,143,.14); color:var(--th-in);} .th-tag.out{background:rgba(79,209,139,.14); color:var(--th-out);}
+  .th-tag.free{background:rgba(111,182,255,.14); color:var(--th-free);} .th-tag.loan{background:rgba(199,155,255,.14); color:var(--th-loan);}
+  .th-player{background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--ink); cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px;}
+  .th-det{color:var(--ink-dim); font-size:13px; margin-top:3px; overflow-wrap:anywhere;}
+  .th-team{background:none; border:0; padding:0; font:inherit; font-weight:600; color:var(--amber); cursor:pointer; text-decoration:underline; text-underline-offset:3px;}
+  .th-player:hover, .th-team:hover, .th-player:focus-visible, .th-team:focus-visible{text-decoration-color:currentColor;}
+  .th-fa{color:var(--ink-faint); font-style:italic;}
+  .th-team-txt{font-weight:600; color:var(--ink);}
+  .th-price{font-size:17px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap;}
+  .th-price small{display:block; font-size:11px; font-weight:600; color:var(--ink-faint);}
+  .th-price.in{color:var(--th-in);} .th-price.out{color:var(--th-out);} .th-price.zero{color:var(--ink-dim); font-size:15px;}
+  .th-empty{color:var(--ink-dim); margin:12px 0;}
+  .th-sum-title{margin-top:26px; padding-top:16px; border-top:2px solid var(--line); font-weight:800; font-size:15px;}
+  .th-sum{margin-top:10px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;}
+  .th-box{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+  .th-box > span{color:var(--ink-faint); font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;}
+  .th-box b{display:block; font-size:22px; margin:4px 0 2px; font-variant-numeric:tabular-nums;}
+  .th-box small{color:var(--ink-faint); font-size:12px;}
+  .th-box.in b{color:var(--th-in);} .th-box.out b{color:var(--th-out);} .th-box.bal.zero b{color:var(--ink);}
+  .th-title{margin:6px 0 4px;} .th-title small{color:var(--ink-faint); font-weight:500; font-size:13px; margin-left:6px;}
+  .mk-hist-btn{margin-left:auto; padding:8px 14px; border-radius:8px; border:1px solid var(--amber); background:none; color:var(--amber); font:inherit; font-weight:700; cursor:pointer;}
+  .mk-hist-btn[aria-expanded="true"]{background:var(--amber); color:#1A0F02;}
+  .mk-page.mk-history-on > :not(.mk-ph):not(#mkHistoryPanel){display:none !important;}
+  @media (max-width:640px){ .th-row{grid-template-columns:minmax(0,1fr) auto; } .th-date{grid-column:1/-1;} .th-sum{grid-template-columns:1fr;} }
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -9005,7 +9045,11 @@
              marketUi.mode, comme les autres réglages du marché ; voir
              mkSetMode / renderMarketStaffListings. -->
         <div class="mk-mode" id="marketModeToggle" role="tablist" aria-label="Type de marché"></div>
+        <!-- Historique personnel des opérations du manager (2026-10-05),
+             distinct de l'onglet Transferts d'une fiche équipe. -->
+        <button type="button" class="mk-hist-btn" id="mkHistoryBtn" aria-expanded="false">Mon historique</button>
       </div>
+      <div id="mkHistoryPanel" class="mk-hist-panel" hidden></div>
       <div class="mk-kpis" id="marketKpis"></div>
       <section class="mk-card" aria-labelledby="marketMineTitle">
         <div class="mk-card-head">
@@ -16406,6 +16450,8 @@ class Team {
     // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
     // Tactiques. Le plus récent en tête.
     this.ordersHistory = [];
+    this.transferHistory = [];
+    this.managerSince = null;
     // Rivalités et note des managers (voir recordHumanRivalry).
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
@@ -24305,6 +24351,8 @@ function serializeTeam(team) {
     plannedTactics: team.plannedTactics || {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    transferHistory: Array.isArray(team.transferHistory) ? team.transferHistory : [],
+    managerSince: typeof team.managerSince === "number" ? team.managerSince : null,
     departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
@@ -24876,6 +24924,9 @@ function teamFromSave(data) {
   team.ordersHistory = Array.isArray(data.ordersHistory)
     ? data.ordersHistory.filter(h => h && h.orders).slice(0, ORDERS_HISTORY_MAX).map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) }))
     : [];
+  // Historique des transferts du club (voir engine.js:recordTeamTransfer).
+  team.transferHistory = Array.isArray(data.transferHistory) ? data.transferHistory.filter(e => e && e.id && e.kind) : [];
+  team.managerSince = typeof data.managerSince === "number" ? data.managerSince : null;
   team.injuryLog = Array.isArray(data.injuryLog) ? data.injuryLog : [];
   // Feuille de match sauvegardée (titulaires + remplaçants, éventuellement
   // sur plusieurs postes) ; si absente (ancienne sauvegarde) ou invalide, la
@@ -34375,6 +34426,203 @@ document.addEventListener("click", (e) => {
   showTeamDetail(Number(link.dataset.teamIdx));
 });
 
+// =====================================================================
+// HISTORIQUE DES TRANSFERTS (retour utilisateur 2026-10-05) : onglet
+// « Transferts » de la fiche équipe (tous les mouvements du club consulté,
+// le sien ou un autre, d'un autre championnat compris) et « Mon
+// historique » du Marché (opérations décidées par le manager connecté).
+// Entrées persistantes écrites par le serveur au moment de chaque mouvement
+// (Team.transferHistory, voir engine.js:recordTeamTransfer). Noms de clubs
+// et de joueurs cliquables (navigation habituelle : showTeamDetail /
+// showForeignTeamDetail / showPlayerDetail / showForeignPlayerDetail) ;
+// « Agent libre » jamais cliquable.
+// =====================================================================
+const thUi = { filter: "all" };
+const TH_LABELS = {
+  team: { buy: "Arrivée", sell: "Départ", free_in: "Signature libre", release: "Licencié", expiry: "Fin de contrat", retire: "Retraite", liquidation: "Vente d'urgence", loan_in: "Prêt (arrivée)", loan_out: "Prêt (départ)", loan_end: "Fin de prêt" },
+  mine: { buy: "Achat", sell: "Vente", free_in: "Signature libre", release: "Licenciement", expiry: "Fin de contrat", retire: "Retraite", liquidation: "Vente d'urgence", loan_in: "Prêt (arrivée)", loan_out: "Prêt (départ)", loan_end: "Fin de prêt" },
+};
+function thTone(e) {
+  if (e.kind === "free_in") return "free";
+  if (/^loan/.test(e.kind)) return "loan";
+  return e.dir === "in" ? "in" : "out";
+}
+function thDate(at) {
+  const d = new Date(at);
+  if (isNaN(d)) return "–";
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+// Club d'une entrée : bouton vers sa fiche (même championnat ou autre),
+// texte simple s'il n'a pas de place connue (vente hors championnat).
+function thTeamHtml(ref) {
+  if (!ref || !ref.name) return `<span class="th-fa">Agent libre</span>`;
+  if (ref.idx == null) return `<span class="th-team-txt" data-no-i18n>${escapeHtml(ref.name)}</span>`;
+  return `<button type="button" class="th-team" data-th-team="${escapeHtml(String(ref.leagueId || ""))}|${Number(ref.idx)}" data-th-name="${escapeHtml(ref.name)}" data-no-i18n>${escapeHtml(ref.name)}</button>`;
+}
+function thPlayerHtml(e) {
+  const hint = (e.dir === "in" ? e.to : e.from) || e.to || e.from || null;
+  return `<button type="button" class="th-player" data-th-player="${escapeHtml(String(e.playerId))}" data-th-hint="${escapeHtml(String((hint && hint.leagueId) || ""))}" data-no-i18n>${escapeHtml(e.playerName || "?")}</button>`;
+}
+function thDetailHtml(e, mode) {
+  const pos = e.position ? ` · <span>${escapeHtml(e.position)}</span>` : "";
+  const age = typeof e.age === "number" ? ` · ${e.age} <span>ans</span>` : "";
+  let what;
+  switch (e.kind) {
+    case "buy": what = `<span>de</span> ${thTeamHtml(e.from)}`; break;
+    case "sell": what = `<span>vers</span> ${thTeamHtml(e.to)}`; break;
+    case "free_in": what = `<span class="th-fa">Agent libre</span>${e.formerClub && e.formerClub.name ? ` · <span>ex-</span>${thTeamHtml(e.formerClub)}` : ""}`; break;
+    case "release": what = `<span>vers</span> <span class="th-fa">Agent libre</span>${e.indemnity ? ` · <span>indemnité de licenciement</span> ${escapeHtml(formatMoney(e.indemnity))}` : ""}`; break;
+    case "expiry": what = `<span>contrat terminé, part libre</span> · <span class="th-fa">Agent libre</span>`; break;
+    case "retire": what = `<span>met fin à sa carrière</span>`; break;
+    case "liquidation": what = `<span>vendu hors du championnat</span>`; break;
+    case "loan_in": what = `<span>prêté par</span> ${thTeamHtml(e.from)}`; break;
+    case "loan_out": what = `<span>prêté à</span> ${thTeamHtml(e.to)}`; break;
+    case "loan_end": what = `<span>retour à</span> ${thTeamHtml(e.to)}`; break;
+    default: what = "";
+  }
+  return what + pos + age;
+}
+function thPriceHtml(e) {
+  const fee = e.fee || 0;
+  if (e.kind === "buy") return `<div class="th-price in">−${escapeHtml(formatMoney(fee))}<small>dépense</small></div>`;
+  if (e.kind === "sell" || e.kind === "liquidation") return `<div class="th-price out">+${escapeHtml(formatMoney(fee))}<small>recette</small></div>`;
+  if (e.kind === "free_in") return fee > 0
+    ? `<div class="th-price in">−${escapeHtml(formatMoney(fee))}<small>prime de signature</small></div>`
+    : `<div class="th-price zero">${escapeHtml(formatMoney(0))}<small>agent libre</small></div>`;
+  if (/^loan/.test(e.kind)) return fee > 0
+    ? `<div class="th-price ${e.dir === "in" ? "in" : "out"}">${e.dir === "in" ? "−" : "+"}${escapeHtml(formatMoney(fee))}<small>prêt</small></div>`
+    : `<div class="th-price zero">—<small>${e.kind === "loan_end" ? "sans frais" : "prêt"}</small></div>`;
+  return `<div class="th-price zero">—<small>sans transfert</small></div>`;
+}
+function transferHistoryTotalsClient(entries) {
+  let spent = 0, earned = 0, arrivals = 0, departures = 0, freeArrivals = 0;
+  (entries || []).forEach(e => {
+    if (!e) return;
+    if (e.dir === "in") { arrivals++; if (e.kind === "free_in" && !e.fee) freeArrivals++; spent += e.fee || 0; }
+    else { departures++; earned += e.fee || 0; }
+  });
+  return { spent, earned, balance: earned - spent, arrivals, departures, freeArrivals };
+}
+// `mode` : "team" (fiche équipe) ou "mine" (Marché → Mon historique).
+function transferHistoryViewHtml(entries, opts = {}) {
+  const mode = opts.mode === "mine" ? "mine" : "team";
+  const labels = TH_LABELS[mode];
+  const all = (entries || []).filter(e => e && e.id).slice().sort((a, b) => (b.at || 0) - (a.at || 0));
+  const list = thUi.filter === "in" ? all.filter(e => e.dir === "in") : thUi.filter === "out" ? all.filter(e => e.dir === "out") : all;
+  const chips = [["all", "Tout"], ["in", mode === "mine" ? "Achats et signatures" : "Arrivées"], ["out", mode === "mine" ? "Ventes et départs" : "Départs"]]
+    .map(([k, t]) => `<button type="button" class="th-chip${thUi.filter === k ? " on" : ""}" data-th-filter="${k}" aria-pressed="${thUi.filter === k}">${escapeHtml(t)}</button>`).join("");
+  let html = `<div class="th-wrap" data-th-mode="${mode}"><div class="th-filters" role="group" aria-label="Filtrer les transferts">${chips}</div>`;
+  if (!all.length) {
+    html += `<p class="th-empty">${mode === "mine" ? "Aucune opération pour l'instant : vos achats, ventes et signatures apparaîtront ici." : "Aucun transfert enregistré pour ce club."}</p>`;
+  } else if (!list.length) {
+    html += `<p class="th-empty">Aucun mouvement dans cette catégorie.</p>`;
+  } else {
+    let season = null;
+    list.forEach(e => {
+      if (e.season !== season) {
+        if (season !== null) html += `</div>`;
+        season = e.season;
+        html += `<div class="th-season">${typeof season === "number" ? `<span>Saison</span> ${season}` : ""}</div><div class="th-list">`;
+      }
+      const tone = thTone(e);
+      html += `<div class="th-row ${tone}" data-th-id="${escapeHtml(e.id)}" data-th-kind="${escapeHtml(e.kind)}">` +
+        `<span class="th-date">${thDate(e.at)}</span>` +
+        `<div class="th-main"><span class="th-tag ${tone}">${escapeHtml(labels[e.kind] || e.kind)}</span>${thPlayerHtml(e)}<div class="th-det">${thDetailHtml(e, mode)}</div></div>` +
+        thPriceHtml(e) + `</div>`;
+    });
+    html += `</div>`;
+  }
+  // Bilan : toujours sur TOUT l'historique (pas seulement le filtre affiché).
+  const t = transferHistoryTotalsClient(all);
+  const inLbl = mode === "mine" ? "Achats / dépenses" : "Arrivées / dépenses";
+  const outLbl = mode === "mine" ? "Ventes / recettes" : "Départs / recettes";
+  const balTone = t.balance > 0 ? "out" : t.balance < 0 ? "in" : "zero";
+  const sign = t.balance > 0 ? "+" : t.balance < 0 ? "−" : "";
+  html += `<div class="th-sum-title">${mode === "mine" ? "Mon bilan" : "Bilan des transferts"}</div>` +
+    `<div class="th-sum">` +
+      `<div class="th-box in"><span>${escapeHtml(inLbl)}</span><b class="th-spent">${escapeHtml(formatMoney(t.spent))}</b><small>${t.arrivals} <span>arrivée(s)</span>${t.freeArrivals ? ` · ${t.freeArrivals} <span>agent(s) libre(s)</span>` : ""}</small></div>` +
+      `<div class="th-box out"><span>${escapeHtml(outLbl)}</span><b class="th-earned">${escapeHtml(formatMoney(t.earned))}</b><small>${t.departures} <span>départ(s)</span></small></div>` +
+      `<div class="th-box bal ${balTone}"><span>Solde</span><b class="th-balance">${sign}${escapeHtml(formatMoney(Math.abs(t.balance)))}</b><small>recettes − dépenses</small></div>` +
+    `</div></div>`;
+  return html;
+}
+// Ouvre la fiche d'un club d'une entrée (championnat du manager ou autre).
+function thOpenTeam(btn) {
+  const [lid, idxStr] = btn.dataset.thTeam.split("|");
+  const idx = Number(idxStr);
+  const own = league && league.leagueId ? league.leagueId : "";
+  if (!lid || lid === own) {
+    const t = league && league.teams ? league.teams[idx] : null;
+    if (!t || t.name !== btn.dataset.thName) { showToast("Ce club n'existe plus sous ce nom."); return; }
+    if (t.isGuest) { openPlaneteAt({ country: String(t.guestLeagueId || "").slice(0, 2) || league.country || null, leagueId: t.guestLeagueId, clubIdx: t.guestIdx }); return; }
+    showTeamDetail(idx);
+    return;
+  }
+  showForeignTeamDetail(lid, idx);
+}
+// Ouvre la fiche d'un joueur d'une entrée, là où il est AUJOURD'HUI (il a
+// pu changer de club ou de championnat depuis) : d'abord le championnat du
+// manager, sinon le serveur le cherche dans le monde (/api/world/locate-player).
+async function thOpenPlayer(btn) {
+  const raw = btn.dataset.thPlayer;
+  const id = /^-?\d+$/.test(raw) ? Number(raw) : raw;
+  const loc = typeof bmLocalPlayer === "function" ? bmLocalPlayer(id) : null;
+  if (loc) {
+    if (loc.status === "club") { showPlayerDetail(loc.teamIdx, loc.player.id); return; }
+    if (loc.status === "youth") { setActiveTab("academie"); TAB_HANDLERS.academie && TAB_HANDLERS.academie(); return; }
+    const listing = (league.transferListings || []).find(l => l.status === "open" && l.freeAgent && String(l.playerId) === String(id));
+    if (listing) { TAB_HANDLERS.marche(); mkGotoListing(listing.id); return; }
+    showToast("Ce joueur est agent libre.");
+    return;
+  }
+  let data = null;
+  try {
+    const res = await fetchApi(`/api/world/locate-player?id=${encodeURIComponent(raw)}&hint=${encodeURIComponent(btn.dataset.thHint || "")}`);
+    data = res.ok ? await res.json().catch(() => null) : null;
+  } catch (e) { data = null; }
+  if (!data || !data.ok) { showToast("Fiche du joueur momentanément indisponible."); return; }
+  if (!data.found) { showToast("Ce joueur a quitté le jeu (retraite)."); return; }
+  if (data.status === "club") { window.__lastForeignPlayer = showForeignPlayerDetail(data.leagueId, data.teamIdx, id); return; }
+  if (data.status === "fa") { showToast("Ce joueur est agent libre dans un autre championnat."); return; }
+  showToast("Ce joueur évolue désormais dans un centre de formation.");
+}
+document.addEventListener("click", (e) => {
+  const f = e.target.closest && e.target.closest("[data-th-filter]");
+  if (f) {
+    thUi.filter = f.dataset.thFilter;
+    if (f.closest("#mkHistoryPanel")) renderMarketHistoryPanel(); else renderTeamDetail(teamDetailIdx);
+    return;
+  }
+  const t = e.target.closest && e.target.closest("[data-th-team]");
+  if (t) { e.preventDefault(); e.stopPropagation(); thOpenTeam(t); return; }
+  const p = e.target.closest && e.target.closest("[data-th-player]");
+  if (p) { e.preventDefault(); e.stopPropagation(); window.__lastThPlayer = thOpenPlayer(p); }
+}, true);
+// Marché → Mon historique : opérations décidées par le manager connecté
+// (achats, ventes, signatures, licenciements) depuis sa prise de fonction.
+const mkHistoryUi = { open: false };
+function myTransferOperations() {
+  const since = typeof teamA.managerSince === "number" ? teamA.managerSince : 0;
+  return (teamA.transferHistory || []).filter(e => e && e.human && (e.at || 0) >= since);
+}
+function renderMarketHistoryPanel() {
+  const panel = document.getElementById("mkHistoryPanel");
+  const btn = document.getElementById("mkHistoryBtn");
+  const page = panel && panel.closest(".mk-page");
+  if (!panel) return;
+  panel.hidden = !mkHistoryUi.open;
+  if (page) page.classList.toggle("mk-history-on", mkHistoryUi.open);
+  if (btn) { btn.setAttribute("aria-expanded", String(mkHistoryUi.open)); btn.textContent = mkHistoryUi.open ? "← Retour au marché" : "Mon historique"; }
+  if (!mkHistoryUi.open) { panel.innerHTML = ""; return; }
+  panel.innerHTML = `<h3 class="th-title">Mon historique <small>${escapeHtml(teamA.name)}</small></h3>` + transferHistoryViewHtml(myTransferOperations(), { mode: "mine" });
+}
+document.getElementById("mkHistoryBtn").addEventListener("click", () => {
+  mkHistoryUi.open = !mkHistoryUi.open;
+  thUi.filter = "all";
+  renderMarketHistoryPanel();
+});
+
 // Sous-navigation de la fiche équipe (réutilise le style pastille de
 // .boxscore-toggle/.bs-tab, déjà utilisé pour l'onglet Domicile/Extérieur de
 // la feuille de stats, plutôt que d'inventer une nouvelle classe).
@@ -34384,6 +34632,7 @@ function teamDetailSubNavHtml() {
     { key: "effectif", label: "Effectif" },
     { key: "calendrier", label: "Calendrier" },
     { key: "analyse", label: "Analyse d'équipe" },
+    { key: "transferts", label: "Transferts" },
   ].filter(t => !(teamDetailForeign && t.key === "analyse"));
   return `<div class="boxscore-toggle team-detail-subnav">` +
     tabs.map(t => `<button type="button" class="bs-tab${teamDetailSubView === t.key ? " active" : ""}" data-team-detail-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
@@ -35909,6 +36158,8 @@ function renderTeamDetailContent(teamIdx) {
     html += teamDetailAnalyseHtml(teamIdx);
   } else if (teamDetailSubView === "effectif") {
     html += teamDetailEffectifHtml(teamIdx);
+  } else if (teamDetailSubView === "transferts") {
+    html += transferHistoryViewHtml(team.transferHistory || [], { mode: "team", teamName: team.name });
   } else {
     html += teamDetailApercuHtml(teamIdx);
   }
@@ -47713,6 +47964,7 @@ function renderMarcheSection() {
   renderMarketCritPanel();
   renderMarketAlertsBar();
   renderMarketListings();
+  renderMarketHistoryPanel();
 }
 
 function renderMarketKpis() {

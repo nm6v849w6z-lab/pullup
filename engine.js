@@ -5633,6 +5633,63 @@ function recordPlayerEvent(p, ev) {
   p.historyLog.unshift(ev);
   if (p.historyLog.length > PLAYER_HISTORY_LOG_MAX) p.historyLog.length = PLAYER_HISTORY_LOG_MAX;
 }
+// ---------------------------------------------------------------------
+// HISTORIQUE DES TRANSFERTS D'UN CLUB (retour utilisateur 2026-10-05 : « qui
+// est arrivé, qui est parti, d'où il venait ou où il est parti, combien il
+// a coûté ou rapporté »). Team.transferHistory : entrées PERSISTANTES,
+// écrites au moment du mouvement (jamais reconstruites depuis l'effectif),
+// la plus récente en tête. Une entrée par club concerné : un achat écrit
+// « buy » chez l'acheteur ET « sell » chez le vendeur, avec le même
+// identifiant de mouvement (`id` + sens → jamais de doublon).
+//   kind : buy (arrivée payante) · sell (départ payant) · free_in (agent
+//          libre signé ; prix = prime de signature, 0 si aucune) · release
+//          (licencié → agent libre ; l'indemnité n'est pas un prix de
+//          transfert, elle est notée à part) · expiry (fin de contrat) ·
+//          retire (retraite) · liquidation (vente d'urgence hors du
+//          championnat) · loan_in / loan_out / loan_end (prévus pour un
+//          futur système de prêt : aucun prêt n'existe dans le jeu).
+//   from / to : { name, leagueId, idx } (null = agent libre / hors club).
+//   human : opération décidée par le manager du club (enchère, vente,
+//          licenciement, signature) → « Mon historique » du marché.
+// ---------------------------------------------------------------------
+const TEAM_TRANSFER_HISTORY_MAX = 150;
+const TRANSFER_KIND_DIR = { buy: "in", free_in: "in", loan_in: "in", sell: "out", release: "out", expiry: "out", retire: "out", liquidation: "out", loan_out: "out", loan_end: "out" };
+function transferTeamRef(team, leagueId, idx) {
+  if (!team) return null;
+  return { name: team.name, leagueId: leagueId || null, idx: Number.isInteger(idx) && idx >= 0 ? idx : null };
+}
+function recordTeamTransfer(team, e) {
+  if (!team || !e || !e.kind || !e.player) return null;
+  if (!Array.isArray(team.transferHistory)) team.transferHistory = [];
+  const dir = TRANSFER_KIND_DIR[e.kind] || "in";
+  const id = `${e.id}:${dir}`;
+  if (team.transferHistory.some(x => x && x.id === id)) return null;
+  const p = e.player;
+  const entry = {
+    id, at: typeof e.at === "number" ? e.at : Date.now(), season: typeof e.season === "number" ? e.season : teamSeasonNo(team), kind: e.kind, dir,
+    playerId: p.id, playerName: p.name, position: p.position || null, age: typeof p.age === "number" ? p.age : null,
+    from: e.from || null, to: e.to || null,
+    fee: Math.max(0, Math.round(Number(e.fee) || 0)),
+    human: !!e.human,
+    ...(e.formerClub ? { formerClub: e.formerClub } : {}),
+    ...(e.indemnity ? { indemnity: Math.round(e.indemnity) } : {}),
+  };
+  team.transferHistory.unshift(entry);
+  if (team.transferHistory.length > TEAM_TRANSFER_HISTORY_MAX) team.transferHistory.length = TEAM_TRANSFER_HISTORY_MAX;
+  return entry;
+}
+// Bilan d'une liste d'entrées : dépenses (arrivées payantes et primes de
+// signature), recettes (départs payants), solde = recettes − dépenses.
+function transferHistoryTotals(entries) {
+  let spent = 0, earned = 0, arrivals = 0, departures = 0, freeArrivals = 0;
+  (entries || []).forEach(e => {
+    if (!e) return;
+    if (e.dir === "in") { arrivals++; if (e.kind === "free_in" && !e.fee) freeArrivals++; spent += e.fee || 0; }
+    else { departures++; earned += e.fee || 0; }
+  });
+  return { spent, earned, balance: earned - spent, arrivals, departures, freeArrivals };
+}
+
 function recordPlayerInjury(p, ev) {
   if (!p || !ev) return;
   if (!Array.isArray(p.injuryHistory)) p.injuryHistory = [];
@@ -6162,6 +6219,10 @@ class Team {
     // recordOrdersHistory) : « partir d'un match précédent » dans l'onglet
     // Tactiques. Le plus récent en tête.
     this.ordersHistory = [];
+    // Historique des transferts du club (voir recordTeamTransfer) et date
+    // de prise de fonction du manager actuel (« Mon historique » du marché).
+    this.transferHistory = [];
+    this.managerSince = null;
     // Rivalités et note des managers (voir recordHumanRivalry).
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
@@ -7940,6 +8001,7 @@ class Team {
     archiveDepartedMatchLog(this, p);
     this.applyChemistryDelta(-CHEMISTRY_ROSTER_CHANGE_BASE * departureImportance);
     this.recordTransaction(`Vente de ${p.name}`, p.salePrice || 0);
+    recordTeamTransfer(this, { id: `Q${p.id}:${Date.now()}`, at: Date.now(), kind: "liquidation", player: p, from: { name: this.name, leagueId: null, idx: null }, to: null, fee: p.salePrice || 0, human: !!this.isHuman });
     // Retour utilisateur (2026-09) : "en cas d'indisponibilité pour vente
     // d'un joueur, qui avait été mis dans la composition, il doit être
     // enlevé de la composition" — PAS une reconstruction complète façon
@@ -12621,6 +12683,9 @@ class League {
     this.teams = teams;
     this.schedule = generateRoundRobinSchedule(teams.length);
     this.round = 0; // prochaine journée à jouer (0-indexée)
+    // Championnat créé avec l'historique des transferts : rien à reprendre
+    // (voir seedTransferHistoryFromPlayers ; leagueFromSave relit le drapeau).
+    this.transferHistorySeeded = true;
     this.results = []; // { round, home, away, scoreHome, scoreAway }
     this.playoffs = null; // rempli une fois la saison régulière terminée
 
@@ -13075,7 +13140,10 @@ class League {
           if (l.status === "open" && l.playerId === p.id) { l.status = "cancelled"; l.result = "retired"; }
         });
         const i = team.players.findIndex(x => x.id === p.id);
-        if (i !== -1) { team.players.splice(i, 1); archiveDepartedMatchLog(team, p); }
+        if (i !== -1) {
+          team.players.splice(i, 1); archiveDepartedMatchLog(team, p);
+          recordTeamTransfer(team, { id: `${this.leagueId || "lg"}:T${p.id}`, at: now, kind: "retire", player: p, from: transferTeamRef(team, this.leagueId, idx), to: null, fee: 0, human: false });
+        }
         if (team.isHuman) team.handleStarterDeparture(p.id);
         retired.push({ teamIdx: idx, playerId: p.id, name: p.name, age: p.age, position: p.position });
         if (team.isHuman && team.feed) {
@@ -13830,6 +13898,13 @@ class League {
     if (i === -1) return;
     team.players.splice(i, 1);
     archiveDepartedMatchLog(team, p);
+    // Historique : licenciement (décision du manager) ou fin de contrat.
+    const released = !!(opts && opts.released);
+    recordTeamTransfer(team, {
+      id: `${this.leagueId || "lg"}:${released ? "R" : "X"}${p.id}:${now}`, at: now, kind: released ? "release" : "expiry", player: p,
+      from: transferTeamRef(team, this.leagueId, teamIdx), to: null, fee: 0, human: released && team.isHuman,
+      indemnity: released ? (opts.fee || 0) : 0,
+    });
     (this.transferListings || []).forEach(l => {
       if (l.status === "open" && !l.freeAgent && l.playerId === p.id) { l.status = "cancelled"; l.result = "contract-ended"; }
     });
@@ -13979,7 +14054,7 @@ class League {
   // server/worldMarket.js) : la mise gagnante est une prime de signature
   // (débitée, créditée à personne), contrat au salaire demandé pour la
   // durée choisie. Renvoie { result: "sold" | "buyer-failed" | "player-missing", player? }.
-  signFreeAgentFromListing(listing, buyer, buyerSeason, now) {
+  signFreeAgentFromListing(listing, buyer, buyerSeason, now, buyerRef = null) {
     const amount = listing.currentBid || 0;
     if (!buyer || buyer.players.length >= MAX_ROSTER_SIZE || (buyer.isHuman && amount > buyer.budget)) return { result: "buyer-failed" };
     const i = (this.freeAgents || []).findIndex(p => p.id === listing.playerId);
@@ -13988,6 +14063,15 @@ class League {
     if (buyer.isHuman && amount > 0) buyer.recordTransaction(`${FREE_AGENT_SIGNING_LABEL} : ${player.name}`, -amount);
     buyer.players.push(player);
     recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: listing.formerTeamName || null, to: buyer.name, fee: amount, freeAgent: true });
+    // Historique : signature d'un agent libre (provenance « Agent libre »,
+    // ancien club noté à part). `buyerRef` : club d'un autre championnat
+    // (marché mondial).
+    const bRef = buyerRef || { leagueId: this.leagueId || null, idx: this.teams.indexOf(buyer) };
+    recordTeamTransfer(buyer, {
+      id: `${this.leagueId || "lg"}:L${listing.id}`, at: now, kind: "free_in", player, from: null,
+      to: transferTeamRef(buyer, bRef.leagueId, bRef.idx), fee: amount, human: buyer.isHuman,
+      formerClub: listing.formerTeamName ? transferTeamRef({ name: listing.formerTeamName }, this.leagueId, listing.formerTeamIdx) : null,
+    });
     resetPlayerTacticalKnowledge(player);
     if (player.form < TRANSFER_NEW_CLUB_MOTIVATION_FLOOR) player.form = TRANSFER_NEW_CLUB_MOTIVATION_FLOOR;
     player.weeksAtLowMotivation = 0;
@@ -14011,6 +14095,11 @@ class League {
     signNewContract(player, 1 + Math.floor(rand01() * 2), this.contractSeason(), askedSalary(player));
     cpu.t.players.push(player);
     recordPlayerEvent(player, { type: "transfer", at: now, season: teamSeasonNo(cpu.t), from: listing.formerTeamName || null, to: cpu.t.name, fee: 0, freeAgent: true });
+    recordTeamTransfer(cpu.t, {
+      id: `${this.leagueId || "lg"}:L${listing.id}`, at: now, kind: "free_in", player, from: null,
+      to: transferTeamRef(cpu.t, this.leagueId, cpu.idx), fee: 0, human: false,
+      formerClub: listing.formerTeamName ? transferTeamRef({ name: listing.formerTeamName }, this.leagueId, listing.formerTeamIdx) : null,
+    });
     cpu.t.autoAssignLineup();
     return "cpu-signed";
   }
@@ -14351,6 +14440,12 @@ class League {
       listing.finalPrice = amount;
       this._applyTransferContract(listing, buyer, res.player, this.contractSeason(), now);
       if (seller.isHuman && buyer.isHuman) this.logHumanTransfer(seller.name, buyer.name, res.player, amount, now);
+      // Historique des transferts : chez l'acheteur ET chez le vendeur.
+      const mvId = `${this.leagueId || "lg"}:L${listing.id}`;
+      const fromRef = transferTeamRef(seller, this.leagueId, listing.sellerIdx);
+      const toRef = transferTeamRef(buyer, this.leagueId, buyerIdx);
+      recordTeamTransfer(buyer, { id: mvId, at: now, kind: "buy", player: res.player, from: fromRef, to: toRef, fee: amount, human: buyer.isHuman });
+      recordTeamTransfer(seller, { id: mvId, at: now, kind: "sell", player: res.player, from: fromRef, to: toRef, fee: amount, human: seller.isHuman });
     }
   }
 
@@ -16882,6 +16977,8 @@ function serializeTeam(team) {
     matchOrdersUsed: team.matchOrdersUsed && typeof team.matchOrdersUsed === "object" ? team.matchOrdersUsed : {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
+    transferHistory: Array.isArray(team.transferHistory) ? team.transferHistory : [],
+    managerSince: typeof team.managerSince === "number" ? team.managerSince : null,
     departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
@@ -17608,6 +17705,8 @@ function teamFromSave(data) {
     team.plannedTactics = migrated;
   }
   if (data.matchOrdersUsed && typeof data.matchOrdersUsed === "object") team.matchOrdersUsed = data.matchOrdersUsed;
+  team.transferHistory = Array.isArray(data.transferHistory) ? data.transferHistory.filter(e => e && e.id && e.kind).slice(0, TEAM_TRANSFER_HISTORY_MAX) : [];
+  team.managerSince = typeof data.managerSince === "number" ? data.managerSince : null;
   // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels,
   // intensité, parrainages, plan collectif ; migration des anciennes
   // sauvegardes (voir migrateTrainingSlots).
@@ -17637,6 +17736,7 @@ function serializeLeague(lg) {
     seasonHonoursId: lg.seasonHonoursId || null,
     allStarGame: lg.allStarGame || null,
     humanTransferLog: Array.isArray(lg.humanTransferLog) ? lg.humanTransferLog : [],
+    transferHistorySeeded: !!lg.transferHistorySeeded,
     // Agents libres en attente de club (voir League.processContractExpiries).
     freeAgents: Array.isArray(lg.freeAgents) ? lg.freeAgents.map(serializePlayerRecord) : [],
     // Coupe nationale (server/nationalCup.js) : clubs de CETTE ligue encore
@@ -17829,7 +17929,46 @@ function leagueFromSave(data, userTeam = null) {
   lg.freeAgents = Array.isArray(data.freeAgents) ? data.freeAgents.map(playerFromSave) : [];
   lg.ensureContracts();
   pruneForeignMatchLogs(lg);
+  // Historique des transferts (2026-10-05) : une seule fois par championnat,
+  // les transferts d'avant la fonctionnalité sont repris du journal de
+  // chaque joueur (Player.historyLog), puis tout passe par recordTeamTransfer.
+  lg.transferHistorySeeded = !!data.transferHistorySeeded;
+  if (!lg.transferHistorySeeded) { seedTransferHistoryFromPlayers(lg); lg.transferHistorySeeded = true; }
   return lg;
+}
+
+// Reprise unique des transferts déjà notés dans le journal des joueurs
+// (type "transfer" : de / vers / prix / agent libre) : arrivée chez le club
+// d'arrivée, départ chez le club de départ, s'ils sont dans ce championnat.
+function seedTransferHistoryFromPlayers(lg) {
+  const byName = new Map();
+  (lg.teams || []).forEach((t, i) => { if (t && t.name) byName.set(t.name, i); });
+  const all = [];
+  (lg.teams || []).forEach(t => { if (t) (t.players || []).concat(t.youthPlayers || []).forEach(p => all.push(p)); });
+  (lg.freeAgents || []).forEach(p => all.push(p));
+  const touched = new Set();
+  all.forEach(p => (p && Array.isArray(p.historyLog) ? p.historyLog : []).forEach(ev => {
+    if (!ev || ev.type !== "transfer" || typeof ev.at !== "number") return;
+    const id = `seed:${p.id}:${ev.at}`;
+    const toIdx = byName.has(ev.to) ? byName.get(ev.to) : null;
+    const fromIdx = !ev.freeAgent && byName.has(ev.from) ? byName.get(ev.from) : null;
+    const ref = (name, idx) => (name ? { name, leagueId: idx != null ? (lg.leagueId || null) : null, idx } : null);
+    const fromRef = ev.freeAgent ? null : ref(ev.from, fromIdx);
+    const toRef = ref(ev.to, toIdx);
+    const already = (t, dir) => (t.transferHistory || []).some(x => x && x.playerId === p.id && x.at === ev.at && x.dir === dir);
+    if (toIdx != null && !already(lg.teams[toIdx], "in")) {
+      const t = lg.teams[toIdx];
+      recordTeamTransfer(t, { id, at: ev.at, season: ev.season, kind: ev.freeAgent ? "free_in" : "buy", player: p, from: fromRef, to: toRef, fee: ev.fee, human: !!t.isHuman,
+        formerClub: ev.freeAgent && ev.from ? ref(ev.from, byName.has(ev.from) ? byName.get(ev.from) : null) : null });
+      touched.add(t);
+    }
+    if (fromIdx != null && !already(lg.teams[fromIdx], "out")) {
+      const t = lg.teams[fromIdx];
+      recordTeamTransfer(t, { id, at: ev.at, season: ev.season, kind: "sell", player: p, from: fromRef, to: toRef, fee: ev.fee, human: !!t.isHuman });
+      touched.add(t);
+    }
+  }));
+  touched.forEach(t => t.transferHistory.sort((a, b) => (b.at || 0) - (a.at || 0)));
 }
 
 // Matchs de championnat joués dans un AUTRE championnat (retour utilisateur
@@ -19823,7 +19962,7 @@ return {
   // TACTICAL_KNOWLEDGE_GAIN_BASE) :
   TACTICAL_KNOWLEDGE_GAIN_BASE, TACTICAL_KNOWLEDGE_GAIN_STEP, TACTICAL_KNOWLEDGE_GAIN_MAX,
   MARKET_WATCHLIST_MAX, BOOKMARKS_MAX, MARKET_ALERTS_MAX, sanitizeMarketAlert, marketAlertMatches, marketAlertLabel, marketAlertParts, marketAlertRanges,
-  TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory, pushOrdersHistory,
+  TRAINING_HISTORY_MAX, TACTIC_PRESETS_MAX, TACTIC_PRESETS_FREE_MAX, TACTIC_PRESET_NAME_MAX, tacticPresetOrdersFrom, ORDERS_HISTORY_MAX, recordOrdersHistory, pushOrdersHistory, recordTeamTransfer, transferTeamRef, transferHistoryTotals, TEAM_TRANSFER_HISTORY_MAX, seedTransferHistoryFromPlayers,
   FRIENDLY_TACTICAL_ROLE_WEIGHTS, TACTICAL_KNOWLEDGE_LOSS_GRACE, TACTICAL_KNOWLEDGE_LOSS_STEP, TACTICAL_KNOWLEDGE_LOSS_MAX, TACTICAL_KNOWLEDGE_FLOOR, TACTICAL_KNOWLEDGE_DAILY_GAIN,
   tacticalKnowledgeGainForStreak, tacticalKnowledgeLossForStreak, defaultTacticalKnowledgeShape,
   PLAYER_TACTICAL_KNOWLEDGE_GAIN_BASE, PLAYER_TACTICAL_KNOWLEDGE_GAIN_STEP, PLAYER_TACTICAL_KNOWLEDGE_GAIN_MAX, PLAYER_TACTICAL_KNOWLEDGE_RECRUIT, TACTICAL_FULL_GAIN_SECONDS,
