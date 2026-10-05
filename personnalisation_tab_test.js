@@ -172,6 +172,16 @@ function duplicateIds(doc) {
   await waitFor(() => { const s = win.eval("teamA.courtStyle"); return s && s.wood === "erable" && s.paint === "bleu"; }, "parquet enregistré");
   assert(called("/api/club/set-court-style"), "parquet → /api/club/set-court-style");
   assert(/enregistré/.test(doc.getElementById("persoCourtFeedback").textContent), "confirmation du parquet");
+  // Couleurs libres (2026-10-05) : case du code hexa pour le sol, puis la façade de la salle.
+  { const el = doc.querySelector('#persoCourtHolder [data-fc-hex="court-floor"]'); el.value = "#1E5631"; el.dispatchEvent(new win.Event("change", { bubbles: true })); }
+  assert(!doc.getElementById("persoCourtSaveBtn").disabled && doc.querySelector('#persoCourtHolder [data-fc="court-floor"]').classList.contains("on"), "sol en couleur libre : brouillon, contrôle mis en avant");
+  { const el = doc.querySelector('#persoCourtHolder [data-fc-hex="court-paint"]'); el.value = "zz"; el.dispatchEvent(new win.Event("change", { bubbles: true })); assert(el.classList.contains("bad"), "code hexa invalide signalé"); }
+  doc.getElementById("persoCourtSaveBtn").click();
+  await waitFor(() => { const s = win.eval("teamA.courtStyle"); return s && s.wood === "#1e5631"; }, "sol libre enregistré");
+  { const el = doc.querySelector('#persoArenaHolder [data-fc-hex="arena-facade"]'); el.value = "7a2b3a"; el.dispatchEvent(new win.Event("change", { bubbles: true })); }
+  assert(win.eval("persoArenaDraft && persoArenaDraft.facade") === "#7a2b3a", "façade en couleur libre (sans #) : brouillon");
+  doc.getElementById("persoArenaSaveBtn").click();
+  await waitFor(() => win.eval("teamA.arenaStyle && teamA.arenaStyle.facade") === "#7a2b3a", "salle en couleur libre enregistrée");
   assert(duplicateIds(doc).length === 0, "aucun id en double (Premium)");
 
   // --- 6c) Premium perdu : motif conservé mais affichage retombé sur « uni ».

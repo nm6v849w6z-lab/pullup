@@ -48,6 +48,11 @@ assert(!actions.setTeamArenaStyle(team, 0, league, { arenaStyle: { main: "rose" 
 assert(!actions.setTeamArenaStyle(team, 0, league, { arenaStyle: { mood: "nuit" } }, T0).ok, "ambiance inconnue refusée");
 let r = actions.setTeamArenaStyle(team, 0, league, { arenaStyle: { facade: "anthracite", roof: "noir", main: "vert" } }, T0);
 assert(r.ok && team.arenaStyle.facade === "anthracite" && team.arenaStyle.main === "vert", "style valide enregistré");
+// Couleurs libres (2026-10-05) : couleurs, façade et toit en "#rrggbb".
+r = actions.setTeamArenaStyle(team, 0, league, { arenaStyle: { main: "#123ABC", second: "#ffffff", facade: "#7A2B3A", roof: "#20242C" } }, T0);
+assert(r.ok && team.arenaStyle.main === "#123abc" && team.arenaStyle.facade === "#7a2b3a" && team.arenaStyle.roof === "#20242c", "couleurs libres enregistrées");
+assert(Engine.arenaFacadeColors("#7a2b3a").side !== "#7a2b3a" && /^#[0-9a-f]{6}$/.test(Engine.arenaFacadeColors("#7a2b3a").side), "façade libre : côté ombré déduit");
+assert(!actions.setTeamArenaStyle(team, 0, league, { arenaStyle: { roof: "#12" } }, T0).ok, "toit : code hexa invalide refusé");
 r = actions.setTeamArenaStyle(team, 0, league, { arenaStyle: null }, T0);
 assert(r.ok && team.arenaStyle === null, "retour à la salle par défaut");
 const cand = Engine.generateYouthCandidate(T0, 3, team.country);

@@ -6399,4 +6399,10 @@ window.HM_I18N_ZH = {
   "saisons {0} – {1}": "第 {0} – {1} 赛季",
   // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
   "Défense conseillée": "推荐防守",
+  // Couleurs libres du terrain et de la salle (2026-10-05).
+  "Couleur libre": "自定义颜色",
+  "Couleur libre du sol": "自定义地板颜色",
+  "Couleur libre des raquettes": "自定义禁区颜色",
+  "Couleur libre de la façade": "自定义外墙颜色",
+  "Couleur libre du toit": "自定义屋顶颜色",
 };

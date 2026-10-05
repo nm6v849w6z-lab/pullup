@@ -6399,4 +6399,10 @@ window.HM_I18N_EL = {
   "saisons {0} – {1}": "σεζόν {0} – {1}",
   // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
   "Défense conseillée": "Προτεινόμενη άμυνα",
+  // Couleurs libres du terrain et de la salle (2026-10-05).
+  "Couleur libre": "Ελεύθερο χρώμα",
+  "Couleur libre du sol": "Ελεύθερο χρώμα παρκέ",
+  "Couleur libre des raquettes": "Ελεύθερο χρώμα ρακέτας",
+  "Couleur libre de la façade": "Ελεύθερο χρώμα πρόσοψης",
+  "Couleur libre du toit": "Ελεύθερο χρώμα στέγης",
 };

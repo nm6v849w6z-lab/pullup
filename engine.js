@@ -3221,10 +3221,36 @@ const COURT_WOODS = {
   noyer:  { label: "Noyer foncé", floor: "#5b3a24", grain: "#4f321f", line: "rgba(255,255,255,.82)" },
   ardoise:{ label: "Ardoise", floor: "#2b2f36", grain: "#262a30", line: "rgba(255,255,255,.75)" },
 };
+// Couleurs libres (retour utilisateur 2026-10-05 : « pour les premium :
+// modifier la couleur du terrain et du stade comme les maillots, avec une
+// case pour le code hexa ») : `wood` accepte aussi "#rrggbb" (sol de cette
+// couleur, veinage et lignes déduits), `paint` une clé ou "#rrggbb".
+function hexShade(hex, amt) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16), t = amt < 0 ? 0 : 255, a = Math.abs(amt);
+  const ch = s => Math.round(((n >> s) & 255) + (t - ((n >> s) & 255)) * a);
+  return "#" + [16, 8, 0].map(s => ch(s).toString(16).padStart(2, "0")).join("");
+}
+function hexLuminance(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return 0;
+  const n = parseInt(m[1], 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
+// Couleurs d'un parquet : bois du jeu (clé) ou couleur libre "#rrggbb".
+function courtWoodColors(wood) {
+  if (COURT_WOODS[wood]) return COURT_WOODS[wood];
+  if (JERSEY_HEX_RE.test(wood || "")) {
+    const floor = wood.toLowerCase();
+    return { label: floor.toUpperCase(), floor, grain: hexShade(floor, -0.07), line: hexLuminance(floor) > 0.72 ? "rgba(20,24,30,.78)" : "rgba(255,255,255,.88)" };
+  }
+  return COURT_WOODS.nuit;
+}
 function normalizeCourtStyle(raw) {
   if (!raw || typeof raw !== "object") return null;
-  const wood = COURT_WOODS[raw.wood] ? raw.wood : "nuit";
-  const paint = raw.paint && JERSEY_COLORS[raw.paint] ? raw.paint : null;
+  const wood = COURT_WOODS[raw.wood] ? raw.wood : (JERSEY_HEX_RE.test(raw.wood || "") ? raw.wood.toLowerCase() : "nuit");
+  const paint = raw.paint ? normalizeJerseyColor(raw.paint) : null;
   if (wood === "nuit" && !paint) return null;
   return { wood, paint };
 }
@@ -3233,8 +3259,8 @@ function courtStyleFor(team, now = Date.now()) {
   if (!team || !team.courtStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
   const st = normalizeCourtStyle(team.courtStyle);
   if (!st) return null;
-  const w = COURT_WOODS[st.wood];
-  return { wood: st.wood, floor: w.floor, grain: w.grain, line: w.line, paint: st.paint ? JERSEY_COLORS[st.paint] : null };
+  const w = courtWoodColors(st.wood);
+  return { wood: st.wood, floor: w.floor, grain: w.grain, line: w.line, paint: st.paint ? jerseyHex(st.paint) : null };
 }
 
 // 4) Salle personnalisée (Premium, retour utilisateur 2026-09-30 : « salle
@@ -3260,13 +3286,21 @@ const ARENA_ROOFS = {
   club:   { label: "Couleur du club", color: null },
 };
 const ARENA_MOODS = ["dusk", "day"];
+// Couleurs libres (2026-10-05) : main/second acceptent "#rrggbb" comme les
+// maillots, façade et toit aussi (en plus des choix prédéfinis).
+function arenaFacadeColors(facade) {
+  if (ARENA_FACADES[facade]) return ARENA_FACADES[facade];
+  if (JERSEY_HEX_RE.test(facade || "")) { const front = facade.toLowerCase(); return { label: front.toUpperCase(), front, side: hexShade(front, -0.16) }; }
+  return ARENA_FACADES.beton;
+}
 function normalizeArenaStyle(raw) {
   if (!raw || typeof raw !== "object") return null;
+  const hexOr = (v, ok, dflt) => ok(v) ? v : (JERSEY_HEX_RE.test(v || "") ? v.toLowerCase() : dflt);
   const out = {
-    main: raw.main && JERSEY_COLORS[raw.main] ? raw.main : null,
-    second: raw.second && JERSEY_COLORS[raw.second] ? raw.second : null,
-    facade: ARENA_FACADES[raw.facade] ? raw.facade : "beton",
-    roof: ARENA_ROOFS[raw.roof] ? raw.roof : "gris",
+    main: raw.main ? normalizeJerseyColor(raw.main) : null,
+    second: raw.second ? normalizeJerseyColor(raw.second) : null,
+    facade: hexOr(raw.facade, v => !!ARENA_FACADES[v], "beton"),
+    roof: hexOr(raw.roof, v => !!ARENA_ROOFS[v], "gris"),
     mood: ARENA_MOODS.includes(raw.mood) ? raw.mood : "dusk",
   };
   if (!out.main && !out.second && out.facade === "beton" && out.roof === "gris" && out.mood === "dusk") return null;
@@ -20133,7 +20167,7 @@ return {
   RELEASE_INDEMNITY_RATE, releaseIndemnityFor, medicalCheckFor, MEDICAL_HISTORY_WINDOW_MS,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
-  COURT_WOODS, normalizeCourtStyle, courtStyleFor, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
+  COURT_WOODS, normalizeCourtStyle, courtStyleFor, courtWoodColors, arenaFacadeColors, hexShade, hexLuminance, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
   RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

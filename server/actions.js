@@ -1493,7 +1493,9 @@ function requirePremium(team, now) {
 function setTeamCourtStyle(team, teamIndex, league, body, now) {
   if (!requirePremium(team, now)) return fail("Le parquet aux couleurs du club est réservé au Premium.");
   const raw = body && body.courtStyle;
-  if (raw != null && (typeof raw !== "object" || (raw.wood != null && !Engine.COURT_WOODS[raw.wood]) || (raw.paint != null && raw.paint !== "" && !Engine.JERSEY_COLORS[raw.paint]))) {
+  // Couleurs libres "#rrggbb" acceptées (2026-10-05), comme les maillots.
+  const hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+  if (raw != null && (typeof raw !== "object" || (raw.wood != null && !Engine.COURT_WOODS[raw.wood] && !hex(raw.wood)) || (raw.paint != null && raw.paint !== "" && !Engine.JERSEY_COLORS[raw.paint] && !hex(raw.paint)))) {
     return fail("Style de parquet invalide.");
   }
   team.courtStyle = Engine.normalizeCourtStyle(raw);
@@ -1503,9 +1505,11 @@ function setTeamCourtStyle(team, teamIndex, league, body, now) {
 function setTeamArenaStyle(team, teamIndex, league, body, now) {
   if (!requirePremium(team, now)) return fail("La salle personnalisée est réservée au Premium.");
   const raw = body && body.arenaStyle;
-  const colorOk = v => v == null || v === "" || !!Engine.JERSEY_COLORS[v];
+  // Couleurs libres "#rrggbb" acceptées (2026-10-05) : couleurs, façade, toit.
+  const hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+  const colorOk = v => v == null || v === "" || !!Engine.JERSEY_COLORS[v] || hex(v);
   if (raw != null && (typeof raw !== "object" || !colorOk(raw.main) || !colorOk(raw.second) ||
-      (raw.facade != null && !Engine.ARENA_FACADES[raw.facade]) || (raw.roof != null && !Engine.ARENA_ROOFS[raw.roof]) ||
+      (raw.facade != null && !Engine.ARENA_FACADES[raw.facade] && !hex(raw.facade)) || (raw.roof != null && !Engine.ARENA_ROOFS[raw.roof] && !hex(raw.roof)) ||
       (raw.mood != null && !Engine.ARENA_MOODS.includes(raw.mood)))) {
     return fail("Style de salle invalide.");
   }

@@ -6399,4 +6399,10 @@ window.HM_I18N_PL = {
   "saisons {0} – {1}": "sezony {0} – {1}",
   // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
   "Défense conseillée": "Zalecana obrona",
+  // Couleurs libres du terrain et de la salle (2026-10-05).
+  "Couleur libre": "Dowolny kolor",
+  "Couleur libre du sol": "Dowolny kolor parkietu",
+  "Couleur libre des raquettes": "Dowolny kolor stref",
+  "Couleur libre de la façade": "Dowolny kolor fasady",
+  "Couleur libre du toit": "Dowolny kolor dachu",
 };

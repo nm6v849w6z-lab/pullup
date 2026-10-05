@@ -39,6 +39,14 @@ assert.deepStrictEqual(team.courtStyle, { wood: "chene", paint: "rouge" });
 const cs = Engine.courtStyleFor(team, now);
 assert.strictEqual(cs.floor, Engine.COURT_WOODS.chene.floor); assert.strictEqual(cs.paint, Engine.JERSEY_COLORS.rouge);
 assert.strictEqual(actions.setTeamCourtStyle(team, idx, league, { courtStyle: { wood: "bambou" } }, now).ok, false);
+// Couleurs libres (2026-10-05) : sol et raquettes en "#rrggbb".
+assert.strictEqual(actions.setTeamCourtStyle(team, idx, league, { courtStyle: { wood: "#1E5631", paint: "#F4A300" } }, now).ok, true);
+assert.deepStrictEqual(team.courtStyle, { wood: "#1e5631", paint: "#f4a300" });
+const cs2 = Engine.courtStyleFor(team, now);
+assert.ok(cs2.floor === "#1e5631" && cs2.paint === "#f4a300" && /^#[0-9a-f]{6}$/.test(cs2.grain) && /255,255,255/.test(cs2.line), "sol libre : veinage et lignes claires déduits");
+assert.ok(/20,24,30/.test(Engine.courtWoodColors("#f5f0e6").line), "sol très clair : lignes foncées");
+assert.strictEqual(actions.setTeamCourtStyle(team, idx, league, { courtStyle: { wood: "#12345" } }, now).ok, false, "code hexa invalide refusé");
+assert.strictEqual(actions.setTeamCourtStyle(team, idx, league, { courtStyle: { paint: "#zzzzzz" } }, now).ok, false, "code hexa invalide refusé (raquettes)");
 team.isPaying = false;
 assert.strictEqual(Engine.courtStyleFor(team, now), null, "sans Premium, parquet par défaut");
 team.isPaying = true;

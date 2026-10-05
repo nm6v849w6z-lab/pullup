@@ -6399,4 +6399,10 @@ window.HM_I18N_PT = {
   "saisons {0} – {1}": "temporadas {0} – {1}",
   // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
   "Défense conseillée": "Defesa recomendada",
+  // Couleurs libres du terrain et de la salle (2026-10-05).
+  "Couleur libre": "Cor livre",
+  "Couleur libre du sol": "Cor livre do piso",
+  "Couleur libre des raquettes": "Cor livre do garrafão",
+  "Couleur libre de la façade": "Cor livre da fachada",
+  "Couleur libre du toit": "Cor livre do telhado",
 };

@@ -6399,4 +6399,10 @@ window.HM_I18N_LT = {
   "saisons {0} – {1}": "sezonai {0} – {1}",
   // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
   "Défense conseillée": "Rekomenduojama gynyba",
+  // Couleurs libres du terrain et de la salle (2026-10-05).
+  "Couleur libre": "Laisva spalva",
+  "Couleur libre du sol": "Laisva grindų spalva",
+  "Couleur libre des raquettes": "Laisva baudos aikštelių spalva",
+  "Couleur libre de la façade": "Laisva fasado spalva",
+  "Couleur libre du toit": "Laisva stogo spalva",
 };
