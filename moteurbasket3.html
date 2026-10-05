@@ -5151,6 +5151,19 @@
   .sp2-plan-item em{font-style:normal; color:var(--ink); font-weight:700;}
   .sp2-plan-big{font-size:27px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; line-height:1; padding-left:8px; font-family:var(--display); letter-spacing:.01em;}
   .sp2-plan-big{max-width:120px;}
+  /* Plan de match en rangées (refonte 2026-10-05) : chaque famille sur une
+     rangée de cartes qui se partagent la largeur (2 menaces, 3 conseils…),
+     plus de colonne courte à côté d'une longue. Carte : icône, titre et
+     chiffre sur la 1re ligne, explication sur toute la largeur dessous. */
+  .sp2-plan .sp2-plan-cols{display:flex; flex-direction:column; gap:14px;}
+  .sp2-plan .sp2-plan-col h3{margin:0 0 8px;}
+  .sp2-plan .sp2-plan-list{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px;}
+  .sp2-plan .sp2-plan-item{grid-template-columns:34px minmax(0,1fr) auto; grid-template-areas:"i t n" "d d d"; align-items:start; row-gap:6px;}
+  .sp2-plan .sp2-plan-item > .sp2-plan-num{grid-area:i;}
+  .sp2-plan .sp2-plan-item > div:not(.sp2-plan-big){display:contents;}
+  .sp2-plan .sp2-plan-item > div:not(.sp2-plan-big) > b{grid-area:t; align-self:center;}
+  .sp2-plan .sp2-plan-item > div:not(.sp2-plan-big) > span{grid-area:d; margin-top:0;}
+  .sp2-plan .sp2-plan-item > .sp2-plan-big{grid-area:n;}
   .sp2-plan-big small{white-space:normal;}
   .sp2-plan-big small{display:block; font-size:10.5px; font-weight:700; color:var(--ink-faint); margin-top:4px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .threat .sp2-plan-big{color:var(--danger);}
@@ -5183,47 +5196,30 @@
      Retour utilisateur : « grands espaces vides », page déséquilibrée. Les
      seuils suivent la largeur RÉELLE du rapport (requêtes de conteneur sur
      #scoutingProPanel : elle varie avec la barre latérale), pas l'écran.
-     - Plan de match + 5 de départ dans la même rangée quand c'est large ;
-     - Profil : grille à zones (a duel/anneaux, b zones de tir, c « comment
-       ils marquent », d identité + forces/faiblesses) — d se place sous la
-       colonne la plus courte au lieu de laisser un trou ;
-     - Forme : deux colonnes indépendantes (plus de rangées couplées) ;
+     - Plan de match en rangées de cartes, puis 5 de départ (tableau +
+       défense conseillée à côté) ;
+     - Profil et Forme : placement adaptatif des blocs (sp2LayoutMasonry,
+       chaque bloc dans la colonne la plus courte, hauteurs mesurées) ;
      - Effectif : joueurs clés + répartition à gauche, 5 majeur à droite. */
   #scoutingProPanel{container-type:inline-size; container-name:sp2;}
   .sp2-row-plan{display:grid; grid-template-columns:minmax(0,1fr); gap:0 20px;}
   .sp2-row-plan > .sp2-plan, .sp2-row-plan > .sp2-five{margin-bottom:20px; min-width:0;}
-  @container sp2 (min-width:1380px){
-    .sp2-row-plan{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); align-items:stretch;}
-    .sp2-row-plan > .sp2-five{display:flex; flex-direction:column;}
-    .sp2-row-plan > .sp2-five .sp2-five-body{flex:1; grid-template-rows:auto 1fr;}
-    .sp2-row-plan > .sp2-five .sp2-five-why{align-self:stretch;}
-    .sp2-row-plan .sp2-plan-list{gap:8px;}
-  }
-  .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1fr); grid-template-areas:"a" "d" "b" "c"; align-items:start; gap:20px 24px;}
-  .sp2-grid-3.sp2-prof > div.sp2-pa{grid-area:a;} .sp2-grid-3.sp2-prof > div.sp2-pb{grid-area:b;} .sp2-grid-3.sp2-prof > div.sp2-pc{grid-area:c;} .sp2-grid-3.sp2-prof > div.sp2-pd{grid-area:d;}
-  .sp2-prof > div{min-width:0;}
-  .sp2-prof > div > :first-child{margin-top:0;}
-  @container sp2 (min-width:760px){
-    .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); grid-template-areas:"a b" "d b" "c c";}
-    .sp2-prof .sp2-origins-cols{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:28px; align-items:start;}
-    .sp2-prof .sp2-origins-sit-col > .sp2-origin-sep{display:none;}
-  }
-  @container sp2 (min-width:1260px){
-    /* Zones de tir (la plus haute) à droite sur deux rangées ; identité +
-       forces/faiblesses sous les deux autres colonnes, sur toute leur
-       largeur (identité en 4 colonnes, forces et faiblesses côte à côte). */
-    .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,.95fr); grid-template-areas:"a c b" "d d b";}
-    .sp2-grid-3.sp2-prof.no-origins{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); grid-template-areas:"a b" "d b";}
-    .sp2-prof .sp2-origins-cols{display:block;}
-    .sp2-prof .sp2-origins-sit-col > .sp2-origin-sep{display:block;}
-    .sp2-prof > .sp2-pd .sp2-callouts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;}
-    .sp2-prof > .sp2-pd .sp2-ident{margin-bottom:12px;}
-  }
-  .sp2-ctx-cols{display:grid; grid-template-columns:minmax(0,1fr); gap:22px 24px; align-items:start;}
-  .sp2-ctx-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
-  .sp2-ctx-col > .sp2-ctx-cell > .sp2-chart, .sp2-ctx-col > .sp2-ctx-cell > .sp2-bf, .sp2-ctx-col > .sp2-ctx-cell > .sp2-strat-card{flex:none;}
-  .sp2-ctx-col .sp2-strat-card{justify-content:flex-start; gap:12px;}
-  @container sp2 (min-width:760px){ .sp2-ctx-cols:not(.single){grid-template-columns:repeat(2, minmax(0,1fr));} }
+  /* Placement adaptatif (sp2LayoutMasonry) : nombre de colonnes par
+     largeur du rapport ; chaque colonne est elle-même un conteneur (largeur
+     de colonne → identité sur 2 ou 4 cases, forces/faiblesses côte à côte
+     ou empilées). */
+  .sp2-masonry{--m-cols:1; display:flex; gap:24px; align-items:flex-start;}
+  .sp2-mcol{flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:22px; container-type:inline-size; container-name:mcol;}
+  .sp2-mblock{min-width:0;}
+  .sp2-mblock > :first-child, .sp2-mblock > .sp2-ctx-cell > :first-child{margin-top:0;}
+  .sp2-prof-m .sp2-origins-cols{display:block !important;}
+  .sp2-prof-m .sp2-origins-sit-col > .sp2-origin-sep{display:block !important;}
+  .sp2-ctx-m .sp2-strat-card{justify-content:flex-start; gap:12px;}
+  .sp2-ctx-m .sp2-ctx-cell > .sp2-chart, .sp2-ctx-m .sp2-ctx-cell > .sp2-bf, .sp2-ctx-m .sp2-ctx-cell > .sp2-strat-card{flex:none;}
+  @container sp2 (min-width:760px){ .sp2-prof-m, .sp2-ctx-m{--m-cols:2;} }
+  @container sp2 (min-width:1260px){ .sp2-prof-m{--m-cols:3;} }
+  @container mcol (max-width:620px){ .sp2-pd .sp2-ident{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  @container mcol (max-width:420px){ .sp2-pd .sp2-callouts{grid-template-columns:minmax(0,1fr);} }
   .sp2-eff-top{display:grid; grid-template-columns:minmax(0,1fr); gap:18px 24px; align-items:start;}
   .sp2-eff-main > :first-child, .sp2-eff-court > :first-child{margin-top:0;}
   .sp2-eff-court .sp2-lineup{max-width:none;}
@@ -5246,12 +5242,28 @@
     .sp2-eff-top:not(.single){grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);}
     .sp2-eff-court .sp2-lineup{max-width:720px; margin:0 auto;}
   }
+  .sp2-fcards{display:flex; flex-wrap:wrap; gap:10px;}
+  .sp2-fcards > .sp2-fcard{flex:1 1 170px;}
+  .sp2-fcard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .sp2-fcard.injured{border-color:rgba(226,105,79,.5);}
+  .sp2-fcard.empty{justify-content:center; align-items:flex-start;}
+  .sp2-fcard-top{display:flex; align-items:center; gap:10px; min-width:0;}
+  .sp2-fcard-id{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .sp2-fcard-id .eff-pos{align-self:flex-start; font-size:10.5px; padding:1px 6px;}
+  .sp2-fcard-name{font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sp2-fcard-sal{font-size:11.5px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .sp2-fcard-cond .eff-cond{display:flex; flex-direction:column-reverse; align-items:flex-start; gap:4px;}
+  .sp2-fcard-cond .eff-meter{width:100%;}
+  .sp2-fcard-cond .eff-cond-label{font-size:12px;}
+  .sp2-fcard-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; border-top:1px solid var(--line); padding-top:7px;}
+  .sp2-fcard-stats span{display:flex; flex-direction:column; font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.04em;}
+  .sp2-fcard-stats b{font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums; letter-spacing:0;}
   .sp2-five-body{display:grid; grid-template-columns:minmax(0,1fr); gap:12px 18px; align-items:start;}
   .sp2-five-why{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:10px; padding:10px 14px;}
   .sp2-five-why-k{display:block; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:4px;}
   .sp2-five-why-name{display:block; font-size:18px; font-weight:800; color:var(--amber); margin:0 0 6px; font-family:var(--display);}
   .sp2-five-why p{margin:0; font-size:13px; line-height:1.45; color:var(--ink);}
-  @container sp2 (min-width:860px) and (max-width:1379px){
+  @container sp2 (min-width:860px){
     .sp2-five-body:not(.single){grid-template-columns:minmax(0,1.9fr) minmax(220px,1fr); align-items:start;}
   }
   /* Séance vidéo (adversaire) : bouton et explication sur une ligne. */
@@ -38640,8 +38652,25 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
 function sp2SuggestedFiveHtml(setup) {
   const now = Date.now();
   const five = suggestStartingFive(teamA, now);
-  const table = scoutingStartingFiveCardHtml(teamA, myTeamIndex, now, five);
-  if (!table) return "";
+  if (!five) return "";
+  // 5 cartes joueurs côte à côte (refonte 2026-10-05 : un tableau de 5
+  // lignes laissait de grands vides) — mêmes infos que l'ancien tableau
+  // (poste, joueur, salaire, forme, pts/reb/pas), forme physique à jour
+  // (currentCondition) au lieu de la valeur brute enregistrée.
+  const recovery = teamA.conditionRecoveryPerDay ? teamA.conditionRecoveryPerDay() : undefined;
+  const cards = POSITIONS.map(pos => {
+    const pid = five[pos];
+    const p = pid ? teamA.players.find(x => x.id === pid) : null;
+    if (!p) return `<div class="sp2-fcard empty"><span class="sp2-fcard-pos">${effPosBadgeHtml(pos)}</span><span class="sub">Non pourvu</span></div>`;
+    const log = p.matchLog || [], gp = log.length;
+    const avg = k => gp ? (log.reduce((t, m) => t + (m[k] || 0), 0) / gp).toFixed(1) : "0.0";
+    const injured = !!(p.injuryUntil && p.injuryUntil > now);
+    return `<div class="sp2-fcard${injured ? " injured" : ""}"><div class="sp2-fcard-top">${playerAvatarHtml(p, teamA, 40)}<div class="sp2-fcard-id">${effPosBadgeHtml(pos)}` +
+      `<span class="sp2-fcard-name">${playerLinkHtml(myTeamIndex, p.id, p.name)}</span><span class="sp2-fcard-sal">${escapeHtml(formatMoney(p.salary))}/sem.</span></div></div>` +
+      `<div class="sp2-fcard-cond">${injured ? `<span class="gain-down">Blessé</span>` : effConditionHtml(p, now, recovery)}</div>` +
+      `<div class="sp2-fcard-stats"><span><b>${avg("pts")}</b>pts</span><span><b>${avg("reb")}</b>reb</span><span><b>${avg("ast")}</b>pas</span></div></div>`;
+  }).join("");
+  const table = `<div class="sp2-fcards">${cards}</div>`;
   const def = setup ? `<span class="sp2-five-def" title="${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}">Défense conseillée : <b>${escapeHtml(setup.defense)}</b></span>` : "";
   // Raison de la défense conseillée (jusqu'ici seulement en infobulle) :
   // à côté du tableau sur un rapport large, dessous sinon (refonte
@@ -38649,7 +38678,7 @@ function sp2SuggestedFiveHtml(setup) {
   const why = setup && setup.defenseReason ? `<div class="sp2-five-why"><span class="sp2-five-why-k">Défense conseillée</span><b class="sp2-five-why-name">${escapeHtml(setup.defense)}</b><p>${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}</p></div>` : "";
   return `<section class="sp2-panel sp2-five"><h2 class="sp2-panel-title">5 de départ suggéré</h2>` +
     `<div class="sp2-five-head"><span class="sub">Ton meilleur joueur disponible à chaque poste pour ce match.</span>${def}</div>` +
-    `<div class="sp2-five-body${why ? "" : " single"}"><div class="sp2-five-table">${table}</div>${why}</div></section>`;
+    `<div class="sp2-five-body single">${table}${why}</div></section>`;
 }
 
 // ---- Profil et style de jeu : duel ORtg/DRtg, anneaux eFG%/TS%/LF%, mini-
@@ -38815,7 +38844,11 @@ function sp2ProfileStyleHtml(report, t, adv) {
 
   if (!left && !right && !origins && !ident) return "";
   return `<section class="sp2-panel"><h2 class="sp2-panel-title">Profil et style de jeu</h2>` +
-    `<div class="sp2-grid-3 sp2-prof${origins ? "" : " no-origins"}"><div class="sp2-pa">${left}</div><div class="sp2-pb">${right}</div>${origins ? `<div class="sp2-pc">${origins}</div>` : ""}<div class="sp2-pd">${ident}</div></div></section>`;
+    `<div class="sp2-masonry sp2-prof-m">` +
+    (left ? `<div class="sp2-mblock" data-mpin="first" data-mo1="1">${left}</div>` : "") +
+    (right ? `<div class="sp2-mblock" data-mpin="last" data-mo1="3">${right}</div>` : "") +
+    (origins ? `<div class="sp2-mblock" data-mo1="4">${origins}</div>` : "") +
+    (ident ? `<div class="sp2-mblock sp2-pd" data-mo1="2">${ident}</div>` : "") + `</div></section>`;
 }
 
 // Tableau de comparaison "Saison/Domicile" (gris, .a) vs "Récent/Extérieur"
@@ -38960,11 +38993,12 @@ function sp2FormContextHtml(report, adv) {
       ["Rebonds off.", h && h.orebPerGame, a && a.orebPerGame, ""],
       ["Rebonds déf.", h && h.drebPerGame, a && a.drebPerGame, ""],
     ].filter(r => r[1] != null && r[2] != null);
-    if (rows.length) b += sp2BfRowsHtml("Domicile", "Extérieur", rows);
+    if (!rows.length) b = null; // pas encore de match d'un des deux côtés : rien à comparer
+    else b += sp2BfRowsHtml("Domicile", "Extérieur", rows);
     // Note "Mi-temps : X puis Y pts marqués..." retirée (retour utilisateur,
     // 2026-09-25 : "enlève le mi-temps 56,2 puis...") — elle décalait aussi
     // le bas de cette carte par rapport à "Stratégies utilisées" à côté.
-    blocks.push(b); colOf.push(1);
+    if (b) { blocks.push(b); colOf.push(1); }
   }
   const stratBlock = sp2StrategyBlockHtml(report.strategyUsage);
   if (stratBlock) { blocks.push(stratBlock); colOf.push(0); }
@@ -38985,11 +39019,15 @@ function sp2FormContextHtml(report, adv) {
   if (!blocks.length) {
     return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div></section>`;
   }
-  const cols = [[], []];
-  blocks.forEach((b, i) => cols[colOf[i]].push(`<div class="sp2-ctx-cell">${b}</div>`));
-  const used = cols.filter(c => c.length);
+  // Placement adaptatif (voir sp2LayoutMasonry) : écart de points en
+  // première colonne, 3 derniers matchs en dernière, le reste dans la
+  // colonne la plus courte.
+  const cells = blocks.map((b, i) => {
+    const p = colOf[i] === 0 && !blocks.slice(0, i).some((_, j) => colOf[j] === 0) ? "first" : colOf[i] === 1 && !blocks.slice(0, i).some((_, j) => colOf[j] === 1) ? "last" : "";
+    return `<div class="sp2-mblock sp2-ctx-cell"${p ? ` data-mpin="${p}"` : ""} data-mo1="${i + 1}">${b}</div>`;
+  }).join("");
   return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div>` +
-    `<div class="sp2-ctx-cols${used.length === 1 ? " single" : ""}">${used.map(c => `<div class="sp2-ctx-col">${c.join("")}</div>`).join("")}</div></section>`;
+    `<div class="sp2-masonry sp2-ctx-m">${cells}</div></section>`;
 }
 
 // Tableau "Effectif complet" (sp2-roster) — réutilise teamSeasonStatsRows
@@ -39107,6 +39145,54 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
   return out ? `<section class="sp2-panel"><h2 class="sp2-panel-title">Effectif</h2>${out}</section>` : "";
 }
 
+// ---- Placement adaptatif des blocs (refonte 2026-10-05, retour
+// utilisateur « on a du vide ») : les hauteurs dépendent des données (1
+// match analysé ou 20, terrain des zones de tir réduit ou complet), donc
+// aucune grille figée ne convient à tous les cas. Nombre de colonnes donné
+// par le CSS (--m-cols, requêtes de conteneur) ; bloc « first » dans la
+// 1re colonne, « last » dans la dernière, les autres chacun dans la colonne
+// la plus courte au moment de le placer (hauteur réellement mesurée). Une
+// seule colonne : ordre data-mo1. Recalculé quand la largeur change.
+function sp2LayoutMasonry(root) {
+  if (!root) return;
+  root.querySelectorAll(".sp2-masonry").forEach(box => {
+    if (!box.__mblocks) box.__mblocks = [...box.querySelectorAll(":scope > .sp2-mblock, :scope > .sp2-mcol > .sp2-mblock")];
+    const blocks = box.__mblocks;
+    let n = parseInt(getComputedStyle(box).getPropertyValue("--m-cols"), 10);
+    if (!(n >= 1)) n = 1;
+    n = Math.min(n, blocks.length || 1);
+    const width = box.clientWidth;
+    if (box.__mLayout === n + "|" + width) return;
+    box.__mLayout = n + "|" + width;
+    const cols = [];
+    for (let i = 0; i < n; i++) { const c = document.createElement("div"); c.className = "sp2-mcol"; cols.push(c); }
+    box.replaceChildren(...cols);
+    if (n === 1) {
+      blocks.slice().sort((a, b) => (+a.dataset.mo1 || 0) - (+b.dataset.mo1 || 0)).forEach(b => cols[0].appendChild(b));
+      return;
+    }
+    const rest = [];
+    blocks.forEach(b => {
+      if (b.dataset.mpin === "first") cols[0].appendChild(b);
+      else if (b.dataset.mpin === "last") cols[n - 1].appendChild(b);
+      else rest.push(b);
+    });
+    rest.forEach(b => {
+      let best = cols[0];
+      cols.forEach(c => { if (c.offsetHeight < best.offsetHeight - 1) best = c; });
+      best.appendChild(b);
+    });
+  });
+}
+let sp2MasonryObserver = null;
+function sp2WatchMasonry(holder) {
+  sp2LayoutMasonry(holder);
+  if (typeof ResizeObserver !== "function") return;
+  if (!sp2MasonryObserver) sp2MasonryObserver = new ResizeObserver(entries => entries.forEach(e => sp2LayoutMasonry(e.target)));
+  sp2MasonryObserver.disconnect();
+  sp2MasonryObserver.observe(holder);
+}
+
 // ---- Orchestrateur : appelé par refreshScoutingProPanel une fois le
 // rapport débloqué (report = {..., access} — voir son propre commentaire).
 function scoutingProReportHtml(report) {
@@ -39191,6 +39277,7 @@ async function refreshScoutingProPanel(teamIdx) {
     holder2.innerHTML = proOk
       ? scoutingProReportHtml({ ...report, access })
       : `<h3>Scouting Pro</h3><p class="sub">Impossible de charger le rapport Scouting Pro pour le moment.</p>`;
+    if (proOk) sp2WatchMasonry(holder2);
     const freeReport = document.querySelector("#teamDetailContent .tactical-report");
     if (freeReport) freeReport.hidden = proOk && !!(report && report.gamesPlayed);
   } else {
