@@ -6460,4 +6460,6 @@ window.HM_I18N_IT = {
   "Voix": "Voti",
   "Sélectionneur :": "Commissario tecnico:",
   "saisons {0} – {1}": "stagioni {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Difesa consigliata",
 };

@@ -6397,4 +6397,6 @@ window.HM_I18N_LT = {
   "Voix": "Balsai",
   "Sélectionneur :": "Rinktinės treneris:",
   "saisons {0} – {1}": "sezonai {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Rekomenduojama gynyba",
 };

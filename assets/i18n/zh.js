@@ -6397,4 +6397,6 @@ window.HM_I18N_ZH = {
   "Voix": "票数",
   "Sélectionneur :": "主教练：",
   "saisons {0} – {1}": "第 {0} – {1} 赛季",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "推荐防守",
 };

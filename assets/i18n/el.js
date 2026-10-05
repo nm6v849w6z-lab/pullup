@@ -6397,4 +6397,6 @@ window.HM_I18N_EL = {
   "Voix": "Ψήφοι",
   "Sélectionneur :": "Ομοσπονδιακός προπονητής:",
   "saisons {0} – {1}": "σεζόν {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Προτεινόμενη άμυνα",
 };

@@ -650,6 +650,19 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Analyse d'équipe (Scouting Pro, sa propre équipe en Premium) — mise en
+  page dense (2026-10-05)** : seuils en requêtes de CONTENEUR sur
+  `#scoutingProPanel` (`container-name:sp2`), pas en largeur d'écran (la
+  barre latérale change la place réelle). Plan de match + 5 de départ dans
+  `.sp2-row-plan` (côte à côte ≥ 1380 px de rapport ; le test exige que
+  `.sp2-five` suive immédiatement `.sp2-plan`) ; 5 de départ : tableau +
+  carte « Défense conseillée » (`setup.defenseReason`) ; profil en grille à
+  zones `.sp2-prof` (a duel/anneaux, b zones de tir, c comment ils
+  marquent, d identité + forces/faiblesses) ; forme en deux colonnes
+  indépendantes `.sp2-ctx-cols` ; effectif `.sp2-eff-top` (l joueurs clés,
+  s qui marque, c 5 majeur). Script de captures : voir l'historique de la
+  session (ligue jouée 8 journées + /api/scouting/set-premium).
+
 - **Direct des ligues privées (2026-10-01)** : le match reste simulé d'un
   coup sur des copies (server/privateLeague.js), mais sa diffusion est calée
   sur round.dueAt (schedulePlayback) et rangée dans le store des directs à

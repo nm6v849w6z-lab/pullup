@@ -6422,4 +6422,6 @@ window.HM_I18N_EN = {
   "Voix": "Votes",
   "Sélectionneur :": "Head coach:",
   "saisons {0} – {1}": "seasons {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Recommended defense",
 };

@@ -5150,6 +5150,8 @@
   .sp2-plan-item span{display:block; font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
   .sp2-plan-item em{font-style:normal; color:var(--ink); font-weight:700;}
   .sp2-plan-big{font-size:27px; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; line-height:1; padding-left:8px; font-family:var(--display); letter-spacing:.01em;}
+  .sp2-plan-big{max-width:120px;}
+  .sp2-plan-big small{white-space:normal;}
   .sp2-plan-big small{display:block; font-size:10.5px; font-weight:700; color:var(--ink-faint); margin-top:4px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
   .threat .sp2-plan-big{color:var(--danger);}
   .key .sp2-plan-big{color:var(--ok);}
@@ -5177,6 +5179,85 @@
     .sp2-grid-3 .sp2-origins-sit-col > .sp2-origin-sep{display:none;} }
   @media (max-width:900px){ .sp2-grid-3{grid-template-columns:minmax(0,1fr);} .sp2-grid-3 > div:nth-child(n){grid-column:auto; grid-row:auto;}
     .sp2-grid-3 .sp2-origins-cols{display:block;} .sp2-grid-3 .sp2-origins-sit-col > .sp2-origin-sep{display:block;} }
+  /* ===== Analyse d'équipe : mise en page dense (refonte 2026-10-05) =====
+     Retour utilisateur : « grands espaces vides », page déséquilibrée. Les
+     seuils suivent la largeur RÉELLE du rapport (requêtes de conteneur sur
+     #scoutingProPanel : elle varie avec la barre latérale), pas l'écran.
+     - Plan de match + 5 de départ dans la même rangée quand c'est large ;
+     - Profil : grille à zones (a duel/anneaux, b zones de tir, c « comment
+       ils marquent », d identité + forces/faiblesses) — d se place sous la
+       colonne la plus courte au lieu de laisser un trou ;
+     - Forme : deux colonnes indépendantes (plus de rangées couplées) ;
+     - Effectif : joueurs clés + répartition à gauche, 5 majeur à droite. */
+  #scoutingProPanel{container-type:inline-size; container-name:sp2;}
+  .sp2-row-plan{display:grid; grid-template-columns:minmax(0,1fr); gap:0 20px;}
+  .sp2-row-plan > .sp2-plan, .sp2-row-plan > .sp2-five{margin-bottom:20px; min-width:0;}
+  @container sp2 (min-width:1380px){
+    .sp2-row-plan{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); align-items:stretch;}
+    .sp2-row-plan > .sp2-five{display:flex; flex-direction:column;}
+    .sp2-row-plan > .sp2-five .sp2-five-body{flex:1; grid-template-rows:auto 1fr;}
+    .sp2-row-plan > .sp2-five .sp2-five-why{align-self:stretch;}
+    .sp2-row-plan .sp2-plan-list{gap:8px;}
+  }
+  .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1fr); grid-template-areas:"a" "d" "b" "c"; align-items:start; gap:20px 24px;}
+  .sp2-grid-3.sp2-prof > div.sp2-pa{grid-area:a;} .sp2-grid-3.sp2-prof > div.sp2-pb{grid-area:b;} .sp2-grid-3.sp2-prof > div.sp2-pc{grid-area:c;} .sp2-grid-3.sp2-prof > div.sp2-pd{grid-area:d;}
+  .sp2-prof > div{min-width:0;}
+  .sp2-prof > div > :first-child{margin-top:0;}
+  @container sp2 (min-width:760px){
+    .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); grid-template-areas:"a b" "d b" "c c";}
+    .sp2-prof .sp2-origins-cols{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:28px; align-items:start;}
+    .sp2-prof .sp2-origins-sit-col > .sp2-origin-sep{display:none;}
+  }
+  @container sp2 (min-width:1260px){
+    /* Zones de tir (la plus haute) à droite sur deux rangées ; identité +
+       forces/faiblesses sous les deux autres colonnes, sur toute leur
+       largeur (identité en 4 colonnes, forces et faiblesses côte à côte). */
+    .sp2-grid-3.sp2-prof{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,.95fr); grid-template-areas:"a c b" "d d b";}
+    .sp2-grid-3.sp2-prof.no-origins{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); grid-template-areas:"a b" "d b";}
+    .sp2-prof .sp2-origins-cols{display:block;}
+    .sp2-prof .sp2-origins-sit-col > .sp2-origin-sep{display:block;}
+    .sp2-prof > .sp2-pd .sp2-callouts{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;}
+    .sp2-prof > .sp2-pd .sp2-ident{margin-bottom:12px;}
+  }
+  .sp2-ctx-cols{display:grid; grid-template-columns:minmax(0,1fr); gap:22px 24px; align-items:start;}
+  .sp2-ctx-col{display:flex; flex-direction:column; gap:22px; min-width:0;}
+  .sp2-ctx-col > .sp2-ctx-cell > .sp2-chart, .sp2-ctx-col > .sp2-ctx-cell > .sp2-bf, .sp2-ctx-col > .sp2-ctx-cell > .sp2-strat-card{flex:none;}
+  .sp2-ctx-col .sp2-strat-card{justify-content:flex-start; gap:12px;}
+  @container sp2 (min-width:760px){ .sp2-ctx-cols:not(.single){grid-template-columns:repeat(2, minmax(0,1fr));} }
+  .sp2-eff-top{display:grid; grid-template-columns:minmax(0,1fr); gap:18px 24px; align-items:start;}
+  .sp2-eff-main > :first-child, .sp2-eff-court > :first-child{margin-top:0;}
+  .sp2-eff-court .sp2-lineup{max-width:none;}
+  .sp2-eff-top > .sp2-eff-s > .sp2-h:first-child{margin-top:0;}
+  .sp2-eff-l{grid-area:l;} .sp2-eff-s{grid-area:s;} .sp2-eff-court{grid-area:c;}
+  .sp2-eff-top{grid-template-areas:"l" "s" "c";}
+  .sp2-eff-top.single{grid-template-areas:none;}
+  .sp2-eff-top.single > *{grid-area:auto;}
+  @container sp2 (min-width:860px){
+    .sp2-eff-top:not(.single){grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"l c" "s s"; row-gap:14px;}
+    .sp2-eff-top:not(.single) .sp2-leaders{grid-template-columns:minmax(0,1fr); gap:8px;}
+    .sp2-eff-top:not(.single) .sp2-leader{padding:12px 14px;}
+    .sp2-eff-top:not(.single) .sp2-eff-main > .sp2-h{margin-top:16px;}
+    .sp2-eff-top:not(.single) .sp2-eff-main > .sp2-h:first-child{margin-top:0;}
+  }
+  @container sp2 (min-width:1300px){
+    .sp2-eff-top:not(.single){grid-template-areas:"l c" "s c";}
+  }
+  @container sp2 (min-width:1500px){
+    .sp2-eff-top:not(.single){grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);}
+    .sp2-eff-court .sp2-lineup{max-width:720px; margin:0 auto;}
+  }
+  .sp2-five-body{display:grid; grid-template-columns:minmax(0,1fr); gap:12px 18px; align-items:start;}
+  .sp2-five-why{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:10px; padding:10px 14px;}
+  .sp2-five-why-k{display:block; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:4px;}
+  .sp2-five-why-name{display:block; font-size:18px; font-weight:800; color:var(--amber); margin:0 0 6px; font-family:var(--display);}
+  .sp2-five-why p{margin:0; font-size:13px; line-height:1.45; color:var(--ink);}
+  @container sp2 (min-width:860px) and (max-width:1379px){
+    .sp2-five-body:not(.single){grid-template-columns:minmax(0,1.9fr) minmax(220px,1fr); align-items:start;}
+  }
+  /* Séance vidéo (adversaire) : bouton et explication sur une ligne. */
+  .scouting-actions{display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px;}
+  .scouting-actions .sub{margin:0;}
+
   .sp2-grid-even{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:24px; align-items:start;}
   #scoutingProPanel .scouting-hero-stats{margin-top:0;}
   #scoutingProPanel .scouting-profile-grid{grid-template-columns:repeat(auto-fit, minmax(120px,1fr));}
@@ -38562,9 +38643,13 @@ function sp2SuggestedFiveHtml(setup) {
   const table = scoutingStartingFiveCardHtml(teamA, myTeamIndex, now, five);
   if (!table) return "";
   const def = setup ? `<span class="sp2-five-def" title="${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}">Défense conseillée : <b>${escapeHtml(setup.defense)}</b></span>` : "";
+  // Raison de la défense conseillée (jusqu'ici seulement en infobulle) :
+  // à côté du tableau sur un rapport large, dessous sinon (refonte
+  // 2026-10-05 : remplit la carte au lieu d'un tableau étiré).
+  const why = setup && setup.defenseReason ? `<div class="sp2-five-why"><span class="sp2-five-why-k">Défense conseillée</span><b class="sp2-five-why-name">${escapeHtml(setup.defense)}</b><p>${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}</p></div>` : "";
   return `<section class="sp2-panel sp2-five"><h2 class="sp2-panel-title">5 de départ suggéré</h2>` +
     `<div class="sp2-five-head"><span class="sub">Ton meilleur joueur disponible à chaque poste pour ce match.</span>${def}</div>` +
-    table + `</section>`;
+    `<div class="sp2-five-body${why ? "" : " single"}"><div class="sp2-five-table">${table}</div>${why}</div></section>`;
 }
 
 // ---- Profil et style de jeu : duel ORtg/DRtg, anneaux eFG%/TS%/LF%, mini-
@@ -38679,7 +38764,10 @@ function sp2ProfileStyleHtml(report, t, adv) {
   // ligne. Libellés raccourcis, valeurs longues ("Non déterminé (pas encore
   // de match...)") réduites à "—" avec le texte complet en infobulle.
   const shortLabel = { "Dépendance 3 pts": "Dép. 3 pts", "Jeu intérieur": "Jeu int." };
-  left += `<h3 class="sp2-h">Identité</h3><div class="sp2-ident">` +
+  // Identité + Forces/Faiblesses : zone à part (« d »), placée par la grille
+  // sous la colonne la plus courte selon la largeur (voir .sp2-prof).
+  let ident = "";
+  ident += `<h3 class="sp2-h">Identité</h3><div class="sp2-ident">` +
     chips.map(([label, val]) => {
       const short = /^Non (déterminée?|identifiée)/.test(val) ? "—" : val;
       return `<div class="sp2-ident-item" title="${escapeHtml(label)} : ${escapeHtml(val)}"><span class="sp2-ident-label">${escapeHtml(shortLabel[label] || label)}</span><span class="sp2-ident-value">${escapeHtml(short)}</span></div>`;
@@ -38687,7 +38775,7 @@ function sp2ProfileStyleHtml(report, t, adv) {
 
   const force = scoutingTeamProfileForce(t, adv);
   const weakness = scoutingTeamProfileWeakness(t, adv);
-  left += `<div class="sp2-callouts">` +
+  ident += `<div class="sp2-callouts">` +
     `<div class="scouting-profile-callout scouting-profile-callout-force"><span class="scouting-profile-callout-label">▲ Forces</span><span class="scouting-profile-callout-value">${escapeHtml(force || "Aucun point fort marqué ne ressort de leurs stats actuelles.")}</span></div>` +
     `<div class="scouting-profile-callout scouting-profile-callout-weak"><span class="scouting-profile-callout-label">▼ Faiblesses</span><span class="scouting-profile-callout-value">${escapeHtml(weakness || "Aucune faiblesse nette ne ressort de leurs stats actuelles.")}</span></div>` +
     `</div>`;
@@ -38725,9 +38813,9 @@ function sp2ProfileStyleHtml(report, t, adv) {
   // détaillée allongeant la colonne de droite).
   const origins = sp2ScoringOriginsHtml(league.teams[report.opponentIdx]);
 
-  if (!left && !right && !origins) return "";
+  if (!left && !right && !origins && !ident) return "";
   return `<section class="sp2-panel"><h2 class="sp2-panel-title">Profil et style de jeu</h2>` +
-    `<div class="sp2-grid-3"><div>${left}</div><div>${right}</div>${origins ? `<div>${origins}</div>` : ""}</div></section>`;
+    `<div class="sp2-grid-3 sp2-prof${origins ? "" : " no-origins"}"><div class="sp2-pa">${left}</div><div class="sp2-pb">${right}</div>${origins ? `<div class="sp2-pc">${origins}</div>` : ""}<div class="sp2-pd">${ident}</div></div></section>`;
 }
 
 // Tableau de comparaison "Saison/Domicile" (gris, .a) vs "Récent/Extérieur"
@@ -38833,9 +38921,13 @@ function sp2StrategyBlockHtml(su) {
 
 function sp2FormContextHtml(report, adv) {
   const blocks = [];
+  // Colonne de chaque bloc (refonte 2026-10-05) : 0 = écart de points +
+  // stratégies, 1 = 3 derniers matchs + domicile/extérieur — deux colonnes
+  // qui s'empilent librement (plus de rangées à hauteur imposée).
+  const colOf = [];
   const chronoForm = [...(report.recentForm || [])].reverse();
   if (chronoForm.length) {
-    blocks.push(`<h3 class="sp2-h">Écart de points, match par match</h3>` + sp2PointDiffChartHtml(chronoForm));
+    blocks.push(`<h3 class="sp2-h">Écart de points, match par match</h3>` + sp2PointDiffChartHtml(chronoForm)); colOf.push(0);
   }
   if (adv && adv.recentVsSeason) {
     const rv = adv.recentVsSeason;
@@ -38854,7 +38946,7 @@ function sp2FormContextHtml(report, adv) {
         b += `<p class="sp2-note">${ptsDelta >= 0 ? "En hausse" : "En baisse"} offensive récemment : ${ptsDelta >= 0 ? "+" : ""}${ptsDelta} pts marqués${fgDelta != null ? ` et ${fgDelta >= 0 ? "+" : ""}${fgDelta}% au tir` : ""}.</p>`;
       }
     }
-    blocks.push(b);
+    blocks.push(b); colOf.push(1);
   }
   if (adv && adv.homeAway && (adv.homeAway.home || adv.homeAway.away)) {
     const h = adv.homeAway.home, a = adv.homeAway.away;
@@ -38872,10 +38964,10 @@ function sp2FormContextHtml(report, adv) {
     // Note "Mi-temps : X puis Y pts marqués..." retirée (retour utilisateur,
     // 2026-09-25 : "enlève le mi-temps 56,2 puis...") — elle décalait aussi
     // le bas de cette carte par rapport à "Stratégies utilisées" à côté.
-    blocks.push(b);
+    blocks.push(b); colOf.push(1);
   }
   const stratBlock = sp2StrategyBlockHtml(report.strategyUsage);
-  if (stratBlock) blocks.push(stratBlock);
+  if (stratBlock) { blocks.push(stratBlock); colOf.push(0); }
 
   // Pastille "Face à toi" dans l'en-tête (voir commentaire ci-dessus).
   const h2hList = report.headToHead || [];
@@ -38893,11 +38985,11 @@ function sp2FormContextHtml(report, adv) {
   if (!blocks.length) {
     return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div></section>`;
   }
-  // Nombre impair de blocs : le dernier occupe toute la largeur plutôt que
-  // de laisser une demi-rangée vide.
-  const cells = blocks.map((b, i) => `<div class="sp2-ctx-cell${blocks.length % 2 === 1 && i === blocks.length - 1 ? " full" : ""}">${b}</div>`).join("");
+  const cols = [[], []];
+  blocks.forEach((b, i) => cols[colOf[i]].push(`<div class="sp2-ctx-cell">${b}</div>`));
+  const used = cols.filter(c => c.length);
   return `<section class="sp2-panel"><div class="sp2-panel-head"><h2 class="sp2-panel-title">Forme et contexte</h2>${h2h}</div>` +
-    `<div class="sp2-ctx-grid">${cells}</div></section>`;
+    `<div class="sp2-ctx-cols${used.length === 1 ? " single" : ""}">${used.map(c => `<div class="sp2-ctx-col">${c.join("")}</div>`).join("")}</div></section>`;
 }
 
 // Tableau "Effectif complet" (sp2-roster) — réutilise teamSeasonStatsRows
@@ -38938,7 +39030,10 @@ function sp2RosterTableHtml(teamIdx, rowsData) {
 // répartition), "5 majeur" (diagramme de terrain, team.lineup.starters réel)
 // et effectif complet (sp2RosterTableHtml ci-dessus). ----------------------
 function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
-  let html = "";
+  // Haut de l'effectif (refonte 2026-10-05) : joueurs clés + « qui marque »
+  // à gauche, 5 majeur à droite (le terrain centré seul laissait de grands
+  // vides de part et d'autre) ; empilés sur un rapport étroit.
+  let html = "", lineupHtml = "", shareHtml = "";
   if (report.keyPlayers && report.keyPlayers.length) {
     const shareByName = new Map();
     if (adv && adv.playerShare) adv.playerShare.forEach(p => shareByName.set(p.name, p));
@@ -38964,14 +39059,14 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
     const sumTop = adv.playerShare.reduce((s, p) => s + (p.pctOfTeamPoints || 0), 0);
     const otherPct = Math.max(0, Math.round((100 - sumTop) * 10) / 10);
     const ariaParts = adv.playerShare.map(p => `${p.name} ${p.pctOfTeamPoints} %`).concat([`autres ${otherPct} %`]).join(", ");
-    html += `<h3 class="sp2-h" style="margin-top:22px">Qui marque les points</h3>`;
-    html += `<div class="sp2-share" role="img" aria-label="Part des points : ${escapeHtml(ariaParts)}">` +
+    shareHtml += `<h3 class="sp2-h" style="margin-top:22px">Qui marque les points</h3>`;
+    shareHtml += `<div class="sp2-share" role="img" aria-label="Part des points : ${escapeHtml(ariaParts)}">` +
       adv.playerShare.map((p, i) => `<span style="width:${p.pctOfTeamPoints}%;background:${swatches[i]}"></span>`).join("") + `</div>`;
-    html += `<div class="sp2-share-legend">` +
+    shareHtml += `<div class="sp2-share-legend">` +
       adv.playerShare.map((p, i) => `<span><span class="sp2-zone-key" style="background:${swatches[i]}"></span>${escapeHtml(p.name)} <b>${p.pctOfTeamPoints}%</b></span>`).join("") +
       `<span><span class="sp2-zone-key" style="background:var(--line)"></span>Autres <b>${otherPct}%</b></span></div>`;
     if (adv.topPlayersPointsSharePct != null) {
-      html += `<p class="sp2-note">À eux ${adv.playerShare.length} : ${adv.topPlayersPointsSharePct}% des points${adv.topPlayersShotsSharePct != null ? ` et ${adv.topPlayersShotsSharePct}% des tirs tentés` : ""}.</p>`;
+      shareHtml += `<p class="sp2-note">À eux ${adv.playerShare.length} : ${adv.topPlayersPointsSharePct}% des points${adv.topPlayersShotsSharePct != null ? ` et ${adv.topPlayersShotsSharePct}% des tirs tentés` : ""}.</p>`;
     }
   }
   const starters = oppTeam.lineup && oppTeam.lineup.starters;
@@ -38997,13 +39092,19 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
         `<div class="sp2-token-stats"><b>${ppg}</b> pts · ${rpg} reb · ${apg} pd</div>` +
         (meta ? `<div class="sp2-token-meta">${meta}</div>` : "") + `</div>`;
     }).join("");
-    html += `<h3 class="sp2-h" style="margin-top:22px">5 majeur</h3><div class="sp2-lineup">${SP2_LINEUP_COURT_SVG}${tokens}</div>`;
+    lineupHtml = `<h3 class="sp2-h">5 majeur</h3><div class="sp2-lineup">${SP2_LINEUP_COURT_SVG}${tokens}</div>`;
   }
+  // Zones : L = joueurs clés, S = « qui marque », C = 5 majeur (voir
+  // .sp2-eff-top : S passe sous le terrain quand le rapport est moyen).
+  const anyLeft = html || shareHtml;
+  let out = anyLeft || lineupHtml ? `<div class="sp2-eff-top${anyLeft && lineupHtml ? "" : " single"}">` +
+    (html ? `<div class="sp2-eff-main sp2-eff-l">${html}</div>` : "") + (shareHtml ? `<div class="sp2-eff-main sp2-eff-s">${shareHtml}</div>` : "") +
+    (lineupHtml ? `<div class="sp2-eff-court">${lineupHtml}</div>` : "") + `</div>` : "";
   const rowsData = teamSeasonStatsRows(teamIdx);
   if (rowsData.length) {
-    html += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
+    out += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
   }
-  return html ? `<section class="sp2-panel"><h2 class="sp2-panel-title">Effectif</h2>${html}</section>` : "";
+  return out ? `<section class="sp2-panel"><h2 class="sp2-panel-title">Effectif</h2>${out}</section>` : "";
 }
 
 // ---- Orchestrateur : appelé par refreshScoutingProPanel une fois le
@@ -39030,8 +39131,11 @@ function scoutingProReportHtml(report) {
   const attackTips = suggestOffensiveApproach(t);
 
   let html = sp2HeroHtml(report, oppTeam, adv);
-  html += sp2PlanHtml(report, report.opponentIdx, setup, attackTips);
-  html += sp2SuggestedFiveHtml(setup);
+  // Plan de match et 5 de départ dans la même rangée (refonte de mise en
+  // page 2026-10-05 : le tableau de 5 lignes étalé sur toute la largeur
+  // laissait de grands vides) ; côte à côte dès que le rapport est assez
+  // large, empilés sinon (requêtes de conteneur, voir .sp2-row-plan).
+  html += `<div class="sp2-row-plan">` + sp2PlanHtml(report, report.opponentIdx, setup, attackTips) + sp2SuggestedFiveHtml(setup) + `</div>`;
   html += sp2ProfileStyleHtml(report, t, adv);
   html += sp2FormContextHtml(report, adv);
   html += sp2RosterHtml(report, oppTeam, adv, report.opponentIdx);

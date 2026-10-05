@@ -6397,4 +6397,6 @@ window.HM_I18N_DE = {
   "Voix": "Stimmen",
   "Sélectionneur :": "Nationaltrainer:",
   "saisons {0} – {1}": "Saisons {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Empfohlene Verteidigung",
 };

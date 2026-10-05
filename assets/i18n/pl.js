@@ -6397,4 +6397,6 @@ window.HM_I18N_PL = {
   "Voix": "Głosy",
   "Sélectionneur :": "Selekcjoner:",
   "saisons {0} – {1}": "sezony {0} – {1}",
+  // Analyse d'équipe : carte de la défense conseillée (2026-10-05).
+  "Défense conseillée": "Zalecana obrona",
 };
