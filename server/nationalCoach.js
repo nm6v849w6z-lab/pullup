@@ -442,6 +442,9 @@ function adminAppoint(store, teamId, me, season, now, leagues) {
   if (!team) return fail("Sélection inconnue (ex. fr-A, fr-U21).", 404);
   if (!me) return fail("Club introuvable ou sans manager.", 404);
   const cfg = NT().configOf(store);
+  // Élection en cours pour cette sélection : annulée (nomination directe).
+  const el = NT().currentElection(store, teamId);
+  if (el) { el.status = "cancelled"; el.result = { at: now, cancelled: true, appointed: true }; }
   const prev = NT().activeMandate(store, teamId);
   if (prev) NT().endMandate(store, prev, "dismissed", now, leagues);
   NT().mandatesOfKey(store, me.key).forEach(x => NT().endMandate(store, x, "dismissed", now, leagues));

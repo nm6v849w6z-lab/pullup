@@ -2857,6 +2857,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           sendJson(res, 200, { ok: true, election: NationalTeams.publicElection(natStore, el, me, true), coach: NationalTeams.publicMandate(NationalTeams.activeMandate(natStore, el.teamId)) });
           return;
         }
+        // Phase C : feuille d'un match international (public).
+        if (req.method === "GET" && route.pathname === "/api/national/match") {
+          const md = require("./nationalMatches.js").matchDetail(natStore, route.searchParams.get("id"));
+          if (!md) { sendJson(res, 404, { ok: false, error: "Match introuvable." }); return; }
+          sendJson(res, 200, { ok: true, match: md });
+          return;
+        }
         // Phase B (server/nationalCoach.js) : espace du sélectionneur.
         // GET /api/national/coach?id= ; POST /api/national/coach/{list,
         // convocation,replace,tactics} — réservés au sélectionneur en poste.

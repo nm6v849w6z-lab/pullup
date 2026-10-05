@@ -74,6 +74,7 @@
     ".nt-av{display:inline-flex;vertical-align:middle;margin-right:8px}",
     ".nt-tag2{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:rgba(111,182,255,.15);color:#6FB6FF;white-space:nowrap}",
     ".nt-tag2.is-final{background:rgba(240,162,60,.16);color:var(--amber)}",
+    ".nt-win{color:#4FD18B}.nt-loss{color:#E2694F}.nt-res{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}.nt-res:first-child{border-top:0}",
     ".nt-eff td{white-space:nowrap}",
     ".nt-eff .eff-player .nt-link{text-decoration:none;font-weight:700}",
     ".nt-teamlinks{display:inline-flex;gap:6px;margin-left:8px}",
@@ -318,6 +319,21 @@
     try { return new Date(ts).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); } catch (e) { return ""; }
   }
   function compName(tv, kind) { return kind === "world" ? "Coupe du monde" : continentalComp(tv.team.country); }
+  // Phase C : matchs des fenêtres (adversaire, score, feuille de match).
+  function teamLabelOf(id) { var p = String(id).split("-"); var nf = g("nationName") ? window.nationName(p[0]) : p[0]; return t(nf) + " " + catLabel(p[1]); }
+  function windowMatch(tv, n) { return ((tv.qualif && tv.qualif.matches) || []).filter(function (m) { return m.w === n; })[0] || null; }
+  function oppSide(tv, m) { var home = m.home === tv.team.id; return { id: home ? m.away : m.home, home: home, pf: home ? m.scoreHome : m.scoreAway, pa: home ? m.scoreAway : m.scoreHome }; }
+  function matchLine(tv, m) {
+    var o = oppSide(tv, m), cc = o.id.split("-")[0];
+    var played = m.status === "played";
+    return (o.home ? "" : "@ ") + flag(cc) + " " + esc(teamLabelOf(o.id)) +
+      (played ? ' <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '"><b class="' + (o.pf > o.pa ? "nt-win" : "nt-loss") + '">' + (o.pf > o.pa ? "V " : "D ") + esc(o.pf) + "-" + esc(o.pa) + "</b></button>" : "");
+  }
+  function recordOf(tv) {
+    var w = 0, l = 0;
+    (tv.results || []).filter(function (r) { return r.season === tv.season; }).forEach(function (r) { var o = oppSide(tv, r); if (o.pf > o.pa) w++; else l++; });
+    return { w: w, l: l };
+  }
   function objectiveLabel(tv) {
     if (!tv.phase) return "";
     return tv.phase.kind === "world" ? "Coupe du monde ou consolante (fin de saison)" : continentalComp(tv.team.country) + " (fin de saison)";
@@ -347,15 +363,19 @@
     var nx = nextItem(tv, now);
     var h = '<div class="nt-stats">';
     h += '<div class="nt-card"><div class="nt-k">Groupe</div><div class="nt-big">' + (players.length ? esc(players.length) + " joueurs" : "–") + '</div><div class="nt-small">' + (avgAge != null ? "moyenne " + esc(avgAge.toFixed(1).replace(".", ",")) + " ans" : "Groupe en préparation") + (inj ? " · " + esc(inj) + (inj > 1 ? " blessés" : " blessé") : "") + "</div></div>";
-    h += '<div class="nt-card"><div class="nt-k">Bilan</div><div class="nt-big">–</div><div class="nt-small">Aucun match joué</div></div>';
+    var rec = recordOf(tv);
+    h += '<div class="nt-card"><div class="nt-k">Bilan</div><div class="nt-big">' + (rec.w + rec.l ? esc(rec.w) + " V – " + esc(rec.l) + " D" : "–") + '</div><div class="nt-small">' + (rec.w + rec.l ? "Saison " + esc(tv.season) : "Aucun match joué") + "</div></div>";
     h += '<div class="nt-card"><div class="nt-k">Prochaine échéance</div><div class="nt-big">' + (nx ? esc(dayDate(itemStart(nx))) : "–") + '</div><div class="nt-small">' + (nx ? esc(calItemLabel(tv, nx)) + " · dans " + esc(dur(itemStart(nx) - now)) : "Saison terminée") + "</div></div>";
     h += '<div class="nt-card"><div class="nt-k">Joueurs éligibles</div><div class="nt-big">' + (sq ? esc(sq.eligible) : "–") + '</div><div class="nt-small">' + (sq ? "dans " + esc(sq.leagues) + (sq.leagues > 1 ? " championnats" : " championnat") : "") + "</div></div>";
     h += "</div>";
     h += '<div class="nt-two"><div class="nt-card"><div class="nt-k">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
     if (nx) {
-      h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : "Adversaire à déterminer<br>" + esc(when(nx.at))) + "</span></div>";
+      var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : null;
+      h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "contre" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
     } else h += '<p class="nt-small">Aucune échéance cette saison.</p>';
-    h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div><p class="nt-small" style="margin-top:14px">Aucun match joué pour l\'instant.</p></div></div>';
+    var res = (tv.results || []).slice(0, 5);
+    h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>' +
+      (res.length ? '<div style="margin-top:10px">' + res.map(function (r) { return '<div class="nt-res"><span class="nt-small">' + esc(shortDate(r.at)) + "</span> " + matchLine(tv, r) + "</div>"; }).join("") + "</div>" : '<p class="nt-small" style="margin-top:14px">Aucun match joué pour l\'instant.</p>') + "</div></div>";
     return h;
   }
   // Groupe : mêmes colonnes que l'effectif d'une équipe (fiche club), plus
@@ -488,10 +508,50 @@
       if (c.kind === "final") {
         h += '<tr><td class="nt-small">' + esc(dayDate(c.from)) + " → " + esc(dayDate(c.to)) + '</td><td><span class="nt-tag2 is-final">' + esc(compName(tv, c.comp)) + "</span></td><td>" + (c.comp === "world" ? "Phase finale (consolante pour les non-qualifiés)" : "Phase finale") + " : poules du lundi au jeudi, quarts vendredi, demi-finales samedi, finale dimanche (20:00)</td></tr>";
       } else {
-        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">Fenêtre ' + esc(c.n) + "</span></td><td>" + flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span></td></tr>';
+        var wm = windowMatch(tv, c.n);
+        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">Fenêtre ' + esc(c.n) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
       }
     });
     return h + "</tbody></table></div>";
+  }
+  // Phase C : groupe de qualification (classement) et matchs du groupe.
+  function teamQualifHtml(tv) {
+    var q = tv.qualif;
+    if (!q || !q.group) return '<p class="training-empty">Pas de qualifications cette saison pour cette sélection.</p>';
+    var g = q.group;
+    var h = '<div class="nt-h" style="margin-top:6px">' + esc(g.label) + " · " + esc(g.continent) + " · " + esc(q.comp === "continental" ? "qualifications " + continentalComp(tv.team.country) : "têtes de série de la Coupe du monde") + "</div>";
+    h += '<div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>#</th><th>Sélection</th><th>MJ</th><th>V</th><th>D</th><th>Pts</th><th>Diff.</th><th></th></tr></thead><tbody>';
+    g.standings.forEach(function (r) {
+      var tag = r.status === "qualified" ? '<span class="nt-tag nt-t-res">Qualifié</span>' : r.status === "consolation" ? '<span class="nt-tag nt-t-none">Consolation</span>' : "";
+      h += "<tr" + (r.teamId === tv.team.id ? ' class="is-mine"' : "") + "><td>" + esc(r.rank) + '</td><td><button type="button" class="nt-link" data-nt-team="' + esc(r.teamId) + '">' + flag(r.country) + " " + esc(teamLabelOf(r.teamId)) + "</button></td><td>" + esc(r.played) + "</td><td>" + esc(r.wins) + "</td><td>" + esc(r.losses) + "</td><td><b>" + esc(r.points) + "</b></td><td>" + (r.diff > 0 ? "+" : "") + esc(r.diff) + "</td><td>" + tag + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    h += '<p class="nt-small">Victoire 2 points, défaite 1. Départage : confrontations directes, différence de points, points marqués. ' +
+      (q.comp === "continental" ? (g.continent === "Europe" ? "Phase finale : les 2 premiers de chaque groupe et les 2 meilleurs troisièmes ; les autres jouent le tournoi de consolation." : "Toutes les sélections du continent vont en phase finale ; le classement donne les têtes de série.") : "Le classement fixe les têtes de série de la Coupe du monde et du tournoi de consolation.") + "</p>";
+    return h;
+  }
+  // Feuille d'un match international.
+  function matchHtml() {
+    var back = '<button type="button" class="lg-back" data-nt-match-back>← ' + esc(ui.team ? teamLabelOf(ui.team.team.id) : "Sélection") + "</button>";
+    var m = ui.match;
+    if (!m) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement du match…") + "</p>";
+    var box = function (rows, label) {
+      var b = '<div class="nt-card nt-tablewrap" style="margin-top:12px"><div class="nt-k" style="padding:4px 2px 8px">' + esc(label) + '</div><table class="nt-table"><thead><tr><th>Joueur</th><th>Club</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Int</th><th>Ctr</th><th>BP</th><th>+/-</th></tr></thead><tbody>';
+      rows.forEach(function (r) { b += "<tr><td>" + (r.starter ? "<b>" + esc(r.name) + "</b>" : esc(r.name)) + '</td><td class="nt-small">' + esc(r.club ? r.club.name : "") + "</td><td>" + esc(r.min) + "</td><td>" + esc(r.pts) + "</td><td>" + esc(r.reb) + "</td><td>" + esc(r.ast) + "</td><td>" + esc(r.stl) + "</td><td>" + esc(r.blk) + "</td><td>" + esc(r.tov) + "</td><td>" + (r.plusMinus > 0 ? "+" : "") + esc(r.plusMinus) + "</td></tr>"; });
+      return b + "</tbody></table></div>";
+    };
+    var h = back + '<div class="nt-card" style="margin-top:12px;text-align:center"><div class="nt-small">Fenêtre internationale ' + esc(m.w) + " · " + esc(when(m.at)) + '</div><div class="nt-next" style="justify-content:center">' +
+      flag(m.homeCountry) + " " + esc(teamLabelOf(m.home)) + ' <span class="nt-big" style="margin:0 14px">' + esc(m.scoreHome) + " – " + esc(m.scoreAway) + "</span> " + esc(teamLabelOf(m.away)) + " " + flag(m.awayCountry) + "</div>" +
+      (m.injuries && m.injuries.length ? '<p class="nt-small">Blessé' + (m.injuries.length > 1 ? "s" : "") + " : " + m.injuries.map(function (i) { return esc(i.ref.n) + " (" + esc(i.type) + ")"; }).join(", ") + "</p>" : "") + "</div>";
+    if (m.forfeit) return h + '<p class="nt-small">Match décidé par forfait.</p>';
+    return h + box(m.boxHome, teamLabelOf(m.home)) + box(m.boxAway, teamLabelOf(m.away));
+  }
+  function openMatch(id) {
+    ui.matchId = id; ui.match = null; ui.error = "";
+    paint();
+    var p = api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) { ui.match = d.match; }).catch(function (e) { ui.error = e.message; }).then(paint);
+    window.__lastNational = p;
+    return p;
   }
   function teamCoachesHtml(tv) {
     var list = tv.coaches || [];
@@ -506,7 +566,8 @@
     var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
     var tv = ui.team, now = Date.now();
     if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
-    var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
+    if (ui.matchId) return matchHtml();
+    var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
     var h = back + '<div class="nt-tabs">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
     h += '<div class="nt-hero">' + flag(tv.team.country) + '<div><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : encore vierge</span>' +
@@ -517,6 +578,7 @@
     if (ui.teamTab === "groupe") h += '<div style="margin-top:14px">' + teamGroupeHtml(tv) + "</div>";
     else if (ui.teamTab === "calendrier") h += '<div style="margin-top:14px">' + teamCalendrierHtml(tv) + "</div>";
     else if (ui.teamTab === "selectionneurs") h += '<div style="margin-top:14px">' + teamCoachesHtml(tv) + "</div>";
+    else if (ui.teamTab === "qualifications") h += '<div style="margin-top:14px">' + teamQualifHtml(tv) + "</div>";
     else if (ui.teamTab === "palmares") h += '<p class="training-empty" style="margin-top:14px">Aucun titre pour l\'instant.</p>';
     else h += teamApercuHtml(tv, now);
     return h;
@@ -531,7 +593,7 @@
     if (sec && sec.classList.contains("hidden")) {
       try { window.showPage("selectionsSection"); window.setActiveTab("selections"); } catch (e) { /* page sans ces fonctions */ }
     }
-    ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = "";
+    ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = ""; ui.matchId = null; ui.match = null;
     paint();
     var p = loadTeam(id).then(paint);
     window.__lastNational = p;
@@ -643,6 +705,8 @@
     if (d.ntOpen) { openElection(d.ntOpen, d.ntRun === "1"); return; }
     if (d.ntTeam) { openTeam(d.ntTeam); return; }
     if (d.ntTab && ui.teamId) { ui.teamTab = d.ntTab; paint(); return; }
+    if (d.ntMatch) { openMatch(d.ntMatch); return; }
+    if (d.ntMatchBack !== undefined) { ui.matchId = null; ui.match = null; paint(); return; }
     if (d.ntGroupView && ui.teamId) { ui.groupView = d.ntGroupView; paint(); return; }
     if (d.ntPlayer) { var q = d.ntPlayer.split("|"); openPlayer(q[0], Number(q[1]), q[2]); return; }
     if (d.ntBack !== undefined) { render(); return; }

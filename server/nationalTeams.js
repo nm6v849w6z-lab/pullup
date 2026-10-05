@@ -82,10 +82,9 @@ const DEFAULT_CONFIG = {
   // celle de l'All-Star) ; phase finale pendant la dernière semaine, du
   // lundi (jour 76 de la saison) au dimanche (jour 82), à 20h.
   windowWeeks: [2, 4, 6],
-  // Gel automatique des convocations (et notifications aux clubs) : activé
-  // avec les matchs internationaux (phase C). Avant, le sélectionneur
-  // prépare ses listes sans que rien ne soit envoyé aux clubs.
-  matchesLive: false,
+  // Matchs internationaux (phase C) et gel automatique des convocations
+  // (notifications aux clubs) : réglable par l'administration (« config »).
+  matchesLive: true,
   finalFirstDay: 76,
   matchHour: 20,
 };
@@ -402,6 +401,11 @@ function step(store, leagues, world, now) {
   const coach = require("./nationalCoach.js").step(store, leagues, world, now, season, seasonStart);
   if (coach.changed) changed = true;
   coach.due.forEach(due);
+  // Phase C (server/nationalMatches.js) : groupes de qualification et
+  // matchs des fenêtres internationales.
+  const intl = require("./nationalMatches.js").step(store, leagues, world, now, season, seasonStart);
+  if (intl.changed) changed = true;
+  intl.due.forEach(due);
   // Historique borné : élections closes de plus de 2 cycles.
   if (store.elections.length > 400) { store.elections.splice(0, store.elections.length - 400); changed = true; }
   return { changed, nextDeadlineAt, pools: coach.pools };
@@ -524,7 +528,9 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     squad: sq ? { at: sq.at, source: sq.source, players: sq.players, eligible: sq.eligible, leagues: sq.leagues } : null,
     calendar: seasonCalendar(cfg, calendarStartAt, season, team.cat),
     coaches: store.mandates.filter(m => m.teamId === team.id).slice(-20).reverse().map(publicMandate),
-    results: [], honours: [],
+    // Phase C : qualifications (groupe, classement, matchs) et résultats.
+    qualif: require("./nationalMatches.js").qualifView(store, team.id, season),
+    results: require("./nationalMatches.js").resultsOf(store, team.id).slice(0, 20), honours: [],
   };
 }
 

@@ -50,10 +50,25 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     (`store.squads`, 2 meilleurs par poste puis les meilleurs, 12 au plus),
     calendrier (`seasonCalendar` : dimanches des semaines 3, 7, 10 ; phase
     finale jours 76 → 82), recherche du haut (`HM_NATIONAL.searchHtml`).
-  - Phases restantes : B joueurs / présélection / convocations / suivis /
-    tactique ; C fenêtres du dimanche ; D phases finales ; E mode
+  - FAIT (2026-10-05) phase B (server/nationalCoach.js,
+    assets/national-coach.js) : vivier du sélectionneur, présélection (24),
+    joueurs suivis (40), convocations par rassemblement (15 au plus, figées
+    3 jours avant le premier match, complétées au gel, remplacement d'un
+    blessé/inéligible seulement, clubs prévenus), tactique propre (12 par
+    match parmi les 15) ; admin « appoint ».
+  - FAIT (2026-10-05) phase C (server/nationalMatches.js) : fenêtres
+    dimanches semaines 2, 4, 6 ; groupes de 4 au plus par continent
+    (serpentin par niveau) ; matchs avec le moteur des clubs sur les vrais
+    joueurs (ids provisoires, fatigue normale, retirés du matchLog) ;
+    classement 2/1 pt ; qualif continentale Europe 8/10 (2 premiers + 2
+    meilleurs 3es), Amérique et Asie tous ; saison Coupe du monde : groupes
+    = têtes de série. Onglet Qualifications, feuille de match. Config
+    `matchesLive`. Reste à voir : amical d'un club le dimanche d'une fenêtre
+    pour un convoqué (pas bloqué).
+  - Phases restantes : D phases finales (continentale, Coupe du monde /
+    consolation, récupération améliorée, règle Supercoupe) ; E mode
     Sélectionneur (barre latérale, en-tête, notifications à part, bascule)
-    et bilan de mandat. UI dans des fichiers assets/ séparés (limite 4 Mo
+    et bilan de mandat ; traductions des écrans B/C. UI dans des fichiers assets/ séparés (limite 4 Mo
     de la page).
 
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-02), committé localement — Ligues

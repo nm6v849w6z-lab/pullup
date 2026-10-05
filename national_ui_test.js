@@ -67,7 +67,7 @@ const DAY = 24 * 3600 * 1000;
   box().querySelector('.nt-table [data-nt-team="' + myCountry + '-A"]').click();
   await win.__lastNational;
   assert(box().querySelector(".nt-hero h1") && /France\s+A/.test(box().querySelector(".nt-hero h1").textContent), "page équipe : bandeau « France A »");
-  assert([...box().querySelectorAll(".nt-tab")].map(b => b.textContent).join(",") === "Aperçu,Groupe,Calendrier,Sélectionneurs,Palmarès", "onglets Aperçu / Groupe / Calendrier / Sélectionneurs / Palmarès");
+  assert([...box().querySelectorAll(".nt-tab")].map(b => b.textContent).join(",") === "Aperçu,Groupe,Calendrier,Qualifications,Sélectionneurs,Palmarès", "onglets Aperçu / Groupe / Calendrier / Qualifications / Sélectionneurs / Palmarès");
   assert(box().querySelectorAll(".nt-stats .nt-card").length === 4, "aperçu : 4 chiffres (groupe, bilan, échéance, éligibles)");
   box().querySelector('[data-nt-tab="groupe"]').click();
   const rows = [...box().querySelectorAll("table.eff-general tbody tr")];
