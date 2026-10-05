@@ -7944,7 +7944,9 @@
   .lp-next-orders{margin:14px 0 0;}
   .lp-next-orders .lp-btn{width:100%;}
   .lp-results, .lp-leaders{margin-top:18px;}
-  .lp-leaders .lg-grid{grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));}
+  /* Leaders de ligue privée : 3 briques par ligne comme le championnat
+     (retour utilisateur 2026-10-05 : briques trop petites, texte sur les
+     stats) — règle .lg-grid commune, mêmes paliers téléphone. */
   .lp-show-btn{width:100%;}
   .lp-live-dot{width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 0 currentColor; animation:lpLivePulse 1.4s ease-out infinite; flex:none;}
   .lp-cal-row > .lp-live .lp-live-dot{background:#ef4444;}
