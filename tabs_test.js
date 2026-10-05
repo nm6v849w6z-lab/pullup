@@ -104,13 +104,13 @@ if (!jumpedToOrdres) throw new Error("❌ Le clic sur le bouton du calendrier de
 // --- Salle : plusieurs catégories de places, chacune avec son propre prix. ---
 clickTab("salle");
 const categoryCards = doc.querySelectorAll(".seat-category-card");
-console.log("\nCatégories de places affichées :", categoryCards.length, "(attendu 3)");
-if (categoryCards.length !== 3) throw new Error("❌ La Salle devrait proposer 3 catégories de places (gradins, tribune, loges).");
+console.log("\nCatégories de places affichées :", categoryCards.length, "(attendu 4)");
+if (categoryCards.length !== 4) throw new Error("❌ La Salle devrait proposer 4 catégories de places (Tribune Supérieure, Tribune Centrale, Courtside, Loges VIP).");
 const gradinsRange = doc.getElementById("ticketPriceRange_gradins");
 const logeRange = doc.getElementById("ticketPriceRange_loge");
 if (!gradinsRange || !logeRange) throw new Error("❌ Chaque catégorie de places devrait avoir son propre curseur de prix.");
 if (gradinsRange.max === logeRange.max) throw new Error("❌ Les catégories de places ne devraient pas avoir la même fourchette de prix (gradins vs loges VIP).");
-console.log(`✅ 3 catégories de places, chacune avec sa propre fourchette de prix (gradins jusqu'à ${gradinsRange.max} $, loges jusqu'à ${logeRange.max} $).`);
+console.log(`✅ 4 catégories de places, chacune avec sa propre fourchette de prix (Tribune Supérieure jusqu'à ${gradinsRange.max} $, loges jusqu'à ${logeRange.max} $).`);
 
 // Change le prix des loges VIP et vérifie la persistance.
 logeRange.value = "90";
@@ -139,7 +139,7 @@ await flush(dom);
 saved = readRawSave(savePath);
 const savedSeats = saved.team.seats;
 console.log("\nPlaces après construction :", savedSeats);
-if (!savedSeats || savedSeats.gradins + savedSeats.tribune + savedSeats.loge !== capBefore + 100) throw new Error("❌ Les 100 places construites devraient être sauvegardées.");
+if (!savedSeats || savedSeats.gradins + savedSeats.tribune + savedSeats.courtside + savedSeats.loge !== capBefore + 100) throw new Error("❌ Les 100 places construites devraient être sauvegardées.");
 console.log("✅ L'agrandissement de la salle (+100 places en gradins) fonctionne et est sauvegardé.");
 
 // --- Boutique des supporters : achat UNIQUE, puis revenu hebdomadaire fixe

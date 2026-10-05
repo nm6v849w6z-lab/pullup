@@ -14,25 +14,29 @@ const actions = require("./server/actions.js");
 const { generateTeam, serializeTeam, teamFromSave, SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaInfo } = E;
 
 // 1) Plafonds et prix fixes.
-if (SEAT_CATEGORY_MAX_SEATS.loge !== 2500 || ARENA_MAX_CAPACITY !== 45000) throw new Error("❌ Plafonds attendus : 2 500 loges, 45 000 places au total.");
-console.log("✅ Plafonds : 27 500 gradins, 15 000 tribune, 2 500 loges (45 000 au total).");
+if (SEAT_CATEGORY_MAX_SEATS.loge !== 2500 || SEAT_CATEGORY_MAX_SEATS.courtside !== 1000 || ARENA_MAX_CAPACITY !== 46000) throw new Error("❌ Plafonds attendus : 1 000 Courtside, 2 500 Loges VIP, 46 000 places au total.");
+// 4 catégories, dans l'ordre d'affichage (2026-10-05).
+const names = E.SEAT_CATEGORIES.map(c => c.name).join(" / ");
+if (names !== "Tribune Supérieure / Tribune Centrale / Courtside / Loges VIP") throw new Error(`❌ Catégories inattendues : ${names}.`);
+if (Math.abs(E.SEAT_CATEGORIES.reduce((s, c) => s + c.shareOfCapacity, 0) - 1) > 1e-9) throw new Error("❌ Les parts de capacité doivent faire 100 %.");
+console.log("✅ Plafonds : 27 500 Tribune Supérieure, 15 000 Tribune Centrale, 1 000 Courtside, 2 500 Loges VIP (46 000 au total).");
 
 // 2) Salle existante (palier 3 = 12 000 places) : répartition conservée.
 const t = generateTeam("Test", 1);
 t.arenaLevel = 3;
 const s0 = t.currentSeats();
-if (s0.gradins !== 6600 || s0.tribune !== 3600 || s0.loge !== 1800 || t.arenaCapacity() !== 12000) throw new Error(`❌ Une salle de palier 3 devrait garder 6 600/3 600/1 800 places (${JSON.stringify(s0)}).`);
-console.log("✅ Salle existante : 12 000 places réparties comme avant (6 600 / 3 600 / 1 800).");
+if (s0.gradins !== 6360 || s0.tribune !== 3600 || s0.courtside !== 240 || s0.loge !== 1800 || t.arenaCapacity() !== 12000) throw new Error(`❌ Une salle de palier 3 devrait avoir 6 360/3 600/240/1 800 places (${JSON.stringify(s0)}).`);
+console.log("✅ Salle de palier : 12 000 places réparties (6 360 / 3 600 / 240 / 1 800).");
 
 // 3) Prix fixe : même coût par place, quelle que soit la taille de la tribune.
 t.budget = 10000000;
 const r1 = t.buildSeats({ gradins: 100 });
 const r2 = t.buildSeats({ gradins: 100 });
 if (!r1.ok || r1.cost !== 100 * SEAT_BUILD_COST_PER_SEAT.gradins || r2.cost !== r1.cost) throw new Error("❌ Le prix d'une place doit être fixe, de la première à la dernière.");
-const mixed = t.buildSeats({ gradins: 1000, tribune: 500, loge: 100 });
-if (mixed.cost !== 1000 * 100 + 500 * 500 + 100 * 5000) throw new Error(`❌ Coût d'un lot mixte inattendu : ${mixed.cost}.`);
-if (t.arenaCapacity() !== 12000 + 200 + 1600) throw new Error("❌ La capacité devrait être la somme des places.");
-console.log(`✅ Prix fixe par place (100 / 500 / 5 000 $), lot mixte ${mixed.cost.toLocaleString("fr-FR")} $.`);
+const mixed = t.buildSeats({ gradins: 1000, tribune: 500, courtside: 50, loge: 100 });
+if (mixed.cost !== 1000 * 100 + 500 * 500 + 50 * 2000 + 100 * 5000) throw new Error(`❌ Coût d'un lot mixte inattendu : ${mixed.cost}.`);
+if (t.arenaCapacity() !== 12000 + 200 + 1650) throw new Error("❌ La capacité devrait être la somme des places.");
+console.log(`✅ Prix fixe par place (100 / 500 / 2 000 / 5 000 $), lot mixte ${mixed.cost.toLocaleString("fr-FR")} $.`);
 
 // 4) Plafond par type, tout ou rien ; budget insuffisant refusé.
 const before = JSON.stringify(t.currentSeats());
@@ -51,6 +55,23 @@ if (t.arenaLevel !== 5 || arenaInfo(t.arenaLevel).name !== "Arena") throw new Er
 const back = teamFromSave(JSON.parse(JSON.stringify(serializeTeam(t))));
 if (JSON.stringify(back.seats) !== JSON.stringify(t.seats) || back.arenaCapacity() !== t.arenaCapacity()) throw new Error("❌ Les places doivent survivre à la sauvegarde.");
 console.log(`✅ Nom de la salle selon la capacité (${t.arenaCapacity().toLocaleString("fr-FR")} places → Arena), sauvegarde OK.`);
+
+// 5bis) Sauvegarde d'avant le Courtside : places construites intactes, le
+// Courtside reçoit la part du palier, prix existants gardés.
+{
+  const old = generateTeam("Ancienne", 1);
+  const save = JSON.parse(JSON.stringify(serializeTeam(old)));
+  save.arenaLevel = 4;
+  save.seats = { gradins: 12000, tribune: 4000, loge: 900 };
+  save.ticketPrices = { gradins: 18, tribune: 33, loge: 90 };
+  const m = teamFromSave(save);
+  const exp = Math.round(arenaInfo(4).capacity * 0.02);
+  if (m.seats.gradins !== 12000 || m.seats.tribune !== 4000 || m.seats.loge !== 900 || m.seats.courtside !== exp) throw new Error(`❌ Migration des places inattendue : ${JSON.stringify(m.seats)}.`);
+  if (m.ticketPrices.gradins !== 18 || m.ticketPrices.loge !== 90 || m.ticketPrices.courtside !== 45) throw new Error(`❌ Migration des prix inattendue : ${JSON.stringify(m.ticketPrices)}.`);
+  const res = m.simulateHomeAttendance("X");
+  if (res.breakdown.map(b => b.key).join(",") !== "gradins,tribune,courtside,loge") throw new Error("❌ La recette doit couvrir les 4 catégories.");
+  console.log(`✅ Ancienne sauvegarde : places et prix gardés, +${exp} places Courtside, recette sur 4 catégories.`);
+}
 
 // 6) Action serveur.
 const u = generateTeam("Srv", 1); u.budget = 1e6;
@@ -99,7 +120,7 @@ console.log("✅ Action serveur /api/arena/build-seats.");
     t.budget = 1e8;
     t.seats = { ...t.currentSeats(), loge: E.SEAT_CATEGORY_MAX_SEATS.loge + 50 };
     const r = t.buildSeats({ gradins: 1000 });
-    if (!r.ok) throw new Error("❌ Loges VIP au-dessus du plafond : les gradins populaires devraient rester constructibles.");
+    if (!r.ok) throw new Error("❌ Loges VIP au-dessus du plafond : la Tribune Supérieure devrait rester constructible.");
     console.log("✅ Loges VIP au-dessus du plafond (ancienne salle) : les autres gradins restent constructibles.");
   }
   console.log("\n🏁 Tous les tests de l'agrandissement libre de la salle sont passés.");

@@ -852,12 +852,12 @@ function upgradeArena(team, teamIndex, league, body, now) {
 }
 
 // Agrandissement LIBRE de la salle (retour utilisateur 2026-09-27, voir
-// Team.buildSeats côté moteur) : body.add = { gradins, tribune, loge }.
+// Team.buildSeats côté moteur) : body.add = { gradins, tribune, courtside, loge }.
 function buildArenaSeats(team, teamIndex, league, body, now) {
-  if (!body || typeof body.add !== "object" || !body.add) return fail("add requis ({ gradins, tribune, loge }).");
+  if (!body || typeof body.add !== "object" || !body.add) return fail("add requis ({ gradins, tribune, courtside, loge }).");
   const res = team.buildSeats(body.add);
   if (!res.ok) {
-    const msg = { empty: "Aucune place à construire.", cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées)." };
+    const msg = { empty: "Aucune place à construire.", cap: "Plafond de places atteint pour cette catégorie.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées)." };
     return fail(msg[res.reason] || "Construction refusée.");
   }
   return { ok: true, seats: team.currentSeats(), budget: team.budget, cost: res.cost };

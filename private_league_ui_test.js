@@ -221,7 +221,9 @@ async function waitFor(fn, label, tries = 60) {
   scoreBtn.click();
   const overlay = docA3.getElementById("matchBoxscoreOverlay");
   check(!!overlay && /Ligue privée · Coupe des Potes · Journée 1/.test(overlay.querySelector(".mbx-kicker").textContent), "feuille de match ouverte avec l'en-tête Ligue privée");
-  check(!!overlay.querySelector(".lp-mbx-note") && overlay.querySelectorAll("table.boxscore tbody tr").length >= 6, "note « aucun effet » et lignes de joueurs présentes");
+  // Plus de note « aucun effet sur la forme… » (retour utilisateur 2026-10-05) ;
+  // seul un match décidé par forfait garde sa note.
+  check(!overlay.querySelector(".lp-mbx-note") && !/aucun effet/.test(overlay.textContent) && overlay.querySelectorAll("table.boxscore tbody tr").length >= 6, "pas de note « aucun effet », lignes de joueurs présentes");
   const { league: after } = await store.loadMultiLeague(multiSavePath);
   // (L'isolement des équipes réelles est vérifié dans server/private_league_test.js :
   // ici le rechargement rattrape AUSSI les journées officielles de mercredi/jeudi.)

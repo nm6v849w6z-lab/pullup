@@ -68,7 +68,7 @@ console.log("Chiffres clés :", kpis);
 const expectedAvg = win.eval("Math.round(teamA.attendanceHistory.reduce((s, e) => s + e.attendance, 0) / teamA.attendanceHistory.length)");
 if (!kpis.includes(fr(expectedAvg))) throw new Error(`❌ L'affluence moyenne réelle (${expectedAvg}) devrait apparaître dans les chiffres clés.`);
 if (!kpis.includes("Dernière recette")) throw new Error("❌ Avec au moins un match joué, la dernière recette devrait être affichée.");
-if (doc.querySelectorAll("#salleHeroKpis .sl-kpi-cats span").length !== 3) throw new Error("❌ Le taux de remplissage par catégorie (3 pastilles) devrait accompagner l'affluence moyenne.");
+if (doc.querySelectorAll("#salleHeroKpis .sl-kpi-cats span").length !== 4) throw new Error("❌ Le taux de remplissage par catégorie (4 pastilles) devrait accompagner l'affluence moyenne.");
 if (!txt("#salleHeroRing").includes("remplissage")) throw new Error("❌ Avec des matchs joués, l'anneau devrait montrer le remplissage RÉEL.");
 if (doc.querySelector("#salleHero #salleHeroKpis")) throw new Error("❌ Les chiffres clés ne devraient plus être sur l'image de la salle (retour utilisateur : 'ça allégera un peu').");
 if (!doc.querySelector(".sl-side #salleHeroKpis + #attendanceHistoryHolder")) throw new Error("❌ Les chiffres clés devraient être juste au-dessus de la carte Affluence.");
@@ -76,7 +76,7 @@ console.log("✅ Chiffres clés (hors image, au-dessus de l'affluence) : moyenne
 
 // --- 2. Billetterie : aperçu en direct puis validation ---
 const rows = doc.querySelectorAll("#seatCategoriesHolder .seat-category-card");
-if (rows.length !== 3) throw new Error(`❌ 3 catégories attendues dans le bloc billetterie, obtenu ${rows.length}.`);
+if (rows.length !== 4) throw new Error(`❌ 4 catégories attendues dans le bloc billetterie, obtenu ${rows.length}.`);
 const savedBefore = readRawSave(savePath);
 const gradinsBefore = win.eval("teamA.ticketPrices.gradins");
 // Retour utilisateur (2026-09-25) : "enlève tous les chiffres dans

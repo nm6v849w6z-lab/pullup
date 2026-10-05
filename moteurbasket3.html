@@ -6756,10 +6756,11 @@
      moi à rendre cette page plus sexy", puis sur la maquette : "vas y ça me
      plait bien, code tout ça"). Tout est préfixé .sl- (voir
      renderSalleSection et suivantes dans le JS). Couleurs des catégories de
-     places : ambre de l'app pour les gradins, le bleu déjà validé de
-     --court-zone-three pour la tribune, un violet pour les loges VIP.
+     places : ambre de l'app pour la Tribune Supérieure, le bleu déjà validé
+     de --court-zone-three pour la Tribune Centrale, un turquoise pour le
+     Courtside, un violet pour les Loges VIP.
      ===================================================================== */
-  :root{ --seat-gradins:var(--amber); --seat-tribune:#3987e5; --seat-loge:#a78bfa; }
+  :root{ --seat-gradins:var(--amber); --seat-tribune:#3987e5; --seat-courtside:#2ec4b6; --seat-loge:#a78bfa; }
   #salleSection .sl-num{font-variant-numeric:tabular-nums;}
   #salleSection .sl-up{color:var(--ok);}
   #salleSection .sl-down{color:var(--danger);}
@@ -6846,7 +6847,11 @@
   .sl-kpi b{font-size:22px; font-weight:800; line-height:1.1; color:var(--ink);}
   .sl-kpi em{margin-left:6px; font-style:normal; font-size:12px; font-weight:700;}
   .sl-kpi-sub{font-size:11px; color:var(--ink-faint); margin-top:3px;}
-  .sl-kpi-cats{display:flex; gap:9px; margin-top:5px; font-size:11px; color:var(--ink-dim);}
+  /* Une pastille par catégorie : 4 sur une ligne, ou 2 × 2 quand la tuile
+     est étroite (jamais 3 + 1). */
+  .sl-kpi-cats{display:grid; grid-template-columns:repeat(4, max-content); gap:3px 9px; margin-top:5px; font-size:11px; color:var(--ink-dim);}
+  .sl-kpi:has(.sl-kpi-cats){container-type:inline-size;}
+  @container (max-width:200px){ .sl-kpi-cats{grid-template-columns:repeat(2, max-content);} }
   .sl-kpi-cats span{display:inline-flex; align-items:center; gap:4px;}
   .sl-kpi-cats i{width:7px; height:7px; border-radius:2px;}
   .sl-hero-note{margin-top:8px; font-size:11px; color:var(--ink-faint);}
@@ -6906,6 +6911,19 @@
   #slSeatRows{display:flex; flex-direction:column;}
   #seatCategoriesHolder .sl-card-head{margin-bottom:4px;}
   #salleSection #seatCategoriesHolder .seat-category-card.sl-seat-row{padding:8px 0 10px; row-gap:4px;}
+  /* 4 catégories (2026-10-05 : Tribune Supérieure, Tribune Centrale,
+     Courtside, Loges VIP) : dès que la carte est assez large, chaque
+     catégorie tient sur UNE ligne (nom | prix + curseur), avec la même
+     colonne de noms que « Agrandir la salle » juste en dessous — les deux
+     cartes gardent ainsi la hauteur qu'elles avaient à 3 catégories et la
+     colonne reste alignée sur chiffres clés + Affluence. */
+  #seatCategoriesHolder, #arenaBuildHolder{container-type:inline-size;}
+  @container (min-width:440px){
+    #salleSection #seatCategoriesHolder .seat-category-card.sl-seat-row{grid-template-columns:minmax(150px,210px) minmax(0,1fr); padding:9px 0; column-gap:14px;}
+    .sl-seat-row .sl-seat-ctrl{grid-column:auto; grid-row:auto;}
+    #arenaBuildHolder .sl-build-row{grid-template-columns:minmax(150px,210px) minmax(0,1fr) auto;}
+    #arenaBuildHolder .sl-build-row > div:nth-child(2){grid-column:auto; grid-row:auto;}
+  }
   .sl-main #arenaBuildHolder{flex:1;}
   /* Retour utilisateur (2026-09-30, capture : grand vide sous « Construire ») :
      la colonne de droite (chiffres clés + Affluence, jusqu'à 10 matchs une
@@ -6980,9 +6998,9 @@
   .sl-chart-label-proj{fill:var(--ink-dim); font-weight:700;}
   .sl-chart-rev{font-size:10.5px; font-weight:600; fill:var(--ink-dim);}
   .sl-chart-rev-proj{fill:var(--amber);}
-  .sl-bar-gradins{fill:var(--seat-gradins);} .sl-bar-tribune{fill:var(--seat-tribune);} .sl-bar-loge{fill:var(--seat-loge);}
+  .sl-bar-gradins{fill:var(--seat-gradins);} .sl-bar-tribune{fill:var(--seat-tribune);} .sl-bar-courtside{fill:var(--seat-courtside);} .sl-bar-loge{fill:var(--seat-loge);}
   .sl-bar-proj{fill-opacity:.3; stroke-width:1.2; stroke-dasharray:3 2.5;}
-  .sl-bar-proj.sl-bar-gradins{stroke:var(--seat-gradins);} .sl-bar-proj.sl-bar-tribune{stroke:var(--seat-tribune);} .sl-bar-proj.sl-bar-loge{stroke:var(--seat-loge);}
+  .sl-bar-proj.sl-bar-gradins{stroke:var(--seat-gradins);} .sl-bar-proj.sl-bar-tribune{stroke:var(--seat-tribune);} .sl-bar-proj.sl-bar-courtside{stroke:var(--seat-courtside);} .sl-bar-proj.sl-bar-loge{stroke:var(--seat-loge);}
   .sl-bar-legacy{fill:var(--ink-faint);}
   #salleSection .sl-history{margin-top:12px; padding:0; background:none; border:0;}
   #salleSection .sl-history .gain-line.attendance-line{display:flex; justify-content:space-between; gap:12px; margin:0; padding:10px 0; border:0; border-top:1px solid var(--line-soft); border-radius:0; background:none;}
@@ -9740,7 +9758,7 @@
 
       <div class="guide-entry" data-guide-id="salle" data-guide-group="Club et finances">
         <h3>Salle</h3>
-        <p class="training-intro">Agrandissez votre salle place par place pour accueillir plus de spectateurs (brique Agrandir la salle : chaque type de gradin a son prix par place et son nombre maximum de places), et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : gradins populaires, tribune couverte et loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 5 niveaux comme le centre de formation : Boutique des supporters (revenu fixe chaque semaine), Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
+        <p class="training-intro">Agrandissez votre salle place par place pour accueillir plus de spectateurs (brique Agrandir la salle : chaque catégorie de places a son prix par place et son nombre maximum de places), et réglez le prix du billet CATÉGORIE PAR CATÉGORIE : Tribune Supérieure, Tribune Centrale, Courtside et Loges VIP n'ont ni la même capacité, ni la même tolérance au prix. Seuls les matchs à domicile rapportent une recette. L'humeur des supporters influence le remplissage et la tolérance au prix. D'autres infrastructures sont proposées, chacune sur 5 niveaux comme le centre de formation : Boutique des supporters (revenu fixe chaque semaine), Station TV (revenu fixe chaque semaine), Salle de musculation (réduit le risque de blessure) et Espace bien-être (réduit la fatigue en match).</p>
       </div>
 
       <div class="guide-entry" data-guide-id="boutique" data-guide-group="Club et finances">
@@ -11876,9 +11894,14 @@ function managerDisplayName(team) {
 // vip ? ça paraît démentiel"). ARENA_LEVELS ne sert plus qu'à nommer la salle
 // selon sa capacité totale (voir arenaLevelForCapacity).
 // ---------------------------------------------------------------------
-const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, loge: 2500 };
-const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
-const ARENA_MAX_CAPACITY = SEAT_CATEGORY_MAX_SEATS.gradins + SEAT_CATEGORY_MAX_SEATS.tribune + SEAT_CATEGORY_MAX_SEATS.loge;
+// Courtside (retour utilisateur 2026-10-05 : 4 catégories, Tribune
+// Supérieure, Tribune Centrale, Courtside, Loges VIP) : quelques centaines de
+// places au bord du parquet, plus chères à construire que la Tribune Centrale
+// mais moins que les Loges VIP. Les clés internes (gradins, tribune, loge)
+// restent celles des sauvegardes existantes, seuls les noms affichés changent.
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 1000, loge: 2500 };
+const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, courtside: 2000, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
+const ARENA_MAX_CAPACITY = Object.values(SEAT_CATEGORY_MAX_SEATS).reduce((s, n) => s + n, 0);
 // Palier (et donc nom par défaut) correspondant à une capacité totale : le
 // plus grand palier dont la capacité est atteinte.
 function arenaLevelForCapacity(capacity) {
@@ -11886,7 +11909,7 @@ function arenaLevelForCapacity(capacity) {
   ARENA_LEVELS.forEach(a => { if (capacity >= a.capacity) level = Math.max(level, a.level); });
   return level;
 }
-// Coût d'un lot de places { gradins, tribune, loge } (prix fixe par place).
+// Coût d'un lot de places { gradins, tribune, courtside, loge } (prix fixe par place).
 function seatBuildCost(add) {
   return SEAT_CATEGORIES.reduce((s, c) => s + Math.max(0, Math.floor(Number(add && add[c.key]) || 0)) * (SEAT_BUILD_COST_PER_SEAT[c.key] || 0), 0);
 }
@@ -11924,8 +11947,9 @@ function trainingCenterInfo(level) {
 
 // ---------------------------------------------------------------------
 // Catégories de places, chacune avec son propre prix réglable : une salle
-// n'est pas un seul tarif unique, les gradins populaires, la tribune et les
-// loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
+// n'est pas un seul tarif unique, la Tribune Supérieure, la Tribune Centrale,
+// le Courtside et les Loges VIP ont chacun leur budget et leur tolérance au
+// prix (une loge VIP
 // reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
@@ -11937,8 +11961,11 @@ function trainingCenterInfo(level) {
 // division rapporte des recettes cohérentes avec des salaires eux-mêmes
 // recalés sur des données réelles de BuzzerBeater.
 const SEAT_CATEGORIES = [
-  { key: "gradins", name: "Gradins populaires", shareOfCapacity: 0.55, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
-  { key: "tribune", name: "Tribune couverte", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  // Ordre d'affichage partout : de la place la plus éloignée du terrain à la
+  // plus exclusive.
+  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.53, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
+  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  { key: "courtside", name: "Courtside", shareOfCapacity: 0.02, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
   { key: "loge", name: "Loges VIP", shareOfCapacity: 0.15, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
 ];
 
@@ -16923,7 +16950,7 @@ class Team {
     // journal des transactions (recettes/dépenses les plus récentes, pour
     // l'écran "Économie") — voir recordTransaction().
     this.arenaLevel = 1;
-    this.seats = null; // { gradins, tribune, loge } une fois la salle agrandie librement (voir buildSeats)
+    this.seats = null; // { gradins, tribune, courtside, loge } une fois la salle agrandie librement (voir buildSeats)
     this.ticketPrices = {};
     SEAT_CATEGORIES.forEach(cat => { this.ticketPrices[cat.key] = cat.defaultPrice; });
     this.fanShopLevel = 0;
@@ -18016,7 +18043,7 @@ class Team {
     return true;
   }
 
-  // Capacité totale = somme des places des 3 types de gradins (voir
+  // Capacité totale = somme des places de chaque catégorie (voir
   // Team.seats / categoryCapacity).
   arenaCapacity() {
     return SEAT_CATEGORIES.reduce((s, cat) => s + this.categoryCapacity(cat.key), 0);
@@ -18034,7 +18061,7 @@ class Team {
   }
 
   // Ajoute des places (retour utilisateur 2026-09-27, voir
-  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
+  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, courtside, loge } (entiers
   // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
   // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
   // Budget dépensable (retour utilisateur 2026-10-03 : « j'ai enchéri mais
@@ -18987,7 +19014,7 @@ class Team {
     }
 
     // Humeur des supporters : dérive lente et indépendante des résultats,
-    // selon le confort tarifaire MOYEN des 3 catégories de place — des prix
+    // selon le confort tarifaire MOYEN des catégories de place — des prix
     // durablement trop élevés agacent les supporters semaine après semaine,
     // des prix confortables les rassérènent doucement (voir
     // ticketPriceComfortFactor / moraleForgiveness).
@@ -24975,15 +25002,24 @@ function teamFromSave(data) {
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
   if (ARENA_LEVELS.some(a => a.level === data.arenaLevel)) team.arenaLevel = data.arenaLevel;
   // Places par type (agrandissement libre, voir Team.buildSeats) : absent
-  // d'une ancienne sauvegarde -> répartition du palier (currentSeats).
-  if (data.seats && SEAT_CATEGORIES.every(c => Number.isInteger(data.seats[c.key]) && data.seats[c.key] >= 0)) {
+  // d'une ancienne sauvegarde -> répartition du palier (currentSeats). Une
+  // catégorie absente d'une sauvegarde d'avant son introduction (Courtside,
+  // 2026-10-05) reçoit la part du palier de la salle, sans toucher aux places
+  // déjà construites dans les autres catégories.
+  const savedSeats = data.seats && typeof data.seats === "object" ? data.seats : null;
+  const validSeat = v => Number.isInteger(v) && v >= 0;
+  if (savedSeats && Object.keys(savedSeats).every(k => validSeat(savedSeats[k])) && SEAT_CATEGORIES.some(c => validSeat(savedSeats[c.key]))) {
+    const cap = arenaInfo(team.arenaLevel).capacity;
     team.seats = {};
-    SEAT_CATEGORIES.forEach(c => { team.seats[c.key] = Math.min(data.seats[c.key], SEAT_CATEGORY_MAX_SEATS[c.key]); });
+    SEAT_CATEGORIES.forEach(c => {
+      const n = validSeat(savedSeats[c.key]) ? savedSeats[c.key] : Math.round(cap * c.shareOfCapacity);
+      team.seats[c.key] = Math.min(n, SEAT_CATEGORY_MAX_SEATS[c.key]);
+    });
   }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne
   // sauvegarde (avant l'introduction des catégories, un seul "ticketPrice")
-  // : on réutilise cette valeur pour les gradins, le reste part du défaut —
+  // : on réutilise cette valeur pour la Tribune Supérieure, le reste part du défaut —
   // c'est mieux qu'une remise à zéro complète du réglage tarifaire du joueur.
   if (data.ticketPrices && typeof data.ticketPrices === "object") {
     SEAT_CATEGORIES.forEach(cat => {
@@ -46366,6 +46402,7 @@ function dashboardDataFromGameState() {
       prices: {
         stands: teamA.ticketPrices.gradins,
         tribune: teamA.ticketPrices.tribune,
+        courtside: teamA.ticketPrices.courtside,
         boxes: teamA.ticketPrices.loge,
       },
       // Affluence moyenne (retour utilisateur, 2026-09-25 : "dans la brique
@@ -52198,7 +52235,7 @@ function buildUpgradeArrow(confirmOpts, btnOpts) {
 //     qu'avant, voir buildUpgradeArrow), chiffres clés et anneau de
 //     remplissage (affluence RÉELLE des matchs joués, voir
 //     arenaAttendanceStats, repli sur la projection s'il n'y en a aucun).
-//   - renderSalleTicketing : les 3 catégories de places dans UN seul bloc,
+//   - renderSalleTicketing : les 4 catégories de places dans UN seul bloc,
 //     avec aperçu EN DIRECT pendant qu'on fait glisser un curseur (voir
 //     Team.projectedAttendanceRateAtPrice), repère "prix idéal" et zone
 //     rouge (voir seatPriceZones), recette prévue totale et conseil.
@@ -52215,8 +52252,8 @@ function buildUpgradeArrow(confirmOpts, btnOpts) {
 
 // Couleur de chaque catégorie de place, partout sur la page (barre de
 // remplissage, curseur, graphique, légende) — voir --seat-* dans le CSS.
-const SEAT_CATEGORY_COLORS = { gradins: "var(--seat-gradins)", tribune: "var(--seat-tribune)", loge: "var(--seat-loge)" };
-const SEAT_CATEGORY_ICONS = { gradins: "ticket", tribune: "stand", loge: "star" };
+const SEAT_CATEGORY_COLORS = { gradins: "var(--seat-gradins)", tribune: "var(--seat-tribune)", courtside: "var(--seat-courtside)", loge: "var(--seat-loge)" };
+const SEAT_CATEGORY_ICONS = { gradins: "ticket", tribune: "stand", courtside: "court", loge: "star" };
 
 // Pictogrammes au trait (pas d'emoji : retirés à la demande de
 // l'utilisateur en 2026-09, voir le commentaire de syncArenaPurchasesHeight
@@ -52224,6 +52261,7 @@ const SEAT_CATEGORY_ICONS = { gradins: "ticket", tribune: "stand", loge: "star" 
 const SALLE_ICON_PATHS = {
   ticket: '<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M15 7v10" stroke-dasharray="2 2.5"/>',
   stand: '<path d="M3 9.5 12 4l9 5.5"/><path d="M5 9v11M19 9v11M5 13.5h14M5 17.5h14"/>',
+  court: '<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M12 6v12M3 9.5h2.5v5H3M21 9.5h-2.5v5H21"/><circle cx="12" cy="12" r="2.2"/>',
   star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
   ball: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17M6 6c3.2 3.4 3.2 8.6 0 12M18 6c-3.2 3.4-3.2 8.6 0 12"/>',
   bag: '<path d="M5 8.5h14l-1.2 11.5H6.2z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
@@ -53003,11 +53041,12 @@ function renderSalleHero(info, stats) {
 }
 
 // --- Agrandir la salle (retour utilisateur 2026-09-27) --------------------
-// Une ligne par type de gradin : prix fixe de la place, barre de remplissage
+// Une ligne par catégorie de places : prix fixe de la place, barre de remplissage
 // par rapport au plafond (places ajoutées hachurées avant validation), et un
 // sélecteur de places à ajouter (±100). "Construire" débite le budget tout de
 // suite (Team.buildSeats), synchronisé côté serveur en ligue partagée.
-const arenaBuildDraft = { gradins: 0, tribune: 0, loge: 0 };
+const arenaBuildDraft = {};
+SEAT_CATEGORIES.forEach(c => { arenaBuildDraft[c.key] = 0; });
 function renderArenaBuild(feedback) {
   const holder = document.getElementById("arenaBuildHolder");
   if (!holder) return;
@@ -53074,7 +53113,7 @@ document.addEventListener("click", (e) => {
       renderSalleSection();
       renderArenaBuild(`<span class="sl-up">+${res.added.toLocaleString("fr-FR")} places construites (${formatMoney(res.cost)}).</span>`);
     } else {
-      const msg = { cap: "Plafond de places atteint pour ce type de gradin.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées).", empty: "Aucune place à construire." };
+      const msg = { cap: "Plafond de places atteint pour cette catégorie.", "insufficient-budget": "Budget insuffisant (les enchères où vous êtes en tête sont réservées).", empty: "Aucune place à construire." };
       renderArenaBuild(`<span class="sl-down">${msg[res.reason] || "Construction refusée."}</span>`);
     }
   }
@@ -53215,6 +53254,17 @@ function renderAttendanceHistory() {
   }
   holder.innerHTML = html;
 }
+// Détail par catégorie d'un match de l'historique, dans l'ordre actuel des
+// catégories et sous leur nom actuel : les entrées enregistrées avant le
+// passage à 4 catégories (2026-10-05) portent encore « Gradins populaires »
+// ou « Tribune couverte » dans `name`, la clé fait foi.
+function salleOrderedBreakdown(breakdown) {
+  const rank = k => { const i = SEAT_CATEGORIES.findIndex(c => c.key === k); return i < 0 ? SEAT_CATEGORIES.length : i; };
+  return breakdown.slice().sort((a, b) => rank(a.key) - rank(b.key)).map(b => {
+    const cat = SEAT_CATEGORIES.find(c => c.key === b.key);
+    return cat ? { ...b, name: cat.name } : b;
+  });
+}
 function attendanceLineHtml(entry) {
   const capacity = entry.capacity || 0;
   const rate = capacity > 0 ? Math.round((entry.attendance / capacity) * 100) : null;
@@ -53222,7 +53272,7 @@ function attendanceLineHtml(entry) {
     `<div class="sl-history-main"><b>Semaine ${entry.week}, vs ${escapeHtml(entry.opponentName)}</b>`;
   if (Array.isArray(entry.breakdown) && entry.breakdown.length) {
     html += `<div class="attendance-breakdown">` +
-      entry.breakdown.map(b => {
+      salleOrderedBreakdown(entry.breakdown).map(b => {
         const catRate = b.capacity > 0 ? Math.round((b.attendance / b.capacity) * 100) : null;
         // Nom complet gardé dans le texte (lecteurs d'écran, tests) mais
         // masqué à l'écran : la pastille de couleur, identique à la légende
@@ -53299,19 +53349,26 @@ function salleAttendanceChartSvg(history) {
   const dense = bars.length > 7;
   bars.forEach((b, i) => {
     const x = left + i * slot + (slot - bw) / 2;
-    let acc = 0;
+    let acc = 0, yTop = y(b.total);
     if (b.legacy) {
       s += `<rect x="${x.toFixed(1)}" y="${y(b.total).toFixed(1)}" width="${bw.toFixed(1)}" height="${(plotH - (y(b.total) - top)).toFixed(1)}" rx="3" class="sl-bar-legacy"/>`;
     } else {
+      // Hauteur minimale par segment : une petite catégorie (Courtside, une
+      // centaine de places) reste visible dans la pile au lieu de s'écraser
+      // sous 1 px ; les segments suivants s'empilent au-dessus.
+      let yBase = y(0);
       b.parts.forEach((v, j) => {
         if (v <= 0) return;
-        const y1 = y(acc + v), h = y(acc) - y1;
-        s += `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, h - 1.5).toFixed(1)}" rx="2.5" class="sl-bar sl-bar-${SEAT_CATEGORIES[j].key}${b.proj ? " sl-bar-proj" : ""}"/>`;
+        const h = Math.max(y(acc) - y(acc + v), 4.5);
+        const y1 = yBase - h;
+        s += `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${(h - 1.5).toFixed(1)}" rx="2.5" class="sl-bar sl-bar-${SEAT_CATEGORIES[j].key}${b.proj ? " sl-bar-proj" : ""}"/>`;
         acc += v;
+        yBase = y1;
       });
+      yTop = Math.min(yTop, yBase);
     }
     const cx = (x + bw / 2).toFixed(1);
-    if (!dense || b.proj) s += `<text x="${cx}" y="${(y(b.total) - 6).toFixed(1)}" text-anchor="middle" class="sl-chart-total">${b.total.toLocaleString("fr-FR")}</text>`;
+    if (!dense || b.proj) s += `<text x="${cx}" y="${(yTop - 6).toFixed(1)}" text-anchor="middle" class="sl-chart-total">${b.total.toLocaleString("fr-FR")}</text>`;
     s += `<text x="${cx}" y="${H - bottom + 15}" text-anchor="middle" class="sl-chart-label${b.proj ? " sl-chart-label-proj" : ""}">${b.label}</text>`;
     s += `<text x="${cx}" y="${H - bottom + 30}" text-anchor="middle" class="sl-chart-rev${b.proj ? " sl-chart-rev-proj" : ""}">${formatMoneyCompact(b.revenue).replace(" $", "$")}</text>`;
     s += `<title>${b.proj ? "Prévision" : b.label} : ${b.total.toLocaleString("fr-FR")} spectateurs, ${formatMoney(b.revenue)}</title>`;
@@ -57982,12 +58039,12 @@ const TOUR_STEPS = [
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#arenaBuildHolder", wide: true,
     title: "Agrandir la salle",
-    text: "Ajoutez des places type par type (gradins, tribune, loges VIP), au nombre que vous voulez : chaque place a un prix fixe, et chaque type de gradin a un nombre maximum de places. Le nom de la salle évolue avec sa capacité.",
+    text: "Ajoutez des places catégorie par catégorie (Tribune Supérieure, Tribune Centrale, Courtside, Loges VIP), au nombre que vous voulez : chaque place a un prix fixe, et chaque catégorie a un nombre maximum de places. Le nom de la salle évolue avec sa capacité.",
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: "#seatCategoriesHolder", wide: true,
     title: "Prix des billets",
-    text: "Trois catégories de places (gradins, tribune, loges), chacune avec son propre prix. Un prix plus élevé rapporte plus par spectateur, mais peut réduire l'affluence si les supporters jugent que ça ne vaut pas le coup.",
-    tip: "Ajustez catégorie par catégorie plutôt qu'en bloc : les loges tolèrent des hausses plus fortes que les gradins.",
+    text: "Quatre catégories de places (Tribune Supérieure, Tribune Centrale, Courtside, Loges VIP), chacune avec son propre prix. Un prix plus élevé rapporte plus par spectateur, mais peut réduire l'affluence si les supporters jugent que ça ne vaut pas le coup.",
+    tip: "Ajustez catégorie par catégorie plutôt qu'en bloc : les Loges VIP et le Courtside tolèrent des hausses plus fortes que la Tribune Supérieure.",
   },
   { kind: "spotlight", topic: "Salle", page: "salle", target: '#arenaVisualCard [data-district="gym"]',
     title: "Salle de musculation",

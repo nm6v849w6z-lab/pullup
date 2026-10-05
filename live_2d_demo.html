@@ -1090,8 +1090,9 @@ function trainingCenterInfo(level) {
 
 // ---------------------------------------------------------------------
 // Catégories de places, chacune avec son propre prix réglable : une salle
-// n'est pas un seul tarif unique, les gradins populaires, la tribune et les
-// loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
+// n'est pas un seul tarif unique, la Tribune Supérieure, la Tribune Centrale,
+// le Courtside et les Loges VIP ont chacun leur budget et leur tolérance au
+// prix (une loge VIP
 // reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
@@ -1103,8 +1104,11 @@ function trainingCenterInfo(level) {
 // division rapporte des recettes cohérentes avec des salaires eux-mêmes
 // recalés sur des données réelles de BuzzerBeater.
 const SEAT_CATEGORIES = [
-  { key: "gradins", name: "Gradins populaires", shareOfCapacity: 0.55, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
-  { key: "tribune", name: "Tribune couverte", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  // Ordre d'affichage partout : de la place la plus éloignée du terrain à la
+  // plus exclusive.
+  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.53, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
+  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  { key: "courtside", name: "Courtside", shareOfCapacity: 0.02, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
   { key: "loge", name: "Loges VIP", shareOfCapacity: 0.15, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
 ];
 
@@ -2206,7 +2210,7 @@ class Team {
     }
 
     // Humeur des supporters : dérive lente et indépendante des résultats,
-    // selon le confort tarifaire MOYEN des 3 catégories de place — des prix
+    // selon le confort tarifaire MOYEN des catégories de place — des prix
     // durablement trop élevés agacent les supporters semaine après semaine,
     // des prix confortables les rassérènent doucement (voir
     // ticketPriceComfortFactor / moraleForgiveness).

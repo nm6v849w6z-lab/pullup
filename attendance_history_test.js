@@ -91,7 +91,7 @@ console.log("✅ Historique plafonné à 10 entrées, le plus récent affiché e
 const breakdowns = popupOf(win, ".attendance-breakdown");
 console.log("\nLignes de détail par catégorie affichées :", breakdowns.length, "(attendu 10, une par match)");
 if (breakdowns.length !== 10) throw new Error(`❌ BUG NON CORRIGÉ : chaque match de l'historique devrait afficher un détail par catégorie de place, obtenu ${breakdowns.length} sur 10.`);
-["Gradins populaires", "Tribune couverte", "Loges VIP"].forEach(catName => {
+["Tribune Supérieure", "Tribune Centrale", "Courtside", "Loges VIP"].forEach(catName => {
   if (!breakdowns[0].textContent.includes(catName)) {
     throw new Error(`❌ Le détail par catégorie devrait citer "${catName}", obtenu : "${breakdowns[0].textContent.trim()}"`);
   }

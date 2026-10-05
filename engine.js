@@ -2388,9 +2388,14 @@ function managerDisplayName(team) {
 // vip ? ça paraît démentiel"). ARENA_LEVELS ne sert plus qu'à nommer la salle
 // selon sa capacité totale (voir arenaLevelForCapacity).
 // ---------------------------------------------------------------------
-const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, loge: 2500 };
-const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
-const ARENA_MAX_CAPACITY = SEAT_CATEGORY_MAX_SEATS.gradins + SEAT_CATEGORY_MAX_SEATS.tribune + SEAT_CATEGORY_MAX_SEATS.loge;
+// Courtside (retour utilisateur 2026-10-05 : 4 catégories, Tribune
+// Supérieure, Tribune Centrale, Courtside, Loges VIP) : quelques centaines de
+// places au bord du parquet, plus chères à construire que la Tribune Centrale
+// mais moins que les Loges VIP. Les clés internes (gradins, tribune, loge)
+// restent celles des sauvegardes existantes, seuls les noms affichés changent.
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 1000, loge: 2500 };
+const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, courtside: 2000, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
+const ARENA_MAX_CAPACITY = Object.values(SEAT_CATEGORY_MAX_SEATS).reduce((s, n) => s + n, 0);
 // Palier (et donc nom par défaut) correspondant à une capacité totale : le
 // plus grand palier dont la capacité est atteinte.
 function arenaLevelForCapacity(capacity) {
@@ -2398,7 +2403,7 @@ function arenaLevelForCapacity(capacity) {
   ARENA_LEVELS.forEach(a => { if (capacity >= a.capacity) level = Math.max(level, a.level); });
   return level;
 }
-// Coût d'un lot de places { gradins, tribune, loge } (prix fixe par place).
+// Coût d'un lot de places { gradins, tribune, courtside, loge } (prix fixe par place).
 function seatBuildCost(add) {
   return SEAT_CATEGORIES.reduce((s, c) => s + Math.max(0, Math.floor(Number(add && add[c.key]) || 0)) * (SEAT_BUILD_COST_PER_SEAT[c.key] || 0), 0);
 }
@@ -2436,8 +2441,9 @@ function trainingCenterInfo(level) {
 
 // ---------------------------------------------------------------------
 // Catégories de places, chacune avec son propre prix réglable : une salle
-// n'est pas un seul tarif unique, les gradins populaires, la tribune et les
-// loges VIP ont chacun leur budget et leur tolérance au prix (une loge VIP
+// n'est pas un seul tarif unique, la Tribune Supérieure, la Tribune Centrale,
+// le Courtside et les Loges VIP ont chacun leur budget et leur tolérance au
+// prix (une loge VIP
 // reste pleine à 70$ quand des gradins vident à 20$). shareOfCapacity se
 // répartit la capacité totale de la salle (somme = 1).
 // ---------------------------------------------------------------------
@@ -2449,8 +2455,11 @@ function trainingCenterInfo(level) {
 // division rapporte des recettes cohérentes avec des salaires eux-mêmes
 // recalés sur des données réelles de BuzzerBeater.
 const SEAT_CATEGORIES = [
-  { key: "gradins", name: "Gradins populaires", shareOfCapacity: 0.55, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
-  { key: "tribune", name: "Tribune couverte", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  // Ordre d'affichage partout : de la place la plus éloignée du terrain à la
+  // plus exclusive.
+  { key: "gradins", name: "Tribune Supérieure", shareOfCapacity: 0.53, defaultPrice: 15, minPrice: 3, maxPrice: 40, comfortCeiling: 15, comfortSlope: 0.03 },
+  { key: "tribune", name: "Tribune Centrale", shareOfCapacity: 0.30, defaultPrice: 30, minPrice: 8, maxPrice: 80, comfortCeiling: 30, comfortSlope: 0.02 },
+  { key: "courtside", name: "Courtside", shareOfCapacity: 0.02, defaultPrice: 45, minPrice: 10, maxPrice: 130, comfortCeiling: 45, comfortSlope: 0.015 },
   { key: "loge", name: "Loges VIP", shareOfCapacity: 0.15, defaultPrice: 70, minPrice: 15, maxPrice: 200, comfortCeiling: 70, comfortSlope: 0.012 },
 ];
 
@@ -6591,7 +6600,7 @@ class Team {
     // journal des transactions (recettes/dépenses les plus récentes, pour
     // l'écran "Économie") — voir recordTransaction().
     this.arenaLevel = 1;
-    this.seats = null; // { gradins, tribune, loge } une fois la salle agrandie librement (voir buildSeats)
+    this.seats = null; // { gradins, tribune, courtside, loge } une fois la salle agrandie librement (voir buildSeats)
     this.ticketPrices = {};
     SEAT_CATEGORIES.forEach(cat => { this.ticketPrices[cat.key] = cat.defaultPrice; });
     this.fanShopLevel = 0;
@@ -8068,7 +8077,7 @@ class Team {
     return true;
   }
 
-  // Capacité totale = somme des places des 3 types de gradins (voir
+  // Capacité totale = somme des places de chaque catégorie (voir
   // Team.seats / categoryCapacity).
   arenaCapacity() {
     return SEAT_CATEGORIES.reduce((s, cat) => s + this.categoryCapacity(cat.key), 0);
@@ -8086,7 +8095,7 @@ class Team {
   }
 
   // Ajoute des places (retour utilisateur 2026-09-27, voir
-  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, loge } (entiers
+  // SEAT_CATEGORY_MAX_SEATS) : `add` = { gradins, tribune, courtside, loge } (entiers
   // >= 0). Refuse tout ou rien : { ok: false, reason: "empty" | "cap" |
   // "insufficient-budget", category? } ; sinon { ok: true, cost, added }.
   // Budget dépensable (retour utilisateur 2026-10-03 : « j'ai enchéri mais
@@ -9058,7 +9067,7 @@ class Team {
     }
 
     // Humeur des supporters : dérive lente et indépendante des résultats,
-    // selon le confort tarifaire MOYEN des 3 catégories de place — des prix
+    // selon le confort tarifaire MOYEN des catégories de place — des prix
     // durablement trop élevés agacent les supporters semaine après semaine,
     // des prix confortables les rassérènent doucement (voir
     // ticketPriceComfortFactor / moraleForgiveness).
@@ -17646,15 +17655,24 @@ function teamFromSave(data) {
   if (typeof data.deficitWeeks === "number") team.deficitWeeks = data.deficitWeeks;
   if (ARENA_LEVELS.some(a => a.level === data.arenaLevel)) team.arenaLevel = data.arenaLevel;
   // Places par type (agrandissement libre, voir Team.buildSeats) : absent
-  // d'une ancienne sauvegarde -> répartition du palier (currentSeats).
-  if (data.seats && SEAT_CATEGORIES.every(c => Number.isInteger(data.seats[c.key]) && data.seats[c.key] >= 0)) {
+  // d'une ancienne sauvegarde -> répartition du palier (currentSeats). Une
+  // catégorie absente d'une sauvegarde d'avant son introduction (Courtside,
+  // 2026-10-05) reçoit la part du palier de la salle, sans toucher aux places
+  // déjà construites dans les autres catégories.
+  const savedSeats = data.seats && typeof data.seats === "object" ? data.seats : null;
+  const validSeat = v => Number.isInteger(v) && v >= 0;
+  if (savedSeats && Object.keys(savedSeats).every(k => validSeat(savedSeats[k])) && SEAT_CATEGORIES.some(c => validSeat(savedSeats[c.key]))) {
+    const cap = arenaInfo(team.arenaLevel).capacity;
     team.seats = {};
-    SEAT_CATEGORIES.forEach(c => { team.seats[c.key] = Math.min(data.seats[c.key], SEAT_CATEGORY_MAX_SEATS[c.key]); });
+    SEAT_CATEGORIES.forEach(c => {
+      const n = validSeat(savedSeats[c.key]) ? savedSeats[c.key] : Math.round(cap * c.shareOfCapacity);
+      team.seats[c.key] = Math.min(n, SEAT_CATEGORY_MAX_SEATS[c.key]);
+    });
   }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne
   // sauvegarde (avant l'introduction des catégories, un seul "ticketPrice")
-  // : on réutilise cette valeur pour les gradins, le reste part du défaut —
+  // : on réutilise cette valeur pour la Tribune Supérieure, le reste part du défaut —
   // c'est mieux qu'une remise à zéro complète du réglage tarifaire du joueur.
   if (data.ticketPrices && typeof data.ticketPrices === "object") {
     SEAT_CATEGORIES.forEach(cat => {
