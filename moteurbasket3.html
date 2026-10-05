@@ -56518,11 +56518,11 @@ function achCardHtml(def, team, lg) {
       const ok = i < have;
       const v = val(t);
       return `<div class="ach-tier${ok ? " ok" : ""}">${achMedalSvg(i, 30, !ok)}` +
-        `<span class="ach-tier-txt"><b>${escapeHtml(R.TIER_NAMES[i])}</b> — ${escapeHtml(t.text)}</span>` +
+        `<span class="ach-tier-txt"><b>${escapeHtml(R.TIER_NAMES[i])}</b> - ${escapeHtml(t.text)}</span>` +
         `<span class="ach-tier-n">${ok ? `<span class="ach-check" aria-label="obtenu">✓</span>` : `${achFmt(Math.min(v, t.need))} / ${achFmt(t.need)}`}</span></div>`;
     }).join("") + `</div>`;
   } else {
-    html += `<p class="ach-plat-cond"><b>Platine</b> — ${escapeHtml(def.tiers[0].text)}</p>`;
+    html += `<p class="ach-plat-cond"><b>Platine</b> - ${escapeHtml(def.tiers[0].text)}</p>`;
   }
   // Progression vers le prochain palier (ou le dernier, terminé).
   const target = next || def.tiers[def.tiers.length - 1];
