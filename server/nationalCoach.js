@@ -195,8 +195,9 @@ function step(store, leagues, world, now, season, calendarStartAt) {
       store.poolAt[team.id] = now;
       changed = true;
     }
-    // 3) Gel des convocations 3 jours avant le premier match.
-    if (typeof calendarStartAt !== "number") continue;
+    // 3) Gel des convocations 3 jours avant le premier match (seulement une
+    // fois les matchs internationaux en service, cfg.matchesLive).
+    if (typeof calendarStartAt !== "number" || !cfg.matchesLive) continue;
     for (const g of gatheringsOf(store, team, season, calendarStartAt)) {
       if (now < g.freezeAt) { due.push(g.freezeAt); continue; }
       if (now >= g.startAt + 6 * 3600 * 1000) continue;

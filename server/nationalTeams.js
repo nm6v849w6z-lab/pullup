@@ -82,6 +82,10 @@ const DEFAULT_CONFIG = {
   // celle de l'All-Star) ; phase finale pendant la dernière semaine, du
   // lundi (jour 76 de la saison) au dimanche (jour 82), à 20h.
   windowWeeks: [2, 4, 6],
+  // Gel automatique des convocations (et notifications aux clubs) : activé
+  // avec les matchs internationaux (phase C). Avant, le sélectionneur
+  // prépare ses listes sans que rien ne soit envoyé aux clubs.
+  matchesLive: false,
   finalFirstDay: 76,
   matchHour: 20,
 };

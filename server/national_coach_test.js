@@ -20,7 +20,7 @@ let n = 0;
 [fr, es].forEach(lg => lg.teams.forEach(t => t.players.slice(0, 2).forEach(p => { if (n < 30) { p.nationality = "fr"; n++; } })));
 const leagues = new Map([["fr-1", fr], ["es-1", es]]);
 const world = { leagues: [{ id: "fr-1", country: "fr", level: 1, group: 0 }, { id: "es-1", country: "es", level: 1, group: 0 }] };
-const st = N.emptyStore(); st.config = { cycleStartSeason: 2 };
+const st = N.emptyStore(); st.config = { cycleStartSeason: 2, matchesLive: true };
 let now = start + 3600e3;
 N.step(st, leagues, world, now);
 const lyon = N.managerOf("fr-1", fr, 0, world), paris = N.managerOf("fr-1", fr, 1, world);
