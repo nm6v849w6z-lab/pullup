@@ -20,6 +20,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 Sélections nationales (2026-10-05) — phase A FAITE ET POUSSÉE
+  (élections, mandats, page Sélections : server/nationalTeams.js,
+  assets/national.js) ; phases B à E À FAIRE.** Décisions de l'utilisateur :
+  - 17 pays du jeu, sélections A et U21 (pros de 21 ans au plus, pas
+    l'académie). Le sélectionneur voit attributs, forme et condition des
+    éligibles ; jamais salaire, contrat, finances ni potentiel exact.
+  - Mandat de 2 saisons ; élection en semaine 1 (3 j candidatures + 3 j
+    vote) ; A et U21 élues en alternance (jamais la même saison) ; candidat
+    dans n'importe quel pays, vote seulement dans le pays de son club.
+  - Chaque saison : 3 fenêtres internationales le dimanche (éviter le
+    dimanche de l'All-Star, semaine 4, et les amicaux), fatigue normale.
+  - Phase finale pendant la DERNIÈRE semaine (intersaison, seule la
+    Supercoupe s'y joue côté clubs), du lundi au dimanche à 20h :
+    saison 1 du mandat = compétition continentale (Euro, AmeriCup, Coupe
+    d'Asie) ; saison 2 = Coupe du monde pour les qualifiés AU CLASSEMENT
+    de la compétition continentale, tournoi consolante pour les autres.
+  - Un joueur en sélection pendant la phase finale ne joue pas la
+    Supercoupe.
+  - **Semaines de compétition internationale : récupération des joueurs
+    MAXIMISÉE** (matchs quotidiens sans usure cumulée).
+  - Jamais déplacer ni supprimer un match de club ; matchs nationaux avec
+    leur propre clé de compétition, exclus des stats de club.
+  - Phases restantes : B joueurs / présélection / convocations / suivis /
+    tactique ; C fenêtres du dimanche ; D phases finales ; E mode
+    Sélectionneur (barre latérale, en-tête, notifications à part, bascule)
+    et bilan de mandat. UI dans des fichiers assets/ séparés (limite 4 Mo
+    de la page).
+
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-02), committé localement — Ligues
   privées mondiales (retour utilisateur 2026-10-02 : « n'importe quel joueur
   du monde qui est premium [doit pouvoir] rejoindre la LP »)**. Les LP sont
