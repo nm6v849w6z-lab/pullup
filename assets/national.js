@@ -55,7 +55,6 @@
     ".nt-chips{display:flex;flex-wrap:wrap;gap:8px}",
     ".nt-chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}",
     ".nt-chip .nat-flag{width:20px;height:14px;border-radius:2px;object-fit:cover}.nt-chip .nt-small{margin:0}",
-    ".nt-rules{font-size:12.5px;color:var(--ink-dim);line-height:1.5;margin-top:18px}",
   ].join("\n");
 
   function g(name) { return typeof window[name] === "function" ? window[name] : null; }
@@ -212,7 +211,6 @@
       });
       h += "</tbody></table></div>";
     }
-    h += '<p class="nt-rules">Chaque pays a deux sélections, A et U21 (joueurs de 21 ans au plus), élues des saisons différentes. L\'élection a lieu pendant la première semaine de la saison : 3 jours de candidatures, puis 3 jours de vote. Tout manager peut se présenter dans le pays de son choix ; seuls les managers d\'un club du pays votent, une fois, sans retour en arrière. Le mandat dure 2 saisons. Chaque saison compte 3 fenêtres internationales le dimanche, puis une phase finale pendant la dernière semaine (intersaison) : la compétition continentale (Euro, AmeriCup, Coupe d\'Asie) la première saison, la Coupe du monde la seconde, pour les sélections qualifiées au classement continental (tournoi consolante pour les autres). Sans sélectionneur, la sélection est dirigée par intérim jusqu\'à l\'élection suivante.</p>';
     return h;
   }
   function endReasonLabel(r) {
