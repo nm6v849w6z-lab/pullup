@@ -6034,4 +6034,8 @@ window.HM_I18N_LT = {
   "{0} : raccourcis": "{0}: greitieji pasirinkimai",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Pasirinkite raštą žemiau, kad marškinėliai būtų dviejų spalvų.",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Vienspalviai nemokamam klubui. Laisvos spalvos, kiti {0} raštai ir dvispalviai marškinėliai skirti Premium.",
+  "Ordres enregistrés pour la J{0}": "Nurodymai išsaugoti {0} turui",
+  "Ce match se jouera avec les ordres du club.": "Šis mačas bus žaidžiamas su klubo nurodymais.",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "Šie nurodymai galioja tik šiam privačios lygos mačui: kiti turai išlaiko savo. Jie užrakinami likus 5 minutėms iki pradžios, kaip oficialiame mače. Be išsaugotų nurodymų šis mačas žaidžiamas su dabartiniais klubo nurodymais.",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "Netinkamas privačios lygos turas (jau sužaistas arba be jūsų klubo mačo).",
 };

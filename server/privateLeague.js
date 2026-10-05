@@ -272,22 +272,58 @@ function leavePrivateLeague(Engine, store, me, body, now) {
   return { ok: true, dissolved: false };
 }
 
-// POST /api/private-league/orders  body: { id, orders } | { id, reset: true }
+// POST /api/private-league/orders  body: { id, round?, orders } | { id, round?, reset: true }
 // Ordres propres à la ligue privée (retour utilisateur 2026-10-02 : « il n'y
 // a pas de bouton pour faire sa compo ou la modifier en ligue privée ») :
-// rangés sur la fiche du club dans la ligue (member.orders, jamais vus des
-// autres), valables pour tous ses matchs de ligue privée à venir, appliqués
-// sur la COPIE de l'équipe au coup d'envoi (voir playMatch) — rien sur les
-// ordres des matchs officiels. Sans ordres propres : ordres actuels du club.
-// Verrou à T − 5 min, comme un match officiel (retour utilisateur
-// 2026-10-03 : « il faut que la compo soit lue dans les 5 min avant le match,
-// comme un match classique ») : plus aucune modification des ordres de ligue
-// privée entre T − 5 min et la fin de son prochain match.
+// rangés sur la fiche du club dans la ligue, jamais vus des autres,
+// appliqués sur la COPIE de l'équipe au coup d'envoi (voir playMatch) — rien
+// sur les ordres des matchs officiels. Sans ordres propres : ordres actuels
+// du club.
+// UN JEU D'ORDRES PAR JOURNÉE (retour utilisateur 2026-10-05 : « chaque
+// match doit avoir ses propres ordres […] une modification sur le match N ne
+// doit jamais modifier les ordres déjà définis du match N+1, N+2 ») :
+// member.ordersByRound[<index de journée>]. Avant ce correctif, un seul
+// `member.orders` valait pour toutes les journées à venir, d'où la
+// propagation. `round` omis : prochaine journée non jouée du club.
+// Ancien `member.orders` (sauvegardes d'avant) : recopié tel quel sur
+// chaque journée encore à jouer qui n'a pas les siens (rien ne change pour
+// ces journées), puis supprimé — voir migrateMemberOrders.
+// Verrou à T − 5 min de LA journée visée, comme un match officiel (retour
+// utilisateur 2026-10-03 : « il faut que la compo soit lue dans les 5 min
+// avant le match, comme un match classique »).
 const LP_ORDERS_LOCK_MS = 5 * 60 * 1000;
 const LP_ORDERS_LOCKED_ERROR = "Ordres verrouillés : le coup d'envoi est dans moins de 5 minutes.";
+function memberRoundsToPlay(lp, slot) {
+  return (lp.rounds || []).filter(r => r.matches.some(m => !m.played && (m.home === slot || m.away === slot)));
+}
+// Verrou de la PROCHAINE journée du club (T − 5 min).
 function memberOrdersLocked(lp, slot, now) {
-  const round = (lp.rounds || []).find(r => r.matches.some(m => !m.played && (m.home === slot || m.away === slot)));
+  const round = memberRoundsToPlay(lp, slot)[0];
   return !!round && typeof round.dueAt === "number" && now >= round.dueAt - LP_ORDERS_LOCK_MS;
+}
+function migrateMemberOrders(lp, slot) {
+  const member = lp.members && lp.members[slot];
+  if (!member || !member.orders) return false;
+  member.ordersByRound = member.ordersByRound && typeof member.ordersByRound === "object" ? member.ordersByRound : {};
+  memberRoundsToPlay(lp, slot).forEach(r => {
+    if (!member.ordersByRound[r.index]) member.ordersByRound[r.index] = JSON.parse(JSON.stringify(member.orders));
+  });
+  delete member.orders;
+  return true;
+}
+// Ordres de ligue privée de ce club pour CETTE journée (ou null : ordres du club).
+function memberOrdersForRound(lp, slot, roundIndex) {
+  const member = lp.members && lp.members[slot];
+  if (!member) return null;
+  const own = member.ordersByRound && member.ordersByRound[roundIndex];
+  return own || member.orders || null;
+}
+function myLpOrdersView(lp, slot) {
+  if (slot < 0) return { myOrders: null, myOrdersByRound: {} };
+  const byRound = {};
+  memberRoundsToPlay(lp, slot).forEach(r => { const o = memberOrdersForRound(lp, slot, r.index); if (o) byRound[r.index] = o; });
+  const next = memberRoundsToPlay(lp, slot).find(r => r.matches.some(m => !m.live && (m.home === slot || m.away === slot)));
+  return { myOrders: next ? (byRound[next.index] || null) : null, myOrdersByRound: byRound };
 }
 function setPrivateLeagueOrders(Engine, store, me, body, now) {
   const lp = findById(store, body && body.id);
@@ -295,16 +331,22 @@ function setPrivateLeagueOrders(Engine, store, me, body, now) {
   const slot = memberSlot(lp, me.ref.leagueId, me.idx);
   if (slot < 0) return fail("Votre club ne fait pas partie de cette ligue privée.");
   const member = lp.members[slot];
-  if (memberOrdersLocked(lp, slot, now)) return fail(LP_ORDERS_LOCKED_ERROR);
-  if (body && body.reset) { delete member.orders; return { ok: true, privateLeagueId: lp.id }; }
+  const toPlay = memberRoundsToPlay(lp, slot);
+  const round = body && body.round != null ? toPlay.find(r => r.index === Number(body.round)) : toPlay[0];
+  if (!round) return fail("Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).");
+  if (typeof round.dueAt === "number" && now >= round.dueAt - LP_ORDERS_LOCK_MS) return fail(LP_ORDERS_LOCKED_ERROR);
+  migrateMemberOrders(lp, slot);
+  member.ordersByRound = member.ordersByRound && typeof member.ordersByRound === "object" ? member.ordersByRound : {};
+  if (body && body.reset) { delete member.ordersByRound[round.index]; return { ok: true, privateLeagueId: lp.id, round: round.index }; }
   const team = me.league && me.league.teams[me.idx];
   if (!team) return fail("Club introuvable.");
   const Friendlies = require("./friendlies.js");
   const Actions = require("./actions.js");
   const v = Actions.validateOrdersSnapshot({ players: Friendlies.friendlyPool(team) }, body && body.orders);
   if (!v.ok) return fail(v.error);
-  member.orders = v.value;
-  return { ok: true, privateLeagueId: lp.id };
+  // Copie propre à cette journée : jamais d'objet partagé avec une autre.
+  member.ordersByRound[round.index] = JSON.parse(JSON.stringify(v.value));
+  return { ok: true, privateLeagueId: lp.id, round: round.index };
 }
 
 // POST /api/private-league/start  body: { id }
@@ -453,8 +495,12 @@ function busyTimesByIdx(store, leagueId) {
 
 // Copie profonde et indépendante d'une équipe : tout ce que MatchEngine
 // touche pendant simulate() tombe avec elle.
+// Copie INDÉPENDANTE (passage par JSON) : serializeTeam renvoie certains
+// objets du vrai club tels quels (feuille de match, priorités, plans) ;
+// sans cette copie, des ordres appliqués à la copie pouvaient toucher ceux
+// du vrai club (retour utilisateur 2026-10-05 sur les ordres partagés).
 function cloneTeamForExhibition(Engine, team) {
-  return Engine.teamFromSave(Engine.serializeTeam(team));
+  return Engine.teamFromSave(JSON.parse(JSON.stringify(Engine.serializeTeam(team))));
 }
 
 function compactBoxScore(rows) {
@@ -489,7 +535,7 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
     // Compo photographiée à T − 5 min (freezeDueOrders) en priorité, sinon
     // ordres de ligue privée actuels, sinon ordres du club (copie telle quelle).
     const frozen = match.frozen && match.frozen[slot];
-    const orders = copy && (frozen || (lp.members && lp.members[slot] && lp.members[slot].orders));
+    const orders = copy && (frozen || memberOrdersForRound(lp, slot, roundIndex));
     if (!orders) return copy;
     try { return require("./friendlies.js").applyFriendlyOrders(Engine, copy, copy, orders, kickoffAt); } catch (e) { return copy; }
   };
@@ -580,7 +626,8 @@ function freezeDueOrders(Engine, lp, round, leagues, now) {
     m.frozen = {};
     [m.home, m.away].forEach(slot => {
       const member = lp.members[slot];
-      if (member && member.orders) { m.frozen[slot] = JSON.parse(JSON.stringify(member.orders)); return; }
+      const own = memberOrdersForRound(lp, slot, round.index);
+      if (own) { m.frozen[slot] = JSON.parse(JSON.stringify(own)); return; }
       const team = teamOfRef(leagues, member);
       if (team && typeof team.snapshotTactics === "function") {
         m.frozen[slot] = { ...JSON.parse(JSON.stringify(team.snapshotTactics())), lineup: JSON.parse(JSON.stringify(team.lineup || {})) };
@@ -881,8 +928,9 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
       status: lp.status, createdAt: lp.createdAt, startedAt: lp.startedAt, finishedAt: lp.finishedAt,
       teamIndices: local.slice(),
       members: lp.members.map((r, s) => ({ idx: local[s], name: r.name, country: r.country || null, label: r.label || null, leagueId: r.leagueId, sameLeague: r.leagueId === leagueId })),
-      // Ses propres ordres de ligue privée seulement (jamais ceux des autres).
-      myOrders: (lp.members.find(r => r.leagueId === leagueId && r.idx === idx) || {}).orders || null,
+      // Ses propres ordres de ligue privée seulement (jamais ceux des autres),
+      // un jeu par journée encore à jouer (voir setPrivateLeagueOrders).
+      ...myLpOrdersView(lp, lp.members.findIndex(r => r.leagueId === leagueId && r.idx === idx)),
       rounds: (lp.rounds || []).map(round => ({
         index: round.index, dueAt: round.dueAt,
         matches: round.matches.map(m => {
@@ -978,7 +1026,7 @@ function sanitizePrivateLeaguesForViewer(privateLeagues, viewerTeamIndex, now = 
 }
 
 module.exports = {
-  LP_ORDERS_LOCK_MS, memberOrdersLocked,
+  LP_ORDERS_LOCK_MS, memberOrdersLocked, memberOrdersForRound, migrateMemberOrders,
   PRIVATE_LEAGUE_SIZES, PRIVATE_LEAGUE_MIN_TEAMS_TO_START, PRIVATE_LEAGUE_VENUES,
   PRIVATE_LEAGUE_WEEKDAY, PRIVATE_LEAGUE_HOUR, PRIVATE_LEAGUE_MINUTE, PRIVATE_LEAGUE_TIMES, PRIVATE_LEAGUE_NAME_MAX,
   PRIVATE_LEAGUE_CODE_LENGTH, PRIVATE_LEAGUE_FINISHED_RETENTION_MS, PRIVATE_LEAGUE_GUEST_IDX, STORE_NAME,

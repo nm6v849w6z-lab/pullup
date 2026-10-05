@@ -45664,7 +45664,7 @@ function dashboardDataFromGameState() {
     const oppTeam = league.teams[lpNext.oppIdx];
     nextMatch = {
       privateLeague: true,
-      lpId: lpNext.lp.id, lpOrdered: !!lpNext.lp.myOrders, lpLocked: lpOrdersLocked(lpNext.lp),
+      lpId: lpNext.lp.id, lpOrdered: !!lpMyOrdersFor(lpNext.lp, lpNext.round.index), lpLocked: lpOrdersLocked(lpNext.lp, Date.now(), lpNext.round.index),
       orderTarget: orderTargetFor("lp", lpNext.lp.id, lpNext.round.index),
       lpLiveBtn: lpNext.live ? lpLiveBtnHtml(lpNext.lp, lpNext.round.index, lpNext.match, "hm-btn hm-btn--primary hm-btn--display") : null,
       competition: "Ligue privée",
@@ -49648,11 +49648,11 @@ function renderCalendrierSection() {
         lpScore: m.played && !m.forfeit ? { id: lp.id, round: round.index, home: m.home, away: m.away } : null,
         cls, actionCell: m.played ? "" : m.live ? lpLiveBtnHtml(lp, round.index, m, "calendar-order-btn calendar-live-btn") : (typeof round.dueAt === "number" && Date.now() >= round.dueAt - 5 * 60 * 1000)
           ? lockedOrdersBtnHtml("calendar-order-btn calendar-lp-btn", CALENDAR_ORDERS_ICON)
-          : `<button type="button" class="calendar-order-btn calendar-lp-btn${lp.myOrders ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}${lp.myOrders ? "Modifier vos ordres" : "Ordres"}</button>`,
+          : `<button type="button" class="calendar-order-btn calendar-lp-btn${lpMyOrdersFor(lp, round.index) ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("lp", lp.id, round.index))}>${CALENDAR_ORDERS_ICON}${lpMyOrdersFor(lp, round.index) ? "Modifier vos ordres" : "Ordres"}</button>`,
         scheduledAt: round.dueAt, fallbackOrder: 100000 + round.index,
         isHome: isHomeLp, played: !!m.played, won: cls === "result-win", lost: cls === "result-loss",
         isLive: !!m.live, lpLive: m.live ? { lp, round: round.index, m } : null, alreadyOrdered: false, isPrivate: true,
-        lpId: lp.id, lpRound: round.index, lpOrdered: !!lp.myOrders,
+        lpId: lp.id, lpRound: round.index, lpOrdered: !!lpMyOrdersFor(lp, round.index),
       });
     });
   });
@@ -53472,28 +53472,39 @@ function openFriendlyOrders(fid, tab) {
 // Ordres de ligue privée (retour utilisateur 2026-10-02 : « il n'y a pas de
 // bouton pour faire sa compo ou la modifier en ligue privée ») : même page
 // Ordres en mode édition que pour un amical, enregistrés sur la ligue
-// (POST /api/private-league/orders), valables pour tous ses matchs de ligue
-// privée à venir, jamais appliqués aux matchs officiels.
-function lpOrdersSources(lp) {
+// (POST /api/private-league/orders), UN JEU PAR JOURNÉE (2026-10-05 : une
+// modification d'un match ne touche jamais les autres), jamais appliqués
+// aux matchs officiels.
+function lpOrdersSources(lp, roundIndex) {
   const out = [];
-  if (lp && lp.myOrders) out.push({ key: "lp", label: "Ordres enregistrés pour la ligue privée", orders: lp.myOrders });
+  const own = lpMyOrdersFor(lp, roundIndex);
+  if (own) out.push({ key: "lp", label: "Ordres enregistrés pour ce match", orders: own });
+  // Ordres déjà enregistrés pour les AUTRES journées : point de départ
+  // possible (copie), jamais un lien entre les deux matchs.
+  const by = (lp && lp.myOrdersByRound) || {};
+  Object.keys(by).map(Number).filter(i => i !== roundIndex && by[i]).sort((a, b) => a - b)
+    .forEach(i => out.push({ key: "lp:" + i, label: `Ordres enregistrés pour la J${i + 1}`, orders: by[i] }));
   out.push({ key: "club", label: "Ordres actuels du club", orders: teamA.snapshotTactics() });
   tqOrdersSources().forEach(x => { if (x.key !== "current") out.push(x); });
   return out;
 }
 // Verrou à T − 5 min (même règle que le serveur, voir
 // server/privateLeague.js:memberOrdersLocked) : prochain match du club.
-function lpOrdersLocked(lp, now = Date.now()) {
+function lpOrdersLocked(lp, now = Date.now(), roundIndex = null) {
   // Match en direct (`live`, déjà joué côté serveur) : les ordres valent pour
   // la journée SUIVANTE (retour utilisateur 2026-10-03 : « je ne peux pas
-  // enregistrer » pendant le direct de J3).
-  const round = lp && (lp.rounds || []).find(r => r.matches.some(m => !m.played && !m.live && (m.home === myTeamIndex || m.away === myTeamIndex)));
+  // enregistrer » pendant le direct de J3). Journée précise : son propre verrou.
+  const mine = m => m.home === myTeamIndex || m.away === myTeamIndex;
+  const round = lp && (roundIndex != null
+    ? (lp.rounds || []).find(r => r.index === roundIndex)
+    : (lp.rounds || []).find(r => r.matches.some(m => mine(m) && !m.played && !m.live)));
   return !!round && typeof round.dueAt === "number" && now >= round.dueAt - 5 * 60 * 1000;
 }
 function openPrivateLeagueOrders(lpId, tab, roundIndex = null) {
   const lp = findLpById(lpId);
   if (!lp) return;
-  const src = lpOrdersSources(lp)[0];
+  if (roundIndex == null) roundIndex = lpNextRoundIndex(lp);
+  const src = lpOrdersSources(lp, roundIndex)[0];
   tqEdit = { kind: "lp", lpId, lpRound: roundIndex, source: src.key, proxy: tqProxyFrom(src.orders, frOrdersPool()), dirty: false, feedback: null };
   showPage("prepSection");
   setActiveTab(tab || "lp");
@@ -53525,9 +53536,9 @@ function renderTacticEditorBar() {
   if (tqEdit.kind === "lp") {
     const lp = findLpById(tqEdit.lpId);
     if (title) title.textContent = "Ordres de la ligue privée";
-    const opts = lpOrdersSources(lp).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
-    const saved = !!(lp && lp.myOrders);
-    const locked = lpOrdersLocked(lp);
+    const opts = lpOrdersSources(lp, tqEdit.lpRound).map(x => `<option value="${escapeHtml(x.key)}"${x.key === tqEdit.source ? " selected" : ""}>${escapeHtml(x.label)}</option>`).join("");
+    const saved = !!lpMyOrdersFor(lp, tqEdit.lpRound);
+    const locked = lpOrdersLocked(lp, Date.now(), tqEdit.lpRound);
     // Prochain adversaire (retour utilisateur 2026-10-04 : « ce serait bien
     // d'afficher l'adversaire ») : premier match du club pas encore joué.
     const mine = m => m.home === myTeamIndex || m.away === myTeamIndex;
@@ -53547,7 +53558,7 @@ function renderTacticEditorBar() {
         `<button type="button" class="tq-btn" id="tqEditorCancel">Annuler</button></div>` +
       `<p class="tq-editor-note">${tqEdit.feedback ? `<b class="${tqEdit.feedback.ok ? "gain-up" : "gain-down"}">${escapeHtml(tqEdit.feedback.text)}</b> ` : ""}` +
       (locked ? `<b class="gain-down">Ordres verrouillés : le coup d'envoi est dans moins de 5 minutes.</b> ` : "") +
-      `Ces ordres valent pour tous vos matchs de ligue privée à venir, jamais pour les matchs officiels. Ils sont figés 5 minutes avant chaque coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, la ligue privée se joue avec les ordres actuels du club.</p>`;
+      `Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.</p>`;
     return;
   }
   if (tqEdit.kind === "friendly") {
@@ -53582,7 +53593,7 @@ document.getElementById("tqEditorBar").addEventListener("input", (e) => {
 document.getElementById("tqEditorBar").addEventListener("change", (e) => {
   if (!tqEdit || e.target.id !== "tqEditorSource") return;
   const isFr = tqEdit.kind === "friendly" || tqEdit.kind === "lp";
-  const list = tqEdit.kind === "lp" ? lpOrdersSources(findLpById(tqEdit.lpId)) : tqEdit.kind === "friendly" ? frOrdersSources(frList().find(x => x.id === tqEdit.friendlyId)) : tqOrdersSources();
+  const list = tqEdit.kind === "lp" ? lpOrdersSources(findLpById(tqEdit.lpId), tqEdit.lpRound) : tqEdit.kind === "friendly" ? frOrdersSources(frList().find(x => x.id === tqEdit.friendlyId)) : tqOrdersSources();
   const src = list.find(x => x.key === e.target.value);
   if (!src) return;
   tqEdit.source = src.key;
@@ -53596,14 +53607,15 @@ document.getElementById("tqEditorBar").addEventListener("click", (e) => {
     const id = tqEdit.lpId;
     const reset = !!e.target.closest("#lpOrdersReset");
     if (!reset && !e.target.closest("#tqEditorSave")) return;
-    let body = { id, reset: true };
+    const round = tqEdit.lpRound;
+    let body = { id, round, reset: true };
     if (!reset) {
       const px = tqEdit.proxy;
       const orders = { lineup: JSON.parse(JSON.stringify(px.lineup)) };
       TACTIC_PRESET_FIELDS.forEach(k => { orders[k] = Array.isArray(px[k]) ? [...px[k]] : px[k]; });
-      body = { id, orders };
+      body = { id, round, orders };
     }
-    window.__lastLpOrdersSave = lpAction("/api/private-league/orders", body, reset ? "La ligue privée se jouera avec les ordres du club." : "Ordres de la ligue privée enregistrés.").then(() => {
+    window.__lastLpOrdersSave = lpAction("/api/private-league/orders", body, reset ? "Ce match se jouera avec les ordres du club." : "Ordres de la ligue privée enregistrés.").then(() => {
       const fb = lpUi.feedback;
       if (fb && fb.ok) { closeTacticEditor(); return true; }
       if (tqEdit) { tqEdit.feedback = fb; renderTacticEditorBar(); }
@@ -54551,6 +54563,23 @@ function lpStandings(lp) {
   return list;
 }
 function findLpById(id) { return (league.privateLeagues || []).find(lp => lp.id === id) || null; }
+// Ordres de ligue privée : UN jeu par journée (retour utilisateur
+// 2026-10-05 : une modification sur le match N ne doit jamais toucher N+1,
+// N+2, voir server/privateLeague.js:setPrivateLeagueOrders).
+// `myOrdersByRound` (serveur) ; `myOrders` = ancien format (repli).
+function lpMyOrdersFor(lp, roundIndex) {
+  if (!lp) return null;
+  if (roundIndex == null) roundIndex = lpNextRoundIndex(lp);
+  const by = lp.myOrdersByRound;
+  if (by && typeof by === "object") return (roundIndex != null && by[roundIndex]) || null;
+  return lp.myOrders || null;
+}
+// Prochaine journée du club pas encore jouée (ni en direct).
+function lpNextRoundIndex(lp) {
+  const mine = m => m.home === myTeamIndex || m.away === myTeamIndex;
+  const r = lp && (lp.rounds || []).find(x => x.matches.some(m => mine(m) && !m.played && !m.live));
+  return r ? r.index : null;
+}
 function lpTeamName(idx) { const t = league.teams[idx]; return t ? t.name : "?"; }
 // Pays et division d'un membre (ligue privée « monde ») : affichés dès que la
 // ligue réunit des clubs de plusieurs championnats.
@@ -54623,7 +54652,7 @@ function nextNonOfficialMatch() {
   const official = currentMatch && teamB ? scheduledTimeForCurrentMatch() : null;
   let best = null;
   const lp = lpNextMatchIfFirst();
-  if (lp) best = { kind: "lp", at: lp.dueAt, lpId: lp.lp.id, oppIdx: lp.oppIdx, isHome: lp.isHome, validated: !!lp.lp.myOrders, lpNext: lp };
+  if (lp) best = { kind: "lp", at: lp.dueAt, lpId: lp.lp.id, oppIdx: lp.oppIdx, isHome: lp.isHome, validated: !!lpMyOrdersFor(lp.lp, lp.round && lp.round.index), lpNext: lp };
   const f = frMyNextFriendly();
   if (f && (official == null || f.at < official) && (!best || f.at < best.at)) {
     best = { kind: "friendly", at: f.at, friendlyId: f.id, oppIdx: frOppIdx(f), isHome: f.homeIdx === myTeamIndex,
@@ -54863,7 +54892,7 @@ function lpLobbyHtml(lp) {
   // Boutons sous les deux colonnes, centrés sur la page (même retour).
   html += `</div><aside class="cal-side">${lpRulesCardHtml()}</aside></div>`;
   html += `<div class="lp-actions lp-actions-page">`;
-  html += `<button type="button" class="secondary lp-btn" data-lp-orders="${lp.id}">${lp.myOrders ? "Modifier mes ordres" : "Faire mes ordres"}</button>`;
+  html += `<button type="button" class="secondary lp-btn" data-lp-orders="${lp.id}">${lpMyOrdersFor(lp) ? "Modifier mes ordres" : "Faire mes ordres"}</button>`;
   if (isCreator) {
     const can = lp.teamIndices.length >= 4;
     html += `<button type="button" class="cal-next-btn lp-btn" id="lpStartBtn" data-lp-id="${lp.id}"${can ? "" : " disabled"}>Lancer maintenant</button>` +
@@ -55027,7 +55056,7 @@ function lpNextCardHtml(lp) {
     // Émission d'avant-match (sans pronostics) : dès 5 min avant le coup d'envoi.
     (Date.now() >= next.dueAt - 5 * 60 * 1000 ? `<p class="lp-next-live"><button type="button" class="secondary lp-show-btn" data-lp-show="${escapeHtml(lp.id)}" data-lp-round="${next.index}" data-lp-home="${m.home}" data-lp-away="${m.away}">Émission d'avant-match</button></p>` : "") +
     (iAmHome && lp.venue === "home" ? `<p class="cal-card-empty">Vous recevez : avantage du terrain.</p>` : "") +
-    (lp.status !== "finished" && !m.live ? `<p class="lp-next-orders"><button type="button" class="cal-next-btn lp-btn"${orderTargetAttr(orderTargetFor("lp", lp.id, next.index))}>${lp.myOrders ? "Modifier vos ordres" : "Donner vos ordres"}</button></p>` : "") +
+    (lp.status !== "finished" && !m.live ? `<p class="lp-next-orders"><button type="button" class="cal-next-btn lp-btn"${orderTargetAttr(orderTargetFor("lp", lp.id, next.index))}>${lpMyOrdersFor(lp, next.index) ? "Modifier vos ordres" : "Donner vos ordres"}</button></p>` : "") +
     `</div>`;
 }
 

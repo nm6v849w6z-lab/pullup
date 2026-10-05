@@ -207,7 +207,8 @@ function validateLineup(team, raw) {
 // des VRAIS joueurs retenus. Sans composition propre à l'amical : effectif
 // et feuille de match actuels du club (ordres du moment).
 function buildFriendlyTeam(Engine, real, lineup, at, orders = null) {
-  const shell = Engine.teamFromSave(Engine.serializeTeam(real));
+  // Copie indépendante (JSON) : jamais d'objet partagé avec le vrai club.
+  const shell = Engine.teamFromSave(JSON.parse(JSON.stringify(Engine.serializeTeam(real))));
   shell.recordInjury = (entry) => { if (typeof real.recordInjury === "function") real.recordInjury({ ...entry, friendly: true }); };
   // Journal de l'entraînement collectif : tenu par le VRAI club seulement —
   // sur la coquille, les jours « Récupération » seraient crédités une

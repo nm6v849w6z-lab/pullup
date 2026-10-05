@@ -6034,4 +6034,8 @@ window.HM_I18N_PL = {
   "{0} : raccourcis": "{0}: skróty",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wybierz wzór poniżej, aby mieć koszulkę w dwóch kolorach.",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Jednolita dla darmowego klubu. Dowolne kolory, pozostałe {0} wzorów i koszulki dwukolorowe są dostępne w Premium.",
+  "Ordres enregistrés pour la J{0}": "Polecenia zapisane na K{0}",
+  "Ce match se jouera avec les ordres du club.": "Ten mecz zostanie rozegrany z poleceniami klubu.",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "Te polecenia dotyczą tylko tego meczu ligi prywatnej: pozostałe kolejki zachowują swoje. Są blokowane 5 minut przed rozpoczęciem, jak w meczu oficjalnym. Bez zapisanych poleceń mecz rozgrywany jest z aktualnymi poleceniami klubu.",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "Nieprawidłowa kolejka ligi prywatnej (już rozegrana lub bez meczu twojego klubu).",
 };

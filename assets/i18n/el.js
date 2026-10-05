@@ -6034,4 +6034,8 @@ window.HM_I18N_EL = {
   "{0} : raccourcis": "{0}: συντομεύσεις",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Επιλέξτε ένα μοτίβο παρακάτω για δίχρωμη φανέλα.",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Μονόχρωμη για δωρεάν σύλλογο. Τα ελεύθερα χρώματα, τα άλλα {0} μοτίβα και οι δίχρωμες φανέλες είναι για Premium.",
+  "Ordres enregistrés pour la J{0}": "Αποθηκευμένες εντολές για την Α{0}",
+  "Ce match se jouera avec les ordres du club.": "Αυτός ο αγώνας θα παιχτεί με τις εντολές του συλλόγου.",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "Αυτές οι εντολές ισχύουν μόνο για αυτόν τον αγώνα ιδιωτικού πρωταθλήματος: οι άλλες αγωνιστικές κρατούν τις δικές τους. Κλειδώνουν 5 λεπτά πριν το τζάμπολ, όπως σε επίσημο αγώνα. Χωρίς αποθηκευμένες εντολές, ο αγώνας παίζεται με τις τρέχουσες εντολές του συλλόγου.",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "Μη έγκυρη αγωνιστική ιδιωτικού πρωταθλήματος (έχει ήδη παιχτεί ή δεν έχει αγώνα για τον σύλλογό σου).",
 };

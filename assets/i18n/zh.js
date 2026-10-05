@@ -6034,4 +6034,8 @@ window.HM_I18N_ZH = {
   "{0} : raccourcis": "{0}：快捷选择",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "在下方选择图案，即可使用双色球衣。",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "免费俱乐部仅限纯色。自定义颜色、其余 {0} 种图案和双色球衣为 Premium 专享。",
+  "Ordres enregistrés pour la J{0}": "第{0}轮已保存的指令",
+  "Ce match se jouera avec les ordres du club.": "本场比赛将使用俱乐部的指令。",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "这些指令仅适用于本场私人联赛比赛：其他轮次保留各自的指令。与正式比赛一样，开赛前 5 分钟锁定。未保存指令时，本场比赛使用俱乐部当前的指令。",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "私人联赛轮次无效（已结束，或你的俱乐部本轮无比赛）。",
 };

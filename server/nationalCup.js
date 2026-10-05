@@ -165,7 +165,7 @@ function guestForTeam(Engine, team, ref) {
   // Historique hebdomadaire des joueurs (permaliens) : inutile ici, et privé.
   (data.players || []).forEach(p => { delete p.weeklyHistory; });
   // Données privées du club invité (ordres préparés, marché, sponsors…).
-  ["plannedTactics", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen", "bookmarks",
+  ["plannedTactics", "matchOrdersUsed", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen", "bookmarks",
     "sponsorOffers", "sponsorContracts", "sponsorHistory", "scoutingAdTickets", "scoutingUnlocks", "scoutingAdWatchLog",
     "scoutedAttrs", "pendingInterviews", "pendingYouthDecisions", "youthCandidates", "trainingHistory", "lastTrainingReport",
     "collectiveTrainingLog"].forEach(k => { delete data[k]; });
@@ -191,11 +191,17 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
       if (m.bye || m.started) return;
       const home = teamOf(m.home), away = teamOf(m.away);
       if (!home || !away) { m.started = true; m.result = { scoreHome: home ? Engine.FORFEIT_SCORE : 0, scoreAway: away ? Engine.FORFEIT_SCORE : 0, forfeit: true, quarterScores: null, tacticsUsed: null }; return; }
-      if (home.isHuman && typeof home.applyPlannedTacticsForRound === "function") home.applyPlannedTacticsForRound(round.index, "cup");
-      if (away.isHuman && typeof away.applyPlannedTacticsForRound === "function") away.applyPlannedTacticsForRound(round.index, "cup");
+      // Plan de CE match de Coupe, le temps de la simulation seulement : les
+      // ordres du prochain match de championnat ne sont jamais remplacés
+      // (voir Team.runWithMatchPlan).
+      const withPlans = fn => {
+        const h = home.isHuman && typeof home.runWithMatchPlan === "function" ? f => home.runWithMatchPlan(round.index, "cup", f) : f => f();
+        const a = away.isHuman && typeof away.runWithMatchPlan === "function" ? f => away.runWithMatchPlan(round.index, "cup", f) : f => f();
+        return h(() => a(fn));
+      };
       const hasHuman = home.isHuman || away.isHuman;
       if (hasHuman && !late) {
-        const live = LiveMatch.computeLiveMatchForTeams(Engine, home, away, round.index, m.home.idx, m.away.idx, kickoff, "cup");
+        const live = withPlans(() => LiveMatch.computeLiveMatchForTeams(Engine, home, away, round.index, m.home.idx, m.away.idx, kickoff, "cup"));
         m.result = { scoreHome: live.finalScore.home, scoreAway: live.finalScore.away, forfeit: live.forfeit, quarterScores: live.quarterScores, tacticsUsed: live.tacticsUsed, seed: live.seed };
         // Diffusion déposée dans la ligue de chaque manager concerné.
         [["home", home, m.home, away, m.away], ["away", away, m.away, home, m.home]].forEach(([side, team, ref, opp, oppRef]) => {
@@ -215,7 +221,7 @@ function step({ Engine, Calendar, LiveMatch }, cup, leagues, refLeague, now, eve
           };
         });
       } else {
-        const sim = Engine.simulateOrForfeit(home, away, kickoff);
+        const sim = withPlans(() => Engine.simulateOrForfeit(home, away, kickoff));
         m.result = { scoreHome: sim.scoreHome, scoreAway: sim.scoreAway, forfeit: sim.forfeit, quarterScores: sim.quarterScores || null, tacticsUsed: sim.tacticsUsed || null, seed: sim.seed };
         if (!sim.forfeit) Engine.recordMatchStatsAndAwardMvp(home, away, round.index, "cup", kickoff, m.result.quarterScores, m.result.tacticsUsed, m.result.seed);
         m.statsRecorded = true;

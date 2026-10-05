@@ -9728,6 +9728,39 @@ class Team {
     delete this.plannedTactics[key];
   }
 
+  // Joue `fn` (simulation d'un match de Coupe / Coupe nationale) avec le
+  // plan préparé pour CE match, puis RESTAURE les ordres en direct (retour
+  // utilisateur 2026-10-05 : « chaque match doit avoir ses propres ordres
+  // […] une modification ne doit jamais modifier les ordres déjà définis
+  // d'un autre match »). Avant ce correctif, applyPlannedTacticsForRound
+  // remplaçait pour de bon les ordres en direct — qui sont ceux du PROCHAIN
+  // MATCH DE CHAMPIONNAT, déjà validés : le plan de Coupe débordait sur le
+  // championnat. Le championnat, lui, garde applyPlannedTacticsForRound (ses
+  // ordres en direct SONT ceux du match joué). Ordres réellement joués notés
+  // dans matchOrdersUsed pour l'historique (« Partir de », voir
+  // recordOrdersHistory), puisque le direct est fini bien après la
+  // restauration. Sans plan pour ce match : ordres en direct, rien à
+  // restaurer.
+  runWithMatchPlan(round, competition, fn) {
+    const key = planKey(round, competition);
+    if (!this.plannedTactics || !this.plannedTactics[key]) return fn();
+    const saved = JSON.parse(JSON.stringify({
+      offensivePriorities: this.offensivePriorities, defense: this.defense, rhythm: this.rhythm,
+      tacticalTier: this.tacticalTier, screenDefense: this.screenDefense, helpDefense: this.helpDefense,
+      watchAssignments: this.watchAssignments, postDefense: this.postDefense, closeoutStyle: this.closeoutStyle,
+      offRebStyle: this.offRebStyle, endgameManagement: this.endgameManagement, lineup: this.lineup,
+    }));
+    this.applyPlannedTacticsForRound(round, competition);
+    this.matchOrdersUsed = this.matchOrdersUsed && typeof this.matchOrdersUsed === "object" ? this.matchOrdersUsed : {};
+    this.matchOrdersUsed[key] = tacticPresetOrdersFrom(this.snapshotTactics());
+    try {
+      return fn();
+    } finally {
+      Object.assign(this, saved);
+      this.repairLineupDepartures(this.lineup);
+    }
+  }
+
   // Le remplaçant DÉJÀ désigné (via toggleBackupPosition) pour un poste
   // donné, le mieux noté d'abord si plusieurs joueurs le couvrent — utilisé
   // pour l'auto-promotion d'un remplaçant au départ d'un titulaire (voir
@@ -12438,6 +12471,11 @@ function pushOrdersHistory(team, entry) {
 }
 function recordOrdersHistory(team, opponent, isHome, round, competition, now, quarterScores) {
   if (!team || !team.isHuman || !team.snapshotTactics) return;
+  // Ordres réellement joués pour ce match (Coupe : voir Team.runWithMatchPlan),
+  // sinon les ordres en direct.
+  const usedKey = planKey(round, competition);
+  const used = team.matchOrdersUsed && team.matchOrdersUsed[usedKey];
+  if (used) delete team.matchOrdersUsed[usedKey];
   if (!Array.isArray(team.ordersHistory)) team.ordersHistory = [];
   const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
   const qs = quarterScores || {};
@@ -12446,7 +12484,7 @@ function recordOrdersHistory(team, opponent, isHome, round, competition, now, qu
     round, competition: competition || "championship", at: now,
     opponentName: opponent ? opponent.name : null, isHome,
     scoreFor: mine, scoreAgainst: theirs,
-    orders: tacticPresetOrdersFrom(team.snapshotTactics()),
+    orders: tacticPresetOrdersFrom(used || team.snapshotTactics()),
   });
   if (team.ordersHistory.length > ORDERS_HISTORY_MAX) team.ordersHistory.length = ORDERS_HISTORY_MAX;
 }
@@ -13631,6 +13669,7 @@ class League {
       // atteinte) s'appliquerait sinon à la même journée de la saison
       // suivante.
       t.plannedTactics = {};
+      t.matchOrdersUsed = {};
       if (!t.isHuman) t.autoAssignLineup();
     });
     assignSeasonObjectives(this);
@@ -16839,6 +16878,8 @@ function serializeTeam(team) {
     // et stagePlanForRound/applyPlannedTacticsForRound) — déjà un objet
     // JSON-safe (aucune classe/Set/Map à l'intérieur), transporté tel quel.
     plannedTactics: team.plannedTactics || {},
+    // Ordres joués d'un match de Coupe encore en diffusion (Team.runWithMatchPlan).
+    matchOrdersUsed: team.matchOrdersUsed && typeof team.matchOrdersUsed === "object" ? team.matchOrdersUsed : {},
     tacticPresets: Array.isArray(team.tacticPresets) ? team.tacticPresets.map(p => ({ name: p.name, savedAt: p.savedAt, orders: tacticPresetOrdersFrom(p.orders) })) : [],
     ordersHistory: Array.isArray(team.ordersHistory) ? team.ordersHistory.map(h => ({ ...h, orders: tacticPresetOrdersFrom(h.orders) })) : [],
     departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
@@ -17566,6 +17607,7 @@ function teamFromSave(data) {
     });
     team.plannedTactics = migrated;
   }
+  if (data.matchOrdersUsed && typeof data.matchOrdersUsed === "object") team.matchOrdersUsed = data.matchOrdersUsed;
   // Entraînement v2 (retour utilisateur 2026-10-01) : plans individuels,
   // intensité, parrainages, plan collectif ; migration des anciennes
   // sauvegardes (voir migrateTrainingSlots).

@@ -6034,4 +6034,8 @@ window.HM_I18N_ES = {
   "{0} : raccourcis": "{0}: atajos",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Elige un diseño abajo para una camiseta de dos colores.",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Liso para un club gratuito. Los colores libres, los otros {0} diseños y las camisetas de dos colores son exclusivos de Premium.",
+  "Ordres enregistrés pour la J{0}": "Órdenes guardadas para la J{0}",
+  "Ce match se jouera avec les ordres du club.": "Este partido se jugará con las órdenes del club.",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "Estas órdenes solo valen para este partido de liga privada: las demás jornadas conservan las suyas. Se bloquean 5 minutos antes del salto inicial, como en un partido oficial. Sin órdenes guardadas, este partido se juega con las órdenes actuales del club.",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "Jornada de liga privada no válida (ya jugada o sin partido para tu club).",
 };

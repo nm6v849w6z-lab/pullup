@@ -194,6 +194,14 @@ function liveMatchKey(round, homeIdx, awayIdx) {
 // (voir viewLiveMatchForTeam plus bas, qui cherche par home/awayIdx sans se
 // soucier du format de la clé). `cupRoundIndex` = round.index (voir
 // generateCupBracket/buildNextCupRound), PAS le round de championnat.
+// Simule un match de Coupe avec le plan de CE tour pour chaque club humain,
+// puis rend à chacun ses ordres en direct (ceux de son prochain match de
+// championnat) — voir Team.runWithMatchPlan côté moteur.
+function withCupPlans(home, away, roundIndex, fn) {
+  const wrap = (t, f) => (t && t.isHuman && typeof t.runWithMatchPlan === "function" ? () => t.runWithMatchPlan(roundIndex, "cup", f) : f);
+  return wrap(home, wrap(away, fn))();
+}
+
 function cupLiveMatchKey(cupRoundIndex, homeIdx, awayIdx) {
   return `cup:${cupRoundIndex}:${homeIdx}:${awayIdx}`;
 }
@@ -368,9 +376,9 @@ function ensureCupLiveMatchStarted(Engine, league, now, scheduledTimeForLeagueCu
     // Voir le commentaire de ensureLiveMatchStarted (championnat) pour le
     // même mécanisme : appliqué juste avant que computeLiveMatch ne lise
     // les champs "en direct", tout dernier moment où ce plan peut compter.
-    if (home.isHuman) home.applyPlannedTacticsForRound(round.index, "cup");
-    if (away.isHuman) away.applyPlannedTacticsForRound(round.index, "cup");
-    league.liveMatches[key] = computeLiveMatch(Engine, league, round.index, m.home, m.away, kickoffAt, "cup");
+    // Plan de CE tour de Coupe, le temps de la simulation seulement (voir
+    // Team.runWithMatchPlan) : jamais sur les ordres du championnat.
+    league.liveMatches[key] = withCupPlans(home, away, round.index, () => computeLiveMatch(Engine, league, round.index, m.home, m.away, kickoffAt, "cup"));
     startedKeys.push(key);
   });
 
@@ -417,9 +425,7 @@ function finalizeCupRound(Engine, league) {
       // moteur), sinon un manager absent qui avait préparé ce tour de Coupe
       // verrait quand même ses ordres du moment (voire ceux par défaut)
       // appliqués à sa place.
-      if (home.isHuman) home.applyPlannedTacticsForRound(round.index, "cup");
-      if (away.isHuman) away.applyPlannedTacticsForRound(round.index, "cup");
-      const sim = simulateOrForfeit(home, away);
+      const sim = withCupPlans(home, away, round.index, () => simulateOrForfeit(home, away));
       scoreHome = sim.scoreHome;
       scoreAway = sim.scoreAway;
       forfeit = sim.forfeit;

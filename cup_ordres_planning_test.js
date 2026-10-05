@@ -70,8 +70,16 @@ function freshLeagueWithRealCupMatchForTeam0(teamName, now = T0) {
   const kickoffAt = scheduledTimeForLeagueCupRound(league, round0.dayIndex);
   const startedKeys = ensureCupLiveMatchStarted(Engine, league, kickoffAt, scheduledTimeForLeagueCupRound);
 
-  console.log("A1) Après ensureCupLiveMatchStarted avec un plan de Coupe préparé, titulaire Meneur :", team.lineup.starters["Meneur"], "(attendu", backupMeneur.id, ") | plan consommé :", !team.hasPlanForRound(round0.index, "cup"), "| diffusions démarrées :", startedKeys.length);
-  if (team.lineup.starters["Meneur"] !== backupMeneur.id) throw new Error("❌ ensureCupLiveMatchStarted aurait dû appliquer la feuille de match planifiée AVANT de calculer le match en direct.");
+  // Ordres indépendants par match (2026-10-05) : le plan de Coupe sert au
+  // match de Coupe (box score du direct), puis les ordres en direct — ceux
+  // du prochain match de championnat — sont rendus tels quels.
+  const live = league.liveMatches[startedKeys[0]];
+  const side = live && live.homeIdx === 0 ? "home" : "away";
+  const cupStarters = live ? (live.boxScore ? live.boxScore[side] : null) : null;
+  const playedBackup = JSON.stringify(live || {}).includes(String(backupMeneur.id));
+  console.log("A1) Après ensureCupLiveMatchStarted avec un plan de Coupe préparé, titulaire Meneur en direct :", team.lineup.starters["Meneur"], "(attendu, rendu au championnat :", starterMeneurId, ") | meneur planifié présent dans le direct :", playedBackup, "| plan consommé :", !team.hasPlanForRound(round0.index, "cup"), "| diffusions démarrées :", startedKeys.length);
+  if (!playedBackup) throw new Error("❌ ensureCupLiveMatchStarted aurait dû jouer le match de Coupe avec la feuille de match planifiée.");
+  if (team.lineup.starters["Meneur"] !== starterMeneurId) throw new Error("❌ Après le match de Coupe, les ordres du championnat doivent être rendus intacts.");
   if (team.hasPlanForRound(round0.index, "cup")) throw new Error("❌ Le plan de Coupe aurait dû être consommé par ensureCupLiveMatchStarted.");
   if (!startedKeys.length) throw new Error("❌ ensureCupLiveMatchStarted aurait dû démarrer la diffusion du match de Coupe humain.");
   console.log("✅ ensureCupLiveMatchStarted applique le plan de Coupe préparé pour le tour en cours AVANT de calculer le match, puis le consomme.");
@@ -92,9 +100,10 @@ function freshLeagueWithRealCupMatchForTeam0(teamName, now = T0) {
 
   finalizeCupRound(Engine, league);
 
-  console.log("A2) Après finalizeCupRound (jamais diffusé en direct) avec un plan de Coupe préparé, defense:", team.defense, "| rhythm:", team.rhythm, "| plan consommé :", !team.hasPlanForRound(round0.index, "cup"));
-  if (team.defense !== "Zone press") throw new Error("❌ finalizeCupRound aurait dû appliquer la defense planifiée pour ce tour de Coupe.");
-  if (team.rhythm !== "Lent") throw new Error("❌ finalizeCupRound aurait dû appliquer le rythme planifié pour ce tour de Coupe.");
+  const hist = (team.ordersHistory || []).find(h => h.competition === "cup");
+  console.log("A2) Après finalizeCupRound (jamais diffusé en direct) avec un plan de Coupe préparé — joué :", hist && hist.orders.defense, "/", hist && hist.orders.rhythm, "| ordres en direct rendus :", team.defense, "/", team.rhythm, "| plan consommé :", !team.hasPlanForRound(round0.index, "cup"));
+  if (!hist || hist.orders.defense !== "Zone press" || hist.orders.rhythm !== "Lent") throw new Error("❌ finalizeCupRound aurait dû jouer ce tour de Coupe avec la défense et le rythme planifiés.");
+  if (team.defense !== "Homme à homme" || team.rhythm !== "Normal") throw new Error("❌ Après la Coupe, les ordres du championnat doivent être rendus intacts (ordres indépendants par match).");
   if (team.hasPlanForRound(round0.index, "cup")) throw new Error("❌ Le plan de Coupe aurait dû être consommé par finalizeCupRound.");
   console.log("✅ finalizeCupRound applique le plan de Coupe préparé pour le tour qu'il résout (même sans diffusion en direct préalable), et le consomme.");
 }

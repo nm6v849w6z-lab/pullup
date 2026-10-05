@@ -6034,4 +6034,8 @@ window.HM_I18N_DE = {
   "{0} : raccourcis": "{0}: Schnellauswahl",
   "Choisissez un motif ci-dessous pour un maillot à deux couleurs.": "Wählen Sie unten ein Muster für ein zweifarbiges Trikot.",
   "Uni pour un club gratuit. Les couleurs libres, les {0} autres motifs et les maillots à 2 couleurs sont réservés au Premium.": "Einfarbig für einen kostenlosen Club. Freie Farben, die anderen {0} Muster und zweifarbige Trikots sind Premium vorbehalten.",
+  "Ordres enregistrés pour la J{0}": "Gespeicherte Anweisungen für ST{0}",
+  "Ce match se jouera avec les ordres du club.": "Dieses Spiel wird mit den Anweisungen des Clubs gespielt.",
+  "Ces ordres ne valent que pour ce match de ligue privée : les autres journées gardent les leurs. Ils sont figés 5 minutes avant le coup d'envoi, comme pour un match officiel. Sans ordres enregistrés, ce match se joue avec les ordres actuels du club.": "Diese Anweisungen gelten nur für dieses Privatligaspiel: Die anderen Spieltage behalten ihre eigenen. Sie werden 5 Minuten vor dem Anpfiff gesperrt, wie bei einem offiziellen Spiel. Ohne gespeicherte Anweisungen wird dieses Spiel mit den aktuellen Anweisungen des Clubs gespielt.",
+  "Journée de ligue privée invalide (déjà jouée, ou sans match pour votre club).": "Ungültiger Privatliga-Spieltag (bereits gespielt oder ohne Spiel für deinen Club).",
 };

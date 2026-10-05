@@ -45,7 +45,7 @@ const FOREIGN_EXTRA_PLAYER_FIELDS = ["attrs", "aggressiveness"];
 const PRIVATE_TEAM_FIELDS = [
   "scoutedAttrs", "scoutingUnlocks", "scoutingAdWatchLog", "scoutingAdTickets",
   "youthCandidates", "youthPlayers", "pendingYouthDecisions",
-  "feed", "pendingInterviews", "pendingRecapEvents", "marketAlertSeen", "ordersHistory",
+  "feed", "pendingInterviews", "pendingRecapEvents", "marketAlertSeen", "ordersHistory", "matchOrdersUsed",
   // Signets du manager (2026-10-04) : personnels.
   "bookmarks",
 ];
