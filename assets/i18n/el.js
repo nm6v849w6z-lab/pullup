@@ -3437,7 +3437,7 @@ window.HM_I18N_EL = {
   "Quel niveau voulez-vous recruter ?": "Τι επίπεδο θέλεις να προσλάβεις;",
   "Quel retour ! Menés de {c} points, ils sont revenus dans le match.": "Τι επιστροφή! Πίσω στο σκορ με {c} πόντους, ξαναμπήκαν στο παιχνίδι.",
   "Quel sentiment domine au sortir de cette finale ?": "Ποιο συναίσθημα κυριαρχεί μετά από αυτόν τον τελικό;",
-  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page — si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Κάτι πήγε στραβά κατά την εμφάνιση. Φόρτωσε ξανά τη σελίδα — αν το πρόβλημα επανέλθει, τράβηξε ένα στιγμιότυπο οθόνης αυτού του μηνύματος (με τις λεπτομέρειες παρακάτω) για να μπορέσουμε να το διορθώσουμε.",
+  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page - si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Κάτι πήγε στραβά κατά την εμφάνιση. Φόρτωσε ξανά τη σελίδα - αν το πρόβλημα επανέλθει, τράβηξε ένα στιγμιότυπο οθόνης αυτού του μηνύματος (με τις λεπτομέρειες παρακάτω) για να μπορέσουμε να το διορθώσουμε.",
   "Quels sont vos objectifs pour cette saison ?": "Ποιοι είναι οι στόχοι σου για αυτή τη σεζόν;",
   "Quentin": "Quentin",
   "Question": "Ερώτηση",

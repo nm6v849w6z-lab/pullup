@@ -3437,7 +3437,7 @@ window.HM_I18N_LT = {
   "Quel niveau voulez-vous recruter ?": "Kokio lygio žaidėją nori pasamdyti?",
   "Quel retour ! Menés de {c} points, ils sont revenus dans le match.": "Koks sugrįžimas! Atsilikę {c} taškais, jie sugrįžo į rungtynes.",
   "Quel sentiment domine au sortir de cette finale ?": "Koks jausmas vyrauja po šio finalo?",
-  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page — si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Atvaizduojant kažkas nepavyko. Perkrauk puslapį — jei problema kartojasi, padaryk šio pranešimo ekrano kopiją (su žemiau pateikta informacija), kad galėtume ją ištaisyti.",
+  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page - si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Atvaizduojant kažkas nepavyko. Perkrauk puslapį - jei problema kartojasi, padaryk šio pranešimo ekrano kopiją (su žemiau pateikta informacija), kad galėtume ją ištaisyti.",
   "Quels sont vos objectifs pour cette saison ?": "Kokie tavo tikslai šiam sezonui?",
   "Quentin": "Quentin",
   "Question": "Klausimas",

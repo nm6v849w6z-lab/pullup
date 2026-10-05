@@ -9796,7 +9796,7 @@ function showCrashRecoveryScreen(message) {
     document.body.innerHTML = `<div style="max-width:520px;margin:15vh auto;padding:24px;text-align:center;font-family:inherit;">
       <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
       <h2 style="margin:0 0 12px;">Une erreur est survenue</h2>
-      <p style="color:#666;line-height:1.5;">Quelque chose s'est mal passé pendant l'affichage. Recharge la page — si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.</p>
+      <p style="color:#666;line-height:1.5;">Quelque chose s'est mal passé pendant l'affichage. Recharge la page - si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.</p>
       <pre style="margin-top:16px;padding:12px;background:#f4f4f4;border-radius:8px;text-align:left;white-space:pre-wrap;word-break:break-word;font-size:12px;color:#333;">${escaped}</pre>
       <button onclick="location.reload()" style="margin-top:16px;padding:10px 24px;border-radius:8px;border:none;background:#111;color:#fff;font-size:15px;cursor:pointer;">Recharger la page</button>
     </div>`;
@@ -52361,12 +52361,22 @@ function freeColorCtlHtml(key, hex, label, custom) {
     `<label class="jc-swatch fc-swatch" style="background:${v}" title="Choisir une couleur"><input type="color" value="${v}" data-fc-input="${key}" aria-label="${escapeHtml(label)} : choisir une couleur"></label>` +
     `<input type="text" class="jc-hex fc-hex" value="${v.toUpperCase()}" maxlength="7" spellcheck="false" autocomplete="off" data-fc-hex="${key}" aria-label="${escapeHtml(label)} : code couleur"></div>`;
 }
+// Validation tout de suite, nouveau rendu APRÈS l'événement (2026-10-05,
+// plantage signalé : la case du code déclenche « change » en perdant le
+// focus ; remplacer le bloc pendant ce traitement fait échouer innerHTML
+// dans Chrome — « The node to be removed is no longer a child of this
+// node »). Rien à faire si la couleur est déjà celle du brouillon.
 function freeColorCommit(key, hex) {
   hex = String(hex || "").trim().toLowerCase();
   if (!hex.startsWith("#")) hex = "#" + hex;
   if (!JERSEY_HEX_RE.test(hex)) return false;
+  setTimeout(() => freeColorApply(key, hex), 0);
+  return true;
+}
+function freeColorApply(key, hex) {
   if (key === "court-floor" || key === "court-paint") {
     const base = salleCourtDraft || normalizeCourtStyle(teamA.courtStyle) || { wood: "nuit", paint: null };
+    if ((key === "court-floor" ? base.wood : base.paint) === hex) return true;
     salleCourtDraft = { ...base, ...(key === "court-floor" ? { wood: hex } : { paint: hex }) };
     renderPersoCourt();
     renderPersoArena();
@@ -52374,7 +52384,9 @@ function freeColorCommit(key, hex) {
   }
   const field = { "arena-main": "main", "arena-second": "second", "arena-facade": "facade", "arena-roof": "roof" }[key];
   if (!field) return false;
-  persoArenaDraft = { ...persoArenaCurrent(), [field]: hex };
+  const cur = persoArenaCurrent();
+  if (cur[field] === hex) return true;
+  persoArenaDraft = { ...cur, [field]: hex };
   renderPersoArena();
   return true;
 }
@@ -52397,7 +52409,7 @@ document.addEventListener("keydown", (e) => {
   const tx = e.key === "Enter" && e.target.closest && e.target.closest("[data-fc-hex]");
   if (!tx) return;
   e.preventDefault();
-  if (!freeColorCommit(tx.dataset.fcHex, tx.value)) tx.classList.add("bad");
+  tx.blur(); // « change » se déclenche alors (un seul chemin d'enregistrement)
 });
 function renderPersoCourt() {
   const holder = document.getElementById("persoCourtHolder");

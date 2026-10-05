@@ -3437,7 +3437,7 @@ window.HM_I18N_PL = {
   "Quel niveau voulez-vous recruter ?": "Jakiego poziomu zawodnika chcesz szukać?",
   "Quel retour ! Menés de {c} points, ils sont revenus dans le match.": "Co za powrót! Przegrywając {c} punktami, wrócili do gry.",
   "Quel sentiment domine au sortir de cette finale ?": "Jakie uczucie dominuje po tym finale?",
-  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page — si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Coś poszło nie tak podczas wyświetlania. Odśwież stronę — jeśli problem wróci, zrób zrzut ekranu tego komunikatu (ze szczegółami poniżej), żebyśmy mogli to naprawić.",
+  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page - si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "Coś poszło nie tak podczas wyświetlania. Odśwież stronę - jeśli problem wróci, zrób zrzut ekranu tego komunikatu (ze szczegółami poniżej), żebyśmy mogli to naprawić.",
   "Quels sont vos objectifs pour cette saison ?": "Jakie są twoje cele na ten sezon?",
   "Quentin": "Quentin",
   "Question": "Pytanie",

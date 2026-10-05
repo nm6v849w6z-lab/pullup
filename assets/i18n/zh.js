@@ -3437,7 +3437,7 @@ window.HM_I18N_ZH = {
   "Quel niveau voulez-vous recruter ?": "你想招募什么水平的球员？",
   "Quel retour ! Menés de {c} points, ils sont revenus dans le match.": "惊天逆转！落后{c}分的他们追回了比分。",
   "Quel sentiment domine au sortir de cette finale ?": "这场决赛之后，你最主要的感受是什么？",
-  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page — si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "显示时出现了问题。请刷新页面——如果问题再次出现，请截图此消息（包括下方详情），以便我们修复。",
+  "Quelque chose s'est mal passé pendant l'affichage. Recharge la page - si le problème revient, fais une capture d'écran de ce message (avec le détail ci-dessous) pour qu'on puisse le corriger.": "显示时出现了问题。请刷新页面--如果问题再次出现，请截图此消息（包括下方详情），以便我们修复。",
   "Quels sont vos objectifs pour cette saison ?": "你本赛季的目标是什么？",
   "Quentin": "Quentin",
   "Question": "问题",
