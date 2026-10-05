@@ -6229,7 +6229,7 @@ window.HM_I18N_IT = {
   "Victoires sur une même saison régulière.": "Vittorie in una stessa regular season.",
   "Gagner 10 matchs d'une saison régulière": "Vincere 10 partite in una regular season",
   "Gagner 15 matchs d'une saison régulière": "Vincere 15 partite in una regular season",
-  "Gagner 20 matchs d'une saison régulière": "Vincere 20 partite in una regular season",
+  "Gagner 18 matchs d'une saison régulière": "Vincere 18 partite in una regular season",
   "Part de victoires à domicile sur une saison régulière.": "Percentuale di vittorie in casa in una regular season.",
   "75 % de victoires à domicile": "75% di vittorie in casa",
   "90 % de victoires à domicile": "90% di vittorie in casa",

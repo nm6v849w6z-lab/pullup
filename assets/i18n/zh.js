@@ -6166,7 +6166,7 @@ window.HM_I18N_ZH = {
   "Victoires sur une même saison régulière.": "单个常规赛季的胜场。",
   "Gagner 10 matchs d'une saison régulière": "单个常规赛季赢 10 场",
   "Gagner 15 matchs d'une saison régulière": "单个常规赛季赢 15 场",
-  "Gagner 20 matchs d'une saison régulière": "单个常规赛季赢 20 场",
+  "Gagner 18 matchs d'une saison régulière": "单个常规赛季赢 18 场",
   "Part de victoires à domicile sur une saison régulière.": "常规赛季主场胜率。",
   "75 % de victoires à domicile": "主场胜率 75%",
   "90 % de victoires à domicile": "主场胜率 90%",

@@ -6166,7 +6166,7 @@ window.HM_I18N_PL = {
   "Victoires sur une même saison régulière.": "Zwycięstwa w jednym sezonie zasadniczym.",
   "Gagner 10 matchs d'une saison régulière": "Wygraj 10 meczów w sezonie zasadniczym",
   "Gagner 15 matchs d'une saison régulière": "Wygraj 15 meczów w sezonie zasadniczym",
-  "Gagner 20 matchs d'une saison régulière": "Wygraj 20 meczów w sezonie zasadniczym",
+  "Gagner 18 matchs d'une saison régulière": "Wygraj 18 meczów w sezonie zasadniczym",
   "Part de victoires à domicile sur une saison régulière.": "Odsetek zwycięstw u siebie w sezonie zasadniczym.",
   "75 % de victoires à domicile": "75% zwycięstw u siebie",
   "90 % de victoires à domicile": "90% zwycięstw u siebie",

@@ -6166,7 +6166,7 @@ window.HM_I18N_EL = {
   "Victoires sur une même saison régulière.": "Νίκες σε μία κανονική περίοδο.",
   "Gagner 10 matchs d'une saison régulière": "Κέρδισε 10 αγώνες σε μία κανονική περίοδο",
   "Gagner 15 matchs d'une saison régulière": "Κέρδισε 15 αγώνες σε μία κανονική περίοδο",
-  "Gagner 20 matchs d'une saison régulière": "Κέρδισε 20 αγώνες σε μία κανονική περίοδο",
+  "Gagner 18 matchs d'une saison régulière": "Κέρδισε 18 αγώνες σε μία κανονική περίοδο",
   "Part de victoires à domicile sur une saison régulière.": "Ποσοστό εντός έδρας νικών σε μία κανονική περίοδο.",
   "75 % de victoires à domicile": "75% εντός έδρας νίκες",
   "90 % de victoires à domicile": "90% εντός έδρας νίκες",

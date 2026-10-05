@@ -6166,7 +6166,7 @@ window.HM_I18N_LT = {
   "Victoires sur une même saison régulière.": "Pergalės per vieną reguliarųjį sezoną.",
   "Gagner 10 matchs d'une saison régulière": "Laimėti 10 mačų per reguliarųjį sezoną",
   "Gagner 15 matchs d'une saison régulière": "Laimėti 15 mačų per reguliarųjį sezoną",
-  "Gagner 20 matchs d'une saison régulière": "Laimėti 20 mačų per reguliarųjį sezoną",
+  "Gagner 18 matchs d'une saison régulière": "Laimėti 18 mačų per reguliarųjį sezoną",
   "Part de victoires à domicile sur une saison régulière.": "Namų pergalių dalis per reguliarųjį sezoną.",
   "75 % de victoires à domicile": "75 % pergalių namuose",
   "90 % de victoires à domicile": "90 % pergalių namuose",

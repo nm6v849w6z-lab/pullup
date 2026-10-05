@@ -6166,7 +6166,7 @@ window.HM_I18N_PT = {
   "Victoires sur une même saison régulière.": "Vitórias numa mesma fase regular.",
   "Gagner 10 matchs d'une saison régulière": "Vencer 10 jogos numa fase regular",
   "Gagner 15 matchs d'une saison régulière": "Vencer 15 jogos numa fase regular",
-  "Gagner 20 matchs d'une saison régulière": "Vencer 20 jogos numa fase regular",
+  "Gagner 18 matchs d'une saison régulière": "Vencer 18 jogos numa fase regular",
   "Part de victoires à domicile sur une saison régulière.": "Percentagem de vitórias em casa numa fase regular.",
   "75 % de victoires à domicile": "75 % de vitórias em casa",
   "90 % de victoires à domicile": "90 % de vitórias em casa",

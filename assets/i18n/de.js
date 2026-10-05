@@ -6166,7 +6166,7 @@ window.HM_I18N_DE = {
   "Victoires sur une même saison régulière.": "Siege in einer Hauptrunde.",
   "Gagner 10 matchs d'une saison régulière": "10 Siege in einer Hauptrunde",
   "Gagner 15 matchs d'une saison régulière": "15 Siege in einer Hauptrunde",
-  "Gagner 20 matchs d'une saison régulière": "20 Siege in einer Hauptrunde",
+  "Gagner 18 matchs d'une saison régulière": "18 Siege in einer Hauptrunde",
   "Part de victoires à domicile sur une saison régulière.": "Heimsiegquote in einer Hauptrunde.",
   "75 % de victoires à domicile": "75 % Heimsiege",
   "90 % de victoires à domicile": "90 % Heimsiege",

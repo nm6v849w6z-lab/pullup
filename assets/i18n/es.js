@@ -6166,7 +6166,7 @@ window.HM_I18N_ES = {
   "Victoires sur une même saison régulière.": "Victorias en una misma temporada regular.",
   "Gagner 10 matchs d'une saison régulière": "Ganar 10 partidos en una temporada regular",
   "Gagner 15 matchs d'une saison régulière": "Ganar 15 partidos en una temporada regular",
-  "Gagner 20 matchs d'une saison régulière": "Ganar 20 partidos en una temporada regular",
+  "Gagner 18 matchs d'une saison régulière": "Ganar 18 partidos en una temporada regular",
   "Part de victoires à domicile sur une saison régulière.": "Porcentaje de victorias en casa en una temporada regular.",
   "75 % de victoires à domicile": "75 % de victorias en casa",
   "90 % de victoires à domicile": "90 % de victorias en casa",

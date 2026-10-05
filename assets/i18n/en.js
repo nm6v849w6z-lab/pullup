@@ -6191,7 +6191,7 @@ window.HM_I18N_EN = {
   "Victoires sur une même saison régulière.": "Wins in a single regular season.",
   "Gagner 10 matchs d'une saison régulière": "Win 10 games in a regular season",
   "Gagner 15 matchs d'une saison régulière": "Win 15 games in a regular season",
-  "Gagner 20 matchs d'une saison régulière": "Win 20 games in a regular season",
+  "Gagner 18 matchs d'une saison régulière": "Win 18 games in a regular season",
   "Part de victoires à domicile sur une saison régulière.": "Home win rate over a regular season.",
   "75 % de victoires à domicile": "75% home wins",
   "90 % de victoires à domicile": "90% home wins",

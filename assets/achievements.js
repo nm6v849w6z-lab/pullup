@@ -45,7 +45,7 @@
     { id: "SUPERCUP", label: "Supercoupe", icon: "supercup", desc: "Remporter la Supercoupe.",
       tiers: [T(1, "supercups", "Remporter 1 Supercoupe"), T(3, "supercups", "Remporter 3 Supercoupes"), T(5, "supercups", "Remporter 5 Supercoupes")], unit: "Supercoupes" },
     { id: "STEAMROLLER", label: "Rouleau compresseur", icon: "roller", desc: "Victoires sur une même saison régulière.",
-      tiers: [T(10, "bestRegWins", "Gagner 10 matchs d'une saison régulière"), T(15, "bestRegWins", "Gagner 15 matchs d'une saison régulière"), T(20, "bestRegWins", "Gagner 20 matchs d'une saison régulière")], unit: "victoires" },
+      tiers: [T(10, "bestRegWins", "Gagner 10 matchs d'une saison régulière"), T(15, "bestRegWins", "Gagner 15 matchs d'une saison régulière"), T(18, "bestRegWins", "Gagner 18 matchs d'une saison régulière")], unit: "victoires" },
     { id: "FORTRESS", label: "Forteresse", icon: "castle", desc: "Part de victoires à domicile sur une saison régulière.",
       tiers: [T(75, "bestHomePct", "75 % de victoires à domicile"), T(90, "bestHomePct", "90 % de victoires à domicile"), T(100, "bestHomePct", "100 % de victoires à domicile")], unit: "%" },
     { id: "MVP_MAKER", label: "Faiseur de MVP", icon: "star", desc: "Avoir des joueurs élus MVP.",
