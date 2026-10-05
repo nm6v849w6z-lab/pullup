@@ -281,7 +281,7 @@ console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres."
   doc.querySelector("[data-compo-view=details]").click();
   const heads = [...roster().querySelectorAll(".compo-table thead th")].map(th => th.textContent.replace(/[▲▼]/g, "").trim()).filter(Boolean);
   console.log("Colonnes Détails :", heads.join(" | "));
-  ["Nom", "Poste", "Note", "Rôle", "Forme", "Éval.", "MJ", "Min", "Pts", "Reb", "Pas"].forEach(h => { if (!heads.includes(h)) throw new Error(`❌ Colonne « ${h} » absente de la vue Détails.`); });
+  ["Nom", "Poste", "GEN", "Rôle", "Forme", "Éval.", "MJ", "Min", "Pts", "Reb", "Pas"].forEach(h => { if (!heads.includes(h)) throw new Error(`❌ Colonne « ${h} » absente de la vue Détails.`); });
   const trs = () => [...roster().querySelectorAll(".compo-table tbody tr.conv-row")];
   if (trs().length !== n) throw new Error("❌ Vue Détails : une ligne par joueur attendue.");
   if (!trs().every(tr => tr.querySelector(".eff-cond .eff-meter") && tr.querySelectorAll(".eval-square").length === 5 && tr.querySelector("input[type=checkbox]"))) throw new Error("❌ Chaque ligne : case de convocation, barre de forme et 5 carrés d'évaluation attendus.");
@@ -300,7 +300,22 @@ console.log("✅ État 'Ordres validés' après un clic sur Valider les ordres."
   roster().querySelector('th[data-compo-sort="name"] .ct-sort').click();
   const names = trs().map(tr => tr.querySelector(".conv-name").textContent.trim());
   if (names.join("|") !== names.slice().sort((a, b) => a.localeCompare(b)).join("|")) throw new Error("❌ Tri par nom (A→Z) attendu.");
-  console.log("✅ Vue Détails : colonnes Nom/Poste/Note/Rôle/Forme/Éval./MJ/Min/Pts/Reb/Pas, tri Forme ↓ ↑ puis défaut, tri par nom.");
+  console.log("✅ Vue Détails : colonnes Nom/Poste/GEN/Rôle/Forme/Éval./MJ/Min/Pts/Reb/Pas, tri Forme ↓ ↑ puis défaut, tri par nom.");
+  // Réglage « TC » (Paramètres) : la colonne GEN devient TC, avec le total
+  // des caractéristiques (retour utilisateur 2026-10-05).
+  win.eval("localStorage.setItem(RATING_MODE_KEY, 'tc')");
+  doc.querySelector("[data-compo-view=compact]").click();
+  doc.querySelector("[data-compo-view=details]").click();
+  if (win.eval("ratingDisplayMode()") !== "tc") throw new Error("❌ Mode TC non pris en compte.");
+  const tcHead = roster().querySelector('th[data-compo-sort="rating"]').textContent.replace(/[▲▼]/g, "").trim();
+  const tcRow = trs()[0];
+  const tcVal = Number(tcRow.querySelector(".ct-rating").textContent);
+  const tcExpected = win.eval(`playerTotalCaracs(teamA.players.find(p => String(p.id) === "${tcRow.dataset.playerId}") || teamA.youthPlayers.find(p => String(p.id) === "${tcRow.dataset.playerId}"), ATTRS)`);
+  if (tcHead !== "TC" || tcVal !== tcExpected) throw new Error(`❌ Mode TC : en-tête « TC » et total des caractéristiques attendus (${tcHead}, ${tcVal} vs ${tcExpected}).`);
+  win.eval("localStorage.setItem(RATING_MODE_KEY, 'gen')");
+  doc.querySelector("[data-compo-view=compact]").click();
+  doc.querySelector("[data-compo-view=details]").click();
+  console.log("✅ Colonne GEN, remplacée par TC (total des caractéristiques) quand TC est choisi dans les paramètres.");
   // Convocation depuis la vue Détails : même effet que la liste compacte.
   const convBefore = win.eval("teamA.convokedIds().length");
   const onRow = trs().find(tr => tr.classList.contains("on") && /Réserviste|Remplaçant/.test(tr.textContent));

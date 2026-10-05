@@ -41005,7 +41005,9 @@ function compoRosterRowsData(team, model) {
 const COMPO_SORT_VALUE = {
   name: d => d.p.name,
   pos: d => POSITIONS.indexOf(d.best),
-  rating: d => d.rating,
+  // GEN (note au poste) ou TC (total des caractéristiques) selon le réglage
+  // d'affichage du compte (retour utilisateur 2026-10-05).
+  rating: d => compoRatingCellValue(d),
   role: d => -compoRoleRank(d),
   condition: d => d.cond,
   evaluation: d => d.evalAvg,
@@ -41049,11 +41051,21 @@ function compoRoleEl(d, el) {
 // des 5 derniers matchs, moyennes de saison), colonnes triables, première
 // colonne (nom) figée quand le tableau défile sur téléphone, et une case
 // « Comparer » par joueur (2 cochés → comparateur de joueurs).
+// Colonne de note du détail de l'effectif (ordres de match) : « GEN » (note
+// au poste tenu, sinon au meilleur poste) ou « TC » (total des
+// caractéristiques) selon Paramètres → affichage des notes (retour
+// utilisateur 2026-10-05 : « note doit être remplacé par GEN ; si c'est TC
+// qui a été choisi, la colonne GEN doit être remplacée par les TC »).
+function compoRatingCellValue(d) {
+  return ratingDisplayMode() === "tc" ? playerTotalCaracs(d.p, ATTRS) : d.rating;
+}
 function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
   const wrap = el("div", "compo-details");
   const fmt = v => (v == null ? "–" : v.toFixed(1).replace(".", ","));
+  const tc = ratingDisplayMode() === "tc";
   const cols = [
-    ["conv", "", "Convoqué"], ["name", "Nom"], ["pos", "Poste", "Meilleur poste"], ["rating", "Note", "Note au poste tenu (sinon au meilleur poste)"],
+    ["conv", "", "Convoqué"], ["name", "Nom"], ["pos", "Poste", "Meilleur poste"],
+    ["rating", tc ? "TC" : "GEN", tc ? "Total des caractéristiques" : "Note au poste tenu (sinon au meilleur poste)"],
     ["role", "Rôle"], ["condition", "Forme"], ["evaluation", "Éval.", "Évaluation des 5 derniers matchs"],
     ["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["pts", "Pts", "Points par match"],
     ["reb", "Reb", "Rebonds par match"], ["ast", "Pas", "Passes décisives par match"], ["cmp", "", "Comparer"],
@@ -41107,8 +41119,8 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
     const posCell = td("ct-pos", effPosBadgeHtml(d.best));
     posCell.classList.add("conv-pos");
     posCell.title = `Meilleur poste : ${d.best} (${compoRatingAt(d.p, d.best)}) · poste de carte : ${d.p.position}`;
-    const r = td("ct-rating conv-ovr", String(d.rating));
-    r.title = `Note au poste ${POS_SHORT[d.ratedPos]}`;
+    const r = td("ct-rating conv-ovr", String(compoRatingCellValue(d)));
+    r.title = tc ? "Total des caractéristiques" : `Note au poste ${POS_SHORT[d.ratedPos]}`;
     td("ct-role", compoRoleEl(d, el));
     td("ct-condition", effConditionHtml(d.p, Date.now(), typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY));
     td("ct-evaluation", evaluationSquaresHtml(d.p));
@@ -46948,6 +46960,8 @@ function showSettingsModal(tab) {
       overlay.querySelectorAll("[data-rating-choice]").forEach(x => x.setAttribute("aria-pressed", String(x === rc)));
       const ref = currentPlayerDetailRef;
       if (ref && currentVisiblePageId() === "playerDetailSection") renderPlayerDetail(ref.teamIdx, ref.playerId);
+      // Ordres de match ouverts derrière : colonne GEN/TC du détail de l'effectif à jour.
+      if (currentVisiblePageId() === "prepSection" && TAB_HANDLERS.ordres) TAB_HANDLERS.ordres();
       return;
     }
     const b = e.target.closest("[data-theme-choice]");
