@@ -503,9 +503,13 @@ function cloneTeamForExhibition(Engine, team) {
   return Engine.teamFromSave(JSON.parse(JSON.stringify(Engine.serializeTeam(team))));
 }
 
-function compactBoxScore(rows) {
+// `team` (copie jouée) : âge et apparence de chaque joueur, pour dessiner
+// son avatar même s'il vient d'un autre championnat (leaders, MVP).
+function compactBoxScore(rows, team = null) {
+  const byId = new Map(((team && team.players) || []).map(p => [String(p.id), p]));
   return rows.map(r => ({
     id: r.id, name: r.name, position: r.position, min: r.min,
+    ...(byId.has(String(r.id)) ? { age: byId.get(String(r.id)).age, ...(byId.get(String(r.id)).look ? { look: byId.get(String(r.id)).look } : {}) } : {}),
     pts: r.pts, reb: r.reb, oreb: r.oreb || 0, ast: r.ast, stl: r.stl, blk: r.blk, tov: r.tov, pf: r.pf,
     fgm2: r.fgm2, fga2: r.fga2, fgm3: r.fgm3, fga3: r.fga3, ftm: r.ftm, fta: r.fta,
     plusMinus: r.plusMinus || 0,
@@ -562,8 +566,8 @@ function playMatch(Engine, homeReal, awayReal, lp, match, now, kickoffAt, roundI
     match.forfeit = null;
     match.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
     match.seed = result.seed;
-    match.boxScoreHome = compactBoxScore(result.boxScoreA);
-    match.boxScoreAway = compactBoxScore(result.boxScoreB);
+    match.boxScoreHome = compactBoxScore(result.boxScoreA, home);
+    match.boxScoreAway = compactBoxScore(result.boxScoreB, away);
     if (roundIndex != null && archive && Array.isArray(result.events) && result.events.length) {
       const pb = schedulePlayback(result.events, kickoffAt);
       match.kickoffAt = kickoffAt;

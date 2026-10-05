@@ -55193,8 +55193,18 @@ function lpLeagueHtml(lp) {
 // chargé (avatar, lien), sinon le nom seul (club d'un autre championnat).
 function lpPlayerRef(teamIdx, row) {
   const team = league.teams[teamIdx];
-  const player = team && (team.players || []).find(p => String(p.id) === String(row.id));
-  return { team, player, link: player ? playerLinkHtml(teamIdx, player.id, player.name) : escapeHtml(row.name || "?") };
+  const found = team && (team.players || []).find(p => String(p.id) === String(row.id));
+  // Joueur absent de l'effectif connu (club d'un autre championnat, joueur
+  // parti depuis) : avatar quand même, depuis son id (+ âge et apparence
+  // notés dans la feuille de match) — même visage que partout ailleurs.
+  const player = found || (row && row.id != null ? { id: row.id, age: row.age, look: row.look || null } : null);
+  return { team, player, link: found ? playerLinkHtml(teamIdx, found.id, found.name) : escapeHtml(row.name || "?") };
+}
+// Trigramme d'un club de ligue privée (leaders : le nom complet chevauchait
+// les stats), nom complet au survol.
+function lpTeamCodeHtml(idx) {
+  const t = league.teams[idx];
+  return `<span class="lg-code" title="${escapeHtml(lpTeamName(idx))}" data-no-i18n>${escapeHtml(t ? teamTrigram(t) : "?")}</span>`;
 }
 function lpPlayedRounds(lp) {
   return (lp.rounds || []).filter(r => r.matches.some(m => m.played && !m.forfeit));
@@ -55243,7 +55253,7 @@ function lpMvpCardHtml(lp) {
   };
   return `<section class="lg-panel lg-mvp lp-mvp">` +
     `<div class="lg-mvp-kicker">MVP de la journée ${round.index + 1}</div>` +
-    `<div class="lg-mvp-id"><span class="lg-av">${ref.player && ref.team ? playerAvatarHtml(ref.player, ref.team, 50) : ""}</span>` +
+    `<div class="lg-mvp-id"><span class="lg-av">${ref.player ? playerAvatarHtml(ref.player, ref.team, 50) : ""}</span>` +
       `<div><b>${ref.link}</b><small>${teamLinkHtml(best.idx, lpTeamName(best.idx))}</small></div>` +
       `<div class="lg-mvp-eval">${best.evalScore}<small>Éval.</small></div></div>` +
     `<div class="lg-chips">${chips}</div>` +
@@ -55275,15 +55285,15 @@ function lpLeadersHtml(lp) {
     const ref = lpPlayerRef(lead.idx, lead.row);
     html += `<article class="lg-card"><header><h3>${cat.label}</h3><span class="lg-unit">par match</span></header>` +
       `<div class="lg-lead${lead.idx === myTeamIndex ? " lg-mine-p" : ""}">` +
-        `<span class="lg-av">${ref.player && ref.team ? playerAvatarHtml(ref.player, ref.team, 44) : ""}</span>` +
-        `<div class="lg-lead-id"><b>${ref.link}</b><span class="lg-code">${escapeHtml(lpTeamName(lead.idx))}</span></div>` +
+        `<span class="lg-av">${ref.player ? playerAvatarHtml(ref.player, ref.team, 44) : ""}</span>` +
+        `<div class="lg-lead-id"><b>${ref.link}</b>${lpTeamCodeHtml(lead.idx)}</div>` +
         `<span class="lg-lead-v">${leadV.toFixed(1)}</span></div>`;
     if (top.length > 1) {
       html += `<ol start="2">` + top.slice(1).map((r, i) => {
         const v = r.avg[cat.key];
         const w = leadV > 0 ? Math.max(0, Math.min(100, Math.round(v / leadV * 100))) : 0;
         return `<li class="${r.idx === myTeamIndex ? "lg-mine-p" : ""}"><span class="lg-r">${i + 2}</span>` +
-          `<span class="lg-pn">${lpPlayerRef(r.idx, r.row).link}</span><span class="lg-code">${escapeHtml(lpTeamName(r.idx))}</span>` +
+          `<span class="lg-pn">${lpPlayerRef(r.idx, r.row).link}</span>${lpTeamCodeHtml(r.idx)}` +
           `<span class="lg-v">${v.toFixed(1)}</span><span class="lg-bar"><span style="width:${w}%"></span></span></li>`;
       }).join("") + `</ol>`;
     }
