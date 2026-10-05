@@ -73,6 +73,17 @@ const DEFAULT_CONFIG = {
   inactivityDays: 14,
   titleMax: 90,
   projectMax: 2000,
+  // Groupe : 12 joueurs (intérim : 2 meilleurs par poste puis les meilleurs
+  // restants), recalculé au plus toutes les 6 h.
+  squadSize: 12,
+  squadRefreshMs: 6 * 3600 * 1000,
+  // Calendrier (retour utilisateur 2026-10-05) : 3 fenêtres internationales
+  // le dimanche (semaines 3, 7 et 10 : jamais le dimanche de l'All-Star,
+  // semaine 5) ; phase finale pendant la dernière semaine, du lundi (jour
+  // 76 de la saison) au dimanche (jour 82), à 20h.
+  windowWeeks: [3, 7, 10],
+  finalFirstDay: 76,
+  matchHour: 20,
 };
 
 function emptyStore() { return { version: 1, seq: 1, teams: {}, elections: [], mandates: [] }; }
@@ -380,9 +391,114 @@ function step(store, leagues, world, now) {
   }
   // Prochaine ouverture : début de la saison suivante (prochaine 1re semaine).
   if (seasonStart != null && now < seasonStart) due(seasonStart);
+  // Groupes (intérim) : recalculés au plus toutes les 6 h.
+  if (refreshSquads(store, leagues, world, now)) changed = true;
   // Historique borné : élections closes de plus de 2 cycles.
   if (store.elections.length > 400) { store.elections.splice(0, store.elections.length - 400); changed = true; }
   return { changed, nextDeadlineAt };
+}
+
+// --- Groupe et calendrier ----------------------------------------------
+const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
+function isEligible(cfg, team, p) {
+  return p && p.nationality === team.country && (team.cat !== "U21" || (typeof p.age === "number" && p.age <= cfg.u21MaxAge));
+}
+function overallOf(p) {
+  try { return typeof p.overall === "function" ? p.overall() : null; } catch (e) { return null; }
+}
+// Joueurs éligibles d'une sélection dans tous les championnats chargés
+// (effectifs pros seulement : jamais l'académie).
+function eligiblePlayers(cfg, team, leagues, world, now) {
+  const out = [];
+  const leagueIds = new Set();
+  for (const [leagueId, lg] of leagues) {
+    if (!lg || !Array.isArray(lg.teams)) continue;
+    const entry = world && (world.leagues || []).find(e => e.id === leagueId);
+    lg.teams.forEach((t, idx) => {
+      if (!t || t.isGuest || !Array.isArray(t.players)) return;
+      for (const p of t.players) {
+        if (!isEligible(cfg, team, p)) continue;
+        const ovr = overallOf(p);
+        if (ovr == null) continue;
+        leagueIds.add(leagueId);
+        out.push({
+          id: p.id, name: p.name, position: p.position, age: p.age, ovr: Math.round(ovr * 10) / 10,
+          form: typeof p.form === "number" ? p.form : null,
+          injured: typeof p.injuryUntil === "number" && now < p.injuryUntil,
+          ...(p.look ? { look: p.look } : {}),
+          club: {
+            leagueId, idx, name: t.name, country: (entry && entry.country) || lg.country || null,
+            division: entry ? divisionLabelOf(entry) : null,
+            jerseyColor: t.jerseyColor || null, awayJerseyColor: t.awayJerseyColor || null,
+          },
+        });
+      }
+    });
+  }
+  out.sort((a, b) => b.ovr - a.ovr || String(a.name).localeCompare(String(b.name)));
+  return { players: out, leagues: leagueIds.size };
+}
+// Groupe de l'intérim : les 2 meilleurs à chaque poste, puis les meilleurs
+// restants jusqu'à `size`.
+function pickSquad(players, size) {
+  const chosen = new Set();
+  for (const pos of POSITIONS) players.filter(p => p.position === pos).slice(0, 2).forEach(p => chosen.add(p));
+  for (const p of players) { if (chosen.size >= size) break; chosen.add(p); }
+  return [...chosen].slice(0, size).sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.ovr - a.ovr);
+}
+function refreshSquads(store, leagues, world, now, force = false) {
+  const cfg = configOf(store);
+  store.squads = store.squads || {};
+  let changed = false;
+  for (const team of Object.values(store.teams)) {
+    const cur = store.squads[team.id];
+    if (!force && cur && now - cur.at < cfg.squadRefreshMs) continue;
+    const el = eligiblePlayers(cfg, team, leagues, world, now);
+    store.squads[team.id] = { at: now, source: "interim", players: pickSquad(el.players, cfg.squadSize), eligible: el.players.length, leagues: el.leagues };
+    changed = true;
+  }
+  return changed;
+}
+// Calendrier d'une saison : 3 fenêtres le dimanche + phase finale (lundi →
+// dimanche de la dernière semaine). `calendarStartAt` = jour 0 (mardi).
+function seasonCalendar(cfg, calendarStartAt, season, cat) {
+  if (typeof calendarStartAt !== "number") return [];
+  const Calendar = require("./calendar.js");
+  // Jour 0 ramené au mardi de sa semaine (rythme hebdomadaire : la saison
+  // démarre un mardi ; sinon, on se cale quand même sur la semaine).
+  const p0 = Calendar.zonedLocalDateParts(calendarStartAt, "Europe/Paris");
+  const wd = new Date(Date.UTC(p0.year, p0.month - 1, p0.day)).getUTCDay();
+  const day0 = Calendar.addParisCalendarDays(p0, -((wd - 2 + 7) % 7));
+  const at = day => { const d = Calendar.addParisCalendarDays(day0, day); return Calendar.zonedEpochForLocalTime("Europe/Paris", d.year, d.month, d.day, cfg.matchHour); };
+  const pos = cyclePos(cfg, season, cat);
+  const phase = pos >= 0 ? cfg.cycle[pos] : null;
+  const out = (cfg.windowWeeks || []).map((w, i) => ({ kind: "window", n: i + 1, at: at(7 * (w - 1) + 5) }));
+  if (phase) {
+    const days = [];
+    for (let d = 0; d < 7; d++) days.push(at(cfg.finalFirstDay + d));
+    out.push({ kind: "final", comp: phase.kind, from: days[0], to: days[6], days });
+  }
+  return out;
+}
+function teamView(store, teamId, me, season, now, calendarStartAt) {
+  ensureTeams(store);
+  const team = store.teams[teamId];
+  if (!team) return null;
+  const cfg = configOf(store);
+  const pos = cyclePos(cfg, season, team.cat);
+  const el = currentElection(store, team.id);
+  const sq = (store.squads || {})[team.id] || null;
+  return {
+    ok: true, season,
+    team: { id: team.id, country: team.country, countryName: countryName(team.country), cat: team.cat },
+    coach: publicMandate(activeMandate(store, team.id)),
+    election: el ? publicElection(store, el, me, false) : null,
+    phase: pos >= 0 ? cfg.cycle[pos] : null,
+    squad: sq ? { at: sq.at, source: sq.source, players: sq.players, eligible: sq.eligible, leagues: sq.leagues } : null,
+    calendar: seasonCalendar(cfg, calendarStartAt, season, team.cat),
+    coaches: store.mandates.filter(m => m.teamId === team.id).slice(-20).reverse().map(publicMandate),
+    results: [], honours: [],
+  };
 }
 
 // --- Actions des managers (routes) -----------------------------------------
@@ -513,4 +629,5 @@ module.exports = {
   openElection, currentElection, closeElection, breakTie, step,
   runForElection, withdrawCandidacy, castVote, resign, adminDismiss, adminCancelElection,
   publicElection, publicMandate, overview,
+  POSITIONS, isEligible, eligiblePlayers, pickSquad, refreshSquads, seasonCalendar, teamView,
 };

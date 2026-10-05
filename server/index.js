@@ -2803,6 +2803,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       // Sélections nationales (phase A, voir server/nationalTeams.js) :
       // GET /api/national/overview, GET /api/national/election?id=,
+      // GET /api/national/team?id=,
       // POST /api/national/{candidacy,withdraw,vote,resign}.
       if (route.pathname.startsWith("/api/national/")) {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
@@ -2814,6 +2815,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         const season = ctx.league.seasonNumber || 1;
         if (req.method === "GET" && route.pathname === "/api/national/overview") {
           sendJson(res, 200, NationalTeams.overview(natStore, me, season, now));
+          return;
+        }
+        // Page équipe d'une sélection : groupe, calendrier, sélectionneurs.
+        if (req.method === "GET" && route.pathname === "/api/national/team") {
+          const view = NationalTeams.teamView(natStore, route.searchParams.get("id"), me, season, now, ctx.league.calendarStartAt);
+          if (!view) { sendJson(res, 404, { ok: false, error: "Sélection inconnue." }); return; }
+          sendJson(res, 200, view);
           return;
         }
         if (req.method === "GET" && route.pathname === "/api/national/election") {

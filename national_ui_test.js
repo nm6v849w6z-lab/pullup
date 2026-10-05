@@ -62,6 +62,41 @@ const DAY = 24 * 3600 * 1000;
   await flush(dom); await new Promise(r => setTimeout(r, 300)); await flush(dom);
   assert(!/Mon mandat/.test(box().textContent) && /Anciens sélectionneurs/.test(box().textContent) && /Démission/.test(box().textContent), "démission : intérim, historique « Démission »");
 
+  // Page équipe d'une sélection (comme un club) : depuis le tableau.
+  box().querySelector('.nt-table [data-nt-team="' + myCountry + '-A"]').click();
+  await win.__lastNational;
+  assert(box().querySelector(".nt-hero h1") && /France\s+A/.test(box().querySelector(".nt-hero h1").textContent), "page équipe : bandeau « France A »");
+  assert([...box().querySelectorAll(".nt-tab")].map(b => b.textContent).join(",") === "Aperçu,Groupe,Calendrier,Sélectionneurs,Palmarès", "onglets Aperçu / Groupe / Calendrier / Sélectionneurs / Palmarès");
+  assert(box().querySelectorAll(".nt-stats .nt-card").length === 4, "aperçu : 4 chiffres (groupe, bilan, échéance, éligibles)");
+  box().querySelector('[data-nt-tab="groupe"]').click();
+  const rows = [...box().querySelectorAll(".nt-table tbody tr")];
+  assert(rows.length >= 5 && rows.length <= 12 && rows.every(r => r.querySelector("[data-nt-player]") && r.querySelector("[data-nt-club]")), "groupe : joueurs (12 au plus), joueur et club cliquables");
+  box().querySelector('[data-nt-tab="calendrier"]').click();
+  assert(box().querySelectorAll(".nt-table tbody tr").length >= 3 && /Fenêtre 1/.test(box().textContent), "calendrier : fenêtres du dimanche (et phase finale)");
+  box().querySelector('[data-nt-tab="selectionneurs"]').click();
+  assert(/Démission/.test(box().textContent), "sélectionneurs : historique des mandats");
+  // Joueur cliquable : ouvre sa fiche.
+  box().querySelector('[data-nt-tab="groupe"]').click();
+  box().querySelector("[data-nt-player]").click();
+  await flush(dom); await new Promise(r => setTimeout(r, 400));
+  assert(!doc.getElementById("playerDetailSection").classList.contains("hidden"), "clic sur un joueur du groupe : sa fiche");
+
+  // Recherche du haut : « france u21 » → la sélection U21.
+  const input = doc.getElementById("topbarSearchInput");
+  input.value = "france";
+  input.dispatchEvent(new win.Event("input", { bubbles: true }));
+  const found = [...doc.querySelectorAll("#topbarSearchResults [data-nat-team]")].map(b => b.dataset.natTeam);
+  assert(found.includes("fr-A") && found.includes("fr-U21"), "recherche « france » : France A et France U21");
+  input.value = "france u21";
+  input.dispatchEvent(new win.Event("input", { bubbles: true }));
+  const only = [...doc.querySelectorAll("#topbarSearchResults [data-nat-team]")].map(b => b.dataset.natTeam);
+  assert(only.length === 1 && only[0] === "fr-U21", "recherche « france u21 » : seulement la U21");
+  doc.querySelector('#topbarSearchResults [data-nat-team="fr-U21"]').click();
+  await win.__lastNational;
+  assert(!doc.getElementById("selectionsSection").classList.contains("hidden") && /France\s+U21/.test(box().querySelector(".nt-hero h1").textContent), "clic : page de la France U21 (depuis n'importe quelle page)");
+  win.eval("TAB_HANDLERS.selections()");
+  await win.__lastNational;
+
   // Route du fil d'actualité.
   win.eval("dashResolveNavigate('/selections')");
   await win.__lastNational;

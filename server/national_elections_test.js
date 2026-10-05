@@ -216,4 +216,45 @@ const me = (w, id, idx) => N.managerOf(id, w.leagues.get(id), idx, w.world);
   assert.ok(N.canVote(st, st.teams["fr-A"], madrid), "collège électoral : électeur ajouté par liste");
   ok("éligibilité configurable (pays, liste, anciens sélectionneurs, combinaisons any/all)");
 }
+{
+  // Page équipe (2026-10-05) : groupe de l'intérim et calendrier.
+  const start = Date.UTC(2027, 0, 5, 19);
+  const w = makeWorld(2, start);
+  // Quelques Français de 21 ans au plus, dont un en Espagne.
+  w.es.teams[1].players[0].nationality = "fr"; w.es.teams[1].players[0].age = 20;
+  w.fr.teams[2].players[1].age = 19; w.fr.teams[2].players[1].nationality = "fr";
+  const st = N.emptyStore(); st.config = { cycleStartSeason: 2 };
+  N.step(st, w.leagues, w.world, start + 3600e3);
+  const all = [...w.leagues.values()].flatMap(lg => lg.teams.flatMap(t => t.players));
+  const fr = all.filter(p => p.nationality === "fr");
+  const sq = st.squads["fr-A"];
+  assert.ok(sq && sq.players.length === Math.min(12, fr.length), "groupe de 12 (ou moins s'il manque des joueurs)");
+  assert.ok(sq.players.every(p => fr.some(x => x.id === p.id)), "groupe : seulement des joueurs de la nationalité");
+  assert.strictEqual(sq.eligible, fr.length, "joueurs éligibles comptés dans tous les championnats");
+  assert.strictEqual(sq.leagues, 2, "dont un Français d'un club espagnol");
+  const best = fr.slice().sort((a, b) => b.overall() - a.overall())[0];
+  assert.ok(sq.players.some(p => p.id === best.id), "le meilleur Français est dans le groupe");
+  const u = st.squads["fr-U21"];
+  assert.ok(u.players.length >= 2 && u.players.every(p => p.age <= 21), "U21 : 21 ans au plus");
+  const sqPlayer = sq.players[0];
+  assert.ok(sqPlayer.club && sqPlayer.club.leagueId && typeof sqPlayer.club.idx === "number" && !("salary" in sqPlayer) && !("potential" in sqPlayer) && !("attrs" in sqPlayer), "pas de salaire, contrat, potentiel ni attributs détaillés publics");
+  // Pas recalculé avant 6 h.
+  const at = sq.at;
+  N.step(st, w.leagues, w.world, start + 2 * 3600e3);
+  assert.strictEqual(st.squads["fr-A"].at, at, "groupe recalculé au plus toutes les 6 h");
+  // Vue et calendrier.
+  const v = N.teamView(st, "fr-A", null, 2, start + 3600e3, start);
+  assert.ok(v.ok && v.team.countryName && v.squad.players.length && v.phase.kind === "continental");
+  const wins = v.calendar.filter(c => c.kind === "window"), fin = v.calendar.find(c => c.kind === "final");
+  const parisDay = ms => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", weekday: "long" }).format(new Date(ms));
+  const parisHour = ms => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(new Date(ms));
+  assert.ok(wins.length === 3 && wins.every(c => parisDay(c.at) === "Sunday" && parisHour(c.at) === "20"), "3 fenêtres le dimanche à 20h");
+  assert.ok(fin && parisDay(fin.from) === "Monday" && parisDay(fin.to) === "Sunday" && fin.days.length === 7, "phase finale du lundi au dimanche de la dernière semaine");
+  assert.ok(fin.to < start + 84 * DAY - DAY / 2 && fin.from > start + 75 * DAY, "dans l'intersaison, avant la reprise");
+  assert.strictEqual(N.teamView(st, "fr-U21", null, 2, start, start).phase, null, "U21 : cycle pas encore commencé (élection la saison suivante)");
+  assert.strictEqual(N.teamView(st, "fr-U21", null, 3, start, start).phase.kind, "continental", "U21 décalées d'une saison : continentale en saison 3");
+  assert.strictEqual(N.teamView(st, "fr-A", null, 3, start, start).phase.kind, "world", "A : Coupe du monde en saison 3");
+  assert.strictEqual(N.teamView(st, "xx-A", null, 2, start, start), null);
+  ok("page équipe : groupe (intérim, nationalité, U21, tous championnats, rien de privé), calendrier (3 dimanches + dernière semaine)");
+}
 console.log("\n🏁 national_elections_test.js : élections et mandats conformes.");

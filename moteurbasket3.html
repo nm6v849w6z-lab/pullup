@@ -36372,6 +36372,8 @@ function renderTopbarSearchResults(rawQuery) {
     }
   }
 
+  // Sélections nationales A et U21 (assets/national.js), par nom de pays.
+  if (window.HM_NATIONAL && window.HM_NATIONAL.searchHtml) html += window.HM_NATIONAL.searchHtml(rawQuery);
   html += `<div id="topbarWorldResults"></div>`;
   box.innerHTML = html;
   box.classList.remove("hidden");
@@ -58127,6 +58129,7 @@ document.getElementById("topbarOrdersBtn").addEventListener("click", openTopbarO
       if (!item) return;
       hideTopbarSearchResults();
       if (topbarSearchInput) topbarSearchInput.value = "";
+      if (item.dataset.natTeam && window.HM_NATIONAL) { window.__lastNational = window.HM_NATIONAL.openTeam(item.dataset.natTeam); return; }
       if (item.dataset.worldLeague) {
         openPlaneteAt({
           country: item.dataset.worldCountry || null,

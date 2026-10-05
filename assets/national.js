@@ -14,7 +14,12 @@
 (function () {
   "use strict";
   var DAY = 24 * 3600 * 1000;
-  var ui = { overview: null, election: null, electionId: null, error: "", busy: false, formOpen: false, holder: null };
+  var ui = { overview: null, election: null, electionId: null, error: "", busy: false, formOpen: false, holder: null, teamId: null, team: null, teamTab: "apercu" };
+  // Les 17 pays du jeu (une sélection A et une U21 chacun) et leur continent.
+  var COUNTRIES = ["fr", "us", "it", "es", "de", "gr", "lt", "pl", "pt", "be", "ch", "br", "ar", "ca", "cn", "hk", "tw"];
+  var CONTINENT = { us: "Amérique", br: "Amérique", ar: "Amérique", ca: "Amérique", cn: "Asie", hk: "Asie", tw: "Asie" };
+  function continentOf(c) { return CONTINENT[c] || "Europe"; }
+  function continentalComp(c) { var k = continentOf(c); return k === "Amérique" ? "AmeriCup" : k === "Asie" ? "Coupe d'Asie" : "Euro"; }
 
   var CSS = [
     ".nt-sub{color:var(--ink-dim);margin:-4px 0 14px;font-size:13.5px}",
@@ -52,6 +57,26 @@
     ".nt-mine-badge{font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.05em}",
     ".nt-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}.nt-bar i{display:block;height:100%;background:var(--amber)}",
     ".nt-err{color:var(--danger,#e2694f);font-size:13px;margin:8px 0}",
+    ".nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px}",
+    ".nt-tab{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}",
+    ".nt-tab.on{border-color:var(--amber);color:var(--amber)}",
+    ".nt-hero{border:1px solid var(--line);border-radius:18px;padding:24px 26px;display:flex;align-items:center;gap:24px;background:linear-gradient(100deg,#13306f 0%,#1b2a52 35%,var(--panel) 72%);flex-wrap:wrap}",
+    ".nt-hero .nat-flag{width:120px;height:80px;border-radius:10px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.2),0 12px 30px -10px #000}",
+    ".nt-kicker{font-size:11.5px;letter-spacing:.08em;color:#b8c6ee;font-weight:800;text-transform:uppercase}",
+    ".nt-hero h1{font-size:36px;margin:4px 0 10px;color:#fff;line-height:1.1}",
+    ".nt-pill{display:inline-block;background:rgba(255,255,255,.09);border-radius:999px;padding:4px 11px;font-size:12.5px;color:#dbe3f3;margin:0 6px 6px 0}",
+    ".nt-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}",
+    ".nt-two{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin-top:12px}",
+    "@media (max-width:820px){.nt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nt-two{grid-template-columns:1fr}.nt-hero{padding:18px}.nt-hero .nat-flag{width:84px;height:56px}.nt-hero h1{font-size:28px}}",
+    ".nt-k{font-size:11.5px;letter-spacing:.08em;color:var(--ink-dim);font-weight:800;text-transform:uppercase;display:flex;gap:8px}.nt-k .nt-link{margin-left:auto;color:var(--amber);text-transform:none;letter-spacing:0;font-weight:700;text-decoration:none}",
+    ".nt-big{font-size:24px;font-weight:900;margin:10px 0 4px}",
+    ".nt-next{display:flex;align-items:center;gap:12px;margin-top:14px;font-size:17px;font-weight:800;flex-wrap:wrap}",
+    ".nt-av{display:inline-flex;vertical-align:middle;margin-right:8px}",
+    ".nt-tag2{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:rgba(111,182,255,.15);color:#6FB6FF;white-space:nowrap}",
+    ".nt-tag2.is-final{background:rgba(240,162,60,.16);color:var(--amber)}",
+    ".nt-squad td{white-space:nowrap}",
+    ".nt-teamlinks{display:inline-flex;gap:6px;margin-left:8px}",
+    ".nt-teamlink{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;cursor:pointer}",
     ".nt-chips{display:flex;flex-wrap:wrap;gap:8px}",
     ".nt-chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}",
     ".nt-chip .nat-flag{width:20px;height:14px;border-radius:2px;object-fit:cover}.nt-chip .nt-small{margin:0}",
@@ -198,7 +223,7 @@
     rows.forEach(function (r) {
       var a = r.A ? coachCell(r.A, ov.season) : { who: "–", end: "–" };
       var u = r.U21 ? coachCell(r.U21, ov.season) : { who: "–", end: "–" };
-      h += '<tr class="' + (r.code === mc ? "is-mine" : "") + '"><td>' + flag(r.code) + " " + esc(r.name) + "</td><td>" + a.who + "</td><td>" + a.end + "</td><td>" + u.who + "</td><td>" + u.end + "</td></tr>";
+      h += '<tr class="' + (r.code === mc ? "is-mine" : "") + '"><td>' + flag(r.code) + " " + esc(r.name) + '<span class="nt-teamlinks"><button type="button" class="nt-teamlink" data-nt-team="' + esc(r.code) + '-A">A</button><button type="button" class="nt-teamlink" data-nt-team="' + esc(r.code) + '-U21">U21</button></span>' + "</td><td>" + a.who + "</td><td>" + a.end + "</td><td>" + u.who + "</td><td>" + u.end + "</td></tr>";
     });
     h += "</tbody></table></div>";
     // Anciens sélectionneurs.
@@ -225,7 +250,7 @@
     var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat };
     var me = el.me || {};
     var h = back;
-    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px">' + teamNameHtml(t) + " — <span>Élection du sélectionneur</span></b>" +
+    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px"><button type="button" class="nt-link" data-nt-team="' + esc(el.teamId) + '">' + teamNameHtml(t) + "</button> — <span>Élection du sélectionneur</span></b>" +
       '<div class="nt-small" style="margin:2px 0 0">Mandat : saison ' + esc(el.mandate ? el.mandate.fromSeason : "") + " → saison " + esc(el.mandate ? el.mandate.toSeason : "") + "</div><div class=\"nt-small\" style=\"margin:2px 0 0\">Saison " + esc(el.mandate ? el.mandate.fromSeason : "") + " : compétition continentale · saison " + esc(el.mandate ? el.mandate.toSeason : "") + " : Coupe du monde ou consolante</div></div></div>";
     // Étapes.
     var st = el.status, closed = !(st === "candidacy" || st === "vote");
@@ -280,11 +305,171 @@
     return h;
   }
 
+  // --- Page équipe d'une sélection (2026-10-05) ------------------------------
+  // Comme la fiche d'un club : Aperçu, Groupe, Calendrier, Sélectionneurs,
+  // Palmarès. Données : /api/national/team (server/nationalTeams.js:teamView).
+  var POS_SHORT_NT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
+  function posBadge(pos) { var f = g("effPosBadgeHtml"); return f ? f(pos) : '<span class="nt-tag2">' + esc(POS_SHORT_NT[pos] || pos) + "</span>"; }
+  function avatar(p) {
+    var f = g("playerAvatarHtml");
+    if (!f) return "";
+    try { return '<span class="nt-av">' + f({ id: p.id, age: p.age, look: p.look || null }, null, 26) + "</span>"; } catch (e) { return ""; }
+  }
+  function shortDate(ts) {
+    try { return new Date(ts).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; }
+  }
+  function dayDate(ts) {
+    try { return new Date(ts).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); } catch (e) { return ""; }
+  }
+  function compName(tv, kind) { return kind === "world" ? "Coupe du monde" : continentalComp(tv.team.country); }
+  function objectiveLabel(tv) {
+    if (!tv.phase) return "";
+    return tv.phase.kind === "world" ? "Coupe du monde ou consolante (fin de saison)" : continentalComp(tv.team.country) + " (fin de saison)";
+  }
+  function calItemLabel(tv, c) { return c.kind === "final" ? compName(tv, c.comp) : "Fenêtre " + c.n; }
+  function itemStart(c) { return c.kind === "final" ? c.from : c.at; }
+  function nextItem(tv, now) {
+    var cal = tv.calendar || [];
+    for (var i = 0; i < cal.length; i++) { var end = cal[i].kind === "final" ? cal[i].to : cal[i].at; if (end + 3 * 3600e3 > now) return cal[i]; }
+    return null;
+  }
+  function coachPill(tv) {
+    var c = tv.coach;
+    if (!c) return '<span class="nt-pill">Intérim (IA)</span>';
+    return '<span class="nt-pill">Sélectionneur : <b>' + esc(c.pseudo || c.clubName || "") + "</b>" + (c.pseudo && c.clubName ? " (" + esc(c.clubName) + ")" : "") + " · saisons " + esc(c.fromSeason) + " – " + esc(c.toSeason) + "</span>";
+  }
+  function playerBtn(p) {
+    return '<button type="button" class="nt-link" data-nt-player="' + esc(p.club.leagueId) + "|" + esc(p.club.idx) + "|" + esc(p.id) + '">' + esc(p.name) + "</button>";
+  }
+  function clubOfPlayer(p) {
+    return flag(p.club.country) + ' <button type="button" class="nt-link" data-nt-club="' + esc(p.club.leagueId) + "|" + esc(p.club.idx) + '">' + esc(p.club.name) + "</button>" + (p.club.division ? ' <span class="nt-small">(' + esc(p.club.division) + ")</span>" : "");
+  }
+  function teamApercuHtml(tv, now) {
+    var sq = tv.squad, players = sq ? sq.players : [];
+    var avgAge = players.length ? players.reduce(function (a, p) { return a + (p.age || 0); }, 0) / players.length : null;
+    var inj = players.filter(function (p) { return p.injured; }).length;
+    var nx = nextItem(tv, now);
+    var h = '<div class="nt-stats">';
+    h += '<div class="nt-card"><div class="nt-k">Groupe</div><div class="nt-big">' + (players.length ? esc(players.length) + " joueurs" : "–") + '</div><div class="nt-small">' + (avgAge != null ? "moyenne " + esc(avgAge.toFixed(1).replace(".", ",")) + " ans" : "Groupe en préparation") + (inj ? " · " + esc(inj) + (inj > 1 ? " blessés" : " blessé") : "") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k">Bilan</div><div class="nt-big">–</div><div class="nt-small">Aucun match joué</div></div>';
+    h += '<div class="nt-card"><div class="nt-k">Prochaine échéance</div><div class="nt-big">' + (nx ? esc(dayDate(itemStart(nx))) : "–") + '</div><div class="nt-small">' + (nx ? esc(calItemLabel(tv, nx)) + " · dans " + esc(dur(itemStart(nx) - now)) : "Saison terminée") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k">Joueurs éligibles</div><div class="nt-big">' + (sq ? esc(sq.eligible) : "–") + '</div><div class="nt-small">' + (sq ? "dans " + esc(sq.leagues) + (sq.leagues > 1 ? " championnats" : " championnat") : "") + "</div></div>";
+    h += "</div>";
+    h += '<div class="nt-two"><div class="nt-card"><div class="nt-k">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
+    if (nx) {
+      h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : "Adversaire à déterminer<br>" + esc(when(nx.at))) + "</span></div>";
+    } else h += '<p class="nt-small">Aucune échéance cette saison.</p>';
+    h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div><p class="nt-small" style="margin-top:14px">Aucun match joué pour l\'instant.</p></div></div>';
+    return h;
+  }
+  function teamGroupeHtml(tv) {
+    var sq = tv.squad;
+    if (!sq || !sq.players.length) return '<p class="training-empty">Groupe en préparation : il sera disponible sous peu.</p>';
+    var h = '<div class="nt-card nt-tablewrap"><table class="nt-table nt-squad"><thead><tr><th>Joueur</th><th>Poste</th><th>Âge</th><th>Club</th><th>Note</th><th>Forme</th><th>État</th></tr></thead><tbody>';
+    sq.players.forEach(function (p) {
+      h += "<tr><td>" + avatar(p) + playerBtn(p) + "</td><td>" + posBadge(p.position) + "</td><td>" + esc(p.age) + "</td><td>" + clubOfPlayer(p) + "</td><td><b>" + esc(Math.round(p.ovr)) + "</b></td><td>" + (p.form != null ? esc(p.form) : "–") + "</td><td>" + (p.injured ? '<span class="nt-tag2 is-final">Blessé</span>' : "–") + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+    if (sq.source === "interim") h += '<p class="nt-small">Groupe de l\'intérim : les meilleurs joueurs éligibles (2 par poste, puis les meilleurs restants), mis à jour régulièrement.</p>';
+    return h;
+  }
+  function teamCalendrierHtml(tv) {
+    var cal = tv.calendar || [];
+    if (!cal.length) return '<p class="training-empty">Calendrier indisponible.</p>';
+    var h = '<div class="nt-h" style="margin-top:6px">Saison ' + esc(tv.season) + '</div><div class="nt-card nt-tablewrap"><table class="nt-table"><tbody>';
+    cal.forEach(function (c) {
+      if (c.kind === "final") {
+        h += '<tr><td class="nt-small">' + esc(dayDate(c.from)) + " → " + esc(dayDate(c.to)) + '</td><td><span class="nt-tag2 is-final">' + esc(compName(tv, c.comp)) + "</span></td><td>" + (c.comp === "world" ? "Phase finale (consolante pour les non-qualifiés)" : "Phase finale") + " : poules du lundi au jeudi, quarts vendredi, demi-finales samedi, finale dimanche (20:00)</td></tr>";
+      } else {
+        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">Fenêtre ' + esc(c.n) + "</span></td><td>" + flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span></td></tr>';
+      }
+    });
+    return h + "</tbody></table></div>";
+  }
+  function teamCoachesHtml(tv) {
+    var list = tv.coaches || [];
+    if (!list.length) return '<p class="training-empty">Aucun sélectionneur élu pour l\'instant : la sélection est dirigée par intérim.</p>';
+    var h = '<div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Saisons</th><th>Sélectionneur</th><th>Voix</th><th>Fin</th></tr></thead><tbody>';
+    list.forEach(function (m) {
+      h += "<tr><td>" + esc(m.fromSeason) + " – " + esc(m.toSeason) + "</td><td>" + clubBtn(m.ref, m.pseudo, m.clubName) + "</td><td>" + esc(m.votes || 0) + "</td><td>" + (m.endedAt ? esc(endReasonLabel(m.endReason)) : "En cours") + "</td></tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
+  function teamHtml() {
+    var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
+    var tv = ui.team, now = Date.now();
+    if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
+    var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
+    var h = back + '<div class="nt-tabs">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    h += '<div class="nt-hero">' + flag(tv.team.country) + '<div><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
+      coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : encore vierge</span>' +
+      (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") + "</div></div>";
+    if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
+    if (ui.teamTab === "groupe") h += '<div style="margin-top:14px">' + teamGroupeHtml(tv) + "</div>";
+    else if (ui.teamTab === "calendrier") h += '<div style="margin-top:14px">' + teamCalendrierHtml(tv) + "</div>";
+    else if (ui.teamTab === "selectionneurs") h += '<div style="margin-top:14px">' + teamCoachesHtml(tv) + "</div>";
+    else if (ui.teamTab === "palmares") h += '<p class="training-empty" style="margin-top:14px">Aucun titre pour l\'instant.</p>';
+    else h += teamApercuHtml(tv, now);
+    return h;
+  }
+  function loadTeam(id) {
+    return api("/api/national/team?id=" + encodeURIComponent(id)).then(function (d) { ui.team = d; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
+  }
+  function openTeam(id, tab) {
+    ensureCss();
+    // Depuis la recherche du haut : affiche d'abord la page Sélections.
+    var sec = document.getElementById("selectionsSection");
+    if (sec && sec.classList.contains("hidden")) {
+      try { window.showPage("selectionsSection"); window.setActiveTab("selections"); } catch (e) { /* page sans ces fonctions */ }
+    }
+    ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = "";
+    paint();
+    var p = loadTeam(id).then(paint);
+    window.__lastNational = p;
+    return p;
+  }
+  function openPlayer(lid, idx, id) {
+    var lg = typeof league !== "undefined" ? league : null;
+    var pid = /^-?\d+$/.test(id) ? Number(id) : id;
+    if (lg && lg.leagueId === lid && g("showPlayerDetail")) { window.showPlayerDetail(idx, pid); return; }
+    if (g("showForeignPlayerDetail")) window.showForeignPlayerDetail(lid, idx, pid);
+  }
+  // Barre de recherche du haut : sélections dont le pays correspond
+  // (« France », « france u21 », « sélection espagne », « Germany »…).
+  function norm(x) { return String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
+  function searchTeams(q) {
+    q = norm(q);
+    if (q.length < 2) return [];
+    var catWanted = null;
+    var words = q.split(/\s+/).filter(function (w) {
+      if (w === "u21" || w === "espoirs") { catWanted = "U21"; return false; }
+      if (w === "a") { catWanted = catWanted || "A"; return false; }
+      return w && !/^(selections?|equipes?|de|du|des|la|le|l|nationale?s?|team)$/.test(w);
+    });
+    var generic = /selection|equipe nat|national/.test(q);
+    var out = [];
+    COUNTRIES.forEach(function (c) {
+      var nf = g("nationName") ? window.nationName(c) : c;
+      var names = [norm(nf), norm(t(nf))];
+      var ok = words.length ? words.every(function (w) { return names.some(function (n) { return n.indexOf(w) === 0 || n.indexOf(" " + w) >= 0; }); }) : generic;
+      if (!ok) return;
+      ["A", "U21"].forEach(function (cat) { if (!catWanted || catWanted === cat) out.push({ id: c + "-" + cat, country: c, countryName: nf, cat: cat }); });
+    });
+    return out.slice(0, 6);
+  }
+  function searchHtml(q) {
+    var list = searchTeams(q);
+    if (!list.length) return "";
+    return '<div class="topbar-search-group-label">Sélections nationales</div>' + list.map(function (x) {
+      return '<button type="button" class="topbar-search-result" data-nat-team="' + esc(x.id) + '"><span class="tsr-name">' + flag(x.country) + " " + teamNameHtml(x) + '</span><span class="tsr-meta">Sélection nationale</span></button>';
+    }).join("");
+  }
+
   // --- Rendu / données ------------------------------------------------------
   function paint() {
     var holder = document.getElementById("nationalContent");
     if (!holder) return;
-    holder.innerHTML = ui.electionId ? electionHtml() : overviewHtml();
+    holder.innerHTML = ui.teamId ? teamHtml() : ui.electionId ? electionHtml() : overviewHtml();
   }
   function api(path, body) {
     var f = g("fetchApi");
@@ -305,7 +490,7 @@
   }
   function render() {
     ensureCss();
-    ui.electionId = null; ui.election = null; ui.formOpen = false;
+    ui.electionId = null; ui.election = null; ui.formOpen = false; ui.teamId = null; ui.team = null;
     paint();
     var p = loadOverview().then(paint);
     window.__lastNational = p;
@@ -313,7 +498,7 @@
   }
   function openElection(id, wantForm) {
     ensureCss();
-    ui.electionId = id; ui.election = null; ui.formOpen = !!wantForm; ui.error = "";
+    ui.electionId = id; ui.election = null; ui.formOpen = !!wantForm; ui.error = ""; ui.teamId = null; ui.team = null;
     paint();
     var p = Promise.all([ui.overview ? null : loadOverview(), loadElection(id)]).then(paint);
     window.__lastNational = p;
@@ -340,6 +525,9 @@
     if (!b) return;
     var d = b.dataset;
     if (d.ntOpen) { openElection(d.ntOpen, d.ntRun === "1"); return; }
+    if (d.ntTeam) { openTeam(d.ntTeam); return; }
+    if (d.ntTab && ui.teamId) { ui.teamTab = d.ntTab; paint(); return; }
+    if (d.ntPlayer) { var q = d.ntPlayer.split("|"); openPlayer(q[0], Number(q[1]), q[2]); return; }
     if (d.ntBack !== undefined) { render(); return; }
     if (d.ntClub) { var p = d.ntClub.split("|"); openClub(p[0], Number(p[1])); return; }
     if (d.ntShowForm !== undefined) { ui.formOpen = true; paint(); return; }
@@ -379,5 +567,5 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
 
-  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, state: ui, overviewHtml: overviewHtml, electionHtml: electionHtml };
+  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, overviewHtml: overviewHtml, electionHtml: electionHtml };
 })();
