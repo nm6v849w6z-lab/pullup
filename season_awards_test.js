@@ -48,21 +48,22 @@ const H = 3600 * 1000;
 
   // Succès du manager.
   const lyon = league.teams[0];
-  assert.ok(lyon.achievements.some(a => a.key === "firstSeason"), "succès « Première saison »");
-  if (league.playoffs.seeds.includes(0)) assert.ok(lyon.achievements.some(a => a.key === "playoffs"));
-  if (league.playoffs.champion === 0) assert.ok(lyon.achievements.some(a => a.key === "champion" && a.key));
+  assert.ok(lyon.achTiers.FIRST_SEASON >= 1, "succès « Première saison » (Bronze)");
+  if (league.playoffs.seeds.includes(0)) assert.ok(lyon.achTiers.FINAL_FOUR >= 1);
+  if (league.playoffs.champion === 0) assert.ok(lyon.achTiers.CHAMPION >= 1);
   assert.ok(lyon.feed.entries.some(e => /Succès débloqué/.test(e.title)));
-  ok(`succès du manager : ${lyon.achievements.map(a => a.label).join(", ")}`);
+  ok(`succès du manager : ${Object.keys(lyon.achTiers).filter(k => lyon.achTiers[k]).join(", ")}`);
 
   // Idempotent + sauvegarde.
-  const n = mvpPlayer.awards.length, nc = mvpPlayer.careerSeasons.length, na = lyon.achievements.length;
+  const n = mvpPlayer.awards.length, nc = mvpPlayer.careerSeasons.length, na = lyon.achLog.length;
   Engine.awardSeasonHonours(league, t + H);
-  assert.strictEqual(mvpPlayer.awards.length, n); assert.strictEqual(mvpPlayer.careerSeasons.length, nc); assert.strictEqual(lyon.achievements.length, na);
+  assert.strictEqual(mvpPlayer.awards.length, n); assert.strictEqual(mvpPlayer.careerSeasons.length, nc); assert.strictEqual(lyon.achLog.length, na);
   const back = Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(league))));
   assert.deepStrictEqual(back.seasonAwards, league.seasonAwards);
   const mvpBack = back.teams[mvp.teamIdx].players.find(p => p.id === mvp.playerId);
   assert.deepStrictEqual(mvpBack.awards, mvpPlayer.awards); assert.deepStrictEqual(mvpBack.careerSeasons, mvpPlayer.careerSeasons);
-  assert.deepStrictEqual(back.teams[0].achievements, lyon.achievements);
+  assert.deepStrictEqual(back.teams[0].achTiers, lyon.achTiers);
+  assert.deepStrictEqual(back.teams[0].achStats, JSON.parse(JSON.stringify(lyon.achStats)));
   ok("idempotent et sauvegardé (récompenses, distinctions, carrière, succès)");
 
   // Navigateur : Histoire du club + fiche du MVP.
@@ -79,7 +80,7 @@ const H = 3600 * 1000;
   // Succès : sur le profil du manager (2026-09-30).
   win.eval("showManagerProfile(myTeamIndex)");
   const ach = doc.getElementById("mpAchievements");
-  assert.ok(ach && ach.querySelectorAll(".ach.on").length === lyon.achievements.length && /Première saison/.test(ach.textContent));
+  assert.ok(ach && ach.querySelectorAll(".ach-card.is-on").length === Object.keys(lyon.achTiers).filter(k => lyon.achTiers[k]).length && /Première saison/i.test(ach.textContent));
   win.eval(`showPlayerDetail(${mvp.teamIdx}, ${JSON.stringify(mvp.playerId)})`);
   const det = doc.getElementById("playerDetailContent") || doc.body;
   assert.ok(/Carrière/.test(det.textContent) && /Distinctions/.test(det.textContent) && /MVP de la saison/.test(det.textContent), "fiche joueur : carrière et distinctions");

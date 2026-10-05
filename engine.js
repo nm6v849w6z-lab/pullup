@@ -5676,6 +5676,9 @@ function recordTeamTransfer(team, e) {
   };
   team.transferHistory.unshift(entry);
   if (team.transferHistory.length > TEAM_TRANSFER_HISTORY_MAX) team.transferHistory.length = TEAM_TRANSFER_HISTORY_MAX;
+  // Succès « Premier recrutement » : signature décidée par le manager
+  // (enchère gagnée ou agent libre), jamais la reprise des anciens transferts.
+  if (entry.human && (entry.kind === "buy" || entry.kind === "free_in") && !String(e.id).startsWith("seed:")) achAdd(team, "signings", 1, entry.at);
   return entry;
 }
 // Bilan d'une liste d'entrées : dépenses (arrivées payantes et primes de
@@ -6223,6 +6226,12 @@ class Team {
     // de prise de fonction du manager actuel (« Mon historique » du marché).
     this.transferHistory = [];
     this.managerSince = null;
+    // Succès (voir achEvaluate) : club créé avec le nouveau système, rien
+    // à reprendre d'un ancien format.
+    this.achStats = { migrated: true };
+    this.achTiers = {};
+    this.achLog = [];
+    this.achSeenAt = 0;
     // Rivalités et note des managers (voir recordHumanRivalry).
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
@@ -7541,6 +7550,8 @@ class Team {
     if (on && !exists) {
       if (this.bookmarks.length >= BOOKMARKS_MAX) return { ok: false, error: `${BOOKMARKS_MAX} joueurs en signets au maximum.` };
       this.bookmarks.push({ playerId, leagueId: leagueId || null, since: now });
+      // Succès « Œil du recruteur » : joueurs distincts mis en signet.
+      achAddUnique(this, "bookmarked", playerId, now);
     } else if (!on && exists) {
       this.bookmarks = this.bookmarks.filter(b => String(b.playerId) !== String(playerId));
     }
@@ -7588,6 +7599,8 @@ class Team {
     if (slot < this.tacticPresets.length) this.tacticPresets[slot] = preset;
     else if (this.tacticPresets.length < this.tacticPresetsMax(now)) this.tacticPresets.push(preset);
     else return null;
+    // Succès « À vos ordres » (Bronze) : tactique enregistrée.
+    achAdd(this, "presetsSaved", 1, now);
     return preset;
   }
   renameTacticPreset(slot, name) {
@@ -8585,6 +8598,8 @@ class Team {
     // manuellement, voir Team.isHuman), reconstruite entièrement comme
     // ailleurs.
     if (!this.isHuman) this.autoAssignLineup();
+    // Succès « Dénicheur de talents » (Bronze) : jeune du club dans l'effectif.
+    achHomegrownCheck(this, now || Date.now());
     return { ok: true, player };
   }
 
@@ -9049,6 +9064,17 @@ class Team {
     // recalcul des salaires de fin de saison ci-dessous (fait, lui, au poste
     // de carte du moment).
     this.syncCardPositions();
+
+    // Succès : séances d'entraînement individuel de la semaine (Première
+    // séance) et semaine bouclée dans le vert (Gestionnaire prudent) — solde
+    // de toutes les lignes de la semaine qui se termine (billetterie,
+    // salaires, droits TV, boutique…), voir recordTransaction.
+    if (this.isHuman) {
+      if (slotReport.length) achAdd(this, "trainings", slotReport.length, now);
+      const ledgerRow = (this.financeLedger || {})[`${(this.seasonHistory || []).length + 1}:${this.week}`];
+      const net = ledgerRow ? Object.values(ledgerRow).reduce((a, v) => a + (Number(v) || 0), 0) : 0;
+      if (net > 0) achAdd(this, "posWeeks", 1, now);
+    }
 
     this.week++;
     // Une année d'âge par SAISON (11 semaines), pas par 52 semaines
@@ -11222,7 +11248,7 @@ function archiveSeasonForTeam(league, teamIdx, now = Date.now()) {
 //  - Player.awards : distinctions du joueur (toutes saisons, 20 au plus).
 //  - Player.careerSeasons : une ligne par saison (club, division, matchs,
 //    moyennes), 20 au plus.
-//  - Team.achievements : succès débloqués par le manager (clubs humains).
+//  - Succès du manager : voir achSeasonEnd (Team.achStats / achTiers).
 // ---------------------------------------------------------------------
 const SEASON_AWARD_LABELS = {
   mvp: "MVP de la saison",
@@ -11308,44 +11334,246 @@ function computeSeasonAwards(league) {
 
 // Succès du manager : { key, label, description } évalués à la fin de
 // chaque saison sur le club (humain) ; débloqués une seule fois.
-const MANAGER_ACHIEVEMENTS = [
-  { key: "firstSeason", label: "Première saison", description: "Terminer une saison complète." },
-  { key: "playoffs", label: "Dans le dernier carré", description: "Se qualifier pour les play-offs." },
-  { key: "champion", label: "Champion", description: "Remporter les play-offs de son championnat." },
-  { key: "champion1", label: "Au sommet", description: "Être champion de Division I." },
-  { key: "promoted", label: "Ça monte !", description: "Obtenir une montée." },
-  { key: "cupWinner", label: "Coupe en poche", description: "Remporter la Coupe." },
-  { key: "superCup", label: "Supercoupe", description: "Remporter la Supercoupe." },
-  { key: "wins15", label: "Rouleau compresseur", description: "Gagner au moins 15 matchs de saison régulière." },
-  { key: "unbeatenHome", label: "Forteresse", description: "Gagner tous ses matchs à domicile en saison régulière." },
-  { key: "mvpPlayer", label: "Faiseur de MVP", description: "Avoir le MVP de la saison dans son effectif." },
-  { key: "youngTalent", label: "Dénicheur de talents", description: "Avoir le meilleur jeune de la saison dans son effectif." },
-  // « Diriger le même club 3 / 10 saisons » remplacés (retour utilisateur
-  // 2026-10-04) par des succès de fidélité des joueurs.
-  { key: "keep3", label: "Fidélité", description: "Garder un joueur dans son effectif trois saisons." },
-  { key: "keep5", label: "Pilier du vestiaire", description: "Garder un joueur dans son effectif cinq saisons." },
-  { key: "keep10", label: "Une vie au club", description: "Garder un joueur dans son effectif dix saisons." },
-  { key: "core5", label: "Noyau dur", description: "Avoir cinq joueurs dans son effectif depuis au moins trois saisons." },
-  { key: "wins100", label: "Centenaire", description: "Atteindre 100 victoires de championnat avec son club." },
-];
-const MANAGER_ACHIEVEMENT_BY_KEY = Object.fromEntries(MANAGER_ACHIEVEMENTS.map(a => [a.key, a]));
-
-function unlockAchievement(team, key, seasonNumber, now) {
-  const def = MANAGER_ACHIEVEMENT_BY_KEY[key];
-  if (!def) return false;
-  team.achievements = team.achievements || [];
-  if (team.achievements.some(a => a.key === key)) return false;
-  team.achievements.push({ key, label: def.label, description: def.description, seasonNumber, at: now });
-  if (team.feed) {
-    try {
-      pushEntry(team.feed, {
-        key: `achievement_${key}`, category: "club", week: team.week, createdAt: now,
-        title: `Succès débloqué : ${def.label}`, text: def.description,
-        action: { label: "Histoire du club", href: "/histoire" },
-      });
-    } catch (e) { /* confort */ }
+// Nouveau système de succès (2026-10-05) : registre central partagé avec
+// le navigateur (assets/achievements.js) — 20 succès à 3 paliers + 5
+// Platine. Compteurs PERSISTANTS sur le club (Team.achStats), alimentés par
+// les vrais évènements du moteur (achAdd / achMax / achAddUnique /
+// achAddOnce), puis achEvaluate compare chaque compteur aux paliers :
+// paliers obtenus dans Team.achTiers { id: n } (jamais retirés), journal
+// des déblocages dans Team.achLog (notifications du navigateur, voir
+// Team.achSeenAt) + entrée du fil d'actualité. Clubs humains seulement.
+const Achievements = require("./assets/achievements.js");
+const ACH_LOG_MAX = 300;
+const ACH_LIST_MAX = 150;
+function achStats(team) {
+  if (!team.achStats || typeof team.achStats !== "object") team.achStats = {};
+  return team.achStats;
+}
+function achActive(team) { return !!(team && team.isHuman); }
+// Compare les compteurs aux paliers ; débloque (une seule fois) chaque
+// nouveau palier. `opts.silent` : migration (pas de notification).
+function achEvaluate(team, now = Date.now(), opts = {}) {
+  if (!achActive(team)) return [];
+  const stats = achStats(team);
+  team.achTiers = team.achTiers && typeof team.achTiers === "object" ? team.achTiers : {};
+  team.achLog = Array.isArray(team.achLog) ? team.achLog : [];
+  const unlocked = [];
+  Achievements.ACHIEVEMENTS.forEach(def => {
+    const have = team.achTiers[def.id] || 0;
+    const reached = Achievements.tiersReached(def, stats);
+    if (reached <= have) return;
+    for (let t = have; t < reached; t++) {
+      const entry = { id: def.id, tier: t, at: now, season: teamSeasonNo(team), ...(opts.silent ? { silent: true } : {}) };
+      team.achLog.push(entry);
+      unlocked.push(entry);
+      if (!opts.silent && team.feed) {
+        const level = def.platinum ? "Platine" : Achievements.TIER_NAMES[t];
+        try {
+          pushEntry(team.feed, {
+            key: `ach_${def.id}_${t}`, category: "club", week: team.week, createdAt: now,
+            title: `${t === 0 ? "Succès débloqué" : "Nouveau palier"} : ${def.label} (${level})`, text: def.tiers[t].text,
+            action: { label: "Mes succès", href: "/succes" },
+          });
+        } catch (e) { /* confort */ }
+      }
+    }
+    team.achTiers[def.id] = reached;
+  });
+  if (team.achLog.length > ACH_LOG_MAX) team.achLog.splice(0, team.achLog.length - ACH_LOG_MAX);
+  return unlocked;
+}
+function achAdd(team, key, n = 1, now = Date.now()) {
+  if (!achActive(team) || !n) return [];
+  const st = achStats(team);
+  st[key] = (typeof st[key] === "number" ? st[key] : 0) + n;
+  return achEvaluate(team, now);
+}
+function achMax(team, key, value, now = Date.now()) {
+  if (!achActive(team) || typeof value !== "number" || !isFinite(value)) return [];
+  const st = achStats(team);
+  if (!(typeof st[key] === "number" && st[key] >= value)) st[key] = value;
+  return achEvaluate(team, now);
+}
+// Élément distinct (joueur mis en signet, tactique utilisée…) : compte une fois.
+function achAddUnique(team, key, id, now = Date.now()) {
+  if (!achActive(team) || id == null) return [];
+  const st = achStats(team);
+  if (!Array.isArray(st[key])) st[key] = [];
+  const k = String(id);
+  if (!st[key].includes(k) && st[key].length < ACH_LIST_MAX) st[key].push(k);
+  return achEvaluate(team, now);
+}
+// +1 une seule fois par évènement (`onceId` : titre d'une saison, montée…).
+function achAddOnce(team, key, onceId, now = Date.now()) {
+  if (!achActive(team)) return [];
+  const st = achStats(team);
+  if (!Array.isArray(st.once)) st.once = [];
+  const k = `${key}:${onceId}`;
+  if (st.once.includes(k)) return [];
+  st.once.push(k);
+  if (st.once.length > 400) st.once.splice(0, st.once.length - 400);
+  return achAdd(team, key, 1, now);
+}
+// Joueur formé au club (académie) : voir Team.promoteYouthPlayer.
+function isHomegrownFor(p, team) {
+  return !!(p && team && p.homegrownClub && p.homegrownClub === String(team.name || "").trim().toLowerCase());
+}
+function achHomegrownCheck(team, now = Date.now()) {
+  if (!achActive(team)) return [];
+  return achMax(team, "homegrownMax", (team.players || []).filter(p => isHomegrownFor(p, team)).length, now);
+}
+// Tactique enregistrée utilisée pour ce match : mêmes réglages tactiques
+// qu'une des tactiques enregistrées du club.
+function achPresetSignature(o) {
+  if (!o) return "";
+  return JSON.stringify(TACTIC_PRESET_FIELDS.map(k => (Array.isArray(o[k]) ? o[k].join(",") : o[k] == null ? "" : String(o[k]))));
+}
+function achPresetUsed(team, orders) {
+  const sig = achPresetSignature(orders);
+  if (!sig) return null;
+  const p = (team.tacticPresets || []).find(x => x && x.orders && achPresetSignature(x.orders) === sig);
+  return p ? `${p.name}|${p.savedAt || 0}` : null;
+}
+// Match OFFICIEL terminé (championnat, play-offs, barrage, coupes,
+// Supercoupe — jamais amicaux ni ligues privées, qui ne passent pas ici).
+function achRecordOfficialMatch(team, { won, competition, mvp = false, orders = null }, now = Date.now()) {
+  if (!achActive(team)) return [];
+  const st = achStats(team);
+  st.matches = (st.matches || 0) + 1;
+  if (won) st.wins = (st.wins || 0) + 1;
+  if (won && competition === "championship") st.champWins = (st.champWins || 0) + 1;
+  if (mvp) st.matchMvp = (st.matchMvp || 0) + 1;
+  const preset = achPresetUsed(team, orders);
+  if (preset) {
+    if (!Array.isArray(st.presetsUsed)) st.presetsUsed = [];
+    if (!st.presetsUsed.includes(preset) && st.presetsUsed.length < ACH_LIST_MAX) st.presetsUsed.push(preset);
+    if (won) st.presetWins = (st.presetWins || 0) + 1;
   }
-  return true;
+  return achEvaluate(team, now);
+}
+// Saison régulière en cours (après chaque journée et à la fin) : victoires
+// (Rouleau compresseur, au fil de l'eau).
+function achRegularSeasonProgress(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!achActive(team)) return [];
+  const row = league.standings().find(r => r.idx === teamIdx);
+  return row ? achMax(team, "bestRegWins", row.wins, now) : [];
+}
+// Fin de saison (awardSeasonHonours, idempotente par saison) : saisons,
+// play-offs, titre et série, saison régulière (domicile, saison parfaite),
+// distinctions (MVP, meilleur jeune, cinq majeur), noyau dur, académie.
+function achSeasonEnd(league, teamIdx, awards, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!achActive(team)) return [];
+  const st = achStats(team);
+  const seasonId = league.seasonId || `start:${league.calendarStartAt || 0}`;
+  if (st.lastSeasonId === seasonId) return [];
+  const seasonNo = teamSeasonNo(team);
+  const consecutive = typeof st.lastSeasonNo === "number" && st.lastSeasonNo === seasonNo - 1;
+  st.lastSeasonId = seasonId;
+  st.lastSeasonNo = seasonNo;
+  st.seasons = (st.seasons || 0) + 1;
+  const po = league.playoffs;
+  if (po && Array.isArray(po.seeds) && po.seeds.includes(teamIdx)) st.playoffQuals = (st.playoffQuals || 0) + 1;
+  const champion = !!(po && po.champion === teamIdx);
+  if (champion) st.titles = (st.titles || 0) + 1;
+  // Montée d'une ligue seule (hors monde) : validée ici ; dans le monde,
+  // server/world.js:computeCountryMoves s'en charge (achAddOnce).
+  if (!league.leagueId && typeof league.divisionOutcomeForTeam === "function" && league.divisionOutcomeForTeam(teamIdx).outcome === "promoted") {
+    if (!Array.isArray(st.once)) st.once = [];
+    const k = `promotions:${seasonId}`;
+    if (!st.once.includes(k)) { st.once.push(k); st.promotions = (st.promotions || 0) + 1; }
+  }
+  st.titleStreak = champion ? (consecutive ? (st.titleStreak || 0) : 0) + 1 : 0;
+  st.bestTitleStreak = Math.max(st.bestTitleStreak || 0, st.titleStreak);
+  // Saison régulière : league.results ne contient que la saison régulière.
+  const total = league.totalRounds || Infinity;
+  const mine = (league.results || []).filter(r => r.round < total && (r.home === teamIdx || r.away === teamIdx));
+  const won = r => (r.home === teamIdx ? r.scoreHome > r.scoreAway : r.scoreAway > r.scoreHome);
+  const regWins = mine.filter(won).length;
+  st.bestRegWins = Math.max(st.bestRegWins || 0, regWins);
+  // Saison parfaite : TOUS les matchs programmés de la saison régulière
+  // (calendrier du club) joués et gagnés.
+  const scheduled = Array.isArray(league.schedule)
+    ? league.schedule.slice(0, isFinite(total) ? total : league.schedule.length).filter(rd => (rd || []).some(m => m.home === teamIdx || m.away === teamIdx)).length
+    : mine.length;
+  if (mine.length > 0 && regWins === mine.length && mine.length >= scheduled) st.perfectSeasons = (st.perfectSeasons || 0) + 1;
+  const home = mine.filter(r => r.home === teamIdx);
+  const homeWins = home.filter(won).length;
+  if (home.length) st.bestHomePct = Math.max(st.bestHomePct || 0, Math.floor(homeWins / home.length * 100));
+  const homePerfect = home.length > 0 && homeWins === home.length;
+  st.homePerfectStreak = homePerfect ? (consecutive ? (st.homePerfectStreak || 0) : 0) + 1 : 0;
+  st.bestHomePerfectStreak = Math.max(st.bestHomePerfectStreak || 0, st.homePerfectStreak);
+  // Distinctions de la saison.
+  const ofMine = key => (awards || []).filter(a => a && a.key === key && a.teamIdx === teamIdx);
+  if (ofMine("mvp").length) st.seasonMvp = (st.seasonMvp || 0) + 1;
+  const playerOf = a => (team.players || []).find(p => p.id === a.playerId);
+  if (ofMine("youngPlayer").some(a => isHomegrownFor(playerOf(a), team))) st.bestYoungHG = (st.bestYoungHG || 0) + 1;
+  ofMine("allStar").forEach(a => {
+    if (!isHomegrownFor(playerOf(a), team)) return;
+    if (!Array.isArray(st.allStarHG)) st.allStarHG = [];
+    if (!st.allStarHG.includes(String(a.playerId))) st.allStarHG.push(String(a.playerId));
+  });
+  // Noyau dur : joueurs présents depuis au moins 3 saisons (saison en cours comprise).
+  st.keepMax = Math.max(st.keepMax || 0, (team.players || []).filter(p => seasonNo - playerClubSinceSeason(p, team) + 1 >= 3).length);
+  st.homegrownMax = Math.max(st.homegrownMax || 0, (team.players || []).filter(p => isHomegrownFor(p, team)).length);
+  return achEvaluate(team, now);
+}
+// Reprise des parties existantes (une seule fois par club, sans
+// notification) : compteurs reconstruits depuis l'histoire du club
+// (saisons archivées, trophées, transferts, signets, saison en cours).
+// L'ancien Team.achievements est abandonné.
+function achMigrateTeam(league, teamIdx, now = Date.now()) {
+  const team = league.teams[teamIdx];
+  if (!team || !team.isHuman || (team.achStats && team.achStats.migrated)) return;
+  const st = achStats(team);
+  st.migrated = true;
+  const hist = Array.isArray(team.seasonHistory) ? team.seasonHistory : [];
+  const sum = k => hist.reduce((a, h) => a + (Number(h && h[k]) || 0), 0);
+  st.seasons = hist.length;
+  st.matches = sum("played");
+  st.wins = sum("wins");
+  st.champWins = sum("wins");
+  st.bestRegWins = hist.reduce((a, h) => Math.max(a, Number(h && h.wins) || 0), 0);
+  st.perfectSeasons = hist.filter(h => h && h.played > 0 && !h.losses).length;
+  st.playoffQuals = hist.filter(h => h && h.playoffResult).length;
+  // Titres consécutifs (historique le plus récent en tête).
+  let streak = 0, best = 0;
+  hist.slice().reverse().forEach(h => { streak = h && h.champion ? streak + 1 : 0; best = Math.max(best, streak); });
+  st.bestTitleStreak = best;
+  st.titleStreak = hist[0] && hist[0].champion ? (() => { let n = 0; for (const h of hist) { if (h && h.champion) n++; else break; } return n; })() : 0;
+  let promos = 0;
+  for (let i = 0; i + 1 < hist.length; i++) if ((hist[i].divisionLevel || 0) && (hist[i + 1].divisionLevel || 0) && hist[i].divisionLevel < hist[i + 1].divisionLevel) promos++;
+  if (hist[0] && (hist[0].divisionLevel || 0) > (league.divisionLevel || 0) && league.divisionLevel) promos++;
+  st.promotions = promos;
+  const tr = team.trophies || [];
+  st.titles = tr.filter(t => t.type === "championship").length;
+  st.cups = tr.filter(t => t.type === "cup" || t.type === "national-cup").length;
+  st.supercups = tr.filter(t => t.type === "super-cup").length;
+  st.signings = (team.transferHistory || []).filter(e => e && e.human && (e.kind === "buy" || e.kind === "free_in")).length;
+  st.bookmarked = (team.bookmarks || []).map(b => String(b.playerId)).slice(0, ACH_LIST_MAX);
+  st.trainings = (team.trainingHistory || []).reduce((a, h) => a + ((h && Array.isArray(h.slots)) ? h.slots.length : 0), 0);
+  st.presetsSaved = (team.tacticPresets || []).length;
+  if (hist.length) st.lastSeasonNo = teamSeasonNo(team) - 1;
+  // Distinctions des joueurs encore au club.
+  (team.players || []).forEach(p => (p.awards || []).forEach(a => {
+    if (!a || a.teamName !== team.name) return;
+    if (a.key === "mvp") st.seasonMvp = (st.seasonMvp || 0) + 1;
+    if (a.key === "youngPlayer" && isHomegrownFor(p, team)) st.bestYoungHG = (st.bestYoungHG || 0) + 1;
+    if (a.key === "allStar" && isHomegrownFor(p, team)) { if (!Array.isArray(st.allStarHG)) st.allStarHG = []; if (!st.allStarHG.includes(String(p.id))) st.allStarHG.push(String(p.id)); }
+  }));
+  // Saison en cours (pas encore archivée).
+  const row = league.standings().find(r => r.idx === teamIdx);
+  if (row && team.lastArchivedSeasonId !== (league.seasonId || `start:${league.calendarStartAt || 0}`)) {
+    st.matches += row.played || 0; st.wins += row.wins || 0; st.champWins += row.wins || 0;
+    st.bestRegWins = Math.max(st.bestRegWins, row.wins || 0);
+  }
+  st.homegrownMax = (team.players || []).filter(p => isHomegrownFor(p, team)).length;
+  const seasonNo = teamSeasonNo(team);
+  st.keepMax = (team.players || []).filter(p => seasonNo - playerClubSinceSeason(p, team) + 1 >= 3).length;
+  delete team.achievements;
+  achEvaluate(team, now, { silent: true });
+  team.achSeenAt = Math.max(team.achSeenAt || 0, now);
 }
 
 // Saison (numéro de saison du club, voir teamSeasonNo) depuis laquelle le
@@ -11357,40 +11585,6 @@ function playerClubSinceSeason(p, team) {
   const ev = ((p && p.historyLog) || []).find(e => e && (e.type === "transfer" || e.type === "promotion") && e.to === (team && team.name));
   return ev && typeof ev.season === "number" ? ev.season : 1;
 }
-function evaluateManagerAchievements(league, teamIdx, awards, now) {
-  const team = league.teams[teamIdx];
-  const seasonNumber = league.seasonNumber || 1;
-  const unlocked = [];
-  const u = key => { if (unlockAchievement(team, key, seasonNumber, now)) unlocked.push(key); };
-  const table = league.standings();
-  const row = table.find(r => r.idx === teamIdx) || { wins: 0 };
-  u("firstSeason");
-  const po = league.playoffs;
-  if (po && Array.isArray(po.seeds) && po.seeds.includes(teamIdx)) u("playoffs");
-  if (po && po.champion === teamIdx) { u("champion"); if ((league.divisionLevel || 1) === 1) u("champion1"); }
-  if (team.pendingDivisionMove && team.pendingDivisionMove.kind === "promoted") u("promoted");
-  if ((team.trophies || []).some(t => t.type === "cup" || t.type === "national-cup")) u("cupWinner");
-  if ((team.trophies || []).some(t => t.type === "super-cup")) u("superCup");
-  if (row.wins >= 15) u("wins15");
-  const home = (league.results || []).filter(r => r.home === teamIdx && r.round < (league.totalRounds || Infinity));
-  if (home.length >= 4 && home.every(r => r.scoreHome > r.scoreAway)) u("unbeatenHome");
-  if (awards.some(a => a.key === "mvp" && a.teamIdx === teamIdx)) u("mvpPlayer");
-  if (awards.some(a => a.key === "youngPlayer" && a.teamIdx === teamIdx)) u("youngTalent");
-  const seasons = (team.seasonHistory || []).length + (team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : 1);
-  // Ancienneté des joueurs : saisons passées au club, saison en cours comprise
-  // (voir playerClubSinceSeason).
-  const tenures = (team.players || []).map(p => seasons - playerClubSinceSeason(p, team) + 1);
-  const longest = tenures.length ? Math.max(...tenures) : 0;
-  if (longest >= 3) u("keep3");
-  if (longest >= 5) u("keep5");
-  if (longest >= 10) u("keep10");
-  if (tenures.filter(t => t >= 3).length >= 5) u("core5");
-  const pastWins = (team.seasonHistory || []).reduce((a, h) => a + (h.wins || 0), 0);
-  const curWins = team.lastArchivedSeasonId === (league.seasonId || `start:${league.calendarStartAt || 0}`) ? 0 : row.wins;
-  if (pastWins + curWins >= 100) u("wins100");
-  return unlocked;
-}
-
 function seasonDivisionLabel(league) {
   const info = divisionInfo(league.divisionLevel || 1);
   const level = league.divisionLevel || 1;
@@ -11503,7 +11697,7 @@ function awardSeasonHonours(league, now = Date.now()) {
   // saison régulière, voir awardRegularSeasonAwards).
   league.teams.forEach((team, teamIdx) => {
     if (!team.isHuman) return;
-    evaluateManagerAchievements(league, teamIdx, awards, now);
+    achSeasonEnd(league, teamIdx, awards, now);
   });
   return league.seasonAwards;
 }
@@ -12622,7 +12816,21 @@ function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.
     if (home.applyChemistryResult) home.applyChemistryResult(sh, sa);
     if (away.applyChemistryResult) away.applyChemistryResult(sa, sh);
   }
-  return awardMatchMvp(home, away, round, competition, now);
+  const mvpInfo = awardMatchMvp(home, away, round, competition, now);
+  // Succès : match officiel joué (les amicaux et ligues privées n'appellent
+  // jamais cette fonction pour de vrai — garde-fou sur "friendly" / "lp").
+  if (competition !== "friendly" && competition !== "lp") {
+    const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+    const pts = team => (team.players || []).reduce((a, p) => a + ((p.secondsPlayed > 0 && p.stats && p.stats.pts) || 0), 0);
+    const qs = quarterScores || {};
+    const sh = sum(qs.home) ?? pts(home), sa = sum(qs.away) ?? pts(away);
+    [[home, sh > sa], [away, sa > sh]].forEach(([t, won]) => {
+      if (!t || !t.isHuman) return;
+      const last = (t.ordersHistory || [])[0];
+      achRecordOfficialMatch(t, { won, competition, mvp: !!(mvpInfo && mvpInfo.teamName === t.name), orders: last && last.at === now ? last.orders : null }, now);
+    });
+  }
+  return mvpInfo;
 }
 
 // Instantané des ordres "en direct" d'une équipe au moment précis où son
@@ -13340,6 +13548,9 @@ class League {
       : `Champion (${info.name})`;
     team.trophies = team.trophies || [];
     team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label, seasonId: this.seasonId || null });
+    // Succès « Coupe en poche » (le titre de champion est compté en fin de
+    // saison, avec la série « Dynastie », voir achSeasonEnd).
+    if (type === "cup") achAddOnce(team, "cups", `cup:${this.leagueId || "lg"}:${this.seasonId || now}`, now);
     if (team.trophies.length > MAX_TEAM_TROPHIES) team.trophies.length = MAX_TEAM_TROPHIES;
   }
 
@@ -16832,8 +17043,12 @@ function serializeTeam(team) {
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
-    // Succès du manager (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS).
-    achievements: Array.isArray(team.achievements) ? team.achievements.map(a => ({ ...a })) : [],
+    // Succès du manager (voir achEvaluate, assets/achievements.js) :
+    // compteurs, paliers obtenus, journal des déblocages, dernier vu.
+    achStats: team.achStats && typeof team.achStats === "object" ? team.achStats : {},
+    achTiers: team.achTiers && typeof team.achTiers === "object" ? team.achTiers : {},
+    achLog: Array.isArray(team.achLog) ? team.achLog : [],
+    achSeenAt: typeof team.achSeenAt === "number" ? team.achSeenAt : 0,
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Récapitulatif d'absence en attente (voir server/index.js:
@@ -17449,7 +17664,14 @@ function teamFromSave(data) {
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
-  team.achievements = Array.isArray(data.achievements) ? data.achievements.filter(a => a && MANAGER_ACHIEVEMENT_BY_KEY[a.key]).map(a => ({ ...a })) : [];
+  // Succès (2026-10-05) : l'ancien `achievements` n'est plus lu (achMigrateTeam
+  // reconstruit les compteurs depuis l'histoire du club, voir leagueFromSave).
+  team.achStats = data.achStats && typeof data.achStats === "object" ? data.achStats : {};
+  team.achTiers = data.achTiers && typeof data.achTiers === "object" ? data.achTiers : {};
+  team.achLog = Array.isArray(data.achLog) ? data.achLog.filter(e => e && Achievements.BY_ID[e.id]) : [];
+  team.achSeenAt = typeof data.achSeenAt === "number" ? data.achSeenAt : 0;
+  // Paliers d'un succès disparu : ignorés.
+  Object.keys(team.achTiers).forEach(k => { if (!Achievements.BY_ID[k]) delete team.achTiers[k]; });
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   team.pendingRecapEvents = Array.isArray(data.pendingRecapEvents) ? data.pendingRecapEvents : [];
@@ -17934,6 +18156,8 @@ function leagueFromSave(data, userTeam = null) {
   // chaque joueur (Player.historyLog), puis tout passe par recordTeamTransfer.
   lg.transferHistorySeeded = !!data.transferHistorySeeded;
   if (!lg.transferHistorySeeded) { seedTransferHistoryFromPlayers(lg); lg.transferHistorySeeded = true; }
+  // Succès (2026-10-05) : reprise unique des compteurs pour chaque club humain.
+  lg.teams.forEach((t, i) => { if (t && t.isHuman && !(t.achStats && t.achStats.migrated)) achMigrateTeam(lg, i); });
   return lg;
 }
 
@@ -20013,7 +20237,7 @@ return {
   // sérialisation), plutôt que de dupliquer cette formule dans le test.
   planKey,
   serializeTeam, serializePlayerRecord, playerFromSave, teamFromSave, serializeLeague, leagueFromSave, legacySalaryForOverall, SALARY_GRID_ANCHORS, pruneForeignMatchLogs, archiveDepartedMatchLog, restoreDepartedMatchLogs, buildSeasonArchive, ARCHIVE_ROW_COLS,
-  SEASON_AWARD_LABELS, MANAGER_ACHIEVEMENTS, unlockAchievement, computeSeasonAwards, awardSeasonHonours, evaluateManagerAchievements, matchLogEval,
+  SEASON_AWARD_LABELS, Achievements, achEvaluate, achAdd, achMax, achAddUnique, achAddOnce, achRecordOfficialMatch, achRegularSeasonProgress, achSeasonEnd, achMigrateTeam, achHomegrownCheck, isHomegrownFor, computeSeasonAwards, awardSeasonHonours, matchLogEval,
   awardRegularSeasonAwards, computePlayoffsMvp, selectAllStars, simulateAllStarGame, allStarGameDueAt, ALL_STAR_TEAM_NAMES,
   // Fil d'actualité du tableau de bord (voir le grand commentaire au-dessus
   // de FEED_CATEGORIES) : exportées pour server/actions.js, server/liveMatch.js

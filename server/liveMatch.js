@@ -760,6 +760,8 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
     }
 
     league.recordResult(round, m.home, m.away, scoreHome, scoreAway, seed);
+    // Succès « Rouleau compresseur » : victoires de la saison régulière, au fil de l'eau.
+    if (typeof Engine.achRegularSeasonProgress === "function") [m.home, m.away].forEach(i => { if (league.teams[i] && league.teams[i].isHuman) Engine.achRegularSeasonProgress(league, i, now); });
     feedRoundResults.push({ home: home.name, away: away.name, homePts: scoreHome, awayPts: scoreAway });
 
     // Derby contre son rival du championnat (League.isDerbyMatch, saison
@@ -777,6 +779,11 @@ function finalizeRound(Engine, league, round, now = Date.now()) {
       // interview classique d'après CHAQUE match retirée).
       const moraleDelta = home.applyMoraleForResult(won, scoreHome - scoreAway, away.name, round, now, milestone, null, derby);
       const attendanceInfo = home.simulateHomeAttendance(away.name, derby);
+      // Succès « Salle comble » : salle remplie à 100 % (toutes tribunes).
+      if (!forfeit && attendanceInfo && typeof Engine.achAdd === "function") {
+        const cap = (attendanceInfo.breakdown || []).reduce((t, b) => t + (b.capacity || 0), 0);
+        if (cap > 0 && attendanceInfo.attendance >= cap) Engine.achAdd(home, "fullHouse", 1, now);
+      }
       userResults.push({
         teamIdx: m.home, round, isHome: true, opponent: away.name, opponentIdx: m.away,
         scoreUser: scoreHome, scoreOpponent: scoreAway, won, forfeit, moraleDelta, attendanceInfo,

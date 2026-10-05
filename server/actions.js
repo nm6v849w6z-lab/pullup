@@ -1622,7 +1622,18 @@ function submitPronostics(team, teamIndex, league, body, now) {
   return Shows.submitPronosticsSync(league, teamIndex, showId, answers, now);
 }
 
+// Succès : notifications de déblocage vues (2026-10-05). body { upTo } =
+// horodatage du dernier déblocage affiché ; jamais en arrière, jamais au-delà
+// de maintenant. Les déblocages plus récents seront montrés au prochain passage.
+function markAchievementsSeen(team, teamIndex, league, body, now = Date.now()) {
+  const upTo = Number(body && body.upTo);
+  if (!Number.isFinite(upTo) || upTo <= 0) return fail("'upTo' (horodatage) requis.");
+  team.achSeenAt = Math.max(team.achSeenAt || 0, Math.min(upTo, now));
+  return { ok: true, achSeenAt: team.achSeenAt };
+}
+
 module.exports = {
+  markAchievementsSeen,
   setTeamCourtStyle, setTeamArenaStyle, setPlayerJerseyNumber, setPlayerLook,
   validateOrdersSnapshot,
   setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, sellListedPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,

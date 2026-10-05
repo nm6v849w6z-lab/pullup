@@ -590,6 +590,12 @@ function stepRelegationBarrage(league, now, events = []) {
   delete b.started;
   delete b.at;
   league.resolveRelegationBarrage(r.scoreHome, r.scoreAway);
+  // Succès : le barrage est un match officiel (sans feuille de stats ni MVP).
+  if (!r.forfeit && typeof Engine.achRecordOfficialMatch === "function") {
+    [[home, r.scoreHome > r.scoreAway], [away, r.scoreAway > r.scoreHome]].forEach(([team, won]) => {
+      if (team && team.isHuman) Engine.achRecordOfficialMatch(team, { won, competition: "barrage" }, now);
+    });
+  }
   [[home, true], [away, false]].forEach(([team, isHome]) => {
     if (!team.isHuman || !team.feed) return;
     const pf = isHome ? r.scoreHome : r.scoreAway, pa = isHome ? r.scoreAway : r.scoreHome;

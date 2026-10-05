@@ -39,7 +39,8 @@ async function waitFor(fn, label, tries = 200) {
   B.managerPseudo = "Coach_Riri"; B.managerPseudoChangedAt = 0;
   A.seasonHistory = [{ seasonNo: 1, divisionLevel: 3, divisionName: "Division III", rank: 1, teams: 10, wins: 14, losses: 4, playoffResult: "Champion", champion: true, cupResult: "Demi-finale" }];
   A.trophies = [{ at: now - 1e9, type: "championship", label: "Champion (Division III)" }];
-  A.achievements = [{ key: "champion", label: "Champion", description: "", seasonNumber: 1, at: now }];
+  A.achStats = { migrated: true, titles: 1 };
+  A.achTiers = { CHAMPION: 1 };
   A.moraleHistory = [{ week: 2, label: "Interview", delta: 1, milestone: "debut-saison", quote: "Théophile Cosset doit mieux jouer." }];
   B.moraleHistory = [{ week: 2, label: "Interview", delta: 1, milestone: "debut-saison", quote: "On n'a peur de personne." }];
   const cpu = league.teams.findIndex(t => !t.isHuman);
@@ -88,7 +89,7 @@ async function waitFor(fn, label, tries = 200) {
     const kpis = page.querySelector(".mp-kpis").textContent;
     const cur = league.standings().find(r => r.idx === iA);
     check(kpis.includes(`${14 + cur.wins} V – ${4 + cur.losses} D`) && /Titres\s*1/.test(kpis) && /Montées\s*1/.test(kpis), "bilan : victoires/défaites en carrière, titres, montées");
-    check(page.querySelectorAll("#mpAchievements .ach").length === 16 && page.querySelectorAll("#mpAchievements .ach.on").length === 1, "succès du manager (grille complète, 1 débloqué)");
+    check(page.querySelectorAll("#mpAchievements .ach-card").length === 25 && page.querySelectorAll("#mpAchievements .ach-card.is-on").length === 1, "succès du manager (25 succès, 1 débloqué)");
     check(page.querySelectorAll(".mp-table tbody tr").length === 2, "saison par saison : en cours + archivée");
     check(/aszat\s*a déclaré/.test(page.querySelector(".mp-quotes").textContent) && /Théophile Cosset/.test(page.textContent), "interviews relues attribuées au pseudo");
     check(!/@|antony/i.test(page.textContent), "aucun email");

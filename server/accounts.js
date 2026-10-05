@@ -330,6 +330,11 @@ function takeOverCpuClub(league, clubName) {
   // transferts repart de zéro, et « Mon historique » commence ici.
   team.transferHistory = [];
   team.managerSince = Date.now();
+  // Succès : nouveau club, compteurs à zéro.
+  team.achStats = { migrated: true };
+  team.achTiers = {};
+  team.achLog = [];
+  team.achSeenAt = Date.now();
   if (team.feed) {
     try {
       Engine.pushEntry(team.feed, {

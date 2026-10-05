@@ -1043,6 +1043,7 @@ const ACTION_ROUTES = {
   "/api/training": actions.setTraining,
   "/api/plan": actions.setPlan,
   "/api/tactic-presets": actions.setTacticPresets,
+  "/api/achievements/seen": actions.markAchievementsSeen,
   "/api/market/list": actions.listPlayer,
   "/api/roster/sell-listed": actions.sellListedPlayer,
   "/api/market/bid": actions.bidOnListing,

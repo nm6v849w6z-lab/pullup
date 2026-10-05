@@ -8110,6 +8110,47 @@
   @media (max-width:640px){ .th-row{grid-template-columns:minmax(0,1fr) auto; } .th-date{grid-column:1/-1;} .th-sum{grid-template-columns:1fr;} }
   .lg-code-link{border:0; background:transparent; font:inherit; cursor:pointer;}
   .lg-code-link:hover, .lg-code-link:focus-visible{text-decoration:underline; text-underline-offset:2px;}
+
+  /* Succès (2026-10-05) : cartes, médailles Bronze / Argent / Or / Platine. */
+  .ach-sum{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 6px;}
+  .ach-pill{display:inline-flex; align-items:center; gap:7px; background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:4px 13px 4px 4px; font-weight:800;}
+  .ach-pill small{color:var(--ink-dim); font-weight:500;}
+  .ach-sec{font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-dim); font-weight:800; margin:18px 0 10px;}
+  .ach-grid2{display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px;}
+  .ach-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:9px; min-width:0;}
+  .ach-card.is-done{border-color:#6b5524;}
+  .ach-head{display:flex; gap:10px; align-items:center;}
+  .ach-ico{width:40px; height:40px; flex:none; display:grid; place-items:center; background:var(--panel-2); border-radius:10px; color:var(--amber);}
+  .ach-card:not(.is-on) .ach-ico{color:var(--ink-faint);}
+  .ach-id{display:flex; flex-direction:column; min-width:0;}
+  .ach-name{font-weight:800; letter-spacing:.02em; text-transform:uppercase; font-size:14px;}
+  .ach-state{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint);}
+  .ach-state.on{color:var(--amber);}
+  .ach-tiers{display:flex; flex-direction:column; gap:6px;}
+  .ach-tier{display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:10px; align-items:center; font-size:13px; color:var(--ink-dim);}
+  .ach-tier.ok{color:var(--ink);}
+  .ach-tier-n{font-variant-numeric:tabular-nums; font-weight:700; white-space:nowrap;}
+  .ach-check{color:#4FD18B; font-weight:900;}
+  .ach-medal{flex:none; display:block;}
+  .ach-medal.is-locked{opacity:.75;}
+  .ach-prog{display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--ink-dim);}
+  .ach-prog small{color:var(--ink-faint);}
+  .ach-bar{height:6px; border-radius:99px; background:var(--panel-2); overflow:hidden;}
+  .ach-bar i{display:block; height:100%; background:linear-gradient(90deg,#f0a23c,#ffd86b);}
+  .ach-plat .ach-bar i{background:linear-gradient(90deg,#b6aaf0,#ffffff);}
+  .ach-desc, .ach-live, .ach-plat-cond{margin:0; font-size:13px; color:var(--ink-dim);}
+  .ach-plat-cond b{color:#c9c3f5;}
+  .ach-plat{background:linear-gradient(160deg,#1b2235,var(--panel) 60%); border-color:#3c4a6a;}
+  .ach-plat.is-done{border-color:#a9b8d6; box-shadow:0 0 0 1px rgba(169,184,214,.25), 0 8px 30px rgba(130,150,255,.12);}
+  .ach-toast{position:fixed; left:50%; bottom:24px; transform:translate(-50%, 140%); z-index:9000; width:min(400px, calc(100vw - 32px)); background:linear-gradient(160deg,#1f2a40,#141c29); border:1px solid #6b5524; border-radius:16px; padding:14px 40px 14px 16px; display:flex; gap:14px; align-items:center; box-shadow:0 12px 40px rgba(0,0,0,.45); color:#eef2f7; cursor:pointer; transition:transform .35s ease, opacity .35s ease; opacity:0;}
+  .ach-toast.show{transform:translate(-50%, 0); opacity:1;}
+  .ach-toast-txt{display:flex; flex-direction:column; min-width:0;}
+  .ach-toast-k{font-size:11px; letter-spacing:.08em; font-weight:900; color:#f0a23c; text-transform:uppercase;}
+  .ach-toast-txt b{font-size:17px; margin:2px 0;}
+  .ach-toast-lvl{font-weight:700;}
+  .ach-toast-txt small{color:#9aa8bd;}
+  .ach-toast-x{position:absolute; top:8px; right:10px; background:none; border:0; color:#9aa8bd; font-size:14px; cursor:pointer;}
+  @media (max-width:640px){ .ach-grid2{grid-template-columns:minmax(0,1fr);} }
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -8151,6 +8192,8 @@
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
      que showPlayer.js. -->
 <script src="assets/i18n/i18n.js" defer></script>
+<!-- Registre central des succès (partagé avec engine.js, voir son en-tête). -->
+<script src="assets/achievements.js" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
 <script>
 /* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
@@ -24265,7 +24308,10 @@ function serializeTeam(team) {
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
     // Succès du manager (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS).
-    achievements: Array.isArray(team.achievements) ? team.achievements.map(a => ({ ...a })) : [],
+    achStats: team.achStats && typeof team.achStats === "object" ? team.achStats : {},
+    achTiers: team.achTiers && typeof team.achTiers === "object" ? team.achTiers : {},
+    achLog: Array.isArray(team.achLog) ? team.achLog : [],
+    achSeenAt: typeof team.achSeenAt === "number" ? team.achSeenAt : 0,
     lastArchivedSeasonId: team.lastArchivedSeasonId || null,
     hallOfFame: Array.isArray(team.hallOfFame) ? team.hallOfFame : [],
     // Voir engine.js, miroir identique.
@@ -24795,8 +24841,11 @@ function teamFromSave(data) {
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
   // (Liste déclarée plus bas dans le fichier : garde-fou si appelé avant.)
-  const knownAch = (() => { try { return new Set(MANAGER_ACHIEVEMENTS_CLIENT.map(d => d[0])); } catch (e) { return null; } })();
-  team.achievements = Array.isArray(data.achievements) ? data.achievements.filter(a => a && (!knownAch || knownAch.has(a.key))).map(a => ({ ...a })) : [];
+  // Succès (2026-10-05, voir assets/achievements.js et engine.js:achEvaluate).
+  team.achStats = data.achStats && typeof data.achStats === "object" ? data.achStats : {};
+  team.achTiers = data.achTiers && typeof data.achTiers === "object" ? data.achTiers : {};
+  team.achLog = Array.isArray(data.achLog) ? data.achLog : [];
+  team.achSeenAt = typeof data.achSeenAt === "number" ? data.achSeenAt : 0;
   team.lastArchivedSeasonId = typeof data.lastArchivedSeasonId === "string" ? data.lastArchivedSeasonId : null;
   team.hallOfFame = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
   // Voir engine.js, miroir identique.
@@ -28226,6 +28275,8 @@ function setActiveTab(key) {
 // jeu était visée par ce retour utilisateur.
 function enterNextMatchOrShowSeasonEnd(opts) {
   const landOnDashboard = !!(opts && opts.landOnDashboard);
+  // Succès débloqués depuis la dernière visite (une seule fois, voir achShowNewUnlocks).
+  try { achShowNewUnlocks(); } catch (e) { /* confort */ }
   updateLiveTabVisibility();
   syncTopbarLiveStrip();
   if (pendingEvents.length) {
@@ -31403,12 +31454,13 @@ function managerProfileData(team, teamIdx, lg = league) {
   const trophies = team.trophies || [];
   const titles = trophies.filter(t => t.type === "championship");
   const cups = trophies.filter(t => t.type !== "championship");
-  const achievements = (team.achievements || []).slice().sort((x, y) => (y.at || 0) - (x.at || 0));
+  // Badges obtenus (un par palier : 20 × 3 + 5 Platine = 65).
+  const achievements = achUnlockedBadges(team);
   const interviews = (team.moraleHistory || []).filter(e => e.milestone && e.quote).slice(0, 3);
   return {
     team, teamIdx, pseudo: managerPseudoOf(team), rows, seasons: rows.length, archived: hist.length,
     wins, losses, pct: wins + losses ? Math.round(wins / (wins + losses) * 100) : null,
-    promotions, titles, cups, achievements, achievementsTotal: MANAGER_ACHIEVEMENTS_CLIENT.length, interviews,
+    promotions, titles, cups, achievements, achievementsTotal: achTotalBadges(), interviews,
     country: team.country || lg.country || "fr",
   };
 }
@@ -31452,7 +31504,7 @@ function managerProfileCardHtml(team, teamIdx = league.teams.indexOf(team), leag
     `<div class="mp-card-head">${managerAvatarHtml(team, 44)}<div class="mp-card-id"><small>Manager</small>${managerLinkHtml(team, teamIdx, leagueId, "mp-card-name")}</div>` +
     `<button type="button" class="mp-more" data-manager-profile="${teamIdx}"${leagueId ? ` data-manager-league="${escapeHtml(leagueId)}"` : ""}>Voir le profil →</button></div>` +
     managerKpisHtml(d) +
-    `<p class="mp-card-foot">${d.achievements.length} / ${d.achievementsTotal} succès débloqués</p>` +
+    `<p class="mp-card-foot">${d.achievements.length} / ${d.achievementsTotal} badges de succès</p>` +
     `</section>`;
 }
 
@@ -31497,7 +31549,7 @@ function renderManagerProfile() {
       (!own && msgUi.available ? `<button type="button" class="pz-btn pz-btn--ghost mp-msg" data-msg-open="${escapeHtml(foreign ? `${foreign.leagueId}:${idx}` : String(idx))}">Envoyer un message</button>` : "") +
       `</header>`;
     html += `<section class="mp-block"><h3 class="mp-title">Bilan</h3>${managerKpisHtml(d)}</section>`;
-    html += `<section class="mp-block" id="mpAchievements"><h3 class="mp-title">Succès <span>${d.achievements.length} / ${d.achievementsTotal}</span></h3>${managerAchievementsHtml(team)}</section>`;
+    html += `<section class="mp-block" id="mpAchievements"><h3 class="mp-title">Succès <span>${d.achievements.length} / ${d.achievementsTotal} badges</span></h3>${managerAchievementsHtml(team, managerProfileState && managerProfileState.foreign ? managerProfileState.foreign.league : league)}</section>`;
     html += `<div class="mp-split">` +
       `<section class="mp-block"><h3 class="mp-title">Saison par saison</h3><div class="mp-surface">${managerSeasonsTableHtml(d)}</div></section>` +
       `<section class="mp-block"><h3 class="mp-title">Dernières interviews</h3>${managerInterviewsHtml(d)}</section>` +
@@ -36035,7 +36087,7 @@ function teamDetailApercuHtml(teamIdx) {
     const titles = d.titles.length + d.cups.length;
     tiles += `<div class="ov-tile" id="managerProfileCard"><span class="ov-label">Manager</span>` +
       `<div class="ov-mgr">${managerAvatarHtml(team, 40)}<div class="ov-mgr-id">${managerLinkHtml(team, teamIdx, leagueId, "ov-mgr-name")}` +
-      `<span class="ov-sub"><span>${d.wins}V – ${d.losses}D</span> · ${titles} <span>${titles > 1 ? "titres" : "titre"}</span> · ${d.achievements.length} / ${d.achievementsTotal} <span>succès</span></span></div></div>` +
+      `<span class="ov-sub"><span>${d.wins}V – ${d.losses}D</span> · ${titles} <span>${titles > 1 ? "titres" : "titre"}</span> · ${d.achievements.length} / ${d.achievementsTotal} <span>badges</span></span></div></div>` +
       `<button type="button" class="ov-link mp-more" data-manager-profile="${teamIdx}"${leagueId ? ` data-manager-league="${escapeHtml(leagueId)}"` : ""}>Voir le profil →</button></div>`;
   } else {
     tiles += tile("Renommée", `<div class="ov-big ov-stars">${reputationStarsHtml(stars)}</div><div class="ov-sub">Club dirigé par l'IA</div>`);
@@ -46080,6 +46132,13 @@ const DASH_ROUTE_TO_TAB = {
 
 function dashResolveNavigate(href) {
   if (!href) return;
+  // Succès : page du profil du manager, bloc des succès.
+  if (href === "/succes") {
+    showManagerProfile(myTeamIndex);
+    const blk = document.getElementById("mpAchievements");
+    if (blk && blk.scrollIntoView) try { blk.scrollIntoView({ block: "start" }); } catch (e) { /* jsdom */ }
+    return;
+  }
   if (DASH_ROUTE_TO_TAB[href]) {
     TAB_HANDLERS[DASH_ROUTE_TO_TAB[href]]();
     return;
@@ -56057,25 +56116,6 @@ function hcChampionshipLabel(s) {
 // Récompenses de fin de saison, carrière des joueurs, succès du manager
 // (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS côté moteur).
 // ---------------------------------------------------------------------
-const MANAGER_ACHIEVEMENTS_CLIENT = [
-  ["firstSeason", "Première saison", "Terminer une saison complète."],
-  ["playoffs", "Dans le dernier carré", "Se qualifier pour les play-offs."],
-  ["champion", "Champion", "Remporter les play-offs de son championnat."],
-  ["champion1", "Au sommet", "Être champion de Division I."],
-  ["promoted", "Ça monte !", "Obtenir une montée."],
-  ["cupWinner", "Coupe en poche", "Remporter la Coupe."],
-  ["superCup", "Supercoupe", "Remporter la Supercoupe."],
-  ["wins15", "Rouleau compresseur", "Gagner au moins 15 matchs de saison régulière."],
-  ["unbeatenHome", "Forteresse", "Gagner tous ses matchs à domicile en saison régulière."],
-  ["mvpPlayer", "Faiseur de MVP", "Avoir le MVP de la saison dans son effectif."],
-  ["youngTalent", "Dénicheur de talents", "Avoir le meilleur jeune de la saison dans son effectif."],
-  ["keep3", "Fidélité", "Garder un joueur dans son effectif trois saisons."],
-  ["keep5", "Pilier du vestiaire", "Garder un joueur dans son effectif cinq saisons."],
-  ["keep10", "Une vie au club", "Garder un joueur dans son effectif dix saisons."],
-  ["core5", "Noyau dur", "Avoir cinq joueurs dans son effectif depuis au moins trois saisons."],
-  ["wins100", "Centenaire", "Atteindre 100 victoires de championnat avec son club."],
-];
-
 function seasonAwardsHtml() {
   const sa = league && league.seasonAwards;
   if (!sa || !sa.awards || !sa.awards.length) return `<p class="training-empty">Les récompenses (MVP, cinq majeur, meilleur jeune…) sont décernées à la fin de la saison régulière, le MVP des play-offs après la finale.</p>`;
@@ -56085,13 +56125,169 @@ function seasonAwardsHtml() {
   return `<div class="aw-list">${sa.awards.map(row).join("")}</div>`;
 }
 
-function managerAchievementsHtml(team) {
-  const got = new Map((team.achievements || []).map(a => [a.key, a]));
-  return `<div class="ach-grid">` + MANAGER_ACHIEVEMENTS_CLIENT.map(([key, label, desc]) => {
-    const a = got.get(key);
-    return `<div class="ach${a ? " on" : ""}" title="${escapeHtml(desc)}"><span class="ach-icon">${honorIconHtml(a ? "medal" : "shield", 16)}</span>` +
-      `<span class="ach-txt"><b>${escapeHtml(label)}</b><small>${escapeHtml(desc)}${a ? ` · saison ${a.seasonNumber}` : ""}</small></span></div>`;
-  }).join("") + `</div><p class="sub" style="margin:8px 0 0">${got.size} / ${MANAGER_ACHIEVEMENTS_CLIENT.length} succès débloqués.</p>`;
+// =====================================================================
+// SUCCÈS (2026-10-05) : registre partagé window.HM_ACHIEVEMENTS
+// (assets/achievements.js), compteurs et paliers tenus par le serveur
+// (Team.achStats / achTiers / achLog, voir engine.js:achEvaluate).
+// Médailles dessinées en SVG (Bronze, Argent, Or : médaillon frappé de
+// l'étoile ; Platine : gemme facettée) et un dessin par succès — jamais
+// d'emoji (retour utilisateur 2026-10-05).
+// =====================================================================
+function achRegistry() { return window.HM_ACHIEVEMENTS || { ACHIEVEMENTS: [], BY_ID: {}, TIER_NAMES: ["Bronze", "Argent", "Or"], ICONS: {}, statValue: () => 0, tiersReached: () => 0 }; }
+function achTotalBadges() { return achRegistry().ACHIEVEMENTS.reduce((n, d) => n + d.tiers.length, 0); }
+function achUnlockedBadges(team) {
+  const R = achRegistry();
+  const out = [];
+  R.ACHIEVEMENTS.forEach(def => {
+    const n = Math.min(def.tiers.length, (team && team.achTiers && team.achTiers[def.id]) || 0);
+    for (let t = 0; t < n; t++) out.push({ id: def.id, tier: t });
+  });
+  return out;
+}
+// Dégradés métal (une seule fois dans la page).
+function achEnsureDefs() {
+  if (document.getElementById("achMetalDefs")) return;
+  const holder = document.createElement("div");
+  holder.innerHTML = `<svg id="achMetalDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>` +
+    `<linearGradient id="achGB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3c39a"/><stop offset=".45" stop-color="#b8743f"/><stop offset="1" stop-color="#6b3c1b"/></linearGradient>` +
+    `<linearGradient id="achGS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#c3ccd8"/><stop offset="1" stop-color="#6f7c8e"/></linearGradient>` +
+    `<linearGradient id="achGG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b8"/><stop offset=".45" stop-color="#f2b934"/><stop offset="1" stop-color="#94600a"/></linearGradient>` +
+    `<linearGradient id="achGP" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#d9e4f6"/><stop offset=".68" stop-color="#b6aaf0"/><stop offset="1" stop-color="#6879b5"/></linearGradient>` +
+    `<linearGradient id="achGL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a465c"/><stop offset="1" stop-color="#1e2737"/></linearGradient>` +
+    `</defs></svg>`;
+  document.body.appendChild(holder.firstChild);
+}
+// Médaille d'un palier : tier 0/1/2 (Bronze/Argent/Or), "P" (Platine) ;
+// `locked` : version grise. `icon` : dessin du succès au centre (sinon étoile).
+function achMedalSvg(tier, size, locked, icon) {
+  achEnsureDefs();
+  const R = achRegistry();
+  const fill = locked ? "url(#achGL)" : tier === "P" ? "url(#achGP)" : ["url(#achGB)", "url(#achGS)", "url(#achGG)"][tier] || "url(#achGB)";
+  const ink = locked ? "#6f7c90" : tier === "P" ? "#3b3f7a" : ["#4a2710", "#3d4654", "#5c3b04"][tier] || "#4a2710";
+  const art = icon && R.ICONS[icon]
+    ? `<g transform="translate(9.2 9.2) scale(.9)" fill="none" stroke="${ink}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${R.ICONS[icon]}</g>`
+    : `<path d="M20 11.5l2.5 5.2 5.7.8-4.1 4 1 5.6L20 24.4l-5.1 2.7 1-5.6-4.1-4 5.7-.8z" fill="${locked ? "#55627a" : "rgba(255,255,255,.88)"}"/>`;
+  const shape = tier === "P"
+    ? `<path d="M20 1.5l17 10v17L20 38.5l-17-10v-17z" fill="${fill}"/><path d="M20 4.5l14.4 8.4v14.2L20 35.5 5.6 27.1V12.9z" fill="none" stroke="rgba(255,255,255,${locked ? ".12" : ".6"})" stroke-width="1.2"/>`
+    : `<circle cx="20" cy="20" r="18.5" fill="${fill}"/><circle cx="20" cy="20" r="14.6" fill="none" stroke="rgba(255,255,255,${locked ? ".12" : ".55"})" stroke-width="1.3"/>`;
+  return `<svg class="ach-medal${locked ? " is-locked" : ""}" width="${size}" height="${size}" viewBox="0 0 40 40" role="img" aria-label="${escapeHtml(tier === "P" ? "Platine" : R.TIER_NAMES[tier] || "")}${locked ? " (verrouillé)" : ""}">${shape}${art}</svg>`;
+}
+// Dessin seul (en-tête de carte).
+function achIconSvg(icon, size) {
+  const R = achRegistry();
+  return `<svg class="ach-art" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${R.ICONS[icon] || ""}</svg>`;
+}
+function achFmt(n) { return Math.round(n).toLocaleString("fr-FR"); }
+// Carte d'un succès. `lg` : championnat du club (saison en cours, Platine).
+function achCardHtml(def, team, lg) {
+  const R = achRegistry();
+  const st = (team && team.achStats) || {};
+  const have = Math.min(def.tiers.length, (team && team.achTiers && team.achTiers[def.id]) || 0);
+  const val = t => R.statValue(st, t.stat);
+  const next = def.tiers[have] || null;
+  const anyProgress = def.tiers.some(t => val(t) > 0);
+  const state = def.platinum
+    ? (have ? "Platine débloqué" : anyProgress ? "En cours" : "Verrouillé")
+    : (have ? `${R.TIER_NAMES[have - 1]} obtenu` : anyProgress ? "En cours" : "Verrouillé");
+  let html = `<article class="ach-card${def.platinum ? " ach-plat" : ""}${have === def.tiers.length ? " is-done" : ""}${have ? " is-on" : ""}" data-ach-id="${def.id}">` +
+    `<div class="ach-head">` +
+      (def.platinum ? achMedalSvg("P", 46, !have, def.icon) : `<span class="ach-ico">${achIconSvg(def.icon, 24)}</span>`) +
+      `<div class="ach-id"><b class="ach-name">${escapeHtml(def.label)}</b><span class="ach-state${have ? " on" : ""}">${escapeHtml(state)}</span></div></div>`;
+  if (!def.platinum) {
+    html += `<div class="ach-tiers">` + def.tiers.map((t, i) => {
+      const ok = i < have;
+      const v = val(t);
+      return `<div class="ach-tier${ok ? " ok" : ""}">${achMedalSvg(i, 30, !ok)}` +
+        `<span class="ach-tier-txt"><b>${escapeHtml(R.TIER_NAMES[i])}</b> — ${escapeHtml(t.text)}</span>` +
+        `<span class="ach-tier-n">${ok ? `<span class="ach-check" aria-label="obtenu">✓</span>` : `${achFmt(Math.min(v, t.need))} / ${achFmt(t.need)}`}</span></div>`;
+    }).join("") + `</div>`;
+  } else {
+    html += `<p class="ach-plat-cond"><b>Platine</b> — ${escapeHtml(def.tiers[0].text)}</p>`;
+  }
+  // Progression vers le prochain palier (ou le dernier, terminé).
+  const target = next || def.tiers[def.tiers.length - 1];
+  let cur = Math.min(val(target), target.need);
+  let label = "Progression";
+  if (def.platinum && def.live) { cur = Math.min(R.statValue(st, def.live), target.need); label = "Série actuelle"; }
+  if (have === def.tiers.length) cur = target.need;
+  const pct = target.need ? Math.round(cur / target.need * 100) : 0;
+  html += `<div class="ach-prog"><span>${escapeHtml(label)}</span><span>${achFmt(cur)} / ${achFmt(target.need)}${def.unit ? ` <small>${escapeHtml(def.unit)}</small>` : ""}</span></div>` +
+    `<div class="ach-bar"><i style="width:${pct}%"></i></div>`;
+  // Saison parfaite : bilan de la saison régulière en cours.
+  if (def.id === "PERFECT_SEASON" && lg && typeof lg.standings === "function") {
+    const idx = (lg.teams || []).indexOf(team);
+    const row = idx >= 0 ? lg.standings().find(r => r.idx === idx) : null;
+    if (row && row.played) html += `<p class="ach-live">Saison en cours : ${row.wins} V · ${row.losses} D</p>`;
+  }
+  html += `<p class="ach-desc">${escapeHtml(def.desc)}</p></article>`;
+  return html;
+}
+function managerAchievementsHtml(team, lg = league) {
+  const R = achRegistry();
+  const counts = [0, 0, 0, 0];
+  R.ACHIEVEMENTS.forEach(def => {
+    const n = (team && team.achTiers && team.achTiers[def.id]) || 0;
+    if (def.platinum) { if (n) counts[3]++; }
+    else for (let i = 0; i < Math.min(n, 3); i++) counts[i]++;
+  });
+  const pill = (tier, n, lbl) => `<span class="ach-pill">${achMedalSvg(tier, 26, !n)}<b>${n}</b><small>${escapeHtml(lbl)}</small></span>`;
+  return `<div class="ach-sum">${pill(0, counts[0], "Bronze")}${pill(1, counts[1], "Argent")}${pill(2, counts[2], "Or")}${pill("P", counts[3], "Platine")}</div>` +
+    `<h4 class="ach-sec">Succès à paliers</h4><div class="ach-grid2">` + R.ACHIEVEMENTS.filter(d => !d.platinum).map(d => achCardHtml(d, team, lg)).join("") + `</div>` +
+    `<h4 class="ach-sec">Succès Platine</h4><div class="ach-grid2">` + R.ACHIEVEMENTS.filter(d => d.platinum).map(d => achCardHtml(d, team, lg)).join("") + `</div>`;
+}
+// Notifications de déblocage : uniquement les déblocages réels (jamais la
+// reprise d'une ancienne partie), une seule fois — le serveur retient le
+// dernier vu (Team.achSeenAt, POST /api/achievements/seen).
+let achNotifyQueue = [];
+let achNotifyBusy = false;
+let achNotifiedUpTo = 0;
+function achShowNewUnlocks() {
+  if (typeof teamA === "undefined" || !teamA || !Array.isArray(teamA.achLog)) return;
+  // Registre (script différé) pas encore chargé : on réessaie à la fin du chargement.
+  if (!window.HM_ACHIEVEMENTS) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", achShowNewUnlocks, { once: true });
+    else window.addEventListener("load", achShowNewUnlocks, { once: true });
+    return;
+  }
+  const R = achRegistry();
+  const seen = Math.max(teamA.achSeenAt || 0, achNotifiedUpTo);
+  const fresh = teamA.achLog.filter(e => e && !e.silent && (e.at || 0) > seen && R.BY_ID[e.id]).sort((a, b) => (a.at || 0) - (b.at || 0));
+  if (!fresh.length) return;
+  achNotifiedUpTo = Math.max(...fresh.map(e => e.at || 0));
+  achNotifyQueue.push(...fresh);
+  achPumpNotify();
+  if (typeof fetchApi === "function") {
+    window.__lastAchSeen = fetchApi("/api/achievements/seen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ upTo: achNotifiedUpTo }) })
+      .then(r => r.ok ? r.json().catch(() => null) : null).then(d => { if (d && d.ok) teamA.achSeenAt = d.achSeenAt; }).catch(() => {});
+  }
+}
+function achPumpNotify() {
+  if (achNotifyBusy || !achNotifyQueue.length) return;
+  const e = achNotifyQueue.shift();
+  const R = achRegistry();
+  const def = R.BY_ID[e.id];
+  if (!def) { achPumpNotify(); return; }
+  achNotifyBusy = true;
+  let el = document.getElementById("achToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "achToast";
+    el.className = "ach-toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  const tier = def.platinum ? "P" : e.tier;
+  const level = def.platinum ? "Platine" : R.TIER_NAMES[e.tier];
+  el.innerHTML = `${achMedalSvg(tier, 58, false, def.icon)}<div class="ach-toast-txt"><span class="ach-toast-k">${e.tier > 0 && !def.platinum ? "Nouveau palier !" : "Succès débloqué !"}</span>` +
+    `<b>${escapeHtml(def.label)}</b><span class="ach-toast-lvl">${escapeHtml(level)}</span><small>${escapeHtml((def.tiers[e.tier] || def.tiers[0]).text)}</small></div>` +
+    `<button type="button" class="ach-toast-x" aria-label="Fermer">✕</button>`;
+  el.classList.add("show");
+  const done = () => { el.classList.remove("show"); clearTimeout(el.__t); setTimeout(() => { achNotifyBusy = false; achPumpNotify(); }, 350); };
+  el.querySelector(".ach-toast-x").onclick = done;
+  el.onclick = (ev) => { if (ev.target.closest(".ach-toast-x")) return; done(); if (typeof showManagerProfile === "function") showManagerProfile(myTeamIndex); };
+  clearTimeout(el.__t);
+  el.__t = setTimeout(done, 5200);
 }
 
 // Courbe de progression (Premium) : historique hebdomadaire du joueur
