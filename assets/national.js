@@ -212,7 +212,7 @@
       });
       h += "</tbody></table></div>";
     }
-    h += '<p class="nt-rules">Chaque pays a deux sélections, A et U21 (joueurs de 21 ans au plus), élues des saisons différentes. L\'élection a lieu pendant la première semaine de la saison : 3 jours de candidatures, puis 3 jours de vote. Tout manager peut se présenter dans le pays de son choix ; seuls les managers d\'un club du pays votent, une fois, sans retour en arrière. Le mandat dure 2 saisons : la première se termine par la compétition continentale (Euro, AmeriCup, Coupe d\'Asie), jouée à l\'intersaison ; son classement qualifie pour la Coupe du monde, jouée le dimanche pendant la seconde saison (tournoi consolante pour les non-qualifiés). Sans sélectionneur, la sélection est dirigée par intérim jusqu\'à l\'élection suivante.</p>';
+    h += '<p class="nt-rules">Chaque pays a deux sélections, A et U21 (joueurs de 21 ans au plus), élues des saisons différentes. L\'élection a lieu pendant la première semaine de la saison : 3 jours de candidatures, puis 3 jours de vote. Tout manager peut se présenter dans le pays de son choix ; seuls les managers d\'un club du pays votent, une fois, sans retour en arrière. Le mandat dure 2 saisons. Chaque saison compte 3 fenêtres internationales le dimanche, puis une phase finale pendant la dernière semaine (intersaison) : la compétition continentale (Euro, AmeriCup, Coupe d\'Asie) la première saison, la Coupe du monde la seconde, pour les sélections qualifiées au classement continental (tournoi consolante pour les autres). Sans sélectionneur, la sélection est dirigée par intérim jusqu\'à l\'élection suivante.</p>';
     return h;
   }
   function endReasonLabel(r) {

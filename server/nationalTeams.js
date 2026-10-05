@@ -39,9 +39,11 @@ const DEFAULT_CONFIG = {
   // mandat. Saison 1 : compétition continentale (Euro en Europe, AmeriCup,
   // Coupe d'Asie). Saison 2 : Coupe du monde pour les sélections qualifiées
   // au classement de la compétition continentale de la saison 1, tournoi
-  // consolante pour les autres. Calendrier : compétition continentale à
-  // l'intersaison qui suit la saison 1 (semaine 12, du lundi au dimanche à
-  // 20h) ; Coupe du monde / consolante les dimanches de la saison 2.
+  // consolante pour les autres. Calendrier (retour utilisateur 2026-10-05) :
+  // 3 fenêtres internationales le dimanche chaque saison ; phases finales
+  // pendant la dernière semaine (intersaison, seule la Supercoupe s'y joue
+  // côté clubs), du lundi au dimanche à 20h : continentale en saison 1,
+  // Coupe du monde / consolante en saison 2.
   cycle: [{ kind: "continental" }, { kind: "world" }],
   mandateSeasons: 2,
   // Retour utilisateur 2026-10-05 : « l'élection nationale A et U21 ne doit
