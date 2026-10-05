@@ -801,6 +801,10 @@
   .compo-table .conv-role{justify-self:auto;}
   .compo-table .eval-square{width:10px; height:14px;}
   .compo-table th.ct-num, .compo-table th.ct-gp, .compo-table th.ct-min, .compo-table th.ct-pts, .compo-table th.ct-reb, .compo-table th.ct-ast, .compo-table th.ct-rating{text-align:right;}
+  /* En-têtes centrés sur leur colonne (retour utilisateur 2026-10-05) :
+     toutes les colonnes centrées (en-tête et valeurs), sauf le nom. */
+  .compo-table th:not(.ct-name), .compo-table td:not(.ct-name){text-align:center;}
+  .compo-table th .ct-sort{justify-content:center;}
   /* Nom figé (1re colonne après la case de convocation) au défilement. */
   .compo-table .ct-conv{position:sticky; left:0; z-index:1; box-sizing:border-box; width:44px; min-width:44px; max-width:44px;}
   .compo-table .ct-name{position:sticky; left:44px; z-index:1; max-width:210px; overflow:hidden; text-overflow:ellipsis;}
