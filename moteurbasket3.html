@@ -7107,6 +7107,13 @@
      lignes ; empilés, elle ne fait plus que la largeur du libellé. */
   :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
   :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
+  /* Alignement (retour utilisateur 2026-10-05, capture de l'effectif
+     général : libellés de potentiel de longueurs différentes centrés, jauges
+     décalées d'une ligne à l'autre) : colonnes Potentiel et Forme calées à
+     gauche, en-tête compris — jauges et libellés partent du même bord. */
+  :is(#effectifSection, #teamDetailSection) table.eff-general td:has(> .eff-pot),
+  :is(#effectifSection, #teamDetailSection) table.eff-general td:has(> .eff-cond),
+  :is(#effectifSection, #teamDetailSection) table.eff-general th:is(.eff-th-potential, .eff-th-condition){text-align:left !important;}
   :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond .eff-meter{width:60px;}
   :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   /* Un seul bloc (retour utilisateur 2026-09-30) : rôle signalé
