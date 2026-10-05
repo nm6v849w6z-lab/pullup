@@ -6957,7 +6957,7 @@
      jamais chargée dans ce projet). Couleurs : tokens :root du jeu +
      pastilles de poste propres à cet écran.
      ===================================================================== */
-  #effectifSection, #teamDetailSection, #statsHebdoSection, #prepSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
+  #effectifSection, #teamDetailSection, #statsHebdoSection, #prepSection, #selectionsSection{--eff-row:#172031; --eff-row-2:#141c2b; --eff-sep:#222b3d; --eff-track:#243048;
     --eff-pos-m-bg:rgba(96,165,250,.16); --eff-pos-m:#9cc5fb;
     --eff-pos-a-bg:rgba(45,212,191,.15); --eff-pos-a:#6ee7d2;
     --eff-pos-as-bg:rgba(167,139,250,.18); --eff-pos-as:#c9bbfd;
@@ -6990,17 +6990,17 @@
 
   /* --- Tableaux (base commune) --- */
   .eff-table-wrap{margin-bottom:16px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table{width:100%; background:transparent; border-radius:0; overflow:visible; border-collapse:separate; border-spacing:0; font-size:14px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table th, :is(#effectifSection, #teamDetailSection) table.eff-table td{padding:0 8px; border-bottom:0; text-align:left; white-space:nowrap;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table thead th{height:34px; font-size:12px; font-weight:600; text-transform:none; color:var(--ink-dim); letter-spacing:0;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table thead th.sorted{color:var(--amber);}
-  :is(#effectifSection, #teamDetailSection) table.eff-table th.sortable-th:hover{color:var(--ink);}
-  :is(#effectifSection, #teamDetailSection) table.eff-table th:first-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:first-child{padding-left:16px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:last-child{padding-right:12px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table, :is(#effectifSection, #selectionsSection) table.eff-table{width:100%; background:transparent; border-radius:0; overflow:visible; border-collapse:separate; border-spacing:0; font-size:14px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th, :is(#effectifSection, #teamDetailSection) table.eff-table td, :is(#effectifSection, #selectionsSection) table.eff-table th, :is(#effectifSection, #selectionsSection) table.eff-table td{padding:0 8px; border-bottom:0; text-align:left; white-space:nowrap;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table thead th, :is(#effectifSection, #selectionsSection) table.eff-table thead th{height:34px; font-size:12px; font-weight:600; text-transform:none; color:var(--ink-dim); letter-spacing:0;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table thead th.sorted, :is(#effectifSection, #selectionsSection) table.eff-table thead th.sorted{color:var(--amber);}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th.sortable-th:hover, :is(#effectifSection, #selectionsSection) table.eff-table th.sortable-th:hover{color:var(--ink);}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th:first-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:first-child, :is(#effectifSection, #selectionsSection) table.eff-table th:first-child, :is(#effectifSection, #selectionsSection) table.eff-table td:first-child{padding-left:16px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-table td:last-child, :is(#effectifSection, #selectionsSection) table.eff-table th:last-child, :is(#effectifSection, #selectionsSection) table.eff-table td:last-child{padding-right:12px;}
   .eff-sort-ico{margin-left:3px; vertical-align:middle;}
   .eff-th.asc .eff-sort-ico{transform:rotate(180deg);}
   .eff-num{text-align:right !important;}
-  :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-age, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-height, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-salary{text-align:right;}
+  :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-age, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-height, :is(#effectifSection, #teamDetailSection) table.eff-table th.eff-th-salary, :is(#effectifSection, #selectionsSection) table.eff-table th.eff-th-age, :is(#effectifSection, #selectionsSection) table.eff-table th.eff-th-height, :is(#effectifSection, #selectionsSection) table.eff-table th.eff-th-salary{text-align:right;}
   .eff-player{display:inline-flex; align-items:center; gap:10px; min-width:0;}
   /* Drapeau de nationalité (voir nationFlagHtml). */
   .nat-flag{display:inline-block; flex:none; width:20px; height:15px; object-fit:cover; border-radius:2px; box-shadow:0 0 0 1px rgba(127,127,127,.25); vertical-align:middle;}
@@ -7010,10 +7010,10 @@
   /* Nom + numéro + pastilles (« $ » aux enchères…) jamais au-delà de la
      colonne Nom (retour utilisateur 2026-10-03 : la pastille d'Adama
      Brooks chevauchait le poste) : le nom se raccourcit (…) si besoin. */
-  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player{display:flex; max-width:100%;}
-  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > *{flex:none;}
-  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .eff-listed-coin{margin-left:0;}
-  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .player-link{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player, :is(#effectifSection, #selectionsSection) td.eff-td-name .eff-player{display:flex; max-width:100%;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > *, :is(#effectifSection, #selectionsSection) td.eff-td-name .eff-player > *{flex:none;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .eff-listed-coin, :is(#effectifSection, #selectionsSection) td.eff-td-name .eff-player > .eff-listed-coin{margin-left:0;}
+  :is(#effectifSection, #teamDetailSection) td.eff-td-name .eff-player > .player-link, :is(#effectifSection, #selectionsSection) td.eff-td-name .eff-player > .player-link{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .eff-pos{display:inline-flex; min-width:34px; justify-content:center; padding:3px 8px; border-radius:6px; font-weight:800; font-size:13px; letter-spacing:.02em;}
   .eff-pos-m{background:var(--eff-pos-m-bg); color:var(--eff-pos-m);}
   .eff-pos-a{background:var(--eff-pos-a-bg); color:var(--eff-pos-a);}
@@ -7032,7 +7032,7 @@
   .eff-pip{width:12px; height:6px; border-radius:3px; background:#2a3550;}
   .eff-pip.on{background:var(--eff-tier);}
   .eff-pip.half{background:linear-gradient(90deg, var(--eff-tier) 50%, var(--eff-pip-off, #2a3550) 50%);}
-  :is(#effectifSection, #teamDetailSection) .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
+  :is(#effectifSection, #teamDetailSection) .eff-pot .potential-tier, :is(#effectifSection, #selectionsSection) .eff-pot .potential-tier{font-size:13px; font-weight:500; color:var(--eff-tier); max-width:none; white-space:nowrap; text-align:left;}
 
   /* Forme : mini-barre + état. */
   .eff-cond{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim); --eff-c:var(--ok);}
@@ -7063,9 +7063,9 @@
      entassées à droite sauf celle des noms") : le nom garde environ un quart
      de la largeur, l'espace restant se répartit entre les autres colonnes ;
      seule la colonne d'actions « … » reste au plus juste. */
-  :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td{width:auto; padding-left:14px; padding-right:14px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:24%; min-width:200px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-general th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-general td:last-child{width:1%;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th, :is(#effectifSection, #teamDetailSection) table.eff-general td, :is(#effectifSection, #selectionsSection) table.eff-general th, :is(#effectifSection, #selectionsSection) table.eff-general td{width:auto; padding-left:14px; padding-right:14px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th.eff-th-name, :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name, :is(#effectifSection, #selectionsSection) table.eff-general th.eff-th-name, :is(#effectifSection, #selectionsSection) table.eff-general td.eff-td-name{width:24%; min-width:200px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th:last-child, :is(#effectifSection, #teamDetailSection) table.eff-general td:last-child, :is(#effectifSection, #selectionsSection) table.eff-general th:last-child, :is(#effectifSection, #selectionsSection) table.eff-general td:last-child{width:1%;}
   /* Largeurs FIXES par colonne sur ordinateur (retour 2026-09-28 : "c'est un
      peu mal réparti sur la page effectif encore") : en répartition
      automatique, l'espace suivait la longueur du contenu (Âge/Taille/Salaire
@@ -7093,8 +7093,8 @@
     #teamDetailSection table.eff-general tr:first-child > th:nth-child(6){width:12%;}
     #teamDetailSection table.eff-general tr:first-child > th:nth-child(7){width:11%;}
     #teamDetailSection table.eff-general tr:first-child > th:nth-child(n+8){width:6%;}
-    :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name{width:auto; min-width:0;}
-    :is(#effectifSection, #teamDetailSection) table.eff-general :is(th, td){padding-left:10px; padding-right:10px;}
+    :is(#effectifSection, #teamDetailSection) table.eff-general td.eff-td-name, :is(#effectifSection, #selectionsSection) table.eff-general td.eff-td-name{width:auto; min-width:0;}
+    :is(#effectifSection, #teamDetailSection) table.eff-general :is(th, td), :is(#effectifSection, #selectionsSection) table.eff-general :is(th, td){padding-left:10px; padding-right:10px;}
     /* Âge, taille, salaire centrés : le salaire ne colle plus à la Forme. */
     #effectifSection table.eff-general tr > :is(th, td):is(:nth-child(4), :nth-child(5), :nth-child(6)),
     #teamDetailSection table.eff-general tr > :is(th, td):is(:nth-child(3), :nth-child(4), :nth-child(5)){text-align:center !important;}
@@ -7105,33 +7105,33 @@
      jauge + plus long libellé de l'effectif (« Joueur correct », «
      Légèrement fatigué ») et laissait un grand vide sur toutes les autres
      lignes ; empilés, elle ne fait plus que la largeur du libellé. */
-  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
-  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond, :is(#effectifSection, #selectionsSection) table.eff-general .eff-pot, :is(#effectifSection, #selectionsSection) table.eff-general .eff-cond{flex-direction:column-reverse; align-items:flex-start; gap:5px;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond-label, :is(#effectifSection, #selectionsSection) table.eff-general .eff-pot .potential-tier, :is(#effectifSection, #selectionsSection) table.eff-general .eff-cond-label{font-size:13px; line-height:1.2;}
   /* Alignement (retour utilisateur 2026-10-05, capture de l'effectif
      général : libellés de potentiel de longueurs différentes centrés, jauges
      décalées d'une ligne à l'autre) : colonnes Potentiel et Forme calées à
      gauche, en-tête compris — jauges et libellés partent du même bord. */
   :is(#effectifSection, #teamDetailSection) table.eff-general td:has(> .eff-pot),
   :is(#effectifSection, #teamDetailSection) table.eff-general td:has(> .eff-cond),
-  :is(#effectifSection, #teamDetailSection) table.eff-general th:is(.eff-th-potential, .eff-th-condition){text-align:left !important;}
-  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond .eff-meter{width:60px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) table.eff-general th:is(.eff-th-potential, .eff-th-condition), :is(#effectifSection, #selectionsSection) table.eff-general td:has(> .eff-pot), :is(#effectifSection, #selectionsSection) table.eff-general td:has(> .eff-cond), :is(#effectifSection, #selectionsSection) table.eff-general th:is(.eff-th-potential, .eff-th-condition){text-align:left !important;}
+  :is(#effectifSection, #teamDetailSection) table.eff-general .eff-cond .eff-meter, :is(#effectifSection, #selectionsSection) table.eff-general .eff-cond .eff-meter{width:60px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row td{height:52px; background:var(--eff-row-2); border-top:1px solid var(--eff-sep);}
   /* Un seul bloc (retour utilisateur 2026-09-30) : rôle signalé
      discrètement — liseré ambre + petit « 5 » pour le cinq de départ, nom
      estompé pour la réserve (voir effRoleRowClass/effRoleMarkHtml). */
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-starter td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-reserve .eff-player .player-link{color:var(--ink-dim); font-weight:500;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-starter td:first-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row.eff-row-starter td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.eff-row-reserve .eff-player .player-link, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row.eff-row-reserve .eff-player .player-link{color:var(--ink-dim); font-weight:500;}
   .eff-starter-mark{flex:none; display:inline-grid; place-items:center; min-width:16px; height:16px; padding:0 3px; border-radius:4px; background:rgba(240,162,60,.16); color:var(--amber); font-size:10.5px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:first-child{border-top-left-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:last-child{border-top-right-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#1c2638;}
-  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
-  :is(#effectifSection, #teamDetailSection) .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:first-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row td:first-child{border-left:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row td:last-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row td:last-child{border-right:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:first-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:first-child td:first-child{border-top-left-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:first-child td:last-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:first-child td:last-child{border-top-right-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:last-child td{border-bottom:1px solid var(--eff-sep);}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:first-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:last-child td:first-child{border-bottom-left-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:last-child td:last-child, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:last-child td:last-child{border-bottom-right-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:hover td{background:#1c2638;}
+  :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row.injured td, :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row.injured td{background:rgba(226,105,79,.12); color:var(--danger);}
+  :is(#effectifSection, #teamDetailSection) .eff-listed, :is(#effectifSection, #selectionsSection) .eff-listed{margin-left:6px; padding:1px 8px; font-size:10.5px;}
   /* Pastille « $ » (joueur aux enchères) : pièce dorée, relief léger. */
   .eff-listed-coin{
     flex:none; display:inline-grid; place-items:center; width:20px; height:20px; margin-left:8px; border-radius:50%;
@@ -7151,37 +7151,37 @@
   .eff-menu-item:hover{background:#243048;}
   .eff-menu-label{display:block; padding:8px 10px 4px; font-size:12px; color:var(--ink-dim);}
   .eff-menu-row{display:flex; gap:6px; padding:0 4px 6px;}
-  :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input{flex:1 1 auto; width:auto; min-width:0; height:36px; padding:0 10px; border:1px solid #2e3b56; border-radius:7px; background:var(--panel); font-size:13px;}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input, :is(#effectifSection, #selectionsSection) .eff-menu .market-price-input{flex:1 1 auto; width:auto; min-width:0; height:36px; padding:0 10px; border:1px solid #2e3b56; border-radius:7px; background:var(--panel); font-size:13px;}
   .eff-menu-cta{height:36px; padding:0 14px; border:0; border-radius:999px; background:var(--amber); color:var(--amber-ink); font:inherit; font-size:13px; font-weight:700; cursor:pointer;}
   .eff-menu-note{padding:8px 10px; font-size:12.5px; color:var(--ink-dim);}
-  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger{margin:0; border:0; border-radius:7px; padding:9px 10px; font-size:13.5px; color:var(--danger);}
-  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger:hover{background:rgba(226,105,79,.12);}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger, :is(#effectifSection, #selectionsSection) .eff-menu .sell-btn.eff-menu-danger{margin:0; border:0; border-radius:7px; padding:9px 10px; font-size:13.5px; color:var(--danger);}
+  :is(#effectifSection, #teamDetailSection) .eff-menu .sell-btn.eff-menu-danger:hover, :is(#effectifSection, #selectionsSection) .eff-menu .sell-btn.eff-menu-danger:hover{background:rgba(226,105,79,.12);}
 
   /* --- Caractéristiques --- */
-  :is(#effectifSection, #teamDetailSection) .eff-table-wrap-caracs{overflow-x:auto; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs{font-size:13.5px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs tr.eff-family-row td{padding-top:14px; padding-bottom:0; height:auto;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs td.eff-family{text-align:left !important; padding:14px 4px 0 !important;}
+  :is(#effectifSection, #teamDetailSection) .eff-table-wrap-caracs, :is(#effectifSection, #selectionsSection) .eff-table-wrap-caracs{overflow-x:auto; background:var(--eff-row-2); border:1px solid var(--eff-sep); border-radius:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs, :is(#effectifSection, #selectionsSection) .eff-caracs{font-size:13.5px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tr.eff-family-row td, :is(#effectifSection, #selectionsSection) .eff-caracs tr.eff-family-row td{padding-top:14px; padding-bottom:0; height:auto;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs td.eff-family, :is(#effectifSection, #selectionsSection) .eff-caracs td.eff-family{text-align:left !important; padding:14px 4px 0 !important;}
   .eff-family span{display:block; padding-bottom:5px; border-bottom:2px solid #2a3550; font-size:14px; font-weight:700; color:#c3cbd9;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs thead tr:last-child th{border-bottom:1px solid var(--line); padding-bottom:4px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-attr, :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-avg{text-align:center; padding:0 2px; font-size:11px; white-space:normal; line-height:1.15; min-width:38px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot{gap:6px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pip{width:8px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot .potential-tier{font-size:12px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-player{gap:8px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs td{height:44px; border-bottom:1px solid #1d2536;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs tr:last-child td{border-bottom:0;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs thead tr:last-child th, :is(#effectifSection, #selectionsSection) .eff-caracs thead tr:last-child th{border-bottom:1px solid var(--line); padding-bottom:4px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-attr, :is(#effectifSection, #teamDetailSection) .eff-caracs th.eff-th-avg, :is(#effectifSection, #selectionsSection) .eff-caracs th.eff-th-attr, :is(#effectifSection, #selectionsSection) .eff-caracs th.eff-th-avg{text-align:center; padding:0 2px; font-size:11px; white-space:normal; line-height:1.15; min-width:38px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot, :is(#effectifSection, #selectionsSection) .eff-caracs .eff-pot{gap:6px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pip, :is(#effectifSection, #selectionsSection) .eff-caracs .eff-pip{width:8px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-pot .potential-tier, :is(#effectifSection, #selectionsSection) .eff-caracs .eff-pot .potential-tier{font-size:12px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-player, :is(#effectifSection, #selectionsSection) .eff-caracs .eff-player{gap:8px;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs td, :is(#effectifSection, #selectionsSection) .eff-caracs td{height:44px; border-bottom:1px solid #1d2536;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tr:last-child td, :is(#effectifSection, #selectionsSection) .eff-caracs tr:last-child td{border-bottom:0;}
   :is(#effectifSection, #teamDetailSection) .eff-caracs td:nth-child(n+4){text-align:center; padding:0 2px;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-gstart{padding-left:12px !important;}
-  :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td{background:#1a2333;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs .eff-gstart, :is(#effectifSection, #selectionsSection) .eff-caracs .eff-gstart{padding-left:12px !important;}
+  :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td, :is(#effectifSection, #selectionsSection) .eff-caracs tbody tr:hover td{background:#1a2333;}
   .eff-td-avg{font-size:15px; font-weight:800;}
-  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
-  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr, :is(#effectifSection, #selectionsSection) .attr-cell.eff-attr{display:inline-flex; align-items:center; justify-content:center; width:36px; min-width:0; height:30px; margin:0; padding:0; border-radius:6px; background:transparent; gap:0;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr .attr-val, :is(#effectifSection, #selectionsSection) .attr-cell.eff-attr .attr-val{font-size:15px; font-weight:500;}
   /* Colonne GEN/TC de l'onglet Général : un TC tient sur 4 chiffres. */
   #effectifSection td.eff-td-rating .attr-cell.eff-attr{width:auto; min-width:36px;}
   #effectifSection td.eff-td-rating .attr-cell.eff-attr .attr-val{font-weight:800;}
-  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
-  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best, :is(#effectifSection, #selectionsSection) .attr-cell.eff-attr.eff-best{box-shadow:inset 0 0 0 1.5px rgba(244,246,250,.6);}
+  :is(#effectifSection, #teamDetailSection) .attr-cell.eff-attr.eff-best .attr-val, :is(#effectifSection, #selectionsSection) .attr-cell.eff-attr.eff-best .attr-val{font-weight:800;}
   /* --- Colonne Joueur figée (retour utilisateur 2026-09-30 (téléphone) :
      "une fois qu'on scrolle vers la droite, on ne voit plus quel joueur
      c'est la ligne", Général ET Caractéristiques). Prolonge le mécanisme
@@ -7197,32 +7197,32 @@
      fois le tableau défilé (.is-scrolled, posée par effFrozenColSync). Le
      liseré ambre d'un titulaire (inset box-shadow) reste sur la cellule
      figée. */
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr > :first-child{position:sticky; left:0; z-index:1;}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child{position:static;}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr > :first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-table tr > :first-child{position:sticky; left:0; z-index:1;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-table tr.eff-family-row > :first-child{position:static;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table thead th:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-table thead th:first-child{z-index:3; background:var(--bg);}
   :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table thead th:first-child,
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#1a2333;}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row-2);}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(0,0,0,.65); clip-path:inset(0 -14px 0 0);}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#f1f4f9;}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(20,32,51,.22);}
-  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(0,0,0,.65);}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(20,32,51,.22);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table thead th:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody td:first-child{background:var(--eff-row-2);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#1a2333;}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-general tr.eff-row.injured td:first-child{background:linear-gradient(rgba(226,105,79,.12), rgba(226,105,79,.12)), var(--eff-row-2);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(0,0,0,.65); clip-path:inset(0 -14px 0 0);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.eff-table-wrap-caracs table.eff-table tbody tr:hover td:first-child{background:#f1f4f9;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.is-scrolled table.eff-table tr:not(.eff-family-row) > :first-child{box-shadow:8px 0 10px -8px rgba(20,32,51,.22);}
+  :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(0,0,0,.65);}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .roster-table-frozen-col.is-scrolled table.eff-table tr.eff-row.eff-row-starter > td:first-child{box-shadow:inset 3px 0 0 var(--amber), 8px 0 10px -8px rgba(20,32,51,.22);}
   /* Téléphone (même seuil que la barre d'onglets du bas, 768 px) : colonne
      Joueur raccourcie pour laisser voir les chiffres — avatar réduit,
      drapeau masqué, nom tronqué avec « … » (nom complet en infobulle et
      sur la fiche joueur). */
   @media(max-width:768px), (max-height:520px) and (pointer:coarse){
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table th:first-child,
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table td:first-child{padding-left:10px; padding-right:8px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-table td:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-table th:first-child, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-table td:first-child{padding-left:10px; padding-right:8px;}
     :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general th.eff-th-name,
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general td.eff-td-name{width:auto; min-width:0;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player{gap:6px; max-width:150px;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .nat-flag{display:none;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar{width:22px !important; height:24px !important; flex:none;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar svg{width:100%; height:100%;}
-    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col table.eff-general td.eff-td-name, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-general th.eff-th-name, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col table.eff-general td.eff-td-name{width:auto; min-width:0;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-player{gap:6px; max-width:150px;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .nat-flag, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-player .nat-flag{display:none;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-player .player-avatar{width:22px !important; height:24px !important; flex:none;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-avatar svg, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-player .player-avatar svg{width:100%; height:100%;}
+    :is(#effectifSection, #teamDetailSection) .roster-table-frozen-col .eff-player .player-link, :is(#effectifSection, #selectionsSection) .roster-table-frozen-col .eff-player .player-link{display:block; min-width:0; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13.5px;}
     /* En-tête de la page Effectif : un nom d'adversaire long (« Prochain
        match ») élargissait toute la page. */
     .eff-kpi-line{min-width:0; max-width:100%;}
@@ -7244,14 +7244,14 @@
   .tde-kpi-link:hover{text-decoration:underline;}
   .tde-seg-count{display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:var(--panel-2); color:var(--ink-dim); font-size:12px; font-weight:700;}
   .eff-seg-btn.active .tde-seg-count{background:var(--amber); color:var(--amber-ink);}
-  #teamDetailSection table.eff-general th.tde-th-stat{text-align:right;}
+  #teamDetailSection table.eff-general th.tde-th-stat, #selectionsSection table.eff-general th.tde-th-stat{text-align:right;}
   .tde-stat{color:var(--ink-dim);}
   .tde-stat-main{color:var(--ink); font-weight:700;}
-  #teamDetailSection table.tde-stats{font-size:13.5px;}
-  #teamDetailSection table.tde-stats th.tde-th-stat{text-align:right; font-size:12px;}
-  #teamDetailSection table.tde-stats td{height:44px; border-bottom:1px solid #1d2536;}
-  #teamDetailSection table.tde-stats tr:last-child td{border-bottom:0;}
-  #teamDetailSection table.tde-stats tbody tr:hover td{background:#1a2333;}
+  #teamDetailSection table.tde-stats, #selectionsSection table.tde-stats{font-size:13.5px;}
+  #teamDetailSection table.tde-stats th.tde-th-stat, #selectionsSection table.tde-stats th.tde-th-stat{text-align:right; font-size:12px;}
+  #teamDetailSection table.tde-stats td, #selectionsSection table.tde-stats td{height:44px; border-bottom:1px solid #1d2536;}
+  #teamDetailSection table.tde-stats tr:last-child td, #selectionsSection table.tde-stats tr:last-child td{border-bottom:0;}
+  #teamDetailSection table.tde-stats tbody tr:hover td, #selectionsSection table.tde-stats tbody tr:hover td{background:#1a2333;}
   .tde-lead{color:var(--amber) !important; font-weight:800;}
   .tde-shot b{display:block; font-weight:600; color:var(--ink);}
   .tde-shot span{display:block; font-size:11px; color:var(--ink-faint);}
@@ -7343,7 +7343,7 @@
     --hm-surface:#ffffff; --hm-card:#f3f5f9; --hm-border:#dbe2ec;
     --hm-text:#142033; --hm-muted:#5d6b80; --hm-faint:#7a869a; --hm-accent:#d9800b;
   }
-  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection, html[data-theme="light"] #statsHebdoSection, html[data-theme="light"] #prepSection{
+  html[data-theme="light"] #effectifSection, html[data-theme="light"] #teamDetailSection, html[data-theme="light"] #statsHebdoSection, html[data-theme="light"] #prepSection, html[data-theme="light"] #selectionsSection{
     --eff-row:#f6f8fb; --eff-row-2:#ffffff; --eff-sep:#e3e8f0; --eff-track:#e3e8f0;
     --eff-pos-m-bg:rgba(59,130,246,.12); --eff-pos-m:#2563c9;
     --eff-pos-a-bg:rgba(20,184,166,.13); --eff-pos-a:#0f8a79;
@@ -7417,13 +7417,13 @@
   html[data-theme="light"] .eff-pip{background:#dfe5ee; --eff-pip-off:#dfe5ee;}
   html[data-theme="light"] .eff-pip.on{background:var(--eff-tier);}
   html[data-theme="light"] .eff-pip.half{background:linear-gradient(90deg, var(--eff-tier) 50%, #dfe5ee 50%);}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td{background:#eef2f8;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-general tr.eff-row:hover td, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .eff-general tr.eff-row:hover td{background:#eef2f8;}
   html[data-theme="light"] .eff-menu-btn:hover, html[data-theme="light"] .eff-menu-btn[aria-expanded="true"], html[data-theme="light"] .eff-menu-item:hover{background:#eef2f7;}
   html[data-theme="light"] .eff-menu{background:#ffffff; border-color:#d8dfe9; box-shadow:0 12px 32px rgba(20,32,51,.18);}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input{border-color:#d8dfe9;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-menu .market-price-input, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .eff-menu .market-price-input{border-color:#d8dfe9;}
   html[data-theme="light"] .eff-family span{border-bottom-color:#dfe5ee; color:#34425a;}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs td, html[data-theme="light"] #teamDetailSection table.tde-stats td{border-bottom-color:#e6ebf2;}
-  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td, html[data-theme="light"] #teamDetailSection table.tde-stats tbody tr:hover td{background:#f1f4f9;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs td, html[data-theme="light"] #teamDetailSection table.tde-stats td, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .eff-caracs td, html[data-theme="light"] #selectionsSection table.tde-stats td{border-bottom-color:#e6ebf2;}
+  html[data-theme="light"] :is(#effectifSection, #teamDetailSection) .eff-caracs tbody tr:hover td, html[data-theme="light"] #teamDetailSection table.tde-stats tbody tr:hover td, html[data-theme="light"] :is(#effectifSection, #selectionsSection) .eff-caracs tbody tr:hover td, html[data-theme="light"] #selectionsSection table.tde-stats tbody tr:hover td{background:#f1f4f9;}
   /* Fenêtres et superpositions : voile un peu moins opaque. */
   html[data-theme="light"] .upgrade-confirm-overlay, html[data-theme="light"] .tour-center-overlay{background:rgba(20,32,51,.45);}
 

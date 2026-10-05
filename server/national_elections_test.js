@@ -237,11 +237,16 @@ const me = (w, id, idx) => N.managerOf(id, w.leagues.get(id), idx, w.world);
   const u = st.squads["fr-U21"];
   assert.ok(u.players.length >= 2 && u.players.every(p => p.age <= 21), "U21 : 21 ans au plus");
   const sqPlayer = sq.players[0];
-  assert.ok(sqPlayer.club && sqPlayer.club.leagueId && typeof sqPlayer.club.idx === "number" && !("salary" in sqPlayer) && !("potential" in sqPlayer) && !("attrs" in sqPlayer), "pas de salaire, contrat, potentiel ni attributs détaillés publics");
+  const pub = sqPlayer.pub;
+  assert.ok(sqPlayer.club && sqPlayer.club.leagueId && typeof sqPlayer.club.idx === "number", "club du joueur (championnat, place)");
+  assert.ok(pub && pub.attrsHidden && !("attrs" in pub) && !("potential" in pub) && !("form" in pub) && !("aggressiveness" in pub) && !("ovr" in sqPlayer) && !("ovr" in pub),
+    "fiche publique comme la fiche d'un club étranger : ni caractéristiques, ni potentiel, ni motivation, ni note");
+  assert.ok(typeof pub.salary === "number" && typeof pub.height === "number" && typeof pub.condition === "number" && Array.isArray(pub.matchLog), "mêmes infos que l'effectif d'une équipe : taille, salaire, forme physique, matchs");
+  assert.ok(JSON.stringify(st).indexOf('"attrs"') < 0, "aucune caractéristique dans le stock des sélections");
   // Pas recalculé avant 6 h.
   const at = sq.at;
-  N.step(st, w.leagues, w.world, start + 2 * 3600e3);
-  assert.strictEqual(st.squads["fr-A"].at, at, "groupe recalculé au plus toutes les 6 h");
+  N.step(st, w.leagues, w.world, start + 1.5 * 3600e3);
+  assert.strictEqual(st.squads["fr-A"].at, at, "groupe recalculé au plus toutes les heures");
   // Vue et calendrier.
   const v = N.teamView(st, "fr-A", null, 2, start + 3600e3, start);
   assert.ok(v.ok && v.team.countryName && v.squad.players.length && v.phase.kind === "continental");

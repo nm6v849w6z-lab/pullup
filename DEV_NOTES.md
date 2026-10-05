@@ -46,7 +46,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     leur propre clé de compétition, exclus des stats de club.
   - FAIT (2026-10-05) : page équipe de chaque sélection (Aperçu, Groupe,
     Calendrier, Sélectionneurs, Palmarès ; `/api/national/team`,
-    `teamView`), groupe de l'intérim recalculé ≤ 6 h dans `step`
+    `teamView`), groupe de l'intérim recalculé ≤ 1 h dans `step`
     (`store.squads`, 2 meilleurs par poste puis les meilleurs, 12 au plus),
     calendrier (`seasonCalendar` : dimanches des semaines 3, 7, 10 ; phase
     finale jours 76 → 82), recherche du haut (`HM_NATIONAL.searchHtml`).

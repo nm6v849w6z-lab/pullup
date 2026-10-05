@@ -74,7 +74,8 @@
     ".nt-av{display:inline-flex;vertical-align:middle;margin-right:8px}",
     ".nt-tag2{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:rgba(111,182,255,.15);color:#6FB6FF;white-space:nowrap}",
     ".nt-tag2.is-final{background:rgba(240,162,60,.16);color:var(--amber)}",
-    ".nt-squad td{white-space:nowrap}",
+    ".nt-eff td{white-space:nowrap}",
+    ".nt-eff .eff-player .nt-link{text-decoration:none;font-weight:700}",
     ".nt-teamlinks{display:inline-flex;gap:6px;margin-left:8px}",
     ".nt-teamlink{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;cursor:pointer}",
     ".nt-chips{display:flex;flex-wrap:wrap;gap:8px}",
@@ -310,11 +311,6 @@
   // Palmarès. Données : /api/national/team (server/nationalTeams.js:teamView).
   var POS_SHORT_NT = { "Meneur": "M", "Arrière": "A", "Ailier shooteur": "AS", "Ailier fort": "AF", "Pivot": "P" };
   function posBadge(pos) { var f = g("effPosBadgeHtml"); return f ? f(pos) : '<span class="nt-tag2">' + esc(POS_SHORT_NT[pos] || pos) + "</span>"; }
-  function avatar(p) {
-    var f = g("playerAvatarHtml");
-    if (!f) return "";
-    try { return '<span class="nt-av">' + f({ id: p.id, age: p.age, look: p.look || null }, null, 26) + "</span>"; } catch (e) { return ""; }
-  }
   function shortDate(ts) {
     try { return new Date(ts).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; }
   }
@@ -347,7 +343,7 @@
   function teamApercuHtml(tv, now) {
     var sq = tv.squad, players = sq ? sq.players : [];
     var avgAge = players.length ? players.reduce(function (a, p) { return a + (p.age || 0); }, 0) / players.length : null;
-    var inj = players.filter(function (p) { return p.injured; }).length;
+    var inj = players.filter(function (p) { return p.pub && typeof p.pub.injuryUntil === "number" && p.pub.injuryUntil > now; }).length;
     var nx = nextItem(tv, now);
     var h = '<div class="nt-stats">';
     h += '<div class="nt-card"><div class="nt-k">Groupe</div><div class="nt-big">' + (players.length ? esc(players.length) + " joueurs" : "–") + '</div><div class="nt-small">' + (avgAge != null ? "moyenne " + esc(avgAge.toFixed(1).replace(".", ",")) + " ans" : "Groupe en préparation") + (inj ? " · " + esc(inj) + (inj > 1 ? " blessés" : " blessé") : "") + "</div></div>";
@@ -362,14 +358,75 @@
     h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div><p class="nt-small" style="margin-top:14px">Aucun match joué pour l\'instant.</p></div></div>';
     return h;
   }
+  // Groupe : mêmes colonnes que l'effectif d'une équipe (fiche club), plus
+  // le club de chaque joueur ; vue Statistiques = stats de la saison en club.
+  // Joueurs reconstruits avec playerFromSave (fiche publique, comme un club
+  // d'un autre championnat : jamais de caractéristiques ni de note).
+  function squadPlayers(tv) {
+    if (tv.__players) return tv.__players;
+    var f = g("playerFromSave");
+    tv.__players = (tv.squad && tv.squad.players || []).map(function (x) {
+      var p = null;
+      try { p = f && x.pub ? f(x.pub) : null; } catch (e) { p = null; }
+      return p ? { p: p, x: x } : null;
+    }).filter(Boolean);
+    return tv.__players;
+  }
+  function nameCell(o) {
+    var p = o.p, cross = g("injuryCrossHtml") ? window.injuryCrossHtml(p, Date.now()) : "";
+    return '<td class="eff-td-name"><span class="eff-player">' + (g("playerAvatarHtml") ? window.playerAvatarHtml(p, null, 26) : "") + flag(p.nationality) + playerBtn(o.x) + (cross || "") + "</span></td>";
+  }
+  function seasonLine(p) {
+    var log = p.matchLog || [], sum = { min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0 };
+    log.forEach(function (m) { Object.keys(sum).forEach(function (k) { sum[k] += m[k] || 0; }); });
+    return { gp: log.length, sum: sum };
+  }
+  function fmt1(v) { return v.toFixed(1).replace(".", ","); }
+  function groupeGeneralHtml(list) {
+    var now = Date.now();
+    var h = '<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general tde-general nt-eff"><thead><tr>' +
+      '<th class="eff-th-name">Nom</th><th>Club</th><th>Poste</th><th class="eff-th-age">Âge</th><th class="eff-th-height">Taille</th><th class="eff-th-salary">Salaire/sem.</th>' +
+      '<th class="eff-th-condition">Forme</th><th title="Évaluation des 5 derniers matchs">Évaluation</th><th class="tde-th-stat" title="Matchs joués">MJ</th><th class="tde-th-stat" title="Points par match">Pts</th><th class="tde-th-stat" title="Rebonds par match">Reb</th><th class="tde-th-stat" title="Passes décisives par match">Pas</th></tr></thead><tbody class="eff-list">';
+    list.forEach(function (o) {
+      var p = o.p, line = seasonLine(p), gp = line.gp;
+      var stat = function (k) { return gp ? fmt1(line.sum[k] / gp) : "–"; };
+      var rec = o.x.club && typeof o.x.club.recovery === "number" ? o.x.club.recovery : 10;
+      h += '<tr class="eff-row' + (g("isCurrentlyInjured") && window.isCurrentlyInjured(p, now) ? " injured" : "") + '">' + nameCell(o) +
+        "<td>" + clubOfPlayer(o.x) + "</td><td>" + posBadge(p.position) + '</td><td class="eff-num">' + esc(p.age) + '</td><td class="eff-num">' + esc(p.height) + ' cm</td><td class="eff-num">' + (g("formatMoney") ? esc(window.formatMoney(p.salary)) : esc(p.salary)) + "</td>" +
+        '<td class="eff-td-condition">' + (g("effConditionHtml") ? window.effConditionHtml(p, now, rec) : "") + "</td>" +
+        "<td>" + (g("evaluationSquaresHtml") ? window.evaluationSquaresHtml(p) : "") + "</td>" +
+        '<td class="eff-num tde-stat">' + gp + '</td><td class="eff-num tde-stat tde-stat-main">' + stat("pts") + '</td><td class="eff-num tde-stat">' + stat("reb") + '</td><td class="eff-num tde-stat">' + stat("ast") + "</td></tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
+  function groupeStatsHtml(list) {
+    var played = list.filter(function (o) { return (o.p.matchLog || []).length; });
+    if (!played.length) return "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
+    played.sort(function (a, b) { var la = seasonLine(a.p), lb = seasonLine(b.p); return lb.sum.pts / lb.gp - la.sum.pts / la.gp; });
+    var cols = [["MJ", "Matchs joués"], ["Min", "Minutes par match"], ["Pts", "Points par match"], ["Reb", "Rebonds par match"], ["Pas", "Passes décisives par match"], ["Int", "Interceptions par match"], ["Ctr", "Contres par match"], ["Perte", "Balles perdues par match"], ["Faute", "Fautes par match"], ["2 pts", "Tirs à 2 points"], ["3 pts", "Tirs à 3 points"], ["LF", "Lancers francs"]];
+    var keys = ["min", "pts", "reb", "ast", "stl", "blk", "tov", "pf"];
+    var leaders = {};
+    ["min", "pts", "reb", "ast", "stl", "blk"].forEach(function (k) { leaders[k] = Math.max.apply(null, played.map(function (o) { var l = seasonLine(o.p); return l.sum[k] / l.gp; })); });
+    var pct = function (m, a) { return a > 0 ? Math.round(m / a * 100) + "%" : "–"; };
+    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table tde-stats nt-eff"><thead><tr><th class="eff-th-name">Nom</th><th>Club</th><th>Poste</th>' +
+      cols.map(function (c) { return '<th class="tde-th-stat" title="' + c[1] + '">' + c[0] + "</th>"; }).join("") + "</tr></thead><tbody>";
+    played.forEach(function (o) {
+      var l = seasonLine(o.p), s = l.sum;
+      h += '<tr class="eff-row">' + nameCell(o) + "<td>" + clubOfPlayer(o.x) + "</td><td>" + posBadge(o.p.position) + '</td><td class="eff-num tde-stat">' + l.gp + "</td>" +
+        keys.map(function (k) { var v = s[k] / l.gp, lead = leaders[k] !== undefined && v > 0 && v === leaders[k]; return '<td class="eff-num tde-stat' + (lead ? " tde-lead" : "") + (k === "pts" ? " tde-stat-main" : "") + '">' + fmt1(v) + "</td>"; }).join("") +
+        [[s.fgm2, s.fga2], [s.fgm3, s.fga3], [s.ftm, s.fta]].map(function (x) { return '<td class="eff-num tde-stat tde-shot"><b>' + pct(x[0], x[1]) + "</b><span>" + x[0] + "/" + x[1] + "</span></td>"; }).join("") + "</tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
   function teamGroupeHtml(tv) {
     var sq = tv.squad;
     if (!sq || !sq.players.length) return '<p class="training-empty">Groupe en préparation : il sera disponible sous peu.</p>';
-    var h = '<div class="nt-card nt-tablewrap"><table class="nt-table nt-squad"><thead><tr><th>Joueur</th><th>Poste</th><th>Âge</th><th>Club</th><th>Note</th><th>Forme</th><th>État</th></tr></thead><tbody>';
-    sq.players.forEach(function (p) {
-      h += "<tr><td>" + avatar(p) + playerBtn(p) + "</td><td>" + posBadge(p.position) + "</td><td>" + esc(p.age) + "</td><td>" + clubOfPlayer(p) + "</td><td><b>" + esc(Math.round(p.ovr)) + "</b></td><td>" + (p.form != null ? esc(p.form) : "–") + "</td><td>" + (p.injured ? '<span class="nt-tag2 is-final">Blessé</span>' : "–") + "</td></tr>";
-    });
-    h += "</tbody></table></div>";
+    var list = squadPlayers(tv);
+    var view = ui.groupView === "stats" ? "stats" : "general";
+    var h = '<div class="tde-effectif"><div class="eff-toolbar"><div class="eff-seg" role="tablist" aria-label="Vues du groupe">' +
+      [["general", "Général"], ["stats", "Statistiques"]].map(function (x) { return '<button type="button" role="tab" aria-selected="' + (view === x[0]) + '" class="eff-seg-btn' + (view === x[0] ? " active" : "") + '" data-nt-group-view="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
+    h += view === "stats" ? groupeStatsHtml(list) : groupeGeneralHtml(list);
+    h += "</div>";
     if (sq.source === "interim") h += '<p class="nt-small">Groupe de l\'intérim : les meilleurs joueurs éligibles (2 par poste, puis les meilleurs restants), mis à jour régulièrement.</p>';
     return h;
   }
@@ -527,6 +584,7 @@
     if (d.ntOpen) { openElection(d.ntOpen, d.ntRun === "1"); return; }
     if (d.ntTeam) { openTeam(d.ntTeam); return; }
     if (d.ntTab && ui.teamId) { ui.teamTab = d.ntTab; paint(); return; }
+    if (d.ntGroupView && ui.teamId) { ui.groupView = d.ntGroupView; paint(); return; }
     if (d.ntPlayer) { var q = d.ntPlayer.split("|"); openPlayer(q[0], Number(q[1]), q[2]); return; }
     if (d.ntBack !== undefined) { render(); return; }
     if (d.ntClub) { var p = d.ntClub.split("|"); openClub(p[0], Number(p[1])); return; }

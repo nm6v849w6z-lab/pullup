@@ -74,9 +74,9 @@ const DEFAULT_CONFIG = {
   titleMax: 90,
   projectMax: 2000,
   // Groupe : 12 joueurs (intérim : 2 meilleurs par poste puis les meilleurs
-  // restants), recalculé au plus toutes les 6 h.
+  // restants), recalculé au plus toutes les heures (forme, stats à jour).
   squadSize: 12,
-  squadRefreshMs: 6 * 3600 * 1000,
+  squadRefreshMs: 3600 * 1000,
   // Calendrier (retour utilisateur 2026-10-05) : 3 fenêtres internationales
   // le dimanche (semaines 3, 7 et 10 : jamais le dimanche de l'All-Star,
   // semaine 5) ; phase finale pendant la dernière semaine, du lundi (jour
@@ -391,7 +391,7 @@ function step(store, leagues, world, now) {
   }
   // Prochaine ouverture : début de la saison suivante (prochaine 1re semaine).
   if (seasonStart != null && now < seasonStart) due(seasonStart);
-  // Groupes (intérim) : recalculés au plus toutes les 6 h.
+  // Groupes (intérim) : recalculés au plus toutes les heures.
   if (refreshSquads(store, leagues, world, now)) changed = true;
   // Historique borné : élections closes de plus de 2 cycles.
   if (store.elections.length > 400) { store.elections.splice(0, store.elections.length - 400); changed = true; }
@@ -421,16 +421,16 @@ function eligiblePlayers(cfg, team, leagues, world, now) {
         const ovr = overallOf(p);
         if (ovr == null) continue;
         leagueIds.add(leagueId);
+        // `ovr` sert seulement au choix du groupe (jamais envoyé) ; `src` =
+        // le joueur lui-même, transformé en fiche publique pour le groupe.
         out.push({
-          id: p.id, name: p.name, position: p.position, age: p.age, ovr: Math.round(ovr * 10) / 10,
-          form: typeof p.form === "number" ? p.form : null,
-          injured: typeof p.injuryUntil === "number" && now < p.injuryUntil,
-          ...(p.look ? { look: p.look } : {}),
+          id: p.id, name: p.name, position: p.position, age: p.age, ovr,
           club: {
             leagueId, idx, name: t.name, country: (entry && entry.country) || lg.country || null,
             division: entry ? divisionLabelOf(entry) : null,
-            jerseyColor: t.jerseyColor || null, awayJerseyColor: t.awayJerseyColor || null,
+            recovery: typeof t.conditionRecoveryPerDay === "function" ? t.conditionRecoveryPerDay() : null,
           },
+          src: p,
         });
       }
     });
@@ -446,15 +446,31 @@ function pickSquad(players, size) {
   for (const p of players) { if (chosen.size >= size) break; chosen.add(p); }
   return [...chosen].slice(0, size).sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position) || b.ovr - a.ovr);
 }
+// Fiche publique d'un joueur (comme la fiche d'un club d'un autre
+// championnat, server/publicPlayers.js) : identité, âge, taille, salaire,
+// forme physique, blessure, stats et journal des matchs de la saison en
+// club. Jamais ses caractéristiques, son potentiel, sa motivation, sa note.
+const SQUAD_PUBLIC_FIELDS = ["id", "name", "nationality", "position", "height", "age", "number", "look", "salary",
+  "condition", "conditionUpdatedAt", "injuryType", "injuryUntil", "matchLog", "retiringAfterSeason", "homegrownClub", "clubSinceSeason"];
+function publicSquadPlayer(x) {
+  const PublicPlayers = require("./publicPlayers.js");
+  // Liste blanche : seulement ce que le groupe affiche (léger à stocker).
+  const src = JSON.parse(JSON.stringify(x.src));
+  const pub = {};
+  for (const k of SQUAD_PUBLIC_FIELDS) if (src[k] !== undefined) pub[k] = src[k];
+  for (const k of PublicPlayers.HIDDEN_PLAYER_FIELDS.concat(PublicPlayers.FOREIGN_EXTRA_PLAYER_FIELDS)) delete pub[k];
+  pub.attrsHidden = true;
+  return { id: x.id, name: x.name, position: x.position, age: x.age, club: x.club, pub };
+}
 function refreshSquads(store, leagues, world, now, force = false) {
   const cfg = configOf(store);
   store.squads = store.squads || {};
   let changed = false;
   for (const team of Object.values(store.teams)) {
     const cur = store.squads[team.id];
-    if (!force && cur && now - cur.at < cfg.squadRefreshMs) continue;
+    if (!force && cur && cur.v === 2 && now - cur.at < cfg.squadRefreshMs) continue;
     const el = eligiblePlayers(cfg, team, leagues, world, now);
-    store.squads[team.id] = { at: now, source: "interim", players: pickSquad(el.players, cfg.squadSize), eligible: el.players.length, leagues: el.leagues };
+    store.squads[team.id] = { v: 2, at: now, source: "interim", players: pickSquad(el.players, cfg.squadSize).map(publicSquadPlayer), eligible: el.players.length, leagues: el.leagues };
     changed = true;
   }
   return changed;
@@ -629,5 +645,5 @@ module.exports = {
   openElection, currentElection, closeElection, breakTie, step,
   runForElection, withdrawCandidacy, castVote, resign, adminDismiss, adminCancelElection,
   publicElection, publicMandate, overview,
-  POSITIONS, isEligible, eligiblePlayers, pickSquad, refreshSquads, seasonCalendar, teamView,
+  POSITIONS, isEligible, eligiblePlayers, pickSquad, publicSquadPlayer, refreshSquads, seasonCalendar, teamView,
 };
