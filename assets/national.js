@@ -382,12 +382,61 @@
     return { gp: log.length, sum: sum };
   }
   function fmt1(v) { return v.toFixed(1).replace(".", ","); }
+  // Tri des colonnes (comme l'effectif d'une équipe) : clic sur un en-tête,
+  // second clic = sens inverse. Partagé par les vues Général et Statistiques
+  // (une colonne absente de la vue affichée laisse l'ordre par défaut).
+  var POS_ORDER = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
+  var GENERAL_KEYS = ["name", "club", "position", "age", "height", "salary", "condition", "evaluation", "gp", "pts", "reb", "ast"];
+  var STATS_KEYS = ["name", "club", "position", "gp", "min", "pts", "reb", "ast", "stl", "blk", "tov", "pf", "fg2", "fg3", "ft"];
+  function recoveryOf(o) { return o.x.club && typeof o.x.club.recovery === "number" ? o.x.club.recovery : 10; }
+  function sortValue(o, key) {
+    var p = o.p, l = seasonLine(p), s = l.sum;
+    var pctOf = function (m, a) { return a > 0 ? m / a : -1; };
+    switch (key) {
+      case "name": return String(p.name || "");
+      case "club": return String(o.x.club && o.x.club.name || "");
+      case "position": return POS_ORDER.indexOf(p.position);
+      case "age": return p.age || 0;
+      case "height": return p.height || 0;
+      case "salary": return p.salary || 0;
+      case "condition": return g("currentCondition") ? window.currentCondition(p, Date.now(), recoveryOf(o)) : (p.condition || 0);
+      case "evaluation": {
+        var recent = (p.matchLog || []).slice(-5);
+        if (!recent.length || !g("statEvaluation")) return -999;
+        return recent.reduce(function (a, m) { return a + window.statEvaluation(m); }, 0) / recent.length;
+      }
+      case "gp": return l.gp;
+      case "fg2": return pctOf(s.fgm2, s.fga2);
+      case "fg3": return pctOf(s.fgm3, s.fga3);
+      case "ft": return pctOf(s.ftm, s.fta);
+      default: return l.gp ? (s[key] || 0) / l.gp : -1;
+    }
+  }
+  function sortList(list, keys, defaultCmp) {
+    var st = ui.groupSort;
+    if (!st || !st.key || keys.indexOf(st.key) < 0) return list.slice().sort(defaultCmp);
+    return list.slice().sort(function (a, b) {
+      var va = sortValue(a, st.key), vb = sortValue(b, st.key);
+      var c = typeof va === "string" ? va.localeCompare(vb, "fr") : va - vb;
+      return c * st.dir || defaultCmp(a, b);
+    });
+  }
+  function sortTh(key, label, opts) {
+    opts = opts || {};
+    var st = ui.groupSort || {};
+    var active = opts.forceActive || st.key === key;
+    var dir = opts.forceActive ? -1 : st.dir;
+    var cls = ["sortable-th", "eff-th", opts.cls || "", active ? "sorted" : "", active && dir === 1 ? "asc" : ""].filter(Boolean).join(" ");
+    var chev = active && g("effChevronSvg") ? window.effChevronSvg() : "";
+    return '<th class="' + cls + '" data-nt-sort="' + key + '" aria-sort="' + (active ? (dir === 1 ? "ascending" : "descending") : "none") + '"' + (opts.title ? ' title="' + esc(opts.title) + '"' : "") + ">" + esc(label) + chev + "</th>";
+  }
   function groupeGeneralHtml(list) {
     var now = Date.now();
     var h = '<div class="eff-table-wrap roster-table-frozen-col"><table class="roster-table eff-table eff-general tde-general nt-eff"><thead><tr>' +
-      '<th class="eff-th-name">Nom</th><th>Club</th><th>Poste</th><th class="eff-th-age">Âge</th><th class="eff-th-height">Taille</th><th class="eff-th-salary">Salaire/sem.</th>' +
-      '<th class="eff-th-condition">Forme</th><th title="Évaluation des 5 derniers matchs">Évaluation</th><th class="tde-th-stat" title="Matchs joués">MJ</th><th class="tde-th-stat" title="Points par match">Pts</th><th class="tde-th-stat" title="Rebonds par match">Reb</th><th class="tde-th-stat" title="Passes décisives par match">Pas</th></tr></thead><tbody class="eff-list">';
-    list.forEach(function (o) {
+      sortTh("name", "Nom", { cls: "eff-th-name" }) + sortTh("club", "Club") + sortTh("position", "Poste") + sortTh("age", "Âge", { cls: "eff-th-age" }) + sortTh("height", "Taille", { cls: "eff-th-height" }) + sortTh("salary", "Salaire/sem.", { cls: "eff-th-salary" }) +
+      sortTh("condition", "Forme", { cls: "eff-th-condition" }) + sortTh("evaluation", "Évaluation", { title: "Évaluation des 5 derniers matchs" }) + sortTh("gp", "MJ", { cls: "tde-th-stat", title: "Matchs joués" }) + sortTh("pts", "Pts", { cls: "tde-th-stat", title: "Points par match" }) + sortTh("reb", "Reb", { cls: "tde-th-stat", title: "Rebonds par match" }) + sortTh("ast", "Pas", { cls: "tde-th-stat", title: "Passes décisives par match" }) +
+      '</tr></thead><tbody class="eff-list">';
+    sortList(list, GENERAL_KEYS, function (a, b) { return POS_ORDER.indexOf(a.p.position) - POS_ORDER.indexOf(b.p.position) || String(a.p.name).localeCompare(String(b.p.name), "fr"); }).forEach(function (o) {
       var p = o.p, line = seasonLine(p), gp = line.gp;
       var stat = function (k) { return gp ? fmt1(line.sum[k] / gp) : "–"; };
       var rec = o.x.club && typeof o.x.club.recovery === "number" ? o.x.club.recovery : 10;
@@ -402,14 +451,15 @@
   function groupeStatsHtml(list) {
     var played = list.filter(function (o) { return (o.p.matchLog || []).length; });
     if (!played.length) return "<p class='training-empty'>Aucun match joué cette saison pour l'instant.</p>";
-    played.sort(function (a, b) { var la = seasonLine(a.p), lb = seasonLine(b.p); return lb.sum.pts / lb.gp - la.sum.pts / la.gp; });
-    var cols = [["MJ", "Matchs joués"], ["Min", "Minutes par match"], ["Pts", "Points par match"], ["Reb", "Rebonds par match"], ["Pas", "Passes décisives par match"], ["Int", "Interceptions par match"], ["Ctr", "Contres par match"], ["Perte", "Balles perdues par match"], ["Faute", "Fautes par match"], ["2 pts", "Tirs à 2 points"], ["3 pts", "Tirs à 3 points"], ["LF", "Lancers francs"]];
+    var noSort = !ui.groupSort || !ui.groupSort.key || STATS_KEYS.indexOf(ui.groupSort.key) < 0;
+    played = sortList(played, STATS_KEYS, function (a, b) { return sortValue(b, "pts") - sortValue(a, "pts"); });
+    var cols = [["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["pts", "Pts", "Points par match"], ["reb", "Reb", "Rebonds par match"], ["ast", "Pas", "Passes décisives par match"], ["stl", "Int", "Interceptions par match"], ["blk", "Ctr", "Contres par match"], ["tov", "Perte", "Balles perdues par match"], ["pf", "Faute", "Fautes par match"], ["fg2", "2 pts", "Tirs à 2 points"], ["fg3", "3 pts", "Tirs à 3 points"], ["ft", "LF", "Lancers francs"]];
     var keys = ["min", "pts", "reb", "ast", "stl", "blk", "tov", "pf"];
     var leaders = {};
     ["min", "pts", "reb", "ast", "stl", "blk"].forEach(function (k) { leaders[k] = Math.max.apply(null, played.map(function (o) { var l = seasonLine(o.p); return l.sum[k] / l.gp; })); });
     var pct = function (m, a) { return a > 0 ? Math.round(m / a * 100) + "%" : "–"; };
-    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table tde-stats nt-eff"><thead><tr><th class="eff-th-name">Nom</th><th>Club</th><th>Poste</th>' +
-      cols.map(function (c) { return '<th class="tde-th-stat" title="' + c[1] + '">' + c[0] + "</th>"; }).join("") + "</tr></thead><tbody>";
+    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table tde-stats nt-eff"><thead><tr>' + sortTh("name", "Nom", { cls: "eff-th-name" }) + sortTh("club", "Club") + sortTh("position", "Poste") +
+      cols.map(function (c) { return sortTh(c[0], c[1], { cls: "tde-th-stat", title: c[2], forceActive: noSort && c[0] === "pts" }); }).join("") + "</tr></thead><tbody>";
     played.forEach(function (o) {
       var l = seasonLine(o.p), s = l.sum;
       h += '<tr class="eff-row">' + nameCell(o) + "<td>" + clubOfPlayer(o.x) + "</td><td>" + posBadge(o.p.position) + '</td><td class="eff-num tde-stat">' + l.gp + "</td>" +
@@ -578,6 +628,13 @@
   }
 
   function onClick(e) {
+    var th = e.target.closest ? e.target.closest("th[data-nt-sort]") : null;
+    if (th && ui.teamId) {
+      var k = th.dataset.ntSort, st = ui.groupSort || {};
+      ui.groupSort = st.key === k ? { key: k, dir: -st.dir } : { key: k, dir: (k === "name" || k === "club" || k === "position") ? 1 : -1 };
+      paint();
+      return;
+    }
     var b = e.target.closest ? e.target.closest("button") : null;
     if (!b) return;
     var d = b.dataset;

@@ -5,6 +5,7 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const GENERAL_SORTABLE = b => [...b.querySelectorAll("table.eff-general thead th")].every(th => th.hasAttribute("data-nt-sort"));
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 const DAY = 24 * 3600 * 1000;
 
@@ -75,6 +76,21 @@ const DAY = 24 * 3600 * 1000;
   assert(JSON.stringify(heads) === JSON.stringify(["Nom", "Club", "Poste", "Âge", "Taille", "Salaire/sem.", "Forme", "Évaluation", "MJ", "Pts", "Reb", "Pas"]), "groupe : mêmes colonnes que l'effectif d'une équipe (+ club) : " + heads.join(","));
   assert(box().querySelectorAll("table.eff-general .eval-squares").length === rows.length && box().querySelectorAll("table.eff-general .eff-cond").length === rows.length, "forme physique et évaluation des 5 derniers matchs");
   assert(!/Note/.test(box().querySelector("table.eff-general thead").textContent), "pas de note (caractéristiques cachées, comme un club étranger)");
+  // Tri des colonnes (comme l'effectif d'une équipe).
+  const col = (sel, i) => [...box().querySelectorAll("table.eff-general tbody tr")].map(r => r.children[i].textContent.trim());
+  box().querySelector('table.eff-general th[data-nt-sort="age"]').click();
+  let ages = col(null, 3).map(Number);
+  assert(ages.every((v, i) => !i || ages[i - 1] >= v) && box().querySelector('th[data-nt-sort="age"]').classList.contains("sorted"), "tri par âge (décroissant), en-tête marqué");
+  box().querySelector('table.eff-general th[data-nt-sort="age"]').click();
+  ages = col(null, 3).map(Number);
+  assert(ages.every((v, i) => !i || ages[i - 1] <= v), "second clic : ordre inverse");
+  box().querySelector('table.eff-general th[data-nt-sort="name"]').click();
+  const names = [...box().querySelectorAll("table.eff-general tbody tr [data-nt-player]")].map(b => b.textContent);
+  assert(names.join("|") === names.slice().sort((a, b) => a.localeCompare(b, "fr")).join("|"), "tri par nom (A → Z)");
+  box().querySelector('table.eff-general th[data-nt-sort="salary"]').click();
+  const sal = col(null, 5).map(t => Number(t.replace(/[^0-9]/g, "")));
+  assert(sal.every((v, i) => !i || sal[i - 1] >= v), "tri par salaire");
+  assert(GENERAL_SORTABLE(box()), "toutes les colonnes triables");
   box().querySelector('[data-nt-group-view="stats"]').click();
   assert(box().querySelector("table.tde-stats") || /Aucun match joué/.test(box().textContent), "vue Statistiques (stats de la saison en club)");
   box().querySelector('[data-nt-group-view="general"]').click();
