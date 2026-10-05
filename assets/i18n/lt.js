@@ -4242,6 +4242,7 @@ window.HM_I18N_LT = {
   "tribune": "tribūna",
   "Tribune Centrale": "Centrinė tribūna",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Arena: vietos pakeistos (nauji VIP ložių / Courtside limitai), skirtumas grąžintas",
   "Trier les annonces": "Rikiuoti skelbimus",
   "Trier par âge": "Rikiuoti pagal amžių",
   "Trier par fin d'enchère": "Rikiuoti pagal aukciono pabaigą",

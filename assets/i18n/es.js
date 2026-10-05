@@ -4346,6 +4346,7 @@ window.HM_I18N_ES = {
   "tribune": "tribuna",
   "Tribune Centrale": "Tribuna Central",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Pabellón: asientos convertidos (nuevos límites Palcos VIP / Courtside), diferencia reembolsada",
   "Trier les annonces": "Ordenar anuncios",
   "Trier par âge": "Ordenar por edad",
   "Trier par fin d'enchère": "Ordenar por fin de puja",

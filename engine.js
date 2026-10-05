@@ -2393,7 +2393,10 @@ function managerDisplayName(team) {
 // places au bord du parquet (toujours plus que de Loges VIP), plus chères à construire que la Tribune Centrale
 // mais moins que les Loges VIP. Les clés internes (gradins, tribune, loge)
 // restent celles des sauvegardes existantes, seuls les noms affichés changent.
-const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 3000, loge: 2500 };
+// Plafonds décroissants avec l'exclusivité (retour utilisateur 2026-10-05 :
+// « tu peux réduire les places VIP à 500 ou 1000 ») : 1 000 Loges VIP,
+// 2 000 Courtside.
+const SEAT_CATEGORY_MAX_SEATS = { gradins: 27500, tribune: 15000, courtside: 2000, loge: 1000 };
 const SEAT_BUILD_COST_PER_SEAT = { gradins: 100, tribune: 500, courtside: 2000, loge: 5000 }; // retour utilisateur 2026-09-27 : "regarde les coûts de construction sur buzzerbeater [...] on pourrait mettre 100, 500, 5000 pour vip"
 const ARENA_MAX_CAPACITY = Object.values(SEAT_CATEGORY_MAX_SEATS).reduce((s, n) => s + n, 0);
 // Palier (et donc nom par défaut) correspondant à une capacité totale : le
@@ -2468,6 +2471,24 @@ const SEAT_CATEGORIES = [
 
 function seatCategoryInfo(key) {
   return SEAT_CATEGORIES.find(c => c.key === key) || SEAT_CATEGORIES[0];
+}
+
+// Répartition d'une capacité totale entre les catégories (salle jamais
+// agrandie place par place) : la part de chaque catégorie, plafonnée ; ce
+// qui dépasse le plafond d'une catégorie exclusive revient aux tribunes
+// (Supérieure, puis Centrale). Une grande salle garde ainsi 1 000 Loges VIP
+// et 2 000 places Courtside au plus, jamais plus de loges que de Courtside.
+function seatsForCapacity(capacity) {
+  const out = {};
+  SEAT_CATEGORIES.forEach(c => { out[c.key] = Math.min(Math.round(capacity * c.shareOfCapacity), SEAT_CATEGORY_MAX_SEATS[c.key]); });
+  let rest = capacity - SEAT_CATEGORIES.reduce((s, c) => s + out[c.key], 0);
+  for (const c of SEAT_CATEGORIES) {
+    const add = rest < 0 ? rest : Math.min(rest, SEAT_CATEGORY_MAX_SEATS[c.key] - out[c.key]);
+    out[c.key] += add;
+    rest -= add;
+    if (!rest) break;
+  }
+  return out;
 }
 
 // Confort tarifaire du prix du billet POUR UNE CATÉGORIE DE PLACE donnée :
@@ -8091,10 +8112,7 @@ class Team {
   // historique du palier de la salle (SEAT_CATEGORIES.shareOfCapacity).
   currentSeats() {
     if (this.seats) return { ...this.seats };
-    const cap = arenaInfo(this.arenaLevel).capacity;
-    const out = {};
-    SEAT_CATEGORIES.forEach(c => { out[c.key] = Math.round(cap * c.shareOfCapacity); });
-    return out;
+    return seatsForCapacity(arenaInfo(this.arenaLevel).capacity);
   }
 
   // Ajoute des places (retour utilisateur 2026-09-27, voir
@@ -8173,7 +8191,7 @@ class Team {
   categoryCapacity(categoryKey) {
     const key = seatCategoryInfo(categoryKey).key;
     if (this.seats && typeof this.seats[key] === "number") return this.seats[key];
-    return Math.round(arenaInfo(this.arenaLevel).capacity * seatCategoryInfo(key).shareOfCapacity);
+    return seatsForCapacity(arenaInfo(this.arenaLevel).capacity)[key];
   }
 
   setTicketPrice(categoryKey, price) {
@@ -17666,20 +17684,35 @@ function teamFromSave(data) {
   // première version (2 % du palier, souvent moins que les loges) est
   // reprise de la même façon.
   const savedSeats = data.seats && typeof data.seats === "object" ? data.seats : null;
+  let seatRefund = 0;
   const validSeat = v => Number.isInteger(v) && v >= 0;
   if (savedSeats && Object.keys(savedSeats).every(k => validSeat(savedSeats[k])) && SEAT_CATEGORIES.some(c => validSeat(savedSeats[c.key]))) {
     const cap = arenaInfo(team.arenaLevel).capacity;
-    team.seats = {};
-    SEAT_CATEGORIES.forEach(c => {
-      const n = validSeat(savedSeats[c.key]) ? savedSeats[c.key] : Math.round(cap * c.shareOfCapacity);
-      team.seats[c.key] = Math.min(n, SEAT_CATEGORY_MAX_SEATS[c.key]);
-    });
-    const loge = team.seats.loge || 0;
-    const firstMigration = savedSeats.courtside === Math.round(cap * 0.02) && savedSeats.courtside <= loge;
-    if (!validSeat(savedSeats.courtside) || firstMigration) {
-      const n = Math.max(Math.round(cap * seatCategoryInfo("courtside").shareOfCapacity), Math.ceil((loge + 1) / 100) * 100);
-      team.seats.courtside = Math.min(n, SEAT_CATEGORY_MAX_SEATS.courtside);
+    const base = seatsForCapacity(cap);
+    const seats = {};
+    SEAT_CATEGORIES.forEach(c => { seats[c.key] = validSeat(savedSeats[c.key]) ? savedSeats[c.key] : base[c.key]; });
+    const firstMigration = savedSeats.courtside === Math.round(cap * 0.02) && savedSeats.courtside <= seats.loge;
+    const migrateCourtside = !validSeat(savedSeats.courtside) || firstMigration;
+    if (migrateCourtside) seats.courtside = 0;
+    // Plafonds abaissés (2026-10-05 : Loges VIP 2 500 -> 1 000, Courtside
+    // 3 000 -> 2 000) : rien n'est perdu, les places au-delà d'un plafond
+    // deviennent des places de la catégorie juste en dessous (même capacité
+    // totale) et la différence de prix de construction est remboursée.
+    for (let i = SEAT_CATEGORIES.length - 1; i > 0; i--) {
+      const k = SEAT_CATEGORIES[i].key, below = SEAT_CATEGORIES[i - 1].key;
+      const extra = seats[k] - SEAT_CATEGORY_MAX_SEATS[k];
+      if (extra <= 0) continue;
+      seats[k] -= extra;
+      seats[below] += extra;
+      seatRefund += extra * (SEAT_BUILD_COST_PER_SEAT[k] - SEAT_BUILD_COST_PER_SEAT[below]);
     }
+    // Courtside ajouté gratuitement (en plus des loges converties) : part du
+    // palier, toujours au-dessus des Loges VIP (centaine supérieure).
+    if (migrateCourtside) {
+      seats.courtside = Math.min(Math.max(seats.courtside, base.courtside, Math.ceil((seats.loge + 1) / 100) * 100), SEAT_CATEGORY_MAX_SEATS.courtside);
+    }
+    team.seats = {};
+    SEAT_CATEGORIES.forEach(c => { team.seats[c.key] = Math.min(seats[c.key], SEAT_CATEGORY_MAX_SEATS[c.key]); });
   }
   // Sauvegarde à jour (prix par catégorie de place) : on prend ce qui est
   // là et on comble les catégories manquantes avec leur défaut. Ancienne
@@ -17710,6 +17743,7 @@ function teamFromSave(data) {
   }
   team.transactions = Array.isArray(data.transactions) ? data.transactions : [];
   team.financeLedger = data.financeLedger && typeof data.financeLedger === "object" ? data.financeLedger : {};
+  if (seatRefund > 0) team.recordTransaction("Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée", seatRefund);
   if (typeof data.fanMorale === "number") team.fanMorale = clamp(data.fanMorale, 0, 100);
   team.prestige = typeof data.prestige === "number" ? clamp(data.prestige, 0, 100) : null;
   team.moraleHistory = Array.isArray(data.moraleHistory) ? data.moraleHistory : [];
@@ -20201,7 +20235,7 @@ return {
   RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,
-  SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaLevelForCapacity, seatBuildCost,
+  SEAT_CATEGORY_MAX_SEATS, SEAT_BUILD_COST_PER_SEAT, ARENA_MAX_CAPACITY, arenaLevelForCapacity, seatBuildCost, seatsForCapacity,
   SPONSOR_SLOTS, SPONSOR_TIERS, SPONSOR_PROFILES, SPONSOR_PROFILE_KEYS, SPONSOR_NAMES, SPONSOR_NAMES_EN, SPONSOR_CATALOG, SPONSOR_CATALOG_FR, SPONSOR_CATALOG_EN, SPONSOR_ICONS, SPONSOR_LEGACY_NAMES, sponsorCatalogEntry, migrateSponsorName, migrateSponsorList, sponsorCatalogLangFor, sponsorNamesFor, SPONSOR_OFFER_TTL_MS, SPONSOR_OFFER_INTERVAL_MS, SPONSOR_REPUTATION_DEFAULT, SPONSOR_REPUTATION_MISS, SPONSOR_TERMINATION_WEEKS,
   sponsorTiersAvailable, sponsorActiveContractForSlot, sponsorNameForSlot, generateSponsorOffer, refreshSponsorOffers, acceptSponsorOffer, declineSponsorOffer, sponsorTerminationFee, terminateSponsorContract, collectSponsorIncome, applySponsorWinPrimes, settleSponsorsAtSeasonEnd,
   CLUB_RECORD_LABELS, cupResultForTeam, playoffResultForTeam, seasonPlayerTotalsForTeam, seasonSummaryForTeam, seasonRecordCandidatesForTeam, mergeClubRecords, liveClubRecords, liveAllTimePlayers, archiveSeasonForTeam, HALL_OF_FAME_MAX, worldPlayerRankings, worldRankForPlayer,

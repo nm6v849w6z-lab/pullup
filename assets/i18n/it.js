@@ -4278,6 +4278,7 @@ window.HM_I18N_IT = {
   "tribune": "tribuna",
   "Tribune Centrale": "Tribuna Centrale",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Palazzetto: posti convertiti (nuovi tetti Palchi VIP / Courtside), differenza rimborsata",
   "Trier les annonces": "Ordina gli annunci",
   "Trier par âge": "Ordina per età",
   "Trier par fin d'enchère": "Ordina per fine asta",

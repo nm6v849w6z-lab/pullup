@@ -4242,6 +4242,7 @@ window.HM_I18N_PT = {
   "tribune": "tribuna",
   "Tribune Centrale": "Tribuna Central",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Ginásio: lugares convertidos (novos limites Camarotes VIP / Courtside), diferença reembolsada",
   "Trier les annonces": "Ordenar anúncios",
   "Trier par âge": "Ordenar por idade",
   "Trier par fin d'enchère": "Ordenar por fim do leilão",

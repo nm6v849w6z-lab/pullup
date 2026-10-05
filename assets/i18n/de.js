@@ -4242,6 +4242,7 @@ window.HM_I18N_DE = {
   "tribune": "Tribüne",
   "Tribune Centrale": "Haupttribüne",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Halle: Plätze umgewandelt (neue Obergrenzen VIP-Logen / Courtside), Differenz erstattet",
   "Trier les annonces": "Angebote sortieren",
   "Trier par âge": "Nach Alter sortieren",
   "Trier par fin d'enchère": "Nach Auktionsende sortieren",

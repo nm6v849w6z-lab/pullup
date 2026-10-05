@@ -4242,6 +4242,7 @@ window.HM_I18N_EL = {
   "tribune": "κερκίδα",
   "Tribune Centrale": "Κεντρική Κερκίδα",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Γήπεδο: θέσεις μετατράπηκαν (νέα όρια Θεωρεία VIP / Courtside), η διαφορά επιστράφηκε",
   "Trier les annonces": "Ταξινόμηση αγγελιών",
   "Trier par âge": "Ταξινόμηση κατά ηλικία",
   "Trier par fin d'enchère": "Ταξινόμηση κατά λήξη δημοπρασίας",

@@ -4242,6 +4242,7 @@ window.HM_I18N_PL = {
   "tribune": "trybuna",
   "Tribune Centrale": "Trybuna Centralna",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Hala: miejsca przekształcone (nowe limity Loże VIP / Courtside), różnica zwrócona",
   "Trier les annonces": "Sortuj ogłoszenia",
   "Trier par âge": "Sortuj według wieku",
   "Trier par fin d'enchère": "Sortuj według końca licytacji",

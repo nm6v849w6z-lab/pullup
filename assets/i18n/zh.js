@@ -4242,6 +4242,7 @@ window.HM_I18N_ZH = {
   "tribune": "看台",
   "Tribune Centrale": "中央看台",
   "Courtside": "场边座位",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "球馆：座位已转换（VIP 包厢 / 场边座位新上限），差价已退还",
   "Trier les annonces": "排序挂牌",
   "Trier par âge": "按年龄排序",
   "Trier par fin d'enchère": "按竞拍结束时间排序",

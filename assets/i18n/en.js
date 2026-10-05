@@ -4240,6 +4240,7 @@ window.HM_I18N_EN = {
   "tribune": "stand",
   "Tribune Centrale": "Center Stand",
   "Courtside": "Courtside",
+  "Salle : places converties (nouveaux plafonds Loges VIP / Courtside), différence remboursée": "Arena: seats converted (new VIP Boxes / Courtside limits), difference refunded",
   "Trier les annonces": "Sort listings",
   "Trier par âge": "Sort by age",
   "Trier par fin d'enchère": "Sort by bid end",
