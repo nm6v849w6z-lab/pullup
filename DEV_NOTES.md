@@ -65,10 +65,27 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     = têtes de série. Onglet Qualifications, feuille de match. Config
     `matchesLive`. Reste à voir : amical d'un club le dimanche d'une fenêtre
     pour un convoqué (pas bloqué).
-  - Phases restantes : D phases finales (continentale, Coupe du monde /
-    consolation, récupération améliorée, règle Supercoupe) ; E mode
-    Sélectionneur (barre latérale, en-tête, notifications à part, bascule)
-    et bilan de mandat ; traductions des écrans B/C. UI dans des fichiers assets/ séparés (limite 4 Mo
+  - FAIT (2026-10-05) phase D (server/nationalMatches.js, store.finals) :
+    tournois de la dernière semaine (lundi → dimanche 20h ; poules, quarts
+    vendredi à 8, demies samedi, finale + 3e place dimanche ; format selon
+    le nombre d'équipes), consolation, récupération améliorée (moitié de la
+    fatigue d'un match rendue, phases finales seulement), classement final,
+    palmarès (store.honours), Coupe du monde = 5 Europe + 2 Amérique + 1
+    Asie d'après le classement continental de la saison précédente,
+    consolation des 9 autres. Règle Supercoupe : joueurs encore en course
+    avec leur sélection écartés le temps du match (unavailableAt →
+    NationalCup.stepSuperCup opts.unavailable), club prévenu.
+  - FAIT (2026-10-05) phase E : mode Sélectionneur (assets/national-coach.js,
+    bouton dans la barre du haut avec un mandat, /api/national/me ; menu
+    latéral propre, barre du haut de la sélection, rubriques du club
+    masquées, tableau de bord, notifications du mandat m.feed jamais dans le
+    fil du club : résultats, blessures/performances des joueurs suivis,
+    convocations à finaliser ; statistiques en sélection ; bilan de mandat
+    m.report à la fin, caps store.caps ; expérience des candidats aux
+    élections). Exemptés d'une fenêtre : pas de rassemblement.
+  - Reste : traductions des écrans B à E ; amical d'un club le dimanche
+    d'une fenêtre pour un convoqué (pas bloqué) ; pas de classement
+    mondial FIBA (le bilan le signale). UI dans des fichiers assets/ séparés (limite 4 Mo
     de la page).
 
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-02), committé localement — Ligues

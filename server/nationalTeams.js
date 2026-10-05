@@ -214,6 +214,8 @@ function endMandate(store, mandate, reason, now, leagues) {
   if (!mandate || mandate.endedAt) return false;
   mandate.endedAt = now;
   mandate.endReason = reason;
+  // Phase E : bilan complet du mandat, gardé dans l'historique.
+  try { mandate.report = require("./nationalCoach.js").mandateReport(store, mandate); } catch (e) { /* bilan indisponible */ }
   const t = store.teams[mandate.teamId];
   if (t && t.mandateId === mandate.id) t.mandateId = null;
   notify(leagues, mandate.ref, {
@@ -530,7 +532,10 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     coaches: store.mandates.filter(m => m.teamId === team.id).slice(-20).reverse().map(publicMandate),
     // Phase C : qualifications (groupe, classement, matchs) et résultats.
     qualif: require("./nationalMatches.js").qualifView(store, team.id, season),
-    results: require("./nationalMatches.js").resultsOf(store, team.id).slice(0, 20), honours: [],
+    results: require("./nationalMatches.js").resultsOf(store, team.id).slice(0, 20),
+    // Phase D : phases finales et palmarès.
+    finals: require("./nationalMatches.js").finalsView(store, team.id, season),
+    honours: require("./nationalMatches.js").honoursOf(store, team.id),
   };
 }
 
@@ -609,6 +614,13 @@ function publicCandidate(c, full) {
     ref: c.ref, title: c.title, at: c.at, withdrawn: !!c.withdrawn, ...(full ? { project: c.project } : {}),
   };
 }
+function experienceOf(store, key) {
+  return store.mandates.filter(m => m.key === key && m.endedAt).slice(-5).map(m => ({
+    teamId: m.teamId, label: teamLabel(m.teamId), fromSeason: m.fromSeason, toSeason: m.toSeason,
+    played: m.report ? m.report.played : null, wins: m.report ? m.report.wins : null, losses: m.report ? m.report.losses : null,
+    best: m.report ? m.report.bestFinish : null,
+  }));
+}
 function publicElection(store, el, me, full) {
   const team = store.teams[el.teamId];
   const closed = !(el.status === "candidacy" || el.status === "vote");
@@ -616,7 +628,8 @@ function publicElection(store, el, me, full) {
   return {
     id: el.id, teamId: el.teamId, country: team.country, cat: team.cat, status: el.status,
     opensAt: el.opensAt, voteAt: el.voteAt, closesAt: el.closesAt, mandate: el.mandate,
-    candidates: el.candidates.filter(c => full || !c.withdrawn).map(c => publicCandidate(c, full)),
+    // Expérience (phase E) : mandats passés de chaque candidat, avec bilan.
+    candidates: el.candidates.filter(c => full || !c.withdrawn).map(c => ({ ...publicCandidate(c, full), experience: experienceOf(store, c.key) })),
     // Décompte : seulement une fois le scrutin clos.
     voterCount: Object.keys(el.votes || {}).length,
     result: closed ? el.result : null,
@@ -627,7 +640,7 @@ function publicElection(store, el, me, full) {
   };
 }
 function publicMandate(m) {
-  return m ? { id: m.id, teamId: m.teamId, pseudo: m.pseudo, clubName: m.clubName, ref: m.ref, fromSeason: m.fromSeason, toSeason: m.toSeason, startedAt: m.startedAt, endedAt: m.endedAt, endReason: m.endReason, votes: m.votes } : null;
+  return m ? { id: m.id, teamId: m.teamId, pseudo: m.pseudo, clubName: m.clubName, ref: m.ref, fromSeason: m.fromSeason, toSeason: m.toSeason, startedAt: m.startedAt, endedAt: m.endedAt, endReason: m.endReason, votes: m.votes, report: m.report || null } : null;
 }
 function overview(store, me, season, now) {
   ensureTeams(store);
@@ -658,7 +671,7 @@ function overview(store, me, season, now) {
 module.exports = {
   STORE_NAME, CATEGORIES, DEFAULT_CONFIG, emptyStore, isValidStore, configOf, loadStore, saveStore,
   teamIdOf, teamLabel, countryName, intlSeasonOf, cyclePos, isElectionSeason, mandateEndSeason, seasonStartOf, ensureTeams,
-  managerOf, managerAt, notify, evalRule, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
+  managerOf, managerAt, notify, experienceOf, evalRule, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
   openElection, currentElection, closeElection, breakTie, step,
   runForElection, withdrawCandidacy, castVote, resign, adminDismiss, adminCancelElection,
   publicElection, publicMandate, overview,

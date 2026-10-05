@@ -115,15 +115,28 @@ function gatheringsOf(store, team, season, calendarStartAt) {
   const cfg = NT().configOf(store);
   const pos = NT().cyclePos(cfg, season, team.cat);
   const phase = pos >= 0 ? cfg.cycle[pos] : null;
-  return NT().seasonCalendar(cfg, calendarStartAt, season, team.cat).map(c => {
+  const gs = NT().seasonCalendar(cfg, calendarStartAt, season, team.cat).map(c => {
     if (c.kind === "window") {
       return { gid: `s${season}w${c.n}`, kind: "window", n: c.n, label: `Fenêtre internationale ${c.n}`, comp: phase ? phase.kind : null, season, startAt: c.at, endAt: c.at, freezeAt: c.at - LIMITS.freezeDays * DAY };
     }
     return { gid: `s${season}f`, kind: "final", label: c.comp === "continental" ? "Phase finale continentale" : "Coupe du monde / tournoi de consolation", comp: c.comp, season, startAt: c.from, endAt: c.to, freezeAt: c.from - LIMITS.freezeDays * DAY };
   });
+  // Exemptée (groupe de 3, pas de match ce dimanche-là) ou absente des
+  // phases finales : pas de rassemblement, jamais de convocation.
+  const NM = require("./nationalMatches.js");
+  gs.forEach(g => {
+    if (g.kind === "window") {
+      const comp = NM.compOf(store, season, team.cat);
+      g.bye = !!(comp && !comp.matches.some(m => m.gid === g.gid && (m.home === team.id || m.away === team.id)));
+    } else {
+      const fin = NM.finalsOf(store, season, team.cat);
+      g.bye = !!(fin && !fin.tournaments.some(t => t.teams.includes(team.id)));
+    }
+  });
+  return gs;
 }
 // Rassemblement en cours ou à venir (le premier dont la fin n'est pas passée).
-function currentGathering(gs, now) { return gs.find(g => now < g.endAt + 6 * 3600 * 1000) || null; }
+function currentGathering(gs, now) { return gs.find(g => !g.bye && now < g.endAt + 6 * 3600 * 1000) || null; }
 function convocationOf(store, teamId, gid) { return ((store.convocations || {})[teamId] || {})[gid] || null; }
 function ensureConvocation(store, teamId, g, mandateId) {
   store.convocations = store.convocations || {};
@@ -193,14 +206,26 @@ function step(store, leagues, world, now, season, calendarStartAt) {
     if (m && (!store.poolAt[team.id] || now - store.poolAt[team.id] >= cfg.squadRefreshMs)) {
       pools[team.id] = buildPool(store, team, leagues, world, now);
       store.poolAt[team.id] = now;
+      watchAlerts(store, m, team, pools[team.id], season, calendarStartAt, now);
       changed = true;
+    }
+    // Rappel (mode Sélectionneur) : la liste se fige dans moins de 24 h.
+    if (m && cfg.matchesLive && typeof calendarStartAt === "number") {
+      for (const g of gatheringsOf(store, team, season, calendarStartAt)) {
+        if (now < g.freezeAt - DAY || now >= g.freezeAt) continue;
+        const conv = convocationOf(store, team.id, g.gid);
+        const n = conv ? conv.players.length : 0;
+        if (coachFeed(m, { key: `freeze_${g.gid}`, kind: "convocation", at: now, title: "Les convocations doivent être finalisées", text: `${g.label} : liste figée dans moins de 24 h (${n} / ${LIMITS.convocation} joueurs). Les places libres seront complétées automatiquement.` })) changed = true;
+      }
     }
     // 3) Gel des convocations 3 jours avant le premier match (seulement une
     // fois les matchs internationaux en service, cfg.matchesLive).
     if (typeof calendarStartAt !== "number" || !cfg.matchesLive) continue;
     for (const g of gatheringsOf(store, team, season, calendarStartAt)) {
       if (now < g.freezeAt) { due.push(g.freezeAt); continue; }
-      if (now >= g.startAt + 6 * 3600 * 1000) continue;
+      if (now >= g.startAt + 6 * 3600 * 1000 || g.bye) continue;
+      // Phase finale : seulement les sélections engagées dans un tournoi.
+      if (g.kind === "final" && !require("./nationalMatches.js").tournamentOf(store, season, team.cat, team.id)) continue;
       const conv = convocationOf(store, team.id, g.gid);
       if (conv && conv.frozenAt) continue;
       freezeConvocation(store, team, g, m, leagues, world, now);
@@ -244,6 +269,114 @@ function freezeConvocation(store, team, g, m, leagues, world, now) {
     if (x) notifyConvoked(store, team.id, g, { name: x.name, p: x.id, club: x.club });
   });
   return conv;
+}
+
+// --- Mode Sélectionneur (phase E) : notifications propres -------------------
+// Fil du mandat (m.feed) : jamais dans le fil du club. Clé unique par
+// notification (pas de doublon). Renvoie true si ajoutée.
+const FEED_MAX = 60;
+function coachFeed(m, entry) {
+  if (!m) return false;
+  m.feed = Array.isArray(m.feed) ? m.feed : [];
+  if (entry.key && m.feed.some(e => e.key === entry.key)) return false;
+  m.feedSeq = (m.feedSeq || 0) + 1;
+  m.feed.unshift({ id: m.feedSeq, ...entry });
+  if (m.feed.length > FEED_MAX) m.feed.length = FEED_MAX;
+  return true;
+}
+// Alertes sur les joueurs de la présélection, des convocations et des
+// suivis (au recalcul du vivier) : blessure, très bonne performance en club.
+function watchAlerts(store, m, team, pool, season, calendarStartAt, now) {
+  const byKey = poolMap(pool);
+  const cur = typeof calendarStartAt === "number" ? currentGathering(gatheringsOf(store, team, season, calendarStartAt), now) : null;
+  const conv = cur ? convocationOf(store, team.id, cur.gid) : null;
+  const tracked = new Map();
+  [["preselection", m.preselection], ["watchlist", m.watchlist], ["convocation", conv && conv.players]].forEach(([why, list]) => (list || []).forEach(r => { if (!tracked.has(refKey(r))) tracked.set(refKey(r), why); }));
+  m.alertState = m.alertState || {};
+  tracked.forEach((why, k) => {
+    const x = byKey.get(k);
+    if (!x) return;
+    const st = m.alertState[k] = m.alertState[k] || {};
+    if (x.injuryUntil && st.inj !== x.injuryUntil) {
+      st.inj = x.injuryUntil;
+      const days = Math.max(1, Math.ceil((x.injuryUntil - now) / DAY));
+      const hit = cur && x.injuryUntil > cur.startAt;
+      coachFeed(m, { key: `inj_${k}_${x.injuryUntil}`, kind: "injury", at: now, title: `${x.name} est blessé`, text: `${x.injuryType || "Blessure"}, ${days} jour${days > 1 ? "s" : ""} d'indisponibilité${hit ? " : il ne pourra pas participer au prochain rassemblement" : ""}.`, player: { p: x.p, n: x.n } });
+    }
+    const last = (x.last5 || [])[x.last5.length - 1];
+    if (last && last.at && last.eff >= 25 && (st.perf || 0) < last.at) {
+      st.perf = last.at;
+      coachFeed(m, { key: `perf_${k}_${last.at}`, kind: "performance", at: now, title: `${x.name} vient de réaliser une excellente performance`, text: `${last.pts} points, ${last.reb} rebonds, ${last.ast} passes${last.opp ? ` contre ${last.opp}` : ""} avec ${x.club.name} (évaluation ${last.eff}).`, player: { p: x.p, n: x.n } });
+    }
+  });
+}
+// Statistiques des joueurs en sélection (matchs joués depuis `since`).
+function playerStatsOf(store, teamId, since) {
+  const NM = require("./nationalMatches.js");
+  const rows = new Map();
+  NM.resultsOf(store, teamId).filter(r => r.at >= (since || 0)).forEach(r => {
+    const md = NM.matchDetail(store, r.id);
+    const box = md ? (md.home === teamId ? md.boxHome : md.boxAway) : [];
+    box.forEach(b => {
+      if (!b.ref) return;
+      const k = refKey(b.ref);
+      const s = rows.get(k) || { ref: b.ref, name: b.name, position: b.position, club: b.club ? b.club.name : null, gp: 0, min: 0, pts: 0, reb: 0, ast: 0, stl: 0, blk: 0 };
+      if (b.min > 0) { s.gp++; s.min += b.min; s.pts += b.pts; s.reb += b.reb; s.ast += b.ast; s.stl += b.stl; s.blk += b.blk; }
+      rows.set(k, s);
+    });
+  });
+  return [...rows.values()].filter(s => s.gp > 0).sort((a, b) => b.gp - a.gp || b.pts - a.pts);
+}
+// Bilan d'un mandat (en cours ou terminé).
+function mandateReport(store, m) {
+  const NM = require("./nationalMatches.js");
+  const end = m.endedAt || Infinity;
+  const res = NM.resultsOf(store, m.teamId).filter(r => r.at >= m.startedAt && r.at <= end);
+  let wins = 0, losses = 0, pf = 0, pa = 0;
+  res.forEach(r => { const home = r.home === m.teamId; const f = home ? r.scoreHome : r.scoreAway, a = home ? r.scoreAway : r.scoreHome; pf += f; pa += a; if (f > a) wins++; else losses++; });
+  const stats = playerStatsOf(store, m.teamId, m.startedAt).filter(s => true);
+  const used = stats.length;
+  const fresh = stats.filter(s => { const c = (store.caps || {})[refKey(s.ref)]; return c && c.first && c.first.teamId === m.teamId && c.first.at >= m.startedAt && c.first.at <= end; }).map(s => s.name);
+  // Qualifications et compétitions des saisons du mandat.
+  const seasons = [];
+  for (let s = m.fromSeason; s <= m.toSeason; s++) {
+    const q = NM.qualifView(store, m.teamId, s);
+    const f = NM.finalsView(store, m.teamId, s);
+    const t = f && f.tournaments[0];
+    const rank = t && t.ranking ? t.ranking.indexOf(m.teamId) + 1 : null;
+    const cfg = NT().configOf(store), pos = NT().cyclePos(cfg, s, store.teams[m.teamId].cat);
+    seasons.push({
+      season: s, comp: q ? q.comp : pos >= 0 ? cfg.cycle[pos].kind : null,
+      qualified: q && q.finalStatus ? q.finalStatus === "qualified" : null,
+      groupRank: q && q.group ? ((q.group.standings.find(r => r.teamId === m.teamId) || {}).rank || null) : null,
+      tournament: t ? { label: t.label, kind: t.kind, rank, of: t.ranking ? t.ranking.length : t.groups.reduce((n, g) => n + g.standings.length, 0), stage: rank ? stageOfRank(t, m.teamId) : null } : null,
+    });
+  }
+  const finishes = seasons.filter(s => s.tournament && s.tournament.rank && s.tournament.kind !== "consolation");
+  const best = finishes.sort((a, b) => a.tournament.rank - b.tournament.rank)[0];
+  return {
+    teamId: m.teamId, label: NT().teamLabel(m.teamId), coach: m.pseudo || (m.clubName ? `Manager de ${m.clubName}` : "Sélectionneur"),
+    fromSeason: m.fromSeason, toSeason: m.toSeason, seasons: m.toSeason - m.fromSeason + 1, startedAt: m.startedAt, endedAt: m.endedAt || null,
+    played: res.length, wins, losses, winPct: res.length ? Math.round((wins / res.length) * 100) : null, pf, pa,
+    playersUsed: used, newInternationals: fresh.length, newNames: fresh.slice(0, 20),
+    topScorers: stats.slice().sort((a, b) => b.pts - a.pts).slice(0, 3).map(s => ({ name: s.name, pts: s.pts, gp: s.gp })),
+    seasonsDetail: seasons, bestFinish: best ? `${best.tournament.stage} · ${best.tournament.label}` : null,
+    results: res.slice(0, 12).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) })),
+  };
+}
+function stageOfRank(t, teamId) {
+  const r = t.ranking.indexOf(teamId) + 1;
+  if (r === 1) return "Vainqueur";
+  if (r === 2) return "Finaliste";
+  if (t.matches.some(m => m.stage === "sf" && (m.home === teamId || m.away === teamId))) return r === 3 ? "3e place" : "Demi-finale";
+  if (t.matches.some(m => m.stage === "qf" && (m.home === teamId || m.away === teamId))) return "Quart de finale";
+  return "Phase de poules";
+}
+function markSeen(store, me, body, now) {
+  const m = coachMandate(store, me, body && body.teamId);
+  if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
+  m.feedSeenId = m.feedSeq || 0;
+  return { ok: true };
 }
 
 // --- Actions du sélectionneur (routes) -----------------------------------
@@ -427,6 +560,11 @@ function coachView(store, me, teamId, now, ctx) {
     preselection: m.preselection || [], watchlist: m.watchlist || [],
     gatherings, currentGid: cur ? cur.gid : null,
     tactics: m.tactics || defaultOrders(), tacticsPlayers: nidPlayers,
+    // Mode Sélectionneur (phase E) : notifications, statistiques, bilan.
+    feed: (m.feed || []).slice(0, 40), unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)),
+    stats: playerStatsOf(store, team.id, m.startedAt),
+    report: mandateReport(store, m),
+    pastMandates: store.mandates.filter(x => x.key === m.key && x.endedAt && x.report).slice(-5).map(x => x.report),
     options: {
       offense: Object.keys(Engine.OFFENSE_PROFILES), defense: Object.keys(Engine.DEFENSES), rhythm: Object.keys(Engine.RHYTHMS),
       screenDefense: Object.keys(Engine.SCREEN_DEFENSES), helpDefense: Object.keys(Engine.HELP_DEFENSE_LEVELS), postDefense: Object.keys(Engine.POST_DEFENSES),
@@ -464,4 +602,5 @@ module.exports = {
   LIMITS, refOf, refKey, sameRef, cleanRef, poolStoreName, loadPool, savePool, coachPlayer, buildPool, matchEff,
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
+  coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen,
 };

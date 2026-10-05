@@ -330,8 +330,11 @@
   function html() {
     var v = ui.view;
     if (!v) return '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de l'espace du sélectionneur…") + "</p>";
-    var h = headHtml(v) + tabsHtml(v);
-    if (ui.error) h += '<p class="nc-err">' + esc(ui.error) + "</p>";
+    return headHtml(v) + tabsHtml(v) + bodyHtml(v);
+  }
+  // Contenu d'une rubrique (page « Gérer la sélection » et mode Sélectionneur).
+  function bodyHtml(v) {
+    var h = ui.error ? '<p class="nc-err">' + esc(ui.error) + "</p>" : "";
     var players = (v.pool && v.pool.players) || [];
     if (!v.pool) return h + '<div class="nc-card"><p class="nc-club">Vivier en cours de préparation (calculé au prochain passage du monde, quelques minutes au plus).</p></div>';
     if (ui.tab === "convocations") return h + convocationsHtml(v);
@@ -345,12 +348,16 @@
   function paint() {
     var holder = document.getElementById("nationalContent");
     if (!holder || !ui.teamId) return;
-    holder.innerHTML = html();
+    holder.innerHTML = ui.mode ? modeHtml() : html();
+    if (ui.mode) syncModeChrome();
   }
 
   // --- Données / actions ----------------------------------------------------
   function load() {
-    return api("/api/national/coach?id=" + encodeURIComponent(ui.teamId)).then(function (d) { ui.view = d; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
+    var a = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId)).then(function (d) { ui.view = d; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
+    // Mode Sélectionneur : page de la sélection aussi (calendrier, qualifications, phase finale).
+    var b = ui.mode ? api("/api/national/team?id=" + encodeURIComponent(ui.teamId)).then(function (d) { ui.tv = d; }).catch(function () { /* rubriques sans données */ }) : null;
+    return Promise.all([a, b]);
   }
   function open(teamId, tab) {
     ensureCss();
@@ -460,6 +467,232 @@
     else dd[parts[0]] = v;
     paint();
   }
+  // =====================================================================
+  // MODE SÉLECTIONNEUR (phase E) : environnement séparé du mode Club.
+  // Bouton dans la barre du haut (seulement avec un mandat en cours) ; en
+  // mode Sélectionneur, la barre latérale du club, la barre du haut du club
+  // (budget, prochain match, ordres, recherche) et la barre d'onglets mobile
+  // sont masquées : menu latéral propre, tableau de bord, notifications
+  // propres (fil du mandat), bilan. Retour au mode Club par le même bouton.
+  // =====================================================================
+  var MODE_KEY = "hm-nat-mode";
+  var mine = [];
+  var NAV = [
+    ["dashboard", "Tableau de bord"],
+    ["#", "Effectif"],
+    ["joueurs", "Joueurs sélectionnables"], ["preselection", "Présélection"], ["convoques", "Convoqués"], ["suivis", "Joueurs suivis"],
+    ["#", "Sélection"],
+    ["convocations", "Convocations"], ["tactique", "Tactique"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["competition", "Compétition"], ["stats", "Statistiques"],
+    ["#", "Sélectionneur"],
+    ["notifications", "Notifications"], ["mandat", "Mandat"], ["palmares", "Palmarès"],
+  ];
+  var MODE_CSS = [
+    "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#ncModeBtn){display:none!important}",
+    "body.nc-mode .topbar-search, body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
+    "body.nc-mode #mTabbar .tab-btn{display:none!important}",
+    "body.nc-mode #selectionsSection .page-title{display:none}",
+    "#ncTopTitle{display:flex;align-items:center;gap:10px}#ncTopTitle .nat-flag{width:28px;height:19px;border-radius:3px;object-fit:cover}#ncTopTitle b{font-size:15px}#ncTopTitle span{display:block;font-size:12px;color:var(--ink-dim)}",
+    "#ncModeBtn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;border:1px solid rgba(111,182,255,.55);background:rgba(111,182,255,.12);color:var(--ink);white-space:nowrap}",
+    "#ncModeBtn .nat-flag{width:22px;height:15px;border-radius:2px;object-fit:cover}#ncModeBtn.in{border-color:var(--line);background:var(--panel-2)}",
+    "#ncModeBtn .nc-badge,.nc-side-link .nc-badge{min-width:18px;height:18px;border-radius:9px;background:#E2694F;color:#fff;font-size:11px;display:inline-grid;place-items:center;padding:0 5px}",
+    "#ncSidebar{display:flex;flex-direction:column;gap:2px;padding:6px 10px 16px}",
+    "#ncSidebar .nc-side-head{display:flex;align-items:center;gap:10px;padding:10px 8px 12px;border-bottom:1px solid var(--line);margin-bottom:8px}#ncSidebar .nc-side-head .nat-flag{width:30px;height:20px;border-radius:3px;object-fit:cover}#ncSidebar .nc-side-head b{font-size:15px}",
+    "#ncSidebar .nc-side-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:12px 8px 4px}",
+    ".nc-side-link{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;background:none;border:0;color:var(--ink-dim);font:inherit;font-size:14px;font-weight:700;padding:8px 10px;border-radius:9px;cursor:pointer}",
+    ".nc-side-link:hover{color:var(--ink);background:var(--panel-2)}.nc-side-link.on{color:var(--amber);background:rgba(240,162,60,.1);box-shadow:inset 0 0 0 1px rgba(240,162,60,.5)}.nc-side-link.hot{color:var(--ink)}",
+    ".nc-dash{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-dash{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.nc-dash{grid-template-columns:1fr}}",
+    ".nc-kpi .nc-k{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}.nc-kpi .nc-v{font-size:22px;font-weight:900;margin:8px 0 2px}.nc-kpi .nc-s{font-size:12.5px;color:var(--ink-dim)}",
+    ".nc-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0 16px}.nc-hero .nat-flag{width:60px;height:40px;border-radius:5px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.15)}.nc-hero h1{margin:0;font-size:26px}",
+    ".nc-feed-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.nc-feed-item:first-child{border-top:0}.nc-feed-item b{display:block;font-size:13.5px}.nc-feed-item span{font-size:12.5px;color:var(--ink-dim)}.nc-feed-item.unread b{color:var(--amber)}",
+    ".nc-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--line)}.nc-feed-item.unread .nc-feed-dot{background:var(--amber)}",
+    ".nc-mode-title{font-size:24px;font-weight:900;margin:4px 0 14px}",
+    "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}#ncModeBtn{padding:6px 11px;font-size:12px}}",
+    ".nc-report{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-report{grid-template-columns:repeat(2,minmax(0,1fr))}}",
+  ].join("\n");
+  function ensureModeCss() {
+    if (document.getElementById("ncModeCss")) return;
+    var s = document.createElement("style"); s.id = "ncModeCss"; s.textContent = MODE_CSS; document.head.appendChild(s);
+  }
+  function lsGet() { try { return localStorage.getItem(MODE_KEY); } catch (e) { return null; } }
+  function lsSet(v) { try { if (v) localStorage.setItem(MODE_KEY, v); else localStorage.removeItem(MODE_KEY); } catch (e) { /* stockage indisponible */ } }
+  function myMandate(id) { return mine.filter(function (m) { return m.teamId === id; })[0] || null; }
+  // Bouton de bascule dans la barre du haut (seulement avec un mandat).
+  function syncModeButton() {
+    var right = document.querySelector(".topbar-right");
+    var btn = document.getElementById("ncModeBtn");
+    if (!mine.length || !right) { if (btn) btn.remove(); return; }
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button"; btn.id = "ncModeBtn";
+      right.insertBefore(btn, right.firstChild);
+      btn.addEventListener("click", function () { if (ui.mode) exitMode(); else enterMode(mine[0].teamId); });
+    }
+    var m = mine[0], unread = ui.view && ui.mode ? ui.view.unread : m.unread;
+    btn.className = ui.mode ? "in" : "";
+    btn.innerHTML = ui.mode ? "← Retour au mode Club" : flag(m.country) + " Mode Sélectionneur" + (unread ? ' <span class="nc-badge">' + unread + "</span>" : "");
+    btn.title = ui.mode ? "Revenir à la gestion de votre club" : "Gérer " + m.label;
+  }
+  function syncModeChrome() {
+    syncModeButton();
+    var sb = document.getElementById("sidebar");
+    if (sb && !document.getElementById("ncSidebar")) { var d = document.createElement("div"); d.id = "ncSidebar"; sb.appendChild(d); }
+    var side = document.getElementById("ncSidebar");
+    var v = ui.view, m = myMandate(ui.mode) || {};
+    var inFinals = isFinalsPeriod();
+    if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.label || "") + '</b><div class="nc-club">Sélectionneur</div></div></div>' + NAV.map(function (n) {
+      if (n[0] === "#") return '<div class="nc-side-label">' + esc(n[1]) + "</div>";
+      var badge = n[0] === "notifications" && v && v.unread ? '<span class="nc-badge">' + v.unread + "</span>" : n[0] === "convoques" && curGathering() ? '<span class="nc-club">' + curGathering().players.length + "</span>" : "";
+      return '<button type="button" class="nc-side-link' + (ui.nav === n[0] ? " on" : "") + (n[0] === "competition" && inFinals ? " hot" : "") + '" data-nc-nav="' + n[0] + '"><span>' + esc(n[1]) + (n[0] === "competition" && inFinals ? " · en cours" : "") + "</span>" + badge + "</button>";
+    }).join("");
+    var left = document.querySelector(".topbar-left");
+    if (left && !document.getElementById("ncTopTitle")) { var tt = document.createElement("div"); tt.id = "ncTopTitle"; left.appendChild(tt); }
+    var top = document.getElementById("ncTopTitle");
+    if (top && v) top.innerHTML = flag(v.team.country) + "<div><b>" + esc(v.team.label) + "</b><span>Sélectionneur : " + esc(coachName(v)) + "</span></div>";
+  }
+  function coachName(v) { var m = v && v.mandate; return m ? (m.pseudo || (m.clubName ? "Manager de " + m.clubName : "Sélectionneur")) : ""; }
+  function isFinalsPeriod() {
+    var g = ((ui.view && ui.view.gatherings) || []).filter(function (x) { return x.kind === "final"; })[0];
+    return !!(g && Date.now() >= g.freezeAt && Date.now() < g.endAt + DAY);
+  }
+  function enterMode(teamId) {
+    ensureCss(); ensureModeCss();
+    ui.mode = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null;
+    lsSet(teamId);
+    document.body.classList.add("nc-mode");
+    try { window.showPage("selectionsSection"); window.setActiveTab(""); } catch (e) { /* page sans navigation */ }
+    var p = open(teamId, "joueurs");
+    syncModeChrome();
+    return p;
+  }
+  function exitMode() {
+    ui.mode = null; ui.teamId = null;
+    lsSet(null);
+    document.body.classList.remove("nc-mode");
+    ["ncSidebar", "ncTopTitle"].forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
+    syncModeButton();
+    var h = window.TAB_HANDLERS && window.TAB_HANDLERS.club;
+    if (typeof h === "function") h(); else if (typeof TAB_HANDLERS !== "undefined" && TAB_HANDLERS.club) TAB_HANDLERS.club();
+  }
+  var NAV_TAB = { joueurs: "joueurs", preselection: "preselection", convoques: "convocations", suivis: "suivis", convocations: "convocations", tactique: "tactique" };
+  function modeHtml() {
+    var v = ui.view;
+    if (!v) return '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de votre sélection…") + "</p>";
+    var nav = ui.nav || "dashboard";
+    if (nav === "match") return '<button type="button" class="lg-back" data-nc-nav="' + esc(ui.backNav || "dashboard") + '">← Retour</button>' + (ui.match ? window.HM_NATIONAL.matchSheetHtml(ui.match) : '<p class="training-empty">Chargement du match…</p>');
+    if (NAV_TAB[nav]) { ui.tab = NAV_TAB[nav]; return titleHtml(nav) + bodyHtml(v); }
+    if (nav === "calendrier" || nav === "qualifications" || nav === "competition" || nav === "palmares") {
+      if (!ui.tv) return titleHtml(nav) + '<p class="training-empty">Chargement…</p>';
+      return titleHtml(nav) + window.HM_NATIONAL.sectionHtml(ui.tv, nav === "competition" ? "finale" : nav);
+    }
+    if (nav === "stats") return titleHtml(nav) + statsHtml(v);
+    if (nav === "notifications") return titleHtml(nav) + feedHtml(v, 40);
+    if (nav === "mandat") return titleHtml(nav) + mandatHtml(v);
+    return dashboardHtml(v);
+  }
+  function titleHtml(nav) {
+    var lab = (NAV.filter(function (n) { return n[0] === nav; })[0] || [0, ""])[1];
+    return '<h2 class="nc-mode-title">' + esc(lab) + "</h2>";
+  }
+  function nextMatch() {
+    var tv = ui.tv, now = Date.now();
+    var ms = [];
+    if (tv && tv.qualif) tv.qualif.matches.forEach(function (m) { ms.push(m); });
+    if (tv && tv.finals) tv.finals.tournaments.forEach(function (t) { t.matches.forEach(function (m) { if (m.home === tv.team.id || m.away === tv.team.id) ms.push(Object.assign({ label: t.label }, m)); }); });
+    return ms.filter(function (m) { return m.status === "scheduled" && m.at > now - 3 * 3600 * 1000; }).sort(function (a, b) { return a.at - b.at; })[0] || null;
+  }
+  function dashboardHtml(v) {
+    var tv = ui.tv, nx = nextMatch(), cur = curGathering(), r = v.report || {};
+    var last = (tv && tv.results || [])[0];
+    var oppOf = function (m) { return m.home === v.team.id ? m.away : m.home; };
+    var lab = function (id) { return window.HM_NATIONAL && window.HM_NATIONAL.teamLabelOf ? window.HM_NATIONAL.teamLabelOf(id) : id; };
+    var rank = tv && tv.qualif && tv.qualif.group ? (tv.qualif.group.standings.filter(function (s) { return s.teamId === v.team.id; })[0] || {}).rank : null;
+    var seasonNo = v.mandate ? Math.min(2, Math.max(1, v.season - v.mandate.fromSeason + 1)) : 1;
+    var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="nc-k">' + k + '</div><div class="nc-v">' + val + '</div><div class="nc-s">' + sub + "</div></button>"; };
+    var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">Sélectionneur · ' + esc(coachName(v)) + "</div><h1>" + esc(v.team.label) + "</h1></div></div>";
+    h += '<div class="nc-dash">';
+    h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(lab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Fenêtre " + nx.w + " · qualifications" : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", "calendrier");
+    h += kpi("Qualifications", rank ? rank + (rank === 1 ? "er" : "e") + " du groupe" : "–", tv && tv.qualif && tv.qualif.group ? esc(tv.qualif.group.label) + " · " + esc(tv.qualif.group.continent) : "Groupes à venir", "qualifications");
+    h += kpi("Effectif", (cur ? cur.players.length : 0) + " convoqués", cur ? esc(cur.label) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
+    h += kpi("Joueurs suivis", v.watchlist.length, v.preselection.length + " en présélection", "suivis");
+    h += kpi("Mandat", "Saison " + seasonNo + " / 2", "Saisons " + esc(v.mandate.fromSeason) + " à " + esc(v.mandate.toSeason) + (r.played ? " · " + r.wins + " V – " + r.losses + " D" : ""), "mandat");
+    h += kpi("Dernier résultat", last ? esc(lab(last.home)) + " " + esc(last.scoreHome) + " – " + esc(last.scoreAway) + " " + esc(lab(last.away)) : "–", last ? esc(when(last.at)) : "Aucun match joué", "calendrier");
+    h += "</div>";
+    h += '<div class="nc-two" style="margin-top:16px"><div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
+    h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? cur.label : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
+      (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + esc(c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div></div>";
+    return h;
+  }
+  function feedHtml(v, n) {
+    var list = (v.feed || []).slice(0, n);
+    if (!list.length) return '<p class="nc-club">Aucune notification pour l\'instant.</p>';
+    var seen = v.feedSeen != null ? v.feedSeen : (v.feed[0] ? v.feed[0].id - v.unread : 0);
+    return list.map(function (e) {
+      return '<div class="nc-feed-item' + (e.id > seen ? " unread" : "") + '"><i class="nc-feed-dot"></i><div><b>' + esc(e.title) + "</b><span>" + esc(e.text || "") + " · " + esc(when(e.at, true)) + "</span>" +
+        (e.matchId ? ' <button type="button" class="nt-link" data-nc-match="' + esc(e.matchId) + '">Feuille de match</button>' : "") + "</div></div>";
+    }).join("");
+  }
+  function statsHtml(v) {
+    var s = v.stats || [];
+    if (!s.length) return '<p class="training-empty">Aucun match joué sous votre mandat.</p>';
+    var r1 = function (x, gp) { return (Math.round((x / gp) * 10) / 10).toString().replace(".", ","); };
+    return '<div class="nc-card nc-scroll"><table class="nc-table"><thead><tr><th class="l">Joueur</th><th>Club</th><th>MJ</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Int</th><th>Ctr</th></tr></thead><tbody>' +
+      s.map(function (x) { return '<tr><td class="l"><b>' + esc(x.name) + '</b></td><td class="nc-club">' + esc(x.club || "") + "</td><td>" + x.gp + "</td><td>" + r1(x.min, x.gp) + "</td><td>" + r1(x.pts, x.gp) + "</td><td>" + r1(x.reb, x.gp) + "</td><td>" + r1(x.ast, x.gp) + "</td><td>" + r1(x.stl, x.gp) + "</td><td>" + r1(x.blk, x.gp) + "</td></tr>"; }).join("") +
+      '</tbody></table></div><p class="nc-small">Moyennes par match en sélection, sous votre mandat.</p>';
+  }
+  function reportHtml(r, live) {
+    var lab = function (id) { return window.HM_NATIONAL && window.HM_NATIONAL.teamLabelOf ? window.HM_NATIONAL.teamLabelOf(id) : id; };
+    var k = function (t, v, s) { return '<div class="nc-card nc-kpi"><div class="nc-k">' + t + '</div><div class="nc-v">' + v + '</div><div class="nc-s">' + (s || "") + "</div></div>"; };
+    var h = '<div class="nc-card" style="margin-bottom:12px"><b>' + (live ? "Bilan en cours" : "Bilan du mandat") + " · " + esc(r.label) + " · " + esc(r.coach) + '</b><div class="nc-club">Saisons ' + esc(r.fromSeason) + " à " + esc(r.toSeason) + " (" + r.seasons + " saison" + (r.seasons > 1 ? "s" : "") + ")</div></div>";
+    h += '<div class="nc-report">' + k("Matchs", r.played, r.played ? r.wins + (r.wins > 1 ? " victoires, " : " victoire, ") + r.losses + (r.losses > 1 ? " défaites" : " défaite") : "") + k("Victoires", r.winPct != null ? r.winPct + " %" : "–", r.played ? "Points : " + r.pf + " pour, " + r.pa + " contre" : "") +
+      k("Joueurs utilisés", r.playersUsed, "") + k("Nouveaux internationaux", r.newInternationals, (r.newNames || []).slice(0, 6).map(esc).join(", ")) + "</div>";
+    h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span>Compétitions</span></div>' + (r.seasonsDetail || []).map(function (s) {
+      var comp = s.comp === "continental" ? "Compétition continentale" : s.comp === "world" ? "Coupe du monde" : "Compétition";
+      return '<div class="nc-slot"><span class="nc-grow"><b>Saison ' + esc(s.season) + "</b> · " + comp + "</span>" +
+        (s.comp === "continental" && s.qualified != null ? '<span class="nc-tag ' + (s.qualified ? "ok" : "bad") + '">Qualification : ' + (s.qualified ? "oui" : "non") + "</span>" : "") +
+        (s.tournament && s.tournament.rank ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " : " + esc(s.tournament.stage) + "</span>" : s.tournament ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " en cours</span>" : '<span class="nc-club">à venir</span>') + "</div>";
+    }).join("") + (r.bestFinish ? '<p class="nc-small">Meilleur résultat : ' + esc(r.bestFinish) + "</p>" : "") + '<p class="nc-small">Classement international : pas encore de classement mondial dans le jeu.</p></div>';
+    if (r.results && r.results.length) h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span>Principaux résultats</span></div>' + r.results.map(function (m) {
+      return '<div class="nc-slot"><span class="nc-grow">' + esc(lab(m.home)) + " " + esc(m.scoreHome) + " – " + esc(m.scoreAway) + " " + esc(lab(m.away)) + ' <span class="nc-club">· ' + esc(m.label || "") + "</span></span>" + '<button type="button" class="nt-link" data-nc-match="' + esc(m.id) + '">Feuille</button></div>';
+    }).join("") + "</div>";
+    return h;
+  }
+  function mandatHtml(v) {
+    var h = reportHtml(v.report || {}, true);
+    (v.pastMandates || []).forEach(function (r) { h += '<div style="margin-top:22px">' + reportHtml(r, false) + "</div>"; });
+    return h + '<p class="nc-small">À la fin du mandat, ce bilan est conservé dans l\'historique des sélectionneurs et affiché aux électeurs lors des élections suivantes.</p>';
+  }
+  function openModeMatch(id) {
+    ui.backNav = ui.nav === "match" ? ui.backNav : ui.nav; ui.nav = "match"; ui.match = null; paint();
+    api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) { ui.match = d.match; }).catch(function (e) { ui.error = e.message; }).then(paint);
+  }
+  function onModeClick(e) {
+    if (!ui.mode) return;
+    var b = e.target.closest ? e.target.closest("[data-nc-nav],[data-nc-match],[data-nt-match]") : null;
+    if (!b) return;
+    e.stopPropagation(); e.preventDefault();
+    if (b.dataset.ncMatch || b.dataset.ntMatch) { openModeMatch(b.dataset.ncMatch || b.dataset.ntMatch); return; }
+    ui.nav = b.dataset.ncNav; ui.replaceOut = null;
+    if (ui.nav === "notifications" && ui.view && ui.view.unread) {
+      ui.view.feedSeen = ui.view.feed[0] ? ui.view.feed[0].id - ui.view.unread : 0;
+      api("/api/national/coach/seen", { teamId: ui.teamId }).then(function () { if (ui.view) { ui.view.unread = 0; syncModeChrome(); } }).catch(function () { /* hors ligne */ });
+    }
+    try { var sc = document.querySelector(".content-scroll"); if (sc) sc.scrollTop = 0; } catch (err) { /* rien */ }
+    if (window.innerWidth < 900 && document.body.classList.contains("m-drawer-open")) { var c = document.querySelector("[data-m-drawer-close],.m-drawer-backdrop"); if (c) c.click(); }
+    paint();
+  }
+  // Démarrage : mandats en cours du manager → bouton (et mode retrouvé).
+  function bootMode() {
+    api("/api/national/me").then(function (d) {
+      mine = d.mandates || [];
+      ensureModeCss();
+      syncModeButton();
+      var saved = lsGet();
+      if (saved && myMandate(saved)) enterMode(saved);
+      else if (saved) lsSet(null);
+    }).catch(function () { /* hors ligne ou monde absent */ });
+  }
+
   // « Gérer la sélection » (page de la sélection, assets/national.js).
   function onOpenClick(e) {
     var b = e.target.closest ? e.target.closest("[data-nc-open]") : null;
@@ -472,10 +705,19 @@
     if (!holder || holder.__ncBound) return;
     holder.__ncBound = true;
     holder.addEventListener("click", onOpenClick, true);
+    holder.addEventListener("click", onModeClick, true);
+    // Menu latéral du mode Sélectionneur (hors de #nationalContent).
+    document.addEventListener("click", function (e) { if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e); }, true);
     holder.addEventListener("click", onClick);
     holder.addEventListener("change", onChange);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
 
-  window.HM_NATIONAL_COACH = { open: function (id, tab) { bind(); return open(id, tab); }, state: ui, html: html };
+  // Bouton du mode Sélectionneur : une fois le jeu chargé.
+  (function waitGame(n) {
+    if (window.__gameReady) { Promise.resolve(window.__gameReady).then(function () { bind(); bootMode(); }, function () { /* jeu non chargé */ }); return; }
+    if (n > 600) return;
+    setTimeout(function () { waitGame(n + 1); }, 500);
+  })(0);
+  window.HM_NATIONAL_COACH = { open: function (id, tab) { bind(); return open(id, tab); }, enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: bootMode, state: ui, html: html };
 })();

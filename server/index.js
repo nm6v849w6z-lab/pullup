@@ -2840,6 +2840,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!natStore) { sendJson(res, 503, { ok: false, error: "Sélections nationales momentanément indisponibles, réessayez dans quelques minutes." }); return; }
         const me = NationalTeams.managerOf(ctx.leagueId, ctx.league, ctx.teamIndex, ctx.world);
         const season = ctx.league.seasonNumber || 1;
+        // Mode Sélectionneur (phase E) : mandats en cours du manager (bouton
+        // de bascule dans la barre du haut), sans le reste de la page.
+        if (req.method === "GET" && route.pathname === "/api/national/me") {
+          const mine = me ? NationalTeams.mandatesOfKey(natStore, me.key).map(m => ({ teamId: m.teamId, label: NationalTeams.teamLabel(m.teamId), country: natStore.teams[m.teamId].country, cat: natStore.teams[m.teamId].cat, fromSeason: m.fromSeason, toSeason: m.toSeason, unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) })) : [];
+          sendJson(res, 200, { ok: true, mandates: mine });
+          return;
+        }
         if (req.method === "GET" && route.pathname === "/api/national/overview") {
           sendJson(res, 200, NationalTeams.overview(natStore, me, season, now));
           return;
@@ -2881,6 +2888,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
               "/api/national/coach/convocation": NationalCoach.setConvocation,
               "/api/national/coach/replace": NationalCoach.replaceConvoked,
               "/api/national/coach/tactics": NationalCoach.setTactics,
+              "/api/national/coach/seen": NationalCoach.markSeen,
             };
             const fnC = COACH_ACTIONS[route.pathname];
             if (!fnC) { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }

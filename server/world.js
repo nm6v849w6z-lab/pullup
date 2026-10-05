@@ -594,6 +594,10 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   // (world.salaryBestPositionAt), seulement si toutes les ligues sont lues.
   const recalcSalaries = !world.salaryBestPositionAt;
   let allRead = true;
+  // Règle de la Supercoupe (sélections nationales, phase D) : joueurs encore
+  // en course avec leur sélection, lu une fois (lecture seule ici).
+  let natForSuperCup = null;
+  try { natForSuperCup = await NationalTeams.loadStore(savePath); } catch (e) { natForSuperCup = null; }
   for (const country of countryCodes()) {
     const entries = leaguesOfCountry(world, country);
     const leagues = new Map();
@@ -681,7 +685,9 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
         if (sc && !sc.none && sc.season === seasonNumber && !sc.resolved) {
           useLeagueTimeZone(d1);
           const before = events.length;
-          NationalCup.stepSuperCup({ Engine, Calendar, LiveMatch }, sc, leagues, now, events);
+          let unavailable = null;
+          try { if (natForSuperCup) unavailable = require("./nationalMatches.js").unavailableAt(natForSuperCup, sc.at); } catch (e) { unavailable = null; }
+          NationalCup.stepSuperCup({ Engine, Calendar, LiveMatch }, sc, leagues, now, events, { unavailable });
           useLeagueTimeZone(null);
           if (events.length !== before) worldDirty = true;
           if (sc.resolved) {

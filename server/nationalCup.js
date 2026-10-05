@@ -326,12 +326,25 @@ function createSuperCup(country, season, d1Entry, d1League, cup, at) {
 
 function superCupLiveKey(sc) { return `scup:${sc.season}`; }
 
-function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events = []) {
+function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events = [], opts = {}) {
   if (!sc || sc.resolved || now < sc.at) return events;
   const teamOf = ref => { const lg = leagues.get(ref.leagueId); return lg ? lg.teams[ref.idx] : null; };
   const home = teamOf(sc.home), away = teamOf(sc.away);
   const windowEnd = sc.at + Calendar.MATCH_BROADCAST_DURATION_MS;
   const late = now >= windowEnd;
+  // Sélections nationales (server/nationalMatches.js:unavailableAt) : un
+  // joueur dont la sélection est encore en course (demi-finales et au-delà)
+  // ne joue pas la Supercoupe ; il est écarté comme un blessé le temps du
+  // match (rien d'autre ne change), son club est prévenu.
+  const retained = [];
+  if (!sc.started && opts.unavailable && opts.unavailable.size) {
+    [home, away].forEach(team => (team ? team.players : []).forEach(p => {
+      if (!opts.unavailable.has(`${p.id}|${p.name}`)) return;
+      retained.push([p, p.injuryUntil, p.injuryType, team]);
+      p.injuryUntil = sc.at + 6 * 3600 * 1000;
+    }));
+  }
+  try {
   if (!sc.started) {
     if (!home || !away) {
       sc.result = { scoreHome: home ? Engine.FORFEIT_SCORE : 0, scoreAway: away ? Engine.FORFEIT_SCORE : 0, forfeit: true, quarterScores: null };
@@ -364,6 +377,19 @@ function stepSuperCup({ Engine, LiveMatch, Calendar }, sc, leagues, now, events 
     }
     sc.started = true;
     events.push({ type: "super-cup-kickoff", country: sc.country, season: sc.season });
+  }
+  } finally {
+    retained.forEach(([p, until, type]) => { p.injuryUntil = until; p.injuryType = type; });
+  }
+  if (retained.length) {
+    sc.retained = retained.map(([p, , , team]) => ({ id: p.id, name: p.name, club: team.name }));
+    retained.forEach(([p, , , team]) => {
+      if (team.isHuman && team.feed) Engine.pushEntry(team.feed, {
+        key: `scup_nat_${sc.season}_${p.id}`, category: "club", week: team.week, createdAt: now,
+        title: `${p.name} retenu par sa sélection`, text: "Sa sélection est encore en course en phase finale : il ne joue pas la Supercoupe.",
+        action: { label: "Sélections nationales", href: "/selections" },
+      });
+    });
   }
   if (now < windowEnd) return events;
   const r = sc.result;

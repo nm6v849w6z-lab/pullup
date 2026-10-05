@@ -42,6 +42,12 @@ const CONTINENTS = {
   "Asie": ["cn", "hk", "tw"],
 };
 const GROUP_MAX = 4;
+// Phases finales : part de la forme perdue rendue aussitôt (récupération
+// améliorée de la dernière semaine).
+const FINAL_RECOVERY_SHARE = 0.5;
+// Coupe du monde : places par continent (classement continental de la
+// saison précédente), les autres jouent le tournoi de consolation.
+const WORLD_SLOTS = { "Europe": 5, "Amérique": 2, "Asie": 1 };
 const TEMP_ID_BASE = 9000000;
 
 function NT() { return require("./nationalTeams.js"); }
@@ -248,6 +254,12 @@ function playMatch(store, comp, m, leagues, world, now) {
     // Connaissance tactique des joueurs : celle de leur club, jamais touchée.
     [home.shell, away.shell].forEach(sh => { sh.recordInjury = entry => { injuries.push(entry); }; sh.syncCollectiveTrainingLog = () => {}; sh.updateTacticalKnowledge = () => {}; });
     const homeOk = home.shell.hasValidLineup(), awayOk = away.shell.hasValidLineup();
+    // Phase finale (m.boost) : forme physique avant le match, pour la
+    // récupération améliorée ci-dessous.
+    const before = new Map();
+    if (m.boost) [home, away].forEach(side => side.sheet.forEach(x => {
+      try { before.set(x.src, Engine.currentCondition(x.src, m.at, side.shell.conditionRecoveryPerDay())); } catch (e) { /* forme brute */ }
+    }));
     if (homeOk && awayOk) {
       const tacticsUsed = { home: Engine.tacticsSnapshotFor(home.shell), away: Engine.tacticsSnapshotFor(away.shell) };
       const result = new Engine.MatchEngine(home.shell, away.shell, { homeAdvantage: true }).simulate(m.at);
@@ -257,6 +269,14 @@ function playMatch(store, comp, m, leagues, world, now) {
       // Fatigue normale (moteur des clubs), puis entrée retirée du journal.
       Engine.recordMatchStatsForTeam(home.shell, -1, "national", m.at, null, tacticsUsed.home);
       Engine.recordMatchStatsForTeam(away.shell, -1, "national", m.at, null, tacticsUsed.away);
+      // Récupération améliorée, SEULEMENT pendant les phases finales de la
+      // dernière semaine (retour utilisateur 2026-10-05) : la moitié de la
+      // forme perdue sur le match est rendue aussitôt. La fatigue existe
+      // toujours (rotation, profondeur de banc) ; les fenêtres gardent la
+      // récupération normale.
+      before.forEach((b, p) => {
+        if (typeof b === "number" && typeof p.condition === "number" && p.condition < b) p.condition = Math.round(p.condition + (b - p.condition) * FINAL_RECOVERY_SHARE);
+      });
     } else if (!homeOk && !awayOk) { m.forfeit = "both"; m.scoreHome = 0; m.scoreAway = 0; }
     else if (!homeOk) { m.forfeit = "home"; m.scoreHome = 0; m.scoreAway = Engine.FORFEIT_SCORE; }
     else { m.forfeit = "away"; m.scoreHome = Engine.FORFEIT_SCORE; m.scoreAway = 0; }
@@ -266,6 +286,21 @@ function playMatch(store, comp, m, leagues, world, now) {
   }
   for (const t of tempIds.values()) {
     if (Array.isArray(t.player.matchLog)) t.player.matchLog = t.player.matchLog.filter(e => e.competition !== "national");
+    // Compteurs du dernier match remis à zéro : un match de club en cours
+    // de diffusion (Supercoupe) ne doit jamais reprendre ces stats.
+    t.player.secondsPlayed = 0;
+    t.player.secondsPlayedByPosition = {};
+    if (typeof t.player.emptyStats === "function") t.player.stats = t.player.emptyStats();
+  }
+  // Sélections en carrière (phase E : « nouveaux internationaux » du bilan).
+  if (m.boxHome || m.boxAway) {
+    store.caps = store.caps || {};
+    [[m.boxHome || [], m.home], [m.boxAway || [], m.away]].forEach(([box, tid]) => box.forEach(r => {
+      if (!r.ref || !(r.min > 0)) return;
+      const k = NC().refKey(r.ref);
+      const c = store.caps[k] = store.caps[k] || { n: 0, first: { at: m.at, teamId: tid } };
+      c.n++;
+    }));
   }
   m.convokedHome = home ? home.convoked : [];
   m.convokedAway = away ? away.convoked : [];
@@ -289,12 +324,215 @@ function playMatch(store, comp, m, leagues, world, now) {
   [[m.home, m.scoreHome, m.scoreAway, m.away], [m.away, m.scoreAway, m.scoreHome, m.home]].forEach(([tid, pf, pa, opp]) => {
     const md = NT().activeMandate(store, tid);
     if (!md) return;
-    NT().notify(leagues, md.ref, {
-      key: `nat_res_${m.id}_${tid}`, title: `${NT().teamLabel(tid)} : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${NT().teamLabel(opp)}`,
-      text: `Fenêtre internationale ${m.w}, qualifications.`,
-    }, now);
+    // Notification du mode Sélectionneur (phase E), jamais dans le fil du club.
+    NC().coachFeed(md, { key: `res_${m.id}`, kind: "result", at: now, title: `${NT().teamLabel(tid)} : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${NT().teamLabel(opp)}`, text: m.label || `Fenêtre internationale ${m.w}, qualifications.`, matchId: m.id });
   });
   return m;
+}
+
+// =====================================================================
+// PHASE D (2026-10-05) : phases finales de la dernière semaine (lundi →
+// dimanche, 20h). Saison continentale : un tournoi par continent (qualifiés
+// des fenêtres) + tournoi de consolation (Europe : les non-qualifiés).
+// Saison Coupe du monde : Coupe du monde (5 européens, 2 américains, 1
+// asiatique d'après le classement continental de la saison précédente) et
+// tournoi de consolation (toutes les autres sélections) ; têtes de série =
+// classement des groupes de la saison. Format selon le nombre d'équipes :
+// poules (1 ou 2 groupes, un tour par jour dès le lundi), puis quarts le
+// vendredi (8 équipes), demi-finales le samedi, finale et match pour la 3e
+// place le dimanche. Récupération améliorée (m.boost), voir playMatch.
+// store.finals["<saison>-<cat>"] = { season, cat, comp, tournaments: [...] }.
+// =====================================================================
+const KO_DAY = { qf: 4, sf: 5, final: 6, third: 6 };
+// Tours d'un groupe (méthode du cercle) : liste de tours de [i, j].
+function roundRobin(n) {
+  const ids = [...Array(n).keys()];
+  if (n % 2) ids.push(-1);
+  const m = ids.length, rounds = [];
+  for (let r = 0; r < m - 1; r++) {
+    const pairs = [];
+    for (let i = 0; i < m / 2; i++) {
+      const a = ids[i], b = ids[m - 1 - i];
+      if (a >= 0 && b >= 0) pairs.push(r % 2 ? [b, a] : [a, b]);
+    }
+    rounds.push(pairs);
+    ids.splice(1, 0, ids.pop());
+  }
+  return rounds;
+}
+// Format : nombre de groupes et taille du tableau final (8, 4, 2 ou 0).
+function formatFor(n) {
+  const groups = n >= 6 ? 2 : 1;
+  const size = Math.ceil(n / groups);
+  const rounds = size % 2 ? size : size - 1;
+  if (n >= 8 && rounds <= KO_DAY.qf) return { groups, ko: 8, rounds };
+  if (n >= 4 && rounds <= KO_DAY.sf) return { groups, ko: 4, rounds };
+  if (n >= 2 && rounds <= KO_DAY.final) return { groups, ko: 2, rounds };
+  return { groups: 1, ko: 0, rounds: n - 1 };
+}
+function finalsOf(store, season, cat) { return ((store.finals || {})[compKey(season, cat)]) || null; }
+// Tournoi : équipes déjà classées (têtes de série d'abord).
+function makeTournament(key, kind, label, seeds, days, cat, season) {
+  const f = formatFor(seeds.length);
+  const groups = Array.from({ length: f.groups }, (_, i) => ({ id: `${key}${String.fromCharCode(65 + i)}`, label: f.groups > 1 ? `Groupe ${String.fromCharCode(65 + i)}` : "Poule unique", teams: [] }));
+  seeds.forEach((t, i) => { const r = Math.floor(i / f.groups), p = i % f.groups; groups[r % 2 ? f.groups - 1 - p : p].teams.push(t); });
+  const matches = [];
+  groups.forEach(g => roundRobin(g.teams.length).forEach((round, r) => round.forEach(([a, b]) => {
+    matches.push({ id: `${season}${cat}${g.id}d${r}${a}${b}`, stage: "group", groupId: g.id, day: r, at: days[r], home: g.teams[a], away: g.teams[b], status: "scheduled", boost: true });
+  })));
+  return { key, kind, label, ko: f.ko, teams: seeds.slice(), groups, matches, ranking: null, champion: null };
+}
+// Classement d'un groupe de tournoi (mêmes règles que les qualifications).
+function tGroupStandings(t, groupId) { return standings({ groups: t.groups, matches: t.matches.filter(m => m.stage === "group") }, groupId); }
+function winnerOf(m) { return m.scoreHome > m.scoreAway ? m.home : m.away; }
+function loserOf(m) { return m.scoreHome > m.scoreAway ? m.away : m.home; }
+function koMatch(t, stage, n, home, away, days, season, cat) {
+  return { id: `${season}${cat}${t.key}${stage}${n}`, stage, n, day: KO_DAY[stage], at: days[KO_DAY[stage]], home, away, status: "scheduled", boost: true, label: `${t.label} · ${({ qf: "quart de finale", sf: "demi-finale", final: "finale", third: "match pour la 3e place" })[stage]}` };
+}
+// Fait avancer un tournoi : tableau final créé quand l'étape précédente est
+// terminée ; classement final quand tout est joué.
+function advanceTournament(t, days, season, cat) {
+  const done = st => t.matches.filter(m => m.stage === st).every(m => m.status === "played");
+  const has = st => t.matches.some(m => m.stage === st);
+  if (!done("group")) return false;
+  const gs = t.groups.map(g => tGroupStandings(t, g.id).map(r => r.teamId));
+  let changed = false;
+  const add = m => { t.matches.push(m); changed = true; };
+  if (t.ko === 8 && !has("qf")) {
+    const [A, B] = gs;
+    [[A[0], B[3]], [B[1], A[2]], [B[0], A[3]], [A[1], B[2]]].forEach((p, i) => add(koMatch(t, "qf", i + 1, p[0], p[1], days, season, cat)));
+  }
+  if (t.ko >= 4 && !has("sf") && (t.ko === 4 || (has("qf") && done("qf")))) {
+    let pairs;
+    if (t.ko === 8) { const q = n => winnerOf(t.matches.find(m => m.stage === "qf" && m.n === n)); pairs = [[q(1), q(2)], [q(3), q(4)]]; }
+    else if (gs.length === 2) pairs = [[gs[0][0], gs[1][1]], [gs[1][0], gs[0][1]]];
+    else pairs = [[gs[0][0], gs[0][3]], [gs[0][1], gs[0][2]]];
+    pairs.forEach((p, i) => add(koMatch(t, "sf", i + 1, p[0], p[1], days, season, cat)));
+  }
+  if (t.ko >= 2 && !has("final")) {
+    if (t.ko >= 4 && has("sf") && done("sf")) {
+      const sf = t.matches.filter(m => m.stage === "sf").sort((a, b) => a.n - b.n);
+      add(koMatch(t, "final", 1, winnerOf(sf[0]), winnerOf(sf[1]), days, season, cat));
+      add(koMatch(t, "third", 1, loserOf(sf[0]), loserOf(sf[1]), days, season, cat));
+    } else if (t.ko === 2) add(koMatch(t, "final", 1, gs[0][0], gs.length === 2 ? gs[1][0] : gs[0][1], days, season, cat));
+  }
+  if (!t.ranking && t.matches.every(m => m.status === "played") && (t.ko === 0 || has("final"))) {
+    t.ranking = rankTournament(t, gs);
+    t.champion = t.ranking[0];
+    changed = true;
+  }
+  return changed;
+}
+// Classement final : finale, 3e place, puis élimination au tour le plus
+// avancé (quarts, puis poules), départagés par le rang de poule et le bilan.
+function rankTournament(t, gs) {
+  const out = [];
+  const push = id => { if (id && !out.includes(id)) out.push(id); };
+  const fin = t.matches.find(m => m.stage === "final"), third = t.matches.find(m => m.stage === "third");
+  if (fin) { push(winnerOf(fin)); push(loserOf(fin)); }
+  if (third) { push(winnerOf(third)); push(loserOf(third)); }
+  const sfLosers = t.matches.filter(m => m.stage === "sf").map(loserOf);
+  sfLosers.forEach(push);
+  const rows = new Map();
+  gs.forEach(g => tGroupStandings(t, t.groups[gs.indexOf(g)].id).forEach(r => rows.set(r.teamId, r)));
+  const byGroup = (a, b) => { const ra = rows.get(a), rb = rows.get(b); return (ra.rank - rb.rank) || (rb.played ? rb.wins / rb.played : 0) - (ra.played ? ra.wins / ra.played : 0) || rb.diff - ra.diff; };
+  t.matches.filter(m => m.stage === "qf").map(loserOf).sort(byGroup).forEach(push);
+  [...rows.keys()].filter(id => !out.includes(id)).sort(byGroup).forEach(push);
+  return out;
+}
+// Classement des qualifications (têtes de série) : rang de groupe, puis
+// part de victoires, différence par match.
+function qualifRanking(comp, ids) {
+  const rows = new Map();
+  comp.groups.forEach(g => standings(comp, g.id).forEach(r => rows.set(r.teamId, r)));
+  const rate = r => (r && r.played ? r.wins / r.played : 0);
+  return ids.slice().sort((a, b) => {
+    const ra = rows.get(a), rb = rows.get(b);
+    return ((ra ? ra.rank : 9) - (rb ? rb.rank : 9)) || rate(rb) - rate(ra) || ((rb && rb.played ? rb.diff / rb.played : 0) - (ra && ra.played ? ra.diff / ra.played : 0)) || a.localeCompare(b);
+  });
+}
+// Classement continental (saison précédente) : tournoi principal puis
+// consolation ; à défaut, classement des qualifications de la saison.
+function continentalRanking(store, season, cat, continent, comp) {
+  const prev = finalsOf(store, season - 1, cat);
+  const ids = CONTINENTS[continent].map(c => NT().teamIdOf(c, cat));
+  if (prev && prev.comp === "continental") {
+    const order = [];
+    prev.tournaments.filter(t => t.continent === continent && t.ranking).sort((a, b) => (a.kind === "consolation") - (b.kind === "consolation")).forEach(t => t.ranking.forEach(id => { if (!order.includes(id)) order.push(id); }));
+    ids.forEach(id => { if (!order.includes(id)) order.push(id); });
+    return order.filter(id => ids.includes(id));
+  }
+  return qualifRanking(comp, ids);
+}
+function createFinals(store, season, cat, comp, days) {
+  const tournaments = [];
+  if (comp.comp === "continental") {
+    const q = qualification(comp).status;
+    for (const continent of Object.keys(CONTINENTS)) {
+      const ids = CONTINENTS[continent].map(c => NT().teamIdOf(c, cat));
+      const name = continent === "Europe" ? "Euro" : continent === "Amérique" ? "AmeriCup" : "Coupe d'Asie";
+      const main = qualifRanking(comp, ids.filter(id => q[id] === "qualified"));
+      const cons = qualifRanking(comp, ids.filter(id => q[id] === "consolation"));
+      if (main.length) tournaments.push({ ...makeTournament(`${continent.slice(0, 2).toUpperCase()}M`, "continental", name, main, days, cat, season), continent });
+      if (cons.length) tournaments.push({ ...makeTournament(`${continent.slice(0, 2).toUpperCase()}C`, "consolation", `${name} · consolation`, cons, days, cat, season), continent });
+    }
+  } else {
+    const wc = [];
+    for (const continent of Object.keys(CONTINENTS)) wc.push(...continentalRanking(store, season, cat, continent, comp).slice(0, WORLD_SLOTS[continent] || 0));
+    const all = Object.values(CONTINENTS).flat().map(c => NT().teamIdOf(c, cat));
+    tournaments.push(makeTournament("WCM", "world", "Coupe du monde", qualifRanking(comp, wc), days, cat, season));
+    tournaments.push(makeTournament("WCC", "consolation", "Tournoi de consolation", qualifRanking(comp, all.filter(id => !wc.includes(id))), days, cat, season));
+  }
+  store.finals = store.finals || {};
+  store.finals[compKey(season, cat)] = { season, cat, comp: comp.comp, tournaments };
+  return store.finals[compKey(season, cat)];
+}
+function tournamentOf(store, season, cat, teamId) {
+  const f = finalsOf(store, season, cat);
+  return f ? f.tournaments.find(t => t.teams.includes(teamId)) || null : null;
+}
+// Encore en course (pas éliminé) dans un tournoi : avant la fin des poules
+// tout le monde ; ensuite, les équipes du tableau final pas encore battues.
+function aliveTeams(t) {
+  if (t.ranking) return [];
+  const group = t.matches.filter(m => m.stage === "group");
+  if (!group.every(m => m.status === "played") || t.ko === 0) return t.teams.slice();
+  const ko = t.matches.filter(m => m.stage !== "group" && m.stage !== "third");
+  if (!ko.length) {
+    const gs = t.groups.map(g => tGroupStandings(t, g.id).map(r => r.teamId));
+    const per = t.ko / gs.length;
+    return gs.flatMap(g => g.slice(0, per));
+  }
+  const out = new Set(ko.flatMap(m => [m.home, m.away]));
+  ko.filter(m => m.status === "played").forEach(m => out.delete(loserOf(m)));
+  return [...out];
+}
+// Règle de la Supercoupe (retour utilisateur 2026-10-05) : un joueur dont la
+// sélection est encore en course (demi-finales et au-delà, tant qu'elle
+// n'est pas éliminée) ne joue pas la Supercoupe du samedi ; éliminé avant
+// les demi-finales, il la joue normalement. Renvoie l'ensemble des joueurs
+// (refKey) retenus par leur sélection à l'instant `at`.
+function unavailableAt(store, at) {
+  const out = new Set();
+  Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => {
+    const first = Math.min(...t.matches.map(m => m.at)), last = Math.max(...t.matches.map(m => m.at));
+    if (!(at >= first - DAY_MS && at <= last + DAY_MS)) return;
+    aliveTeams(t).forEach(teamId => {
+      const conv = NC().convocationOf(store, teamId, `s${f.season}f`);
+      ((conv && conv.players) || []).forEach(r => out.add(NC().refKey(r)));
+    });
+  }));
+  return out;
+}
+const DAY_MS = 24 * 3600 * 1000;
+// Palmarès d'une sélection.
+function addHonours(store, f) {
+  store.honours = store.honours || {};
+  f.tournaments.forEach(t => (t.ranking || []).forEach((id, i) => {
+    const list = store.honours[id] = store.honours[id] || [];
+    if (list.some(h => h.season === f.season && h.key === t.key)) return;
+    list.push({ season: f.season, key: t.key, kind: t.kind, label: t.label, rank: i + 1, of: t.ranking.length });
+  }));
 }
 
 // --- Passage du rattrapage du monde ---------------------------------------
@@ -320,7 +558,41 @@ function step(store, leagues, world, now, season, calendarStartAt) {
       playMatch(store, comp, m, leagues, world, now);
       changed = true;
     }
+    // Phase D : phases finales de la dernière semaine, créées dès que les
+    // qualifications sont terminées (avant le gel des convocations).
+    const finalCal = NT().seasonCalendar(cfg, calendarStartAt, season, cat).find(c => c.kind === "final");
+    if (!finalCal) continue;
+    let fin = finalsOf(store, season, cat);
+    if (!fin && comp.matches.every(m => m.status === "played")) { fin = createFinals(store, season, cat, comp, finalCal.days); changed = true; }
+    if (!fin) { due.push(finalCal.days[0] - 3 * DAY_MS); continue; }
+    let progress = true;
+    while (progress) {
+      progress = false;
+      for (const t of fin.tournaments) {
+        if (advanceTournament(t, finalCal.days, season, cat)) { changed = true; progress = true; }
+        for (const m of t.matches) {
+          if (m.status !== "scheduled") continue;
+          if (now < m.at) { due.push(m.at); continue; }
+          const g = NC().gatheringsOf(store, store.teams[m.home], season, calendarStartAt).find(x => x.kind === "final");
+          [m.home, m.away].forEach(tid => {
+            const conv = g && NC().convocationOf(store, tid, g.gid);
+            if (g && !(conv && conv.frozenAt)) NC().freezeConvocation(store, store.teams[tid], g, NT().activeMandate(store, tid), leagues, world, now);
+          });
+          m.gid = g ? g.gid : `s${season}f`;
+          m.label = m.label || `${t.label} · poule`;
+          playMatch(store, fin, m, leagues, world, now);
+          changed = true; progress = true;
+        }
+      }
+    }
+    if (fin.tournaments.every(t => t.ranking) && !fin.honoured) {
+      addHonours(store, fin);
+      fin.honoured = true;
+      fin.tournaments.forEach(t => notifyChampion(store, t, leagues, now));
+      changed = true;
+    }
   }
+  Object.keys(store.finals || {}).forEach(k => { if (store.finals[k].season < season - 2) { delete store.finals[k]; changed = true; } });
   // Historique : 3 saisons.
   Object.keys(store.intl || {}).forEach(k => { if (store.intl[k].season < season - 2) { delete store.intl[k]; changed = true; } });
   return { changed, due };
@@ -352,14 +624,41 @@ function resultsOf(store, teamId) {
   Object.values(store.intl || {}).forEach(c => c.matches.forEach(m => {
     if (m.status === "played" && (m.home === teamId || m.away === teamId)) out.push({ ...publicMatch(m), season: c.season, comp: c.comp, cat: c.cat });
   }));
+  Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => t.matches.forEach(m => {
+    if (m.status === "played" && (m.home === teamId || m.away === teamId)) out.push({ ...publicMatch(m), season: f.season, comp: t.kind, cat: f.cat, label: m.label || t.label, stage: m.stage });
+  })));
   return out.sort((a, b) => b.at - a.at);
 }
 function matchDetail(store, matchId) {
-  for (const c of Object.values(store.intl || {})) {
+  const pools = Object.values(store.intl || {}).map(c => ({ season: c.season, comp: c.comp, matches: c.matches }))
+    .concat(Object.values(store.finals || {}).flatMap(f => f.tournaments.map(t => ({ season: f.season, comp: t.kind, matches: t.matches }))));
+  for (const c of pools) {
     const m = c.matches.find(x => x.id === matchId);
-    if (m) return { ...publicMatch(m), season: c.season, comp: c.comp, boxHome: m.boxHome || [], boxAway: m.boxAway || [], injuries: m.injuries || [], homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0] };
+    if (m) return { ...publicMatch(m), label: m.label || null, stage: m.stage || null, season: c.season, comp: c.comp, boxHome: m.boxHome || [], boxAway: m.boxAway || [], injuries: m.injuries || [], homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0] };
   }
   return null;
 }
 
-module.exports = { CONTINENTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, matchDetail };
+function notifyChampion(store, t, leagues, now) {
+  (t.ranking || []).slice(0, 3).forEach((id, i) => {
+    const md = NT().activeMandate(store, id);
+    if (!md) return;
+    NC().coachFeed(md, { key: `rank_${t.key}`, kind: "competition", at: now, title: `${NT().teamLabel(id)} : ${i === 0 ? "vainqueur" : i === 1 ? "finaliste" : "3e"} · ${t.label}`, text: `Classement final : ${i + 1}e sur ${t.ranking.length}.` });
+  });
+}
+// Vue des phases finales d'une sélection (page de la sélection).
+function finalsView(store, teamId, season) {
+  const team = store.teams[teamId];
+  if (!team) return null;
+  const f = finalsOf(store, season, team.cat);
+  if (!f) return null;
+  const pub = t => ({
+    key: t.key, kind: t.kind, label: t.label, ko: t.ko, continent: t.continent || null, champion: t.champion, ranking: t.ranking,
+    groups: t.groups.map(g => ({ id: g.id, label: g.label, standings: tGroupStandings(t, g.id).map(r => ({ ...r, label: NT().teamLabel(r.teamId), country: r.teamId.split("-")[0] })) })),
+    matches: t.matches.map(m => ({ ...publicMatch(m), stage: m.stage, n: m.n || null, day: m.day })),
+    mine: t.teams.includes(teamId),
+  });
+  return { season, comp: f.comp, tournaments: f.tournaments.filter(t => t.teams.includes(teamId)).map(pub), others: f.tournaments.filter(t => !t.teams.includes(teamId)).map(t => ({ key: t.key, label: t.label, champion: t.champion })) };
+}
+function honoursOf(store, teamId) { return ((store.honours || {})[teamId] || []).slice().sort((a, b) => b.season - a.season || a.rank - b.rank); }
+module.exports = { CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, matchDetail };
