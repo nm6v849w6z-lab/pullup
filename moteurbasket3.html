@@ -55860,7 +55860,7 @@ function showPrivateLeagueBoxscore(lp, roundIndex, homeIdx, awayIdx) {
     kicker: `Ligue privée · ${lp.name} · Journée ${roundIndex + 1}`,
     whenText: `${formatCalendarDayFr(round.dueAt)} · ${formatCalendarTimeFr(round.dueAt)}`,
     scoreHome: m.scoreHome, scoreAway: m.scoreAway,
-    noteHtml: `<div class="lp-mbx-note">${m.forfeit ? "Match décidé par forfait (cinq de départ incomplet)." : "Match de ligue privée : aucun effet sur la forme, l'entraînement, les finances ni les stats de carrière."}</div>`,
+    noteHtml: m.forfeit ? `<div class="lp-mbx-note">Match décidé par forfait (cinq de départ incomplet).</div>` : "",
     // Direct gardé avec le match (voir /api/private-league/live) : à revoir.
     replay: typeof m.liveUntil === "number" && !m.forfeit ? { lp: lp.id, round: roundIndex, home: homeIdx, away: awayIdx } : null,
     tactics: m.tacticsUsed || null,
