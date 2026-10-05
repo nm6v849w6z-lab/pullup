@@ -36,8 +36,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     saison 1 du mandat = compétition continentale (Euro, AmeriCup, Coupe
     d'Asie) ; saison 2 = Coupe du monde pour les qualifiés AU CLASSEMENT
     de la compétition continentale, tournoi consolante pour les autres.
-  - Un joueur en sélection pendant la phase finale ne joue pas la
-    Supercoupe.
+  - Supercoupe (samedi 20h de cette semaine) : un joueur dont la sélection
+    est encore en course en demi-finale ne la joue pas ; un joueur dont la
+    sélection est éliminée avant les demi-finales (poules, quarts) la joue
+    normalement (retour utilisateur 2026-10-05).
   - **Semaines de compétition internationale : récupération des joueurs
     MAXIMISÉE** (matchs quotidiens sans usure cumulée).
   - Jamais déplacer ni supprimer un match de club ; matchs nationaux avec
