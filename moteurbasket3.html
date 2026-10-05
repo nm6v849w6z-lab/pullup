@@ -9592,7 +9592,27 @@ function showCrashRecoveryScreen(message) {
     </div>`;
   } catch (e) { /* si même ça échoue, on laisse la page telle quelle plutôt que de planter une deuxième fois */ }
 }
+// Erreurs qui ne viennent PAS du jeu (retour Discord 2026-10-05 : écran
+// « Script error. » à chaque connexion sur ordinateur, rien sur mobile) :
+// le navigateur masque le détail d'une erreur levée par un script d'un
+// autre domaine (régie publicitaire Google chargée sur ordinateur, voir
+// hmAdsLoadScript ; extensions Safari/Chrome : traducteur, bloqueur de
+// pub, gestionnaire de mots de passe…) et ne donne que « Script error. »,
+// sans fichier ni pile. Le jeu n'est pas cassé : on le note dans la
+// console, jamais d'écran de secours.
+function isForeignScriptError(event) {
+  const msg = String((event && event.message) || "");
+  const file = String((event && event.filename) || "");
+  if (/^script error\.?$/i.test(msg.trim()) && !(event && event.error && event.error.stack)) return true;
+  if (/^(chrome|moz|safari|safari-web|webkit-masked)-extension:/i.test(file)) return true;
+  if (file && /^https?:/i.test(file) && !file.startsWith(location.origin)) return true;
+  return false;
+}
 window.addEventListener("error", (event) => {
+  if (isForeignScriptError(event)) {
+    try { console.warn("[erreur externe ignorée]", event.message, event.filename || ""); } catch (e) { /* rien */ }
+    return;
+  }
   showCrashRecoveryScreen(`${event.message || ""}\n${(event.error && event.error.stack) || ""}`.trim());
 });
 window.addEventListener("unhandledrejection", (event) => {
