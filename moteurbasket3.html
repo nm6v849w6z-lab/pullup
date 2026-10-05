@@ -8108,6 +8108,8 @@
   .mk-hist-btn[aria-expanded="true"]{background:var(--amber); color:#1A0F02;}
   .mk-page.mk-history-on > :not(.mk-ph):not(#mkHistoryPanel){display:none !important;}
   @media (max-width:640px){ .th-row{grid-template-columns:minmax(0,1fr) auto; } .th-date{grid-column:1/-1;} .th-sum{grid-template-columns:1fr;} }
+  .lg-code-link{border:0; background:transparent; font:inherit; cursor:pointer;}
+  .lg-code-link:hover, .lg-code-link:focus-visible{text-decoration:underline; text-underline-offset:2px;}
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
@@ -55198,13 +55200,24 @@ function lpPlayerRef(teamIdx, row) {
   // parti depuis) : avatar quand même, depuis son id (+ âge et apparence
   // notés dans la feuille de match) — même visage que partout ailleurs.
   const player = found || (row && row.id != null ? { id: row.id, age: row.age, look: row.look || null } : null);
-  return { team, player, link: found ? playerLinkHtml(teamIdx, found.id, found.name) : escapeHtml(row.name || "?") };
+  // Nom toujours cliquable : fiche du joueur dans son effectif connu, sinon
+  // là où il est aujourd'hui (club d'un autre championnat, transféré depuis :
+  // voir thOpenPlayer / /api/world/locate-player).
+  const hint = team && team.isGuest ? (team.guestLeagueId || "") : "";
+  const link = found ? playerLinkHtml(teamIdx, found.id, found.name)
+    : row && row.id != null
+      ? `<button type="button" class="player-link" data-th-player="${escapeHtml(String(row.id))}" data-th-hint="${escapeHtml(String(hint))}" data-no-i18n>${escapeHtml(row.name || "?")}</button>`
+      : escapeHtml((row && row.name) || "?");
+  return { team, player, link };
 }
 // Trigramme d'un club de ligue privée (leaders : le nom complet chevauchait
 // les stats), nom complet au survol.
 function lpTeamCodeHtml(idx) {
   const t = league.teams[idx];
-  return `<span class="lg-code" title="${escapeHtml(lpTeamName(idx))}" data-no-i18n>${escapeHtml(t ? teamTrigram(t) : "?")}</span>`;
+  if (!t) return `<span class="lg-code">?</span>`;
+  // Cliquable : fiche du club (club d'un autre championnat → Planète Hoop,
+  // voir l'écouteur délégué de [data-team-idx]).
+  return `<button type="button" class="lg-code lg-code-link" data-team-idx="${idx}" title="${escapeHtml(lpTeamName(idx))}" data-no-i18n>${escapeHtml(teamTrigram(t))}</button>`;
 }
 function lpPlayedRounds(lp) {
   return (lp.rounds || []).filter(r => r.matches.some(m => m.played && !m.forfeit));
