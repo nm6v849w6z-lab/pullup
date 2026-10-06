@@ -148,6 +148,26 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   const badges = [...docA3.querySelectorAll("#calendrierSection .cal-fr-badge")];
   check(badges.length === 2, `2 lignes « Amical » dans le Calendrier (${badges.length})`);
   check(!!docA3.querySelector("#calendrierSection .fr-cal-score"), "le score de l'amical joué ouvre sa feuille de match depuis le Calendrier");
+  // Bouton d'ordres de l'amical à venir (retour utilisateur 2026-10-06) :
+  // même bouton que les autres matchs (data-order-target), pas un lien vers
+  // la page des amicaux ; « Voir le match » garde l'accès à cette page.
+  {
+    const up = winA3.eval("(() => { const f = league.friendlies.find(x => x.status === 'accepted' && x.at > Date.now()); return f ? { id: f.id, ordered: !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex])) } : null; })()");
+    check(!!up, "un amical accepté à venir dans le Calendrier");
+    const btnOf = () => docA3.querySelector(`#calendrierSection .calendar-table [data-order-target='fr:${up.id}']`);
+    check(!!btnOf() && btnOf().classList.contains("calendar-order-btn"), "amical : bouton d'ordres commun (cible fr:<id>)");
+    check(up.ordered ? /Modifier vos ordres/.test(btnOf().textContent) : (/Ordres/.test(btnOf().textContent) && !/Modifier/.test(btnOf().textContent)), `amical sans ordres → « Ordres » (${btnOf().textContent.trim()})`);
+    const row = btnOf().closest("tr");
+    check(!!row.querySelector(".calendar-fr-link[data-tab='amicaux']") && /Voir le match/.test(row.textContent), "la page de l'amical reste accessible (« Voir le match »)");
+    btnOf().click();
+    await waitFor(() => !docA3.getElementById("prepSection").classList.contains("hidden") && winA3.eval("tqEdit && tqEdit.kind === 'friendly' && tqEdit.friendlyId") === up.id, "clic → éditeur d'ordres de CET amical");
+    // Ordres enregistrés → « Modifier vos ordres ».
+    const saved = await (await fetch(`${baseUrl}api/friendly/lineup`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": tokens[0] }, body: JSON.stringify({ id: up.id, starters: winA3.eval("POSITIONS.map(p => teamA.lineup.starters[p])"), bench: [] }) })).json();
+    check(saved.ok, "ordres de l'amical enregistrés (serveur)");
+    winA3.eval(`(() => { const f = league.friendlies.find(x => x.id === '${up.id}'); f.lineups = f.lineups || {}; f.lineups[myTeamIndex] = { starters: Object.values(teamA.lineup.starters) }; })()`);
+    [...docA3.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "calendrier").click();
+    check(/Modifier vos ordres/.test(btnOf().textContent) && btnOf().classList.contains("calendar-order-btn-validated"), "amical avec ordres → « Modifier vos ordres »");
+  }
 
   // --- Invitation reçue page déjà ouverte (retour d'un joueur 2026-09-27 :
   //     "j'ai reçu la notification pour le match amical mais pas

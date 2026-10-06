@@ -8319,6 +8319,8 @@
   .fr-lu-actions{margin-top:14px;}
   .cal-fr-badge{background:rgba(51,180,161,.14); color:var(--ok);}
   .calendar-fr-progress{font-size:13px; color:var(--ink-faint);}
+  .calendar-fr-actions{display:flex; flex-direction:column; align-items:flex-end; gap:4px;}
+  .calendar-fr-link{background:none; border:0; padding:0; font:inherit; font-size:12px; color:var(--ink-dim); text-decoration:underline; cursor:pointer;}
   @media (max-width: 640px){
     .fr-row{flex-wrap:wrap;}
     .fr-row-actions{width:100%; justify-content:flex-start;}
@@ -50911,16 +50913,26 @@ function renderCalendrierSection() {
       scoreText = `${my} - ${opp}`;
       cls = my > opp ? "result-win" : my < opp ? "result-loss" : "";
     }
+    // Bouton d'ordres (retour utilisateur 2026-10-06) : MÊME composant et
+    // même navigation que les autres matchs (orderTargetFor/openOrdersTarget,
+    // cible « fr:<id> » → éditeur d'ordres de l'amical), « Ordres » ou
+    // « Modifier vos ordres » selon les ordres déjà enregistrés. Le serveur
+    // accepte les ordres d'un amical jusqu'au coup d'envoi (invitation en
+    // attente comprise, voir server/friendlies.js:setFriendlyLineup). La
+    // page de l'amical reste accessible par « Voir le match ».
+    const frOrdered = !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex]));
+    const frOrderBtn = `<button class="calendar-order-btn${frOrdered ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("fr", f.id))}>${CALENDAR_ORDERS_ICON}${frOrdered ? "Modifier vos ordres" : "Ordres"}</button>`;
+    const frPageBtn = `<button type="button" class="calendar-fr-link" data-tab="amicaux">${f.status === "pending" ? "Invitation en attente" : "Voir le match"}</button>`;
     rows.push({
       competition: "fr", label: "Match amical", shortLabel: "Amical",
       opponent: league.teams[oppIdxFr].name, opponentIdx: oppIdxFr,
       location: isHomeFr ? "Domicile" : "Extérieur",
       scoreText, boxscore: null, frBox: played && !f.result.forfeit ? f.id : null,
-      cls, actionCell: played ? "" : frInProgress ? `<span class="calendar-fr-progress">Résultat à venir</span>` : `<button type="button" class="calendar-order-btn calendar-fr-btn" data-tab="amicaux">${f.status === "pending" ? "En attente" : "Amical"}</button>`,
+      cls, actionCell: played ? "" : frInProgress ? `<span class="calendar-fr-progress">Résultat à venir</span>` : `<div class="calendar-fr-actions">${frOrderBtn}${frPageBtn}</div>`,
       scheduledAt: f.at, fallbackOrder: 200000,
       isHome: isHomeFr, played, won: cls === "result-win", lost: cls === "result-loss",
-      isLive: false, alreadyOrdered: false, isPrivate: true, frPending: f.status === "pending",
-      frId: f.id, frOrdered: !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex])),
+      isLive: false, alreadyOrdered: frOrdered, isPrivate: true, frPending: f.status === "pending",
+      frId: f.id, frOrdered,
     });
   });
 
