@@ -232,13 +232,15 @@ function buildSide(store, teamId, gid, leagues, world, at, tempIds) {
   shell.lineup = { starters, backupPositions, convoked: sheet.map(tmpOf), ...(minutes ? { minutes } : {}) };
   return { shell, sheet, convoked: ((conv && conv.players) || []).slice() };
 }
+// Lignes de box score : TOUTES les statistiques du moteur (comme un match
+// de club : rebonds offensifs/défensifs, raquette, zones de tir, origine des
+// points…), pour le box score, le direct et l'analyse (2026-10-06).
+// `id` = id provisoire du match (celui du fil d'événements du direct).
 function boxOf(rows, tempIds) {
   return (rows || []).map(r => {
     const t = tempIds.get(r.id);
     return {
-      ref: t ? { p: t.id, n: t.player.name } : null, name: r.name, position: r.position, min: r.min,
-      pts: r.pts, reb: r.reb, ast: r.ast, stl: r.stl, blk: r.blk, tov: r.tov, pf: r.pf,
-      fgm2: r.fgm2, fga2: r.fga2, fgm3: r.fgm3, fga3: r.fga3, ftm: r.ftm, fta: r.fta, plusMinus: r.plusMinus || 0, starter: r.starter || undefined,
+      ...r, ref: t ? { p: t.id, n: t.player.name } : null, plusMinus: r.plusMinus || 0, starter: r.starter || undefined,
       club: t ? { name: t.club.name, leagueId: t.club.leagueId, idx: t.club.idx } : null,
     };
   });
@@ -266,6 +268,8 @@ function playMatch(store, comp, m, leagues, world, now) {
       m.scoreHome = result.finalScore.A; m.scoreAway = result.finalScore.B;
       m.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
       m.boxHome = boxOf(result.boxScoreA, tempIds); m.boxAway = boxOf(result.boxScoreB, tempIds);
+      // Tactiques réellement jouées (analyse, comme tacticsUsed d'un club).
+      m.tacticsUsed = tacticsUsed; m.seed = result.seed;
       // Fatigue normale (moteur des clubs), puis entrée retirée du journal.
       Engine.recordMatchStatsForTeam(home.shell, -1, "national", m.at, null, tacticsUsed.home);
       Engine.recordMatchStatsForTeam(away.shell, -1, "national", m.at, null, tacticsUsed.away);

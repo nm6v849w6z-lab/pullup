@@ -138,8 +138,12 @@ function gatheringsOf(store, team, season, calendarStartAt) {
   gs.forEach(g => {
     if (g.kind === "friendly") { g.bye = false; return; }
     if (g.kind === "window") {
+      // Sans match de qualification ce dimanche-là (pas de tirage cette
+      // saison, ou groupe de 3) : la fenêtre n'est pas un rassemblement ;
+      // un amical joué ce jour-là a son propre rassemblement (retour
+      // utilisateur 2026-10-06 : plus de « fenêtre » en double du vrai match).
       const comp = NM.compOf(store, season, team.cat);
-      g.bye = !!(comp && !comp.matches.some(m => m.gid === g.gid && (m.home === team.id || m.away === team.id)));
+      g.bye = !comp || !comp.matches.some(m => m.gid === g.gid && (m.home === team.id || m.away === team.id));
     } else {
       const fin = NM.finalsOf(store, season, team.cat);
       g.bye = !!(fin && !fin.tournaments.some(t => t.teams.includes(team.id)));
@@ -221,10 +225,25 @@ function step(store, leagues, world, now, season, calendarStartAt) {
       watchAlerts(store, m, team, pools[team.id], season, calendarStartAt, now);
       changed = true;
     }
+    // Convocations faites sur une fenêtre sans match alors qu'un amical est
+    // programmé ce jour-là : reportées sur le rassemblement de l'amical.
+    if (m && typeof calendarStartAt === "number") {
+      const gsAll = gatheringsOf(store, team, season, calendarStartAt);
+      gsAll.filter(g => g.kind === "friendly" && now < g.freezeAt).forEach(fg => {
+        const w = gsAll.find(g => g.kind === "window" && g.bye && g.startAt === fg.startAt);
+        const wc = w && convocationOf(store, team.id, w.gid);
+        const fc = convocationOf(store, team.id, fg.gid);
+        if (!wc || wc.frozenAt || !wc.players.length || (fc && fc.players.length)) return;
+        const conv = ensureConvocation(store, team.id, fg, m.id);
+        conv.players = wc.players.slice();
+        wc.players = [];
+        changed = true;
+      });
+    }
     // Rappel (mode Sélectionneur) : la liste se fige dans moins de 24 h.
     if (m && cfg.matchesLive && typeof calendarStartAt === "number") {
       for (const g of gatheringsOf(store, team, season, calendarStartAt)) {
-        if (now < g.freezeAt - DAY || now >= g.freezeAt) continue;
+        if (g.bye || now < g.freezeAt - DAY || now >= g.freezeAt) continue;
         const conv = convocationOf(store, team.id, g.gid);
         const n = conv ? conv.players.length : 0;
         if (coachFeed(m, { key: `freeze_${g.gid}`, kind: "convocation", at: now, title: "Les convocations doivent être finalisées", text: `${g.label} : liste figée dans moins de 24 h (${n} / ${LIMITS.convocation} joueurs). Les places libres seront complétées automatiquement.` })) changed = true;
@@ -615,10 +634,11 @@ function coachView(store, me, teamId, now, ctx) {
   const pm = poolMap(pool);
   const gs = gatheringsOf(store, team, ctx.season, ctx.calendarStartAt);
   const cur = currentGathering(gs, now);
+  const gMatches = gatheringMatchesOf(store, team, ctx.season, now);
   const gatherings = gs.map(g => {
     const conv = convocationOf(store, team.id, g.gid);
     const players = ((conv && conv.players) || []).map(r => ({ ref: r, nid: nidOf(m, r), status: statusOf(r, pm, g) }));
-    return { ...g, frozen: !!(conv && conv.frozenAt) || now >= g.freezeAt, frozenAt: conv ? conv.frozenAt : null, auto: !!(conv && conv.auto), players, changes: (conv && conv.changes) || [], past: now >= g.endAt + 6 * 3600 * 1000 };
+    return { ...g, matches: gMatches[g.gid] || [], frozen: !!(conv && conv.frozenAt) || now >= g.freezeAt, frozenAt: conv ? conv.frozenAt : null, auto: !!(conv && conv.auto), players, changes: (conv && conv.changes) || [], past: now >= g.endAt + 6 * 3600 * 1000 };
   });
   const { refs } = tacticsRoster(store, m, team, ctx);
   const nidPlayers = refs.map(r => ({ nid: nidOf(m, r), ref: r }));
@@ -662,6 +682,33 @@ function coachView(store, me, teamId, now, ctx) {
 // publiques : stats en club, jamais les caractéristiques), convoqués une
 // fois la liste figée, derniers résultats, bilan, confrontations. `oppId` :
 // une autre sélection de la même catégorie, choisie par le staff.
+// Vrais matchs de chaque rassemblement (retour utilisateur 2026-10-06 : la
+// « fenêtre internationale » ne doit pas apparaître comme un pseudo-match à
+// côté du vrai match) : { gid: [{ id, at, home, away, opponent, venue,
+// comp, status, scoreHome, scoreAway }] }. Le score n'est donné qu'une
+// fois le match joué (et sa diffusion terminée).
+function gatheringMatchesOf(store, team, season, now) {
+  const NM = require("./nationalMatches.js");
+  const out = {};
+  const add = (gid, m, comp) => {
+    if (!gid || (m.home !== team.id && m.away !== team.id)) return;
+    const played = m.status === "played" && !(m.liveUntil && now < m.liveUntil);
+    (out[gid] = out[gid] || []).push({
+      id: m.id, at: m.at, home: m.home, away: m.away, opponent: m.home === team.id ? m.away : m.home, venue: m.home === team.id ? "home" : "away",
+      comp, status: played ? "played" : m.status === "played" ? "live" : m.status, scoreHome: played ? m.scoreHome : null, scoreAway: played ? m.scoreAway : null,
+    });
+  };
+  const comp = NM.compOf(store, season, team.cat);
+  if (comp) comp.matches.forEach(m => {
+    const g = (comp.groups || []).find(x => x.id === m.groupId);
+    add(m.gid, m, "Qualifications" + (g && g.label ? " · " + g.label : ""));
+  });
+  const fin = NM.finalsOf(store, season, team.cat);
+  if (fin) fin.tournaments.forEach(t => t.matches.forEach(m => add(`s${season}f`, m, m.label || t.label)));
+  (store.intlFriendlies || []).forEach(f => { if (f.season === season && (f.status === "accepted" || f.status === "played")) add(`s${f.season}x${f.id}`, f, "Match amical international"); });
+  Object.values(out).forEach(list => list.sort((a, b) => a.at - b.at));
+  return out;
+}
 function upcomingMatchesOf(store, team, season) {
   const NM = require("./nationalMatches.js");
   const out = [];

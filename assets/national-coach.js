@@ -61,7 +61,7 @@
     ".nc-err{color:#E2694F;font-size:13px;margin:8px 0}",
     ".nc-gath{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}",
     ".nc-g{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--ink);font:inherit;cursor:pointer}",
-    ".nc-g.on{border-color:var(--amber)}.nc-g.past{opacity:.6}.nc-g b{display:block;font-size:13.5px}.nc-g span{font-size:12px;color:var(--ink-dim)}",
+    ".nc-g.on{border-color:var(--amber)}.nc-g.past{opacity:.6}.nc-g b{display:block;font-size:13.5px}.nc-g span{font-size:12px;color:var(--ink-dim)}.nc-g b .nat-flag{width:18px;height:12px;vertical-align:-1px}.nc-g .nc-g-comp{color:var(--amber);font-weight:700}",
     ".nc-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}@media(max-width:900px){.nc-two{grid-template-columns:minmax(0,1fr)}}",
     ".nc-set{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}",
     ".nc-set label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-dim);font-weight:700}",
@@ -135,8 +135,24 @@
   function gathering(gid) { return ((ui.view && ui.view.gatherings) || []).filter(function (x) { return x.gid === gid; })[0] || null; }
   function curGathering() { return gathering(ui.gid || (ui.view && ui.view.currentGid)) || null; }
   function convRefs(gg) { return gg ? gg.players.map(function (x) { return x.ref; }) : []; }
+  // Vrai match d'un rassemblement (retour utilisateur 2026-10-06) : la
+  // fenêtre internationale reste interne, l'interface montre le match.
+  function gMatch(gg) { return gg && gg.matches && gg.matches.length === 1 ? gg.matches[0] : null; }
+  function matchTitleHtml(m) {
+    return flag(m.home.split("-")[0]) + " " + esc(teamLab(m.home)) + " – " + flag(m.away.split("-")[0]) + " " + esc(teamLab(m.away));
+  }
+  function gTitleHtml(gg) {
+    var m = gMatch(gg);
+    return m ? matchTitleHtml(m) : esc(gg.label);
+  }
+  function gTitleText(gg) {
+    var m = gMatch(gg);
+    return m ? teamLab(m.home) + " – " + teamLab(m.away) : gg.label;
+  }
   function compLabel(gg) {
     if (!gg) return "";
+    var m = gMatch(gg);
+    if (m) return teamLab(m.home) + " – " + teamLab(m.away) + " · " + m.comp;
     if (gg.kind === "final") return gg.label;
     return gg.label + (gg.comp === "continental" ? " · qualifications continentales" : gg.comp === "world" ? " · qualifications Coupe du monde" : "");
   }
@@ -305,7 +321,10 @@
     if (!v.gatherings.length) return '<div class="nc-card"><p class="nc-club">Aucun rassemblement cette saison.</p></div>';
     var h = '<div class="nc-gath">' + v.gatherings.map(function (x) {
       var on = (ui.gid || v.currentGid) === x.gid;
-      return '<button type="button" class="nc-g' + (on ? " on" : "") + (x.past ? " past" : "") + '" data-nc-gid="' + esc(x.gid) + '"><b>' + esc(x.label) + "</b><span>" + esc(x.kind === "final" ? "Du " + when(x.startAt) + " au " + when(x.endAt) : when(x.startAt, true)) + "</span><br><span>" +
+      var gm = gMatch(x);
+      // Phase finale : plusieurs matchs pour un même rassemblement, listés.
+      var sub = gm ? '<span class="nc-g-comp">' + esc(gm.comp) + "</span><br>" : x.matches && x.matches.length > 1 ? '<span class="nc-g-comp">' + x.matches.map(function (m) { return esc(teamLab(m.opponent)); }).join(" · ") + "</span><br>" : "";
+      return '<button type="button" class="nc-g' + (on ? " on" : "") + (x.past ? " past" : "") + '" data-nc-gid="' + esc(x.gid) + '"><b>' + gTitleHtml(x) + "</b>" + sub + "<span>" + esc(x.kind === "final" ? "Du " + when(x.startAt) + " au " + when(x.endAt) : when(x.startAt, true)) + "</span><br><span>" +
         (x.past ? "Terminé" : x.bye ? "Exempt" : x.frozen ? "Liste figée · " + x.players.length + " convoqués" : "Ouverte · " + x.players.length + " / " + v.limits.convocation) + "</span></button>";
     }).join("") + "</div>";
     var cur = curGathering();
@@ -374,7 +393,7 @@
     var h = '<div class="nc-two"><div class="nc-card"><div class="nc-sec"><span>Feuille de match</span><span>' + sheet.length + " / " + v.limits.matchSquad + "</span></div>";
     if (!roster.length) h += '<p class="nc-club">Aucun joueur : convoquez (ou présélectionnez) des joueurs d\'abord.</p>';
     else {
-      h += '<p class="nc-small" style="margin:0 0 8px">' + (cur && cur.players.length ? "Les " + roster.length + " convoqués de « " + esc(cur.label) + " » : cochez les 12 du match." : "Pas encore de convoqués : la tactique se prépare avec la présélection.") + "</p>";
+      h += '<p class="nc-small" style="margin:0 0 8px">' + (cur && cur.players.length ? "Les " + roster.length + " convoqués de « " + esc(gTitleText(cur)) + " » : cochez les 12 du match." : "Pas encore de convoqués : la tactique se prépare avec la présélection.") + "</p>";
       h += '<div class="nc-scroll"><table class="nc-sheet"><thead><tr><th></th><th>Joueur</th><th>Poste</th><th>Titulaire</th><th>Remplaçant à</th><th>Minutes</th></tr></thead><tbody>';
       roster.forEach(function (x) {
         var on = sheet.indexOf(x.nid) >= 0;
@@ -540,7 +559,7 @@
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
     "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
-    "body.nc-mode .topbar-right > :not(#ncModeBtn){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#ncModeBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
     "body.nc-mode .topbar-search, body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
     "body.nc-mode #selectionsSection .page-title{display:none}",
@@ -641,7 +660,7 @@
     ui.mode = teamId; ui.teamId = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null; ui.view = null; ui.gid = null; ui.draft = null; ui.replaceOut = null; ui.opp = null; ui.error = "";
     lsSet(teamId);
     document.body.classList.add("nc-mode");
-    try { window.showPage("selectionsSection"); window.setActiveTab(""); } catch (e) { /* page sans navigation */ }
+    showModePage();
     if (window.HM_NATIONAL && window.HM_NATIONAL.state) window.HM_NATIONAL.state.coachOpen = teamId;
     paint();
     var p = load().then(paint);
@@ -707,7 +726,7 @@
     h += '<div class="nc-dash">';
     h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Fenêtre " + nx.w + " · qualifications" : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
     if (can("calendar")) h += kpi("Qualifications", rank ? rank + (rank === 1 ? "er" : "e") + " du groupe" : "–", tv && tv.qualif && tv.qualif.group ? esc(tv.qualif.group.label) + " · " + esc(tv.qualif.group.continent) : "Groupes à venir", "qualifications");
-    if (can("convocView")) h += kpi("Convoqués", (cur ? cur.players.length : 0) + " / " + v.limits.convocation, cur ? esc(cur.label) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
+    if (can("convocView")) h += kpi("Convoqués", (cur ? cur.players.length : 0) + " / " + v.limits.convocation, cur ? esc(gTitleText(cur)) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
     h += kpi("Joueurs suivis", v.watchlist.length, can("preselectView") ? v.preselection.length + " en présélection" : "Joueurs sélectionnables", can("watch") ? "preselection" : "joueurs");
     if (can("mandate")) h += kpi("Mandat", "Saison " + seasonNo + " / 2", "Saisons " + esc(v.mandate.fromSeason) + " à " + esc(v.mandate.toSeason) + (r.played ? " · " + r.wins + " V – " + r.losses + " D" : ""), "mandat");
     if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : v.friendlies.limits.used + " / " + v.friendlies.limits.perSeason + " cette saison", "amicaux");
@@ -715,7 +734,7 @@
     h += "</div>";
     h += '<div class="nc-two" style="margin-top:16px">';
     if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
-    if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? cur.label : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
+    if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? gTitleText(cur) : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
       (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + esc(c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div>";
     return h + "</div>";
   }
@@ -757,6 +776,15 @@
     (v.pastMandates || []).forEach(function (r) { h += '<div style="margin-top:22px">' + reportHtml(r, false) + "</div>"; });
     return h + '<p class="nc-small">À la fin du mandat, ce bilan est conservé dans l\'historique des sélectionneurs et affiché aux électeurs lors des élections suivantes.</p>';
   }
+  // Page du mode : réaffichée dès qu'on revient d'une autre page (fiche
+  // joueur, fiche club…), sinon le menu latéral redessinait une section
+  // masquée (retour utilisateur 2026-10-06 : menu inutilisable depuis une
+  // fiche joueur). Même navigation que le reste du jeu (showPage).
+  function showModePage() {
+    var sec = document.getElementById("selectionsSection");
+    if (sec && !sec.classList.contains("hidden") && sec.style.display !== "none") return;
+    try { window.showPage("selectionsSection"); window.setActiveTab(""); } catch (e) { /* page sans navigation */ }
+  }
   function paint() {
     var holder = document.getElementById("nationalContent");
     if (!holder || !ui.mode) return;
@@ -764,7 +792,7 @@
     syncModeChrome();
   }
   function openModeMatch(id) {
-    ui.backNav = ui.nav === "match" ? ui.backNav : ui.nav; ui.nav = "match"; ui.match = null; paint();
+    ui.backNav = ui.nav === "match" ? ui.backNav : ui.nav; ui.nav = "match"; ui.match = null; showModePage(); paint();
     api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) { ui.match = d.match; }).catch(function (e) { ui.error = e.message; }).then(paint);
   }
 
@@ -922,6 +950,7 @@
     }
     try { var sc = document.querySelector(".content-scroll"); if (sc) sc.scrollTop = 0; } catch (err) { /* rien */ }
     if (window.innerWidth < 900 && document.body.classList.contains("m-drawer-open")) { var c = document.querySelector("[data-m-drawer-close],.m-drawer-backdrop"); if (c) c.click(); }
+    showModePage();
     paint();
   }
   // Démarrage : mandats et rôles de staff en cours → bouton du tableau de

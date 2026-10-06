@@ -9,6 +9,7 @@ process.env.BASKET_ADMIN_TOKEN = process.env.BASKET_ADMIN_TOKEN || "admintest-mo
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
 const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const check2 = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (fn()) return; } catch (e) { /* encore */ } await new Promise(r => setTimeout(r, 100)); } throw new Error("❌ attente : " + label); };
 
@@ -63,6 +64,12 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     const a2 = ageOf();
     assert(a2.every((v, i) => !i || a2[i - 1] >= v), "second clic : tri inversé");
   } else console.log("ℹ️ vivier pas encore calculé : tableau non vérifié");
+  // Fiche joueur ouverte depuis le mode : le menu latéral reste utilisable
+  // (retour utilisateur 2026-10-06, il fallait la flèche du navigateur).
+  win.eval("showPlayerDetail(myTeamIndex, teamA.players[0].id)");
+  check2(!doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.getElementById("ncSidebar"), "fiche joueur ouverte, menu du mode toujours là");
+  doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
+  check2(!doc.getElementById("selectionsSection").classList.contains("hidden") && doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.querySelector(".nc-side-link.on[data-nc-nav=tactique]"), "depuis la fiche joueur : clic dans le menu → rubrique affichée");
   // Rôle recruteur : menu filtré.
   st.view.perms = ["view", "watch", "analysis"]; st.view.role = "scout"; st.nav = "dashboard";
   doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
