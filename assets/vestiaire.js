@@ -579,10 +579,13 @@
     const mood = moodScore(rows);
     const leaderDown = rows.some(r => r.level === "leader" && (num(r.p.form, 50) < 35 || r.p.transferRequestActive));
     let chemDelta = 0;
-    if (mood < 30 || (mood < 40 && leaderDown)) chemDelta = -2;
-    else if (mood < 40 || leaderDown) chemDelta = -1;
-    else if (mood >= 72) chemDelta = 2;
-    else if (mood >= 62) chemDelta = 1;
+    // Neutre autour du moral « normal » d'un effectif (≈ 55-75) : seuls un
+    // vestiaire vraiment épanoui ou vraiment abattu pèsent (simulation d'une
+    // saison, 2026-10-06 : un bonus dès 62 faisait monter l'alchimie à 100).
+    if (mood < 35 || (mood < 45 && leaderDown)) chemDelta = -2;
+    else if (mood < 45 || leaderDown) chemDelta = -1;
+    else if (mood >= 85) chemDelta = 2;
+    else if (mood >= 78) chemDelta = 1;
     chemDelta = clamp(chemDelta, -CONTAGION_MAX, CONTAGION_MAX);
     if (chemDelta && rows.length >= 5) {
       if (typeof opts.applyChemistry === "function") opts.applyChemistry(chemDelta);
