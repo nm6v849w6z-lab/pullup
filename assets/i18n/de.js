@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_DE = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Durchbrechender Aufbauspieler",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Aufbauspieler, der mit dem Ball zum Korb zieht und bei der Hilfe herauspasst.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "Der Stretch 4 macht die Zone für den Slasher frei.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "Der Aufbauspieler zieht zum Korb und passt raus zum Scharfschützen.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Der Aufbauspieler zieht zum Korb und passt raus zum 3&D in die Ecke.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & Roll: Der Aufbauspieler greift an, der Center schließt ab.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Scorender Aufbauspieler",
   "Scoreur arrière": "Scorender Shooting Guard",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Aufbauspieler, der den Ball bringt, den Angriff einleitet und für sich selbst kreiert.",

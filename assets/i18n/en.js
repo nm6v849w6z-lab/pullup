@@ -3,6 +3,13 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Slashing point guard",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Point guard who attacks the rim with the ball and kicks it out when the help comes.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "The Stretch 4 clears the paint for the Slasher.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "The point guard drives and kicks out to the Sharpshooter.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "The point guard drives and kicks out to the 3&D in the corner.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: the point guard attacks, the big finishes.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Scoring point guard",
   "Scoreur arrière": "Scoring shooting guard",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Point guard who brings the ball up, starts the offence and creates for himself.",

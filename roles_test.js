@@ -87,6 +87,12 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   check(n4.primary === "rim_protector", `C + défense intérieure → Rim Protector ${n4.m("rim_protector")}`);
   const n5 = synth("Ailier fort", { threePoint: 85, midRange: 80, speed: 80, agility: 80, rebound: 65 });
   check(n5.primary === "stretch_four", `PF + tir + mobilité → Stretch 4 ${n5.m("stretch_four")}`);
+  // Meneur slasher (demande du 2026-10-06) : meneur pénétrant avec une passe
+  // correcte ; sans passe, il n'est pas meneur slasher.
+  const ms = synth("Meneur", { penetration: 90, acceleration: 88, dribble: 85, speed: 85, pass: 66, shotCreation: 55, threePoint: 35 });
+  check(ms.primary === "slasher_pg" && ms.m("slasher_pg") >= 85, `meneur pénétrant → Meneur slasher ${ms.m("slasher_pg")}`);
+  const msNoPass = synth("Meneur", { penetration: 90, acceleration: 88, dribble: 85, speed: 85, pass: 40, shotCreation: 55, threePoint: 35 });
+  check(msNoPass.m("slasher_pg") <= ms.m("slasher_pg") - 15, `meneur pénétrant sans passe : Meneur slasher ${msNoPass.m("slasher_pg")} (pénalisé)`);
   // Le rôle mesure un profil, pas une puissance générale (section 16) : un
   // excellent scoreur reste un mauvais 3&D.
   check(D.m("three_and_d") <= D.m("scorer_sg") - 25, `scoreur pur : 3&D ${D.m("three_and_d")} loin de Scoreur arrière ${D.m("scorer_sg")}`);

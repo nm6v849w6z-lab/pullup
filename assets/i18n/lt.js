@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Prasiveržiantis įžaidėjas",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Įžaidėjas, puolantis krepšį su kamuoliu ir atiduodantis jį, kai ateina pagalba.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 atlaisvina baudos aikštelę Slasheriui.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "Įžaidėjas prasiveržia ir atiduoda Snaiperiui.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Įžaidėjas prasiveržia ir atiduoda 3&D žaidėjui kampe.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: įžaidėjas puola, centras užbaigia.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Taškus renkantis įžaidėjas",
   "Scoreur arrière": "Taškus renkantis atakuojantis gynėjas",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Įžaidėjas, kuris atneša kamuolį, pradeda ataką ir kuria sau.",

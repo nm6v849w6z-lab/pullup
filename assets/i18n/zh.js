@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "突破型控卫",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "持球攻筐、遇到协防时分球的控卫。",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "空间型四号位为突破手清空禁区。",
+  "Le meneur pénètre et ressort pour la Gâchette.": "控卫突破后分给神射手。",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "控卫突破后分给底角的3D球员。",
+  "Pick & roll : le meneur attaque, le pivot finit.": "挡拆：控卫进攻，内线终结。",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "得分型控卫",
   "Scoreur arrière": "得分型分卫",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "控球推进、发动进攻并为自己创造机会的控卫。",

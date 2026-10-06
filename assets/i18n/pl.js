@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Penetrujący rozgrywający",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Rozgrywający, który atakuje kosz z piłką i oddaje ją przy pomocy obrońcy.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 opróżnia trumnę dla Slashera.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "Rozgrywający wchodzi pod kosz i oddaje do Snajpera.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Rozgrywający wchodzi pod kosz i oddaje do 3&D w rogu.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: rozgrywający atakuje, środkowy kończy.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Punktujący rozgrywający",
   "Scoreur arrière": "Punktujący rzucający obrońca",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Rozgrywający, który prowadzi piłkę, rozpoczyna akcję i kreuje dla siebie.",

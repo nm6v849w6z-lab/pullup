@@ -41,6 +41,13 @@
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Playmaker penetratore",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Playmaker che attacca il ferro palla in mano e scarica sull'aiuto.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "Lo Stretch 4 libera l'area per lo Slasher.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "Il playmaker penetra e scarica per il Tiratore.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Il playmaker penetra e scarica per il 3&D nell'angolo.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: il playmaker attacca, il centro conclude.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Playmaker realizzatore",
   "Scoreur arrière": "Guardia realizzatrice",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Playmaker che porta palla, avvia l'attacco e crea per sé.",

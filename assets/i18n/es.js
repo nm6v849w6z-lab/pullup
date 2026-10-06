@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Base penetrador",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Base que ataca el aro con el balón y la saca cuando llega la ayuda.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "El Stretch 4 vacía la zona para el Slasher.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "El base penetra y la saca para el Tirador.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "El base penetra y la saca para el 3&D en la esquina.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: el base ataca, el pívot finaliza.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Base anotador",
   "Scoreur arrière": "Escolta anotador",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Base que sube el balón, inicia el ataque y crea para sí mismo.",

@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Διεισδυτικός πλέι μέικερ",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Πλέι μέικερ που επιτίθεται στο καλάθι με την μπάλα και τη βγάζει έξω στη βοήθεια.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "Ο Stretch 4 αδειάζει τη ρακέτα για τον Slasher.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "Ο πλέι μέικερ διεισδύει και βγάζει την μπάλα στον Σουτέρ.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Ο πλέι μέικερ διεισδύει και βγάζει την μπάλα στον 3&D στη γωνία.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: ο πλέι μέικερ επιτίθεται, ο σέντερ τελειώνει.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Σκόρερ πλέι μέικερ",
   "Scoreur arrière": "Σκόρερ σούτινγκ γκαρντ",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Πλέι μέικερ που ανεβάζει την μπάλα, ξεκινά την επίθεση και δημιουργεί για τον εαυτό του.",

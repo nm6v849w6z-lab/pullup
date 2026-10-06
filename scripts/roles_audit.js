@@ -34,6 +34,7 @@ const ESSENTIALS = {
   sharpshooter: { threePoint: 72 },
   three_and_d: { threePoint: 65, defOutside: 65 },
   slasher: { penetration: 65, acceleration: 60 },
+  slasher_pg: { penetration: 65, acceleration: 60, pass: 55 },
   shot_creator: { shotCreation: 68, dribble: 60 },
   point_forward: { pass: 65, dribble: 60 },
   stretch_forward: { threePoint: 62, rebound: 55 },
@@ -55,7 +56,7 @@ const NAMES = {
 const FAMILY = {};
 [["handler", ["floor_general", "pass_first", "combo_guard", "scorer_pg", "scorer_sg", "shot_creator", "point_forward", "playmaking_four", "point_center"]],
  ["shooter", ["sharpshooter", "three_and_d", "stretch_four", "stretch_five", "stretch_forward"]],
- ["athlete", ["slasher", "lob_threat", "small_ball_four"]],
+ ["athlete", ["slasher", "slasher_pg", "lob_threat", "small_ball_four"]],
  ["big", ["inside_four", "interior_scorer", "rebounder", "rim_protector", "defensive_four"]]]
   .forEach(([f, ids]) => ids.forEach(id => { FAMILY[id] = f; }));
 

@@ -5,6 +5,13 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Meneur slasher": "Armador infiltrador",
+  "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Armador que ataca o aro com a bola e passa para fora na ajuda.",
+  "Le Stretch 4 vide la raquette pour le Slasher.": "O Stretch 4 esvazia o garrafão para o Slasher.",
+  "Le meneur pénètre et ressort pour la Gâchette.": "O armador infiltra e passa para o Atirador.",
+  "Le meneur pénètre et ressort pour le 3&D dans le corner.": "O armador infiltra e passa para o 3&D no canto.",
+  "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: o armador ataca, o pivô finaliza.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Armador pontuador",
   "Scoreur arrière": "Ala-armador pontuador",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Armador que conduz a bola, inicia o ataque e cria para si.",
