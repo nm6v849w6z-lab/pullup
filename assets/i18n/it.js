@@ -40,6 +40,22 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Playmaker realizzatore",
+  "Scoreur arrière": "Guardia realizzatrice",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Playmaker che porta palla, avvia l'attacco e crea per sé.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Guardia che segna: tiro, creazione secondaria, attacco dei closeout e conclusione.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Ala capace di crearsi il tiro (isolamento, media distanza).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "Il playmaker trova la guardia realizzatrice in ritmo.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Evoluzione del ruolo",
+  "Pour progresser dans ce rôle": "Per migliorare in questo ruolo",
+  "Cette tactique convient à votre cinq.": "Questa tattica si adatta al tuo quintetto.",
+  "Cette tactique convient mal à votre cinq.": "Questa tattica si adatta poco al tuo quintetto.",
+  "Adéquation de la tactique aux rôles du cinq": "Adattamento della tattica ai ruoli del quintetto",
+  "Rythme rapide": "Ritmo veloce",
+  "Rythme lent": "Ritmo lento",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Ordina per compatibilità",
   "Préféré": "Preferito",

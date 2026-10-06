@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Punktujący rozgrywający",
+  "Scoreur arrière": "Punktujący rzucający obrońca",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Rozgrywający, który prowadzi piłkę, rozpoczyna akcję i kreuje dla siebie.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Rzucający obrońca, który punktuje: rzut, kreacja drugoplanowa, atak na closeouty i wykończenie.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Skrzydłowy, który sam kreuje sobie rzut (izolacja, średni dystans).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "Rozgrywający znajduje punktującego obrońcę w rytmie.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Ewolucja roli",
+  "Pour progresser dans ce rôle": "Aby rozwijać się w tej roli",
+  "Cette tactique convient à votre cinq.": "Ta taktyka pasuje do twojej piątki.",
+  "Cette tactique convient mal à votre cinq.": "Ta taktyka słabo pasuje do twojej piątki.",
+  "Adéquation de la tactique aux rôles du cinq": "Dopasowanie taktyki do ról piątki",
+  "Rythme rapide": "Szybkie tempo",
+  "Rythme lent": "Wolne tempo",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Sortuj według zgodności",
   "Préféré": "Ulubiona",

@@ -2,6 +2,22 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Scoring point guard",
+  "Scoreur arrière": "Scoring shooting guard",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Point guard who brings the ball up, starts the offence and creates for himself.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Shooting guard who scores: shooting, secondary creation, attacking closeouts and finishing.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Wing who can create his own shot (isolation, mid-range).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "The point guard finds the scoring guard in rhythm.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Role evolution",
+  "Pour progresser dans ce rôle": "To improve in this role",
+  "Cette tactique convient à votre cinq.": "This tactic suits your five.",
+  "Cette tactique convient mal à votre cinq.": "This tactic doesn't suit your five.",
+  "Adéquation de la tactique aux rôles du cinq": "How well the tactic suits the five's roles",
+  "Rythme rapide": "Fast pace",
+  "Rythme lent": "Slow pace",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Sort by compatibility",
   "Préféré": "Preferred",

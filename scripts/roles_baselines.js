@@ -1,5 +1,5 @@
 // Recalcule CONFIG.baselines de assets/roles.js (relief habituel de chaque
-// rôle à chaque poste) et les réécrit dans le fichier. À relancer après
+// rôle chez les joueurs de chaque poste) et les réécrit dans le fichier. À relancer après
 // toute modification des poids d'un rôle :  node scripts/roles_baselines.js
 const fs = require("fs");
 const path = require("path");
@@ -12,7 +12,10 @@ const avg = a => { const v = Object.values(a).filter(x => typeof x === "number")
 players.forEach(p => {
   const ov = avg(p.attrs);
   Object.entries(R.ROLES).forEach(([id, r]) => {
-    if (!r.positions.includes(p.position)) return;
+    // Référence par (rôle, poste DU JOUEUR) : un joueur est comparé aux
+    // joueurs de son poste, pour tous les rôles. Une référence par poste DU
+    // RÔLE avantageait les joueurs hors poste (un meneur jugé sur la Passe
+    // habituelle d'un ailier fort paraissait exceptionnel).
     (acc[`${id}|${p.position}`] = acc[`${id}|${p.position}`] || []).push(R.keyAverage(r, p.attrs) / ov - 1);
   });
 });

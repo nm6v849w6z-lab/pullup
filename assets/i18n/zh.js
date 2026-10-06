@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "得分型控卫",
+  "Scoreur arrière": "得分型分卫",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "控球推进、发动进攻并为自己创造机会的控卫。",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "能得分的分卫：投篮、二次创造、攻击扑防和终结。",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "能自主创造投篮的锋线（单打、中距离）。",
+  "Le meneur trouve l'arrière scoreur en rythme.": "控卫在节奏中找到得分后卫。",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "团队契合度",
+  "Évolution du rôle": "角色演变",
+  "Pour progresser dans ce rôle": "提升该角色的训练",
+  "Cette tactique convient à votre cinq.": "这套战术适合你的五人阵容。",
+  "Cette tactique convient mal à votre cinq.": "这套战术不太适合你的五人阵容。",
+  "Adéquation de la tactique aux rôles du cinq": "战术与五人角色的匹配度",
+  "Rythme rapide": "快节奏",
+  "Rythme lent": "慢节奏",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "按契合度排序",
   "Préféré": "偏好",

@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Σκόρερ πλέι μέικερ",
+  "Scoreur arrière": "Σκόρερ σούτινγκ γκαρντ",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Πλέι μέικερ που ανεβάζει την μπάλα, ξεκινά την επίθεση και δημιουργεί για τον εαυτό του.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Σούτινγκ γκαρντ που σκοράρει: σουτ, δευτερεύουσα δημιουργία, επίθεση στα closeouts και τελείωμα.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Φόργουορντ που δημιουργεί το δικό του σουτ (απομόνωση, μέση απόσταση).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "Ο πλέι μέικερ βρίσκει τον σκόρερ γκαρντ σε ρυθμό.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Εξέλιξη ρόλου",
+  "Pour progresser dans ce rôle": "Για να βελτιωθεί σε αυτόν τον ρόλο",
+  "Cette tactique convient à votre cinq.": "Αυτή η τακτική ταιριάζει στην πεντάδα σου.",
+  "Cette tactique convient mal à votre cinq.": "Αυτή η τακτική δεν ταιριάζει στην πεντάδα σου.",
+  "Adéquation de la tactique aux rôles du cinq": "Καταλληλότητα της τακτικής για τους ρόλους της πεντάδας",
+  "Rythme rapide": "Γρήγορος ρυθμός",
+  "Rythme lent": "Αργός ρυθμός",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Ταξινόμηση κατά συμβατότητα",
   "Préféré": "Προτιμώμενος",

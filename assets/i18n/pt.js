@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Armador pontuador",
+  "Scoreur arrière": "Ala-armador pontuador",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Armador que conduz a bola, inicia o ataque e cria para si.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Ala-armador que pontua: arremesso, criação secundária, ataque aos closeouts e finalização.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Ala capaz de criar o próprio arremesso (isolação, meia distância).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "O armador encontra o ala-armador pontuador no ritmo.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Evolução do papel",
+  "Pour progresser dans ce rôle": "Para evoluir neste papel",
+  "Cette tactique convient à votre cinq.": "Esta tática combina com seu quinteto.",
+  "Cette tactique convient mal à votre cinq.": "Esta tática não combina com seu quinteto.",
+  "Adéquation de la tactique aux rôles du cinq": "Adequação da tática aos papéis do quinteto",
+  "Rythme rapide": "Ritmo rápido",
+  "Rythme lent": "Ritmo lento",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Ordenar por compatibilidade",
   "Préféré": "Preferido",

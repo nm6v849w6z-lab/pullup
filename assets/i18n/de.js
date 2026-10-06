@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_DE = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Scorender Aufbauspieler",
+  "Scoreur arrière": "Scorender Shooting Guard",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Aufbauspieler, der den Ball bringt, den Angriff einleitet und für sich selbst kreiert.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Shooting Guard, der punktet: Wurf, sekundäre Kreation, Angriff auf Closeouts und Abschluss.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Flügelspieler, der sich seinen Wurf selbst erarbeitet (Isolation, Mitteldistanz).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "Der Aufbauspieler findet den scorenden Shooting Guard im Rhythmus.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Entwicklung der Rolle",
+  "Pour progresser dans ce rôle": "Um sich in dieser Rolle zu verbessern",
+  "Cette tactique convient à votre cinq.": "Diese Taktik passt zu deiner Fünf.",
+  "Cette tactique convient mal à votre cinq.": "Diese Taktik passt schlecht zu deiner Fünf.",
+  "Adéquation de la tactique aux rôles du cinq": "Passung der Taktik zu den Rollen der Fünf",
+  "Rythme rapide": "Schnelles Tempo",
+  "Rythme lent": "Langsames Tempo",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Nach Kompatibilität sortieren",
   "Préféré": "Bevorzugt",

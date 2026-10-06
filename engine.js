@@ -9427,6 +9427,7 @@ class Team {
           p.lastAgedSeasonNo = seasonNo;
         }
         p.age += 1;
+        recordRoleHistory(p, seasonNo);
       };
       this.players.forEach(ageUp);
       salaryChanges = this.recalculateSalaries();
@@ -10775,11 +10776,26 @@ function attrsForCardPosition(position, makeAttrs) {
 // MODIFICATEUR (un gros talent compense en partie), jamais une règle.
 // Cohérence 65 % = neutre.
 const ROLE_COHESION_PIVOT = 65;
+const ROLE_TACTIC_WEIGHT = 0.15;
+// Évolution des rôles (phase 5) : rôle principal noté à chaque passage de
+// saison quand il change (Slasher à 20 ans, Shot Creator à 25, Gâchette à 31…).
+const ROLE_HISTORY_MAX = 12;
+function recordRoleHistory(p, seasonNo) {
+  try {
+    const prof = Roles.profileOf(p.attrs, positionRatings(p), 1, p.position);
+    if (!prof) return;
+    p.roleHistory = Array.isArray(p.roleHistory) ? p.roleHistory : [];
+    const last = p.roleHistory[p.roleHistory.length - 1];
+    if (last && last.role === prof.primary.role) return;
+    p.roleHistory.push({ season: seasonNo, age: p.age, role: prof.primary.role, name: prof.primary.name, pos: prof.primary.position });
+    if (p.roleHistory.length > ROLE_HISTORY_MAX) p.roleHistory = p.roleHistory.slice(-ROLE_HISTORY_MAX);
+  } catch (e) { /* jamais bloquant */ }
+}     // tactique adaptée aux rôles : ±4,5 pts de cohérence offensive aux extrêmes
 const ROLE_MISMATCH_FORM_MALUS = 2;      // motivation perdue par un titulaire hors de son rôle préféré
 const ROLE_MISMATCH_COOLDOWN_WEEKS = 2;  // au plus une fois toutes les 2 semaines par joueur
 const ROLE_OFF_OPENNESS = 0.12;      // ouverture des tirs par point de cohérence offensive
 const ROLE_OFF_TOV = 0.0003;         // pertes de balle en moins par point de cohérence offensive
-const ROLE_DEF_BOOST = 0.0015;       // contest défensif par point de cohérence défensive
+const ROLE_DEF_BOOST = 0.001;        // contest défensif par point de cohérence défensive
 const ROLE_USAGE_BASE = 0.7;         // part des tirs : ×0,7 (rôle qui ne demande pas le ballon) …
 const ROLE_USAGE_SLOPE = 0.6;        // … à ×1,3 (rôle qui monopolise le ballon)
 const ROLE_CREATE_BASE = 0.7;        // choix du passeur : ×0,7 à ×1,3 selon la création du rôle
@@ -13914,6 +13930,7 @@ class League {
           p.lastAgedSeasonNo = seasonNo;
         }
         p.age += 1;
+        recordRoleHistory(p, seasonNo);
       });
       if (typeof t.recalculateSalaries === "function") t.recalculateSalaries();
     });
@@ -17223,6 +17240,7 @@ function serializePlayerRecord(p) {
     // Numéro de maillot, apparence choisie, club formateur (voir le bloc
     // PREMIUM « personnalisation »).
     number: Number.isInteger(p.number) ? p.number : null, look: normalizePlayerLook(p.look), homegrownClub: p.homegrownClub || null,
+    roleHistory: Array.isArray(p.roleHistory) ? p.roleHistory.slice(-ROLE_HISTORY_MAX) : [],
     // Plafonds physique/mental, caractéristique par caractéristique (voir
     // Player.physicalPotential/mentalPotential, retour utilisateur 2026-09 :
     // "le physique ne bouge qu'un peu [...] le mental peut bien évoluer") :
@@ -17834,6 +17852,7 @@ function playerFromSave(pdata) {
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
   p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
+  p.roleHistory = Array.isArray(pdata.roleHistory) ? pdata.roleHistory.filter(x => x && typeof x.role === "string").slice(-ROLE_HISTORY_MAX) : [];
   if (pdata.tacticalKnowledge && typeof pdata.tacticalKnowledge === "object" && pdata.tacticalKnowledge.offense) p.tacticalKnowledge = copyTacticalKnowledge(pdata.tacticalKnowledge);
   // Migration : sauvegardes d'avant l'ajout de mental/endurance/freeThrow aux
   // ATTRS (voir le grand commentaire au-dessus d'ATTRS) - ces 3 caractéristiques
@@ -18991,24 +19010,27 @@ class MatchEngine {
   roleState(team) {
     const five = team.onCourtPlayers();
     if (five.length < 2) return null;
-    const key = five.map(p => `${p.id}:${p.matchPosition || p.position}`).join(",");
+    const key = five.map(p => `${p.id}:${p.matchPosition || p.position}`).join(",") + `|${(team.offensivePriorities || []).join("/")}|${team.rhythm || ""}`;
     this._roleStates = this._roleStates || new Map();
     if (this._roleStates.has(key)) return this._roleStates.get(key);
     this._prCache = this._prCache || new Map();
     const prOf = p => { if (!this._prCache.has(p.id)) this._prCache.set(p.id, positionRatings(p)); return this._prCache.get(p.id); };
     let st = null;
     try {
-      const coh = Roles.lineupCohesion(five.map(p => ({ pos: p.matchPosition || p.position, attrs: p.attrs, positionRatings: prOf(p), name: p.name, id: p.id })));
+      const slots = five.map(p => ({ pos: p.matchPosition || p.position, attrs: p.attrs, positionRatings: prOf(p), name: p.name, id: p.id, position: p.position }));
+      const coh = Roles.lineupCohesion(slots);
+      // Phase 5 : tactique adaptée (ou non) aux rôles du cinq.
+      const tac = Roles.tacticalFit(slots, team.offensivePriorities || [], team.rhythm);
       if (coh) {
         const byId = new Map();
         let spacing = 0;
         coh.slots.forEach(sl => {
-          const t = Roles.ROLES[sl.role].tendencies, m = clamp(sl.mastery / 100, 0.3, 1);
+          const t = Roles.ROLES[sl.role].tendencies, m = clamp((sl.neutral != null ? sl.neutral : sl.mastery) / 100, 0.3, 1);
           const eff = k => 0.5 + (t[k] - 0.5) * m;
           byId.set(sl.id, { usage: eff("usage"), create: eff("create") });
           spacing += t.spacing * m;
         });
-        st = { off: coh.offense, def: coh.defense, byId, spacing: spacing / five.length };
+        st = { off: coh.offense + (tac ? (tac.score - 50) * ROLE_TACTIC_WEIGHT : 0), def: coh.defense, byId, spacing: spacing / five.length, tactic: tac ? tac.score : null };
       }
     } catch (e) { st = null; }
     this._roleStates.set(key, st);
@@ -20794,7 +20816,7 @@ return {
   // uid()/reseedUidFromSave : voir le grand commentaire au-dessus de leur
   // définition (correctif "Cette enchère est déjà terminée" après un
   // redémarrage du process serveur, 2026-09).
-  uid, reseedUidFromSave, bumpUidFloor, scanMaxId, clockUidFloor, repairDuplicatePlayerIds,
+  uid, reseedUidFromSave, bumpUidFloor, scanMaxId, clockUidFloor, repairDuplicatePlayerIds, recordRoleHistory,
   PLAYER_ID_MIN, isPlayerIdFormat, registerPlayerIds, newPlayerId, takePendingPlayerIds, requeuePendingPlayerIds, playerIdRegistrySize,
   stealGambleRate, determinationTrainingMult, ATTR_FAMILIES, correlatedUnitDraws,
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,

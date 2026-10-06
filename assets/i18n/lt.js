@@ -4,6 +4,22 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Scoreur meneur": "Taškus renkantis įžaidėjas",
+  "Scoreur arrière": "Taškus renkantis atakuojantis gynėjas",
+  "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Įžaidėjas, kuris atneša kamuolį, pradeda ataką ir kuria sau.",
+  "Arrière qui marque : tir, création secondaire, attaque des closeouts et finition.": "Taškus renkantis gynėjas: metimas, antrinis kūrimas, puolimas prieš artėjantį gynėją ir užbaigimas.",
+  "Ailier capable de se créer son tir (isolation, mi-distance).": "Kraštas, pats susikuriantis metimą (izoliacija, vidutinis nuotolis).",
+  "Le meneur trouve l'arrière scoreur en rythme.": "Įžaidėjas randa taškus renkantį gynėją ritme.",
+  // Rôles de jeu : tactiques et évolution des rôles (2026-10-06).
+  "Team Fit": "Team Fit",
+  "Évolution du rôle": "Vaidmens raida",
+  "Pour progresser dans ce rôle": "Kad tobulėtų šiame vaidmenyje",
+  "Cette tactique convient à votre cinq.": "Ši taktika tinka tavo penketui.",
+  "Cette tactique convient mal à votre cinq.": "Ši taktika prastai tinka tavo penketui.",
+  "Adéquation de la tactique aux rôles du cinq": "Taktikos tinkamumas penketo vaidmenims",
+  "Rythme rapide": "Greitas tempas",
+  "Rythme lent": "Lėtas tempas",
   // Rôles de jeu : marché, rôle préféré, messages (2026-10-06).
   "Trier par compatibilité": "Rikiuoti pagal suderinamumą",
   "Préféré": "Mėgstamas",

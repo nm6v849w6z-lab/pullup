@@ -2962,6 +2962,9 @@
   .coh-note b{font-weight:700;}
   .coh-good{color:var(--ok, #33b4a1);} .coh-mid{color:#e8a33a;} .coh-bad{color:var(--bad, #E2694F);}
   .pdp-compat{display:flex; align-items:center; gap:14px; margin-top:16px;}
+  .coh-tac{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px;}
+  .coh-tac-chip{font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:99px; border:1px solid var(--line); color:var(--ink-dim);}
+  .pdp-role-evo{font-size:13px; margin-top:6px;} .pdp-role-evo b{font-weight:800;}
   .pdp-compat-ring{width:78px; height:78px; border-radius:50%; display:grid; place-items:center; flex:none;}
   .pdp-compat-ring > div{width:62px; height:62px; border-radius:50%; background:var(--panel); display:grid; place-items:center; font-weight:900; font-size:19px;}
   .pdp2-row--profile{grid-template-columns:360px minmax(0,1fr);}
@@ -20194,12 +20197,20 @@ function compoCohesionHtml(team) {
   const c = slots ? R.lineupCohesion(slots) : null;
   if (!c) return "";
   let h = `<section class="coh-card" id="compoCohesion"><div class="coh-head"><h3>Cohérence du cinq</h3></div>`;
-  h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [c.overall, "Globale"]]
+  // Phase 5 : adéquation de la tactique (priorités offensives, rythme) aux
+  // rôles du cinq ; « Team Fit » = cohérence globale ajustée par la tactique.
+  const tac = R.tacticalFit(slots, team.offensivePriorities || [], team.rhythm);
+  const teamFit = tac ? Math.max(1, Math.min(99, Math.round(c.overall + (tac.score - 50) * 0.3))) : c.overall;
+  h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [teamFit, "Team Fit"]]
     .map(([v, l]) => `<div class="coh-kpi"><b class="${cohTone(v)}">${v}%</b><span>${l}</span></div>`).join("") + `</div>`;
+  if (tac && tac.parts.length) {
+    h += `<div class="coh-tac">` + tac.parts.map(x => `<span class="coh-tac-chip ${x.score >= 65 ? "coh-good" : x.score <= 35 ? "coh-bad" : ""}" title="Adéquation de la tactique aux rôles du cinq"><span>${escapeHtml(x.key)}</span> · ${x.score}</span>`).join("") + `</div>`;
+  }
   c.slots.forEach(sl => {
     h += `<div class="coh-slot">${sl.warn ? COH_WARN_SVG : COH_OK_SVG}<span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><span>${escapeHtml(sl.roleName)}</span> · ${sl.mastery}%</span></div>`;
   });
   c.notes.slice(0, 5).forEach(n => { h += cohesionNoteHtml(n); });
+  (tac ? tac.notes : []).forEach(n => { h += `<div class="coh-note${n.tone === "warn" ? " warn" : ""}"><b>${escapeHtml(n.tactic)}</b> — <span>${escapeHtml(n.text)}</span></div>`; });
   h += `</section>`;
   return h;
 }
@@ -20230,6 +20241,16 @@ function pdpRoleRowHtml(player, fullyVisible) {
     const isPref = pref && pref.role === f.role && pref.position === f.position;
     h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}${isPref ? ` <span class="pdp-role-pref" title="Le rôle qu'il aime jouer">Préféré</span>` : ""}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
   });
+  // Phase 5 : évolution du rôle au fil de la carrière, et programmes
+  // d'entraînement qui développent le rôle principal.
+  const hist = Array.isArray(player.roleHistory) ? player.roleHistory : [];
+  if (hist.length && hist[hist.length - 1].role !== prof.primary.role || hist.length >= 2) {
+    const steps = hist.concat(hist.length && hist[hist.length - 1].role === prof.primary.role ? [] : [{ name: prof.primary.name, age: player.age }]);
+    h += `<div class="pdp-role-sub" style="margin-top:12px">Évolution du rôle</div><div class="pdp-role-evo">` +
+      steps.map(x => `<b><span>${escapeHtml(x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div>`;
+  }
+  const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
+  if (progs.length) h += `<div class="pdp-role-sub" style="margin-top:12px">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div>`;
   h += `<p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
   h += `<section class="pdp2-card"><div class="pdp-role-sw"><div><div class="pdp-role-sub">Forces</div>` +
     (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
