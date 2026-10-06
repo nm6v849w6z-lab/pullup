@@ -56956,10 +56956,10 @@ function hcRivalriesHtml(team) {
   return list.map(r => {
     const idx = league.teams.findIndex(t => t && t.name === r.name);
     const name = idx >= 0 ? teamLinkHtml(idx, r.name) : escapeHtml(r.name);
-    const moments = (r.moments || []).slice(0, 2).map(m => escapeHtml(m.text)).join(" · ");
+    const moments = (r.moments || []).slice(0, 2).map(m => `<span>${escapeHtml(m.text)}</span>`).join(" · ");
     return `<div class="hc-riv"><div class="hc-riv-top"><b>${name}</b><span class="hc-riv-badge ${cls(r.s)}">${escapeHtml(r.label)} · ${r.s}</span></div>` +
       `<div class="hc-gauge"><b style="width:${Math.max(2, r.s)}%"></b></div>` +
-      `<div class="hc-small">${r.w} V – ${r.l} D toutes compétitions${moments ? " · " + moments : ""}</div></div>`;
+      `<div class="hc-small"><span>${r.w} V – ${r.l} D toutes compétitions</span>${moments ? " · " + moments : ""}</div></div>`;
   }).join("") + `<p class="hc-small" style="margin-top:8px">Échelle : Faible &lt; 20 · Modérée 20-39 · Forte 40-64 · Intense 65-84 · Légendaire 85+. Une rivalité s'apaise sans nouvel épisode.</p>`;
 }
 function hcManagersHtml(team) {
