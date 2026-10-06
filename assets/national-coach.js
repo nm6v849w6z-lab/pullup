@@ -708,7 +708,7 @@
   // --- Analyse des adversaires ------------------------------------------------
   // Retour utilisateur 2026-10-06 : MÊME rapport que l'analyse Premium
   // (Scouting Pro) du Mode Club, pour l'adversaire choisi ou pour sa propre
-  // sélection (« Analyse de ma sélection », comme « Analyse de mon équipe »).
+  // sélection (option « Ma sélection » du sélecteur).
   // Données : /api/national/coach/analysis-data (matchs internationaux de la
   // saison en cours et de la précédente, en « équipe virtuelle »), rendues
   // par les fonctions du club (scoutingProReportHtml et ses blocs sp2*),
@@ -803,7 +803,6 @@
       (a.next ? '<option value="">Prochain adversaire</option>' : '<option value="">Choisir une sélection</option>') +
       '<option value="__self"' + (ui.anaSelf ? " selected" : "") + ">Ma sélection · " + esc(teamLab(v.team.id)) + "</option>" +
       a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (!ui.anaSelf && ui.opp === c.id ? " selected" : "") + ">" + esc(teamLab(c.id)) + "</option>"; }).join("") + "</select></label>" +
-      (ui.anaSelf ? "" : '<button type="button" class="nc-btn2" data-nc-own-analysis="1" title="Comment vos adversaires vous voient">Analyse de ma sélection</button>') +
       (a.next ? '<div class="nc-next" style="margin:0;flex:1;min-width:220px"><b>Prochain match</b><br><span>' + esc(a.next.label) + '</span><br><span class="nc-club">' + esc(when(a.next.at, true)) + '</span> <span class="nc-club">' + (a.next.venue === "home" ? "· à domicile contre " : "· à l'extérieur contre ") + esc(teamLab(a.next.opponent)) + "</span></div>" : "") + "</div></div>";
     var target = anaTarget(v);
     if (target) loadAnalysis(target);
@@ -1168,7 +1167,6 @@
     }
     if (d.ncTqSave) { tqSave(); return; }
     if (d.ncTqRevert) { ui.tq = null; paint(); return; }
-    if (d.ncOwnAnalysis) { ui.anaSelf = true; paint(); return; }
     // « Appliquer à ma tactique » (équivalent de « Appliquer à mes ordres »
     // du club) : le Plan de match (scoutingGamePlanPatch, recalculé au clic)
     // prérempli dans les ordres du PROCHAIN match non verrouillé (sinon la

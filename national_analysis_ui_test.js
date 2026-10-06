@@ -59,10 +59,10 @@ function fixture() {
   await wait(() => content().querySelector("select[data-nc-opp]"), "rubrique Analyse");
   const sel = content().querySelector("select[data-nc-opp]");
   assert([...sel.options].some(o => o.value === "__self" && /Ma sélection/.test(o.textContent)), "choix « Ma sélection » dans le sélecteur");
-  assert(content().querySelector("[data-nc-own-analysis]"), "bouton « Analyse de ma sélection »");
+  assert(!content().querySelector("[data-nc-own-analysis]"), "plus de bouton « Analyse de ma sélection » (doublon du sélecteur, retiré le 2026-10-06)");
 
   // 1) Ma sélection sans match international : message clair (route réelle).
-  content().querySelector("[data-nc-own-analysis]").click();
+  sel.value = "__self"; sel.dispatchEvent(new win.Event("change", { bubbles: true }));
   await wait(() => st.ana && st.ana.data, "analyse de ma sélection chargée");
   await flush(dom);
   assert(st.anaSelf && /n'a encore joué aucun match international/.test(doc.getElementById("ncScoutingPanel").textContent), "sans match : message clair");
