@@ -72,6 +72,31 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   // (retour utilisateur 2026-10-06, il fallait la flèche du navigateur).
   win.eval("showPlayerDetail(myTeamIndex, teamA.players[0].id)");
   check2(!doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.getElementById("ncSidebar"), "fiche joueur ouverte, menu du mode toujours là");
+  // Fiche d'un joueur sélectionnable : « Ajouter à la présélection » et
+  // « Ajouter aux joueurs suivis » sous la note (retour utilisateur 2026-10-06).
+  {
+    const lgId = win.eval("league.leagueId");
+    const pool = (st.view.pool && st.view.pool.players) || [];
+    let x = pool.find(q => q.club && q.club.leagueId === lgId);
+    if (!x) {
+      // Vivier pas encore calculé : un joueur du club, ajouté au vivier côté client (affichage seulement).
+      const pl = win.eval("({ id: teamA.players[0].id, name: teamA.players[0].name })");
+      x = { p: pl.id, n: pl.name, name: pl.name, club: { leagueId: lgId, idx: win.eval("myTeamIndex") } };
+      st.view.pool = Object.assign({}, st.view.pool || {}, { players: pool.concat([x]) });
+    }
+    win.eval(`showPlayerDetail(${x.club.idx}, ${x.p})`);
+    const box = () => doc.querySelector("#playerDetailSection .nc-pdp-acts");
+    check2(box() && /Ajouter à la présélection/.test(box().textContent) && /Ajouter aux joueurs suivis/.test(box().textContent), "fiche joueur : boutons présélection et joueurs suivis");
+    check2(box().previousElementSibling && !box().closest(".pdp2-ring"), "boutons placés sous la note");
+    if (pool.length) {
+      box().querySelector('[data-nc-pdp-list="watchlist"]').click();
+      await win.__lastNationalCoach;
+      check2(st.view.watchlist.some(r => r.p === x.p && r.n === x.n) && /Ne plus suivre/.test(box().textContent), "clic : joueur suivi, bouton mis à jour");
+      box().querySelector('[data-nc-pdp-list="preselection"]').click();
+      await win.__lastNationalCoach;
+      check2(st.view.preselection.some(r => r.p === x.p && r.n === x.n) && /Retirer de la présélection/.test(box().textContent), "clic : joueur en présélection, bouton mis à jour");
+    }
+  }
   doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
   check2(!doc.getElementById("selectionsSection").classList.contains("hidden") && doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.querySelector(".nc-side-link.on[data-nc-nav=tactique]"), "depuis la fiche joueur : clic dans le menu → rubrique affichée");
   // Rôle recruteur : menu filtré.

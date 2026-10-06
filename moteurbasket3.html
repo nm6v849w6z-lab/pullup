@@ -33982,6 +33982,9 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `<div class="pdp2-ring pdp2-ring--locked"><div class="pdp2-ring-center"><span class="pdp2-ring-q">?</span><span class="pdp2-ring-lbl">Note</span></div></div>` +
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
+  // Mode Sélectionneur (retour utilisateur 2026-10-06) : présélection et
+  // joueurs suivis, sous la note (voir assets/national-coach.js).
+  try { if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.pdpActionsHtml) html += window.HM_NATIONAL_COACH.pdpActionsHtml(player); } catch (e) { /* mode indisponible */ }
   html += `<div class="pdp2-actions">` +
     (playerDetailForeign ? "" : `<button type="button" class="pdp2-btn" data-pdp-compare>Comparer</button>`);
   if (isOwnTeam) {

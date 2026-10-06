@@ -1116,6 +1116,48 @@
     window.__lastNationalCoach = p;
     return p;
   }
+  // Fiche joueur (retour utilisateur 2026-10-06) : sous la note, « Ajouter à
+  // la présélection » et « Ajouter aux joueurs suivis » pour un joueur
+  // sélectionnable de la sélection en cours. Même route que les icônes des
+  // tableaux (/api/national/coach/list).
+  function pdpActionsHtml(player) {
+    if (!ui.mode || !ui.view || !player || player.id == null) return "";
+    var r = { p: Number(player.id), n: player.name };
+    if (!poolByKey()[key(r)]) return "";
+    var v = ui.view, lim = v.limits || {}, out = "";
+    var btn = function (list, on, label, full) {
+      return '<button type="button" class="pdp2-btn' + (on ? "" : " pdp2-btn--accent") + '" data-nc-pdp-list="' + list + '" data-nc-on="' + (on ? 0 : 1) + '" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '"' +
+        (!on && full ? ' disabled title="Liste complète"' : "") + ">" + esc(label) + "</button>";
+    };
+    if (can("preselect")) {
+      var p = inList(v.preselection, r);
+      out += btn("preselection", p, p ? "Retirer de la présélection" : "Ajouter à la présélection", (v.preselection || []).length >= (lim.preselection || Infinity));
+    }
+    if (can("watch")) {
+      var w = inList(v.watchlist, r);
+      out += btn("watchlist", w, w ? "Ne plus suivre" : "Ajouter aux joueurs suivis", (v.watchlist || []).length >= (lim.watchlist || Infinity));
+    }
+    return out ? '<div class="pdp2-actions nc-pdp-acts" style="flex-direction:column;margin-top:10px">' + out + "</div>" : "";
+  }
+  function onPdpListClick(b) {
+    var d = b.dataset, box = b.closest(".nc-pdp-acts");
+    if (ui.busy) return;
+    ui.busy = true;
+    b.disabled = true;
+    var player = { id: Number(d.ncP), name: d.ncN };
+    var p = api("/api/national/coach/list", { teamId: ui.teamId, list: d.ncPdpList, on: d.ncOn === "1", player: { p: player.id, n: player.name } })
+      .then(function (data) {
+        if (data.team) ui.view = data;
+        toast(d.ncPdpList === "preselection" ? (d.ncOn === "1" ? "Ajouté à la présélection." : "Retiré de la présélection.") : (d.ncOn === "1" ? "Ajouté aux joueurs suivis." : "Retiré des joueurs suivis."));
+      })
+      .catch(function (e) { toast(e.message); })
+      .then(function () {
+        ui.busy = false;
+        if (box && box.isConnected) { var tmp = document.createElement("div"); tmp.innerHTML = pdpActionsHtml(player); box.replaceWith(tmp.firstChild || document.createTextNode("")); }
+      });
+    window.__lastNationalCoach = p;
+    return p;
+  }
   function setConv(r, on) {
     var cur = curGathering();
     if (!cur) return;
@@ -1284,6 +1326,8 @@
       var enter = e.target.closest && e.target.closest("[data-nc-enter]");
       if (enter) { e.preventDefault(); e.stopPropagation(); ensureModeCss(); enterMode(enter.dataset.ncEnter); return; }
       if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e);
+      var pdpList = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-list]");
+      if (pdpList) { e.preventDefault(); e.stopPropagation(); onPdpListClick(pdpList); }
     }, true);
     holder.addEventListener("click", onClick);
     holder.addEventListener("change", onChange);
@@ -1298,7 +1342,7 @@
   })(0);
   window.HM_NATIONAL_COACH = {
     enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: function () { return bootMode(); },
-    dashButtonHtml: dashButtonHtml, state: ui,
+    dashButtonHtml: dashButtonHtml, state: ui, pdpActionsHtml: pdpActionsHtml,
     // Ancien point d'entrée (« Gérer la sélection ») : ouvre le mode.
     open: function (id) { bind(); return enterMode(id); },
   };
