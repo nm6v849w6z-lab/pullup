@@ -48,6 +48,8 @@ const PRIVATE_TEAM_FIELDS = [
   "feed", "pendingInterviews", "pendingRecapEvents", "marketAlertSeen", "ordersHistory", "matchOrdersUsed",
   // Signets du manager (2026-10-04) : personnels.
   "bookmarks",
+  // Dynamique de groupe (2026-10-06) : vestiaire interne au club.
+  "locker",
 ];
 const FOREIGN_PRIVATE_TEAM_FIELDS = [
   ...PRIVATE_TEAM_FIELDS,

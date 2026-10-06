@@ -10,6 +10,9 @@
     root.BasketEngine = factory();
   }
 })(typeof self !== "undefined" ? self : this, function () {
+  // Dynamique de groupe (« Vestiaire », 2026-10-06) : module partagé avec le
+  // navigateur (window.HM_VESTIAIRE), voir assets/vestiaire.js.
+  const Vestiaire = require("./assets/vestiaire.js");
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
@@ -5320,6 +5323,7 @@ const CHEMISTRY_ARRIVAL_SHARE = 0.5; // malus max, pour le tout meilleur joueur 
 // quelques joueurs et je suis maintenant à 3, c'est un peu hard ») : une
 // équipe ne descend jamais sous 40.
 const CHEMISTRY_MIN = 40;
+function vestiaireApi() { return Vestiaire; }
 const CHEMISTRY_MATCH_TOGETHER_GAIN = 0.5; // par match joué
 const CHEMISTRY_SAME_FIVE_GAIN = 1; // en plus, si même cinq de départ qu'au match précédent
 // Résultat du match (officiel, jamais un amical) : victoire +2 (+3 à partir
@@ -6682,6 +6686,9 @@ class Team {
     // Série de résultats officiels pour l'alchimie (voir applyChemistryResult) :
     // > 0 victoires consécutives, < 0 défaites consécutives.
     this.chemistryResultStreak = 0;
+    // Dynamique de groupe (voir assets/vestiaire.js) : relevés hebdo,
+    // événements de vestiaire, dernier état connu, relations fortes.
+    this.locker = vestiaireApi() ? vestiaireApi().emptyLocker() : { history: [], log: [], last: null, relations: {} };
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE au-dessus de TACTICAL_KNOWLEDGE_GAIN_BASE plus haut) : neutre
     // au départ sur CHACUNE des 18 options possibles (10 priorités
@@ -7173,6 +7180,7 @@ class Team {
       if (pa - pf > CHEMISTRY_BLOWOUT_MARGIN) delta -= CHEMISTRY_BLOWOUT_EXTRA;
     }
     this.applyChemistryDelta(delta);
+    Vestiaire.onResult(this, pf, pa);
     return delta;
   }
 
@@ -8785,6 +8793,7 @@ class Team {
     } else {
       p.transferRequestDiscussed = true;
     }
+    if (vestiaireApi()) vestiaireApi().pushLog(this, { t: success ? "talk-ok" : "talk-ko", p: p.id, n: p.name });
     return { ok: true, success, formBefore, formAfter: p.form };
   }
 
@@ -8891,6 +8900,9 @@ class Team {
     // cette semaine (malus du banc inclus) pour décider qui franchit le
     // seuil de motivation "proche de 0".
     this.updateTransferRequests(now);
+    // Dynamique de groupe (voir assets/vestiaire.js:weeklyUpdate) : APRÈS la
+    // forme de la semaine, AVANT la remise à zéro du temps de jeu ci-dessous.
+    if (vestiaireApi()) vestiaireApi().weeklyUpdate(this, { now: now != null ? now : Date.now(), applyChemistry: d => this.applyChemistryDelta(d) });
     // Retraite : une semaine de plus depuis l'annonce (donne le tiers de
     // saison des discussions, voir retirementTalkPeriod). Les partants de
     // fin de saison ont déjà quitté l'effectif (League.retireAnnouncedPlayers).
@@ -17142,6 +17154,7 @@ function serializeTeam(team) {
     chemistry: team.chemistry,
     lastStartersKey: team.lastStartersKey || null,
     chemistryResultStreak: team.chemistryResultStreak || 0,
+    locker: vestiaireApi() ? vestiaireApi().serialize(team) : (team.locker || null),
     // Connaissance tactique (voir le grand commentaire CONNAISSANCE
     // TACTIQUE plus haut) : maîtrise PAR OPTION (10 priorités offensives, 5
     // défenses, 3 rythmes), plus la série en cours par option
@@ -17796,6 +17809,7 @@ function teamFromSave(data) {
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, CHEMISTRY_MIN, 100);
   if (typeof data.lastStartersKey === "string") team.lastStartersKey = data.lastStartersKey;
   if (Number.isFinite(data.chemistryResultStreak)) team.chemistryResultStreak = Math.trunc(data.chemistryResultStreak);
+  if (vestiaireApi()) team.locker = vestiaireApi().sanitize(data.locker);
   // Connaissance tactique (voir serializeTeam ci-dessus) : PAR OPTION depuis
   // cette révision (retour utilisateur, 2026-09 : "il faudrait qu'il y ait
   // une jauge par type d'attaque, une par rythme et une par défense") —

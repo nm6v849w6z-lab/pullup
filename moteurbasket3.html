@@ -8355,6 +8355,8 @@
 <script src="assets/i18n/i18n.js" defer></script>
 <!-- Registre central des succès (partagé avec engine.js, voir son en-tête). -->
 <script src="assets/achievements.js" defer></script>
+<!-- Dynamique de groupe (partagé avec engine.js). -->
+<script src="assets/vestiaire.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
@@ -16108,6 +16110,8 @@ const CHEMISTRY_ROSTER_CHANGE_BASE = 8;
 // Une arrivée pèse moitié moins qu'un départ (retour utilisateur 2026-10-03).
 const CHEMISTRY_ARRIVAL_SHARE = 0.5;
 const CHEMISTRY_MIN = 40; // plancher de l'alchimie (voir engine.js)
+// Dynamique de groupe : module partagé assets/vestiaire.js (chargé en defer).
+function vestiaireApi() { return (typeof window !== "undefined" && window.HM_VESTIAIRE) || null; }
 function chemistryRosterImportance(rank) {
   return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
 }
@@ -17012,6 +17016,8 @@ class Team {
 
     // Alchimie d'équipe (voir engine.js, miroir identique).
     this.chemistry = 50;
+    // Dynamique de groupe (voir engine.js, miroir identique).
+    this.locker = vestiaireApi() ? vestiaireApi().emptyLocker() : { history: [], log: [], last: null, relations: {} };
     // Connaissance tactique (voir engine.js, miroir identique) : maîtrise
     // PAR OPTION, plus la série en cours par option qui pilote sa courbe de
     // gain/perte progressive.
@@ -18716,6 +18722,7 @@ class Team {
     } else {
       p.transferRequestDiscussed = true;
     }
+    if (vestiaireApi()) vestiaireApi().pushLog(this, { t: success ? "talk-ok" : "talk-ko", p: p.id, n: p.name });
     return { ok: true, success, formBefore, formAfter: p.form };
   }
 
@@ -18809,6 +18816,9 @@ class Team {
     // jeu de CETTE semaine qui s'achève, pas de la semaine suivante.
     this.applyBenchFrustration(now);
     this.updateTransferRequests(now);
+    // Dynamique de groupe (voir assets/vestiaire.js:weeklyUpdate) : APRÈS la
+    // forme de la semaine, AVANT la remise à zéro du temps de jeu ci-dessous.
+    if (vestiaireApi()) vestiaireApi().weeklyUpdate(this, { now: now != null ? now : Date.now(), applyChemistry: d => this.applyChemistryDelta(d) });
     // Retraite : une semaine de plus depuis l'annonce (donne le tiers de
     // saison des discussions, voir retirementTalkPeriod). Les partants de
     // fin de saison ont déjà quitté l'effectif (League.retireAnnouncedPlayers).
@@ -24567,6 +24577,7 @@ function serializeTeam(team) {
     lastSeasonBonusSeasonId: team.lastSeasonBonusSeasonId || null,
     // Alchimie d'équipe (voir engine.js, miroir identique).
     chemistry: team.chemistry,
+    locker: vestiaireApi() ? vestiaireApi().serialize(team) : (team.locker || null),
     // Connaissance tactique (voir engine.js, miroir identique) : maîtrise
     // PAR OPTION, plus la série en cours par option.
     tacticalKnowledge: {
@@ -25134,6 +25145,8 @@ function teamFromSave(data) {
   team.lastSeasonBonusSeasonId = typeof data.lastSeasonBonusSeasonId === "string" ? data.lastSeasonBonusSeasonId : null;
   // Alchimie d'équipe (voir engine.js, miroir identique).
   if (typeof data.chemistry === "number") team.chemistry = clamp(data.chemistry, CHEMISTRY_MIN, 100);
+  // Dynamique de groupe (voir engine.js, miroir identique).
+  team.locker = vestiaireApi() ? vestiaireApi().sanitize(data.locker) : (data.locker || null);
   // Connaissance tactique (voir engine.js, miroir identique) : PAR OPTION
   // depuis cette révision, migration depuis l'ancien format scalaire (une
   // sauvegarde d'avant cette révision) en ne reprenant que les options
