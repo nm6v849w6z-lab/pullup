@@ -35416,7 +35416,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     families.map((f, fi) => f.keys.map((k, ki) => H(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
       cls: `eff-th-attr${ki === 0 && fi > 0 ? " eff-gstart" : ""}`,
       title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
-    })).join("")).join("") + (isOwnTeam ? "" : `<th class="eff-th">Confiance</th>`) + `</tr></thead><tbody>`;
+    })).join("")).join("") + (isOwnTeam ? "" : `<th class="eff-th">Fiabilité</th>`) + `</tr></thead><tbody>`;
   sorted.forEach(p => {
     html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${effPosBadgeHtml(p.position)}</td>`;
     if (!isOwnTeam) html += `<td class="eff-num fog-cell">${p.fog ? fogRangeText(p.fog.o) : "?"}</td>`;
@@ -35853,7 +35853,7 @@ function teamDetailAnalyseHtml(teamIdx) {
       `<div class="fog-kpi"><span>Analyste</span><b>Niv. ${shown.level}</b><i class="fog-lvl">${lvlBars}</i></div>` +
       `<div class="fog-kpi"><span>Par joueur</span><b>${shown.keys.length} / ${ATTRS.length}</b></div>` +
       `<div class="fog-kpi"><span>Précision</span><b>± ${scfg.half + age * Fog.CONFIG.agingHalfPerSeason}</b></div>` +
-      `<div class="fog-kpi"><span>Confiance</span><b>${fogConfHtml(Fog.confidence(shown.level, age), true)}</b></div></div>` +
+      `<div class="fog-kpi"><span>Fiabilité</span><b>${fogConfHtml(Fog.confidence(shown.level, age), true)}</b></div></div>` +
       `<p class="sub">${escapeHtml(fogReportLine({ season: shown.season, at: shown.at, level: shown.level }))} · caractéristiques estimées : ${shown.keys.map(k => escapeHtml(TRAINING_LABELS[k] || k)).join(", ")}.</p>`;
   } else {
     card += `<p class="sub">Aucune caractéristique de cet effectif n'a encore été estimée. Une séance vidéo estime des caractéristiques de TOUS ses joueurs, une fois par saison : plus votre analyste est bon, plus elle en estime et plus les fourchettes sont étroites. Une estimation n'est jamais certaine.</p>`;
@@ -45284,7 +45284,7 @@ function staffFogReportsHtml() {
       `<td>${done ? `<span class="fog-tag ok">Fait</span>` : `<button type="button" class="stf-btn stf-btn--ghost fog-go" data-fog-analyse="${i}">Analyser</button>`}</td></tr>`;
   }).join("");
   return `<div class="fog-card stf-fog"><div class="fog-card-head">${FOG_FILM_SVG}<b>Rapports de l'analyste vidéo</b><span class="fog-tag ${teamA.videoAnalyst ? "ok" : "no"}">${teamA.videoAnalyst ? `Analyste niveau ${teamA.videoAnalyst.level}` : "Aucun analyste"}</span></div>` +
-    `<table class="fog-table"><thead><tr><th>Adversaire</th><th>Dernier rapport</th><th>Niveau</th><th>Confiance</th><th></th></tr></thead><tbody>${body}</tbody></table>` +
+    `<table class="fog-table"><thead><tr><th>Adversaire</th><th>Dernier rapport</th><th>Niveau</th><th>Fiabilité</th><th></th></tr></thead><tbody>${body}</tbody></table>` +
     `<p class="sub" style="margin:8px 0 0">Une analyse par adversaire et par saison (une nouvelle équipe par jour). Les estimations ne sont jamais certaines et perdent en fiabilité avec le temps.</p></div>`;
 }
 document.addEventListener("click", (e) => {
