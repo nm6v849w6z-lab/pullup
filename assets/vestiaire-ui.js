@@ -195,8 +195,7 @@
     }).join("");
     var alone = v.players.filter(function (p) { return !p.group; });
     return (cards ? '<div class="vs-groups">' + cards + '</div>' : '<div class="vs-card"><p class="vs-empty">Pas encore de groupe marqué : les affinités se créent avec le temps passé ensemble.</p></div>') +
-      (alone.length ? '<div class="vs-card"><h3>Hors des groupes</h3>' + alone.map(chip).join("") + '<p class="vs-why">Pas forcément un problème : un joueur isolé et frustré, en revanche, mérite qu\'on s\'en occupe.</p></div>' : "") +
-      '<p class="vs-why">Les groupes se forment seuls : nationalité, génération, ancienneté, formation au club, tutorat, rôle sur le terrain et vécu commun.</p>';
+      (alone.length ? '<div class="vs-card"><h3>Hors des groupes</h3>' + alone.map(chip).join("") + '<p class="vs-why">Pas forcément un problème : un joueur isolé et frustré, en revanche, mérite qu\'on s\'en occupe.</p></div>' : "");
   }
 
   function graphSvg(v) {
@@ -233,8 +232,7 @@
     var bad = v.relations.filter(function (r) { return r.kind === "tension"; }).slice(0, 8);
     return '<div class="vs-card"><h3>Carte des relations</h3>' + (graphSvg(v) || '<p class="vs-empty">Pas assez de joueurs.</p>') + '</div>' +
       '<div class="vs-two"><div class="vs-card"><h3>Bonnes ententes</h3><ul class="vs-list">' + (good.map(item).join("") || '<li><span class="vs-empty">Aucune pour l\'instant.</span></li>') + '</ul></div>' +
-      '<div class="vs-card"><h3>Tensions</h3><ul class="vs-list">' + (bad.map(item).join("") || '<li><span class="vs-empty">Aucune tension.</span></li>') + '</ul>' +
-      (bad.length ? '<p class="vs-why">Une concurrence au même poste devient une tension quand le remplaçant n\'a plus le moral : du temps de jeu ou une discussion apaisent les choses.</p>' : "") + '</div></div>';
+      '<div class="vs-card"><h3>Tensions</h3><ul class="vs-list">' + (bad.map(item).join("") || '<li><span class="vs-empty">Aucune tension.</span></li>') + '</ul></div></div>';
   }
 
   function chartSvg(hist) {
