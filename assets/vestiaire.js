@@ -63,10 +63,16 @@
     { min: -1, key: "crisis", label: "Vestiaire en crise" },
   ];
   // Effets en retour, par semaine (voir weeklyUpdate).
-  const PLAYTIME_FORM_GAIN = 1.5;      // joueur qui a vraiment joué, moral bas
-  const PLAYTIME_FORM_CAP = 60;        // ... jusqu'à ce plafond seulement
+  // Renforcés le 2026-10-06 (retour utilisateur : « ne peut-on pas avoir
+  // un peu plus d'influence ? »), toujours bornés.
+  const PLAYTIME_FORM_GAIN = 3;        // joueur qui a vraiment joué, moral bas
+  const PLAYTIME_FORM_CAP = 65;        // ... jusqu'à ce plafond seulement
   const PLAYTIME_MIN_SECONDS = 20 * 60; // ~20 min cumulées dans la semaine
-  const CONTAGION_MAX = 1;             // |delta| d'alchimie max par semaine
+  const CONTAGION_MAX = 2;             // |delta| d'alchimie max par semaine
+  const LEADER_FORM_EFFECT = 1;        // un leader épanoui relève les frustrés, un leader en rupture tire son groupe vers le bas
+  const LEADER_HAPPY_FORM = 65;
+  const LEADER_DOWN_FORM = 30;
+  const LEADER_PULL_FLOOR = 25;        // jamais sous ce seuil par l'effet du leader (demande de transfert à 20)
 
   const num = (v, d = 0) => (Number.isFinite(v) ? v : d);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -551,13 +557,33 @@
       const secs = Object.values(p.trainingSecondsPlayedByPosition || {}).reduce((s, v) => s + num(v), 0);
       if (secs >= PLAYTIME_MIN_SECONDS && num(p.form, 50) < PLAYTIME_FORM_CAP) p.form = clamp(Math.round(num(p.form, 50) + PLAYTIME_FORM_GAIN), 1, PLAYTIME_FORM_CAP);
     });
-    // 2) contagion du moral sur la cohésion, ±1 par semaine au plus.
+    // 2) les leaders pèsent sur le moral : un leader épanoui relève les
+    //    joueurs frustrés (+1), un leader en rupture (moral très bas ou
+    //    demande de transfert) entraîne son groupe (−1, jamais sous 25) ;
     const rows = hierarchy(ctx);
+    const pairsNow = allPairs(ctx);
+    const groupsNow = detectGroups(ctx, pairsNow, rows);
+    rows.filter(r => r.level === "leader").forEach(r => {
+      const lf = num(r.p.form, 50);
+      if (lf >= LEADER_HAPPY_FORM && !r.p.transferRequestActive) {
+        ctx.players.forEach(p => { if (p !== r.p && num(p.form, 50) < 40) p.form = clamp(Math.round(num(p.form, 50) + LEADER_FORM_EFFECT), 1, 100); });
+      } else if (lf < LEADER_DOWN_FORM || r.p.transferRequestActive) {
+        const g = groupsNow.find(gr => gr.ids.includes(sid(r.p.id)));
+        (g ? g.ids : []).forEach(id => {
+          const p = ctx.byId.get(id);
+          if (p && p !== r.p && num(p.form, 50) > LEADER_PULL_FLOOR) p.form = clamp(Math.round(num(p.form, 50) - LEADER_FORM_EFFECT), LEADER_PULL_FLOOR, 100);
+        });
+      }
+    });
+    // 3) contagion du moral sur la cohésion, ±2 par semaine au plus.
     const mood = moodScore(rows);
-    const leaderDown = rows.some(r => r.level === "leader" && num(r.p.form, 50) < 35);
+    const leaderDown = rows.some(r => r.level === "leader" && (num(r.p.form, 50) < 35 || r.p.transferRequestActive));
     let chemDelta = 0;
-    if (mood < 35 || leaderDown) chemDelta = -CONTAGION_MAX;
-    else if (mood >= 68) chemDelta = CONTAGION_MAX;
+    if (mood < 30 || (mood < 40 && leaderDown)) chemDelta = -2;
+    else if (mood < 40 || leaderDown) chemDelta = -1;
+    else if (mood >= 72) chemDelta = 2;
+    else if (mood >= 62) chemDelta = 1;
+    chemDelta = clamp(chemDelta, -CONTAGION_MAX, CONTAGION_MAX);
     if (chemDelta && rows.length >= 5) {
       if (typeof opts.applyChemistry === "function") opts.applyChemistry(chemDelta);
       else team.chemistry = clamp(num(team.chemistry, 50) + chemDelta, CHEM_MIN, 100);
@@ -630,7 +656,7 @@
 
   const api = {
     HISTORY_MAX, LOG_MAX, RELATIONS_MAX, RELATION_KEEP, LEVELS, MOOD_LEVELS, STATE_LEVELS, EVENT_TONE,
-    PLAYTIME_FORM_GAIN, PLAYTIME_FORM_CAP, PLAYTIME_MIN_SECONDS, CONTAGION_MAX,
+    PLAYTIME_FORM_GAIN, PLAYTIME_FORM_CAP, PLAYTIME_MIN_SECONDS, CONTAGION_MAX, LEADER_FORM_EFFECT, LEADER_PULL_FLOOR,
     emptyLocker, sanitize, ensure, serialize, pushLog,
     buildContext, influenceOf, satisfactionOf, hierarchy, affinity, detectGroups, allPairs,
     moodOf, stateOf, buildView, weeklyUpdate, onResult, eventText, pairKey,

@@ -151,4 +151,28 @@ function team(name = "Vestiaire Test") {
   V.weeklyUpdate(empty, {});
 })();
 
+// 8) Leaders : un leader épanoui relève les frustrés ; un leader en rupture
+//    tire son groupe vers le bas sans jamais passer sous le plancher.
+(function testLeaders() {
+  const t = team();
+  let v = V.buildView(t, { now: Date.now() });
+  const leader = t.players.find(p => p.id === v.players.find(x => x.level === "leader").id);
+  leader.form = 80;
+  const low = t.players.find(p => p !== leader);
+  low.form = 30;
+  V.weeklyUpdate(t, { now: Date.now() });
+  assert.ok(low.form >= 30 + V.LEADER_FORM_EFFECT, "leader épanoui : le frustré remonte");
+  const t2 = team();
+  t2.players.forEach(p => { p.nationality = "zz"; p.age = 26; });
+  v = V.buildView(t2, { now: Date.now() });
+  const l2 = t2.players.find(p => p.id === v.players.find(x => x.level === "leader").id);
+  l2.form = 15;
+  const mate = t2.players.find(p => p !== l2 && v.players.find(x => x.id === p.id).group && v.players.find(x => x.id === p.id).group === v.players.find(x => x.id === l2.id).group);
+  if (mate) {
+    mate.form = V.LEADER_PULL_FLOOR + 1;
+    V.weeklyUpdate(t2, { now: Date.now() });
+    assert.ok(mate.form >= V.LEADER_PULL_FLOOR, "plancher respecté");
+  }
+})();
+
 console.log("vestiaire_test OK");
