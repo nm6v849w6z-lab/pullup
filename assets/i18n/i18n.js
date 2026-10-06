@@ -241,6 +241,9 @@
       if ((m = /^(\d+)V$/.exec(core))) return m[1] + LETTERS.V;
       if ((m = /^(\d+)D$/.exec(core))) return m[1] + LETTERS.D;
       if ((m = /^(\d+)V\s*[–-]\s*(\d+)D$/.exec(core))) return m[1] + LETTERS.V + " – " + m[2] + LETTERS.D;
+      // Bilans espacés (« 3 V – 2 D ») et scores précédés du résultat (« V 80-75 »).
+      if ((m = /^(\d+) V\s*[–-]\s*(\d+) D$/.exec(core))) return m[1] + " " + LETTERS.V + " – " + m[2] + " " + LETTERS.D;
+      if ((m = /^([VD]) (\d+\s*[–-]\s*\d+)$/.exec(core))) return LETTERS[m[1]] + " " + m[2];
       return null;
     }
     // Postes abrégés (Italie : Playmaker, Guardia, Ala piccola, Ala grande, Centro).
@@ -252,7 +255,7 @@
     var FRENCH = /[A-Za-zÀ-ÿ]{2,}/;
     // Bilans sans mot (« 2V-1D », « 12V ») : traités par les règles de
     // translateCore même s'ils ne contiennent pas deux lettres de suite.
-    var WL_ONLY = /^\s*(\d+[VD](\s*[–-]\s*\d+D)?|J\d+)\s*$/;
+    var WL_ONLY = /^\s*(\d+[VD](\s*[–-]\s*\d+D)?|\d+ V\s*[–-]\s*\d+ D|[VD] \d+\s*[–-]\s*\d+|J\d+)\s*$/;
 
     function enNumber(g) {
       // Italien : 1 234 → 1.234 ; 12,5 reste 12,5.

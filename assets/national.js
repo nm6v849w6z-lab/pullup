@@ -391,7 +391,7 @@
     h += '<div class="nt-two"><div class="nt-card"><div class="nt-k">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
     if (nx) {
       var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : null;
-      h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "contre" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
+      h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "face à" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
     } else h += '<p class="nt-small">Aucune échéance cette saison.</p>';
     var res = (tv.results || []).slice(0, 5);
     h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>' +
@@ -604,7 +604,7 @@
       if (t.ranking) h += '<p class="nt-small">Classement final : ' + t.ranking.map(function (id, i) { return (i + 1) + ". " + esc(teamLabelOf(id)); }).join(" · ") + "</p>";
     });
     h += '<p class="nt-small">Un match par jour à 20h, du lundi au dimanche ; récupération améliorée pendant la phase finale (la fatigue existe toujours). Un joueur dont la sélection est encore en course ne joue pas la Supercoupe du samedi.</p>';
-    if (f.others && f.others.length) h += '<p class="nt-small">Autres tournois : ' + f.others.map(function (o) { return esc(o.label) + (o.champion ? " (vainqueur : " + esc(teamLabelOf(o.champion)) + ")" : ""); }).join(" · ") + "</p>";
+    if (f.others && f.others.length) h += '<p class="nt-small">Autres tournois : ' + f.others.map(function (o) { return "<span>" + esc(o.label) + (o.champion ? " (vainqueur : " + esc(teamLabelOf(o.champion)) + ")" : "") + "</span>"; }).join(" · ") + "</p>";
     return h;
   }
   // Feuille d'un match international.
