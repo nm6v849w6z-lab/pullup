@@ -2929,6 +2929,22 @@
   .pdp2-btn--static{cursor:default; color:var(--amber); border-color:rgba(240,162,60,.45); font-size:13px;}
 
   .pdp2-row{display:grid; gap:18px;}
+  /* Rôles de jeu (assets/roles.js, maquette validée le 2026-10-06). */
+  .pdp2-row--role{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  @media (max-width:900px){ .pdp2-row--role{grid-template-columns:minmax(0,1fr);} }
+  .pdp-role-pos{display:flex; gap:6px; align-items:center;}
+  .pdp-role-pos .on{background:var(--amber); color:#1A0F02; border-color:var(--amber);}
+  .pdp-role-pos span{font-size:11px; font-weight:900; letter-spacing:.05em; padding:4px 9px; border-radius:6px; border:1px solid var(--line); color:var(--ink-dim);}
+  .pdp-role-name{font-size:22px; font-weight:900; margin:10px 0 2px;}
+  .pdp-role-desc{font-size:13.5px; color:var(--ink-dim); margin:0 0 12px;}
+  .pdp-role-sub{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:4px 0 6px;}
+  .pdp-role-fit{display:grid; grid-template-columns:minmax(120px,170px) 1fr 42px; gap:10px; align-items:center; padding:5px 0; font-size:13.5px;}
+  .pdp-role-fit b{font-weight:700;} .pdp-role-fit .pct{text-align:right; font-weight:800;}
+  .pdp-role-track{height:8px; border-radius:99px; background:var(--line); overflow:hidden;} .pdp-role-track i{display:block; height:100%; border-radius:99px;}
+  .pdp-role-sw{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .pdp-role-li{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13.5px;}
+  .pdp-role-dot{width:10px; height:10px; border-radius:50%; flex:none;}
+  .pdp-role-note{font-size:12.5px; color:var(--ink-dim); margin-top:10px;}
   .pdp2-row--profile{grid-template-columns:360px minmax(0,1fr);}
   .pdp2-rank-scope{padding:8px 0; border-top:1px solid var(--line);}
   .pdp2-rank-scope:first-of-type{border-top:0; padding-top:0;}
@@ -8433,6 +8449,7 @@
 <script src="assets/scouting-fog.js" defer></script>
 <!-- Mémoire historique des franchises (partagé avec engine.js). -->
 <script src="assets/history.js" defer></script>
+<script src="assets/roles.js" defer></script>
 <script src="assets/vestiaire-ui.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
@@ -20133,6 +20150,38 @@ function positionRating(player, pos) {
 }
 
 // Les 5 notes d'un joueur, { poste: note }.
+// Bloc « Rôle » de la fiche joueur (assets/roles.js, phase 1 des rôles de
+// jeu, maquette validée le 2026-10-06) : postes, rôle principal, maîtrise
+// des rôles, forces et faiblesses. Seulement si toutes les
+// caractéristiques sont visibles (brouillard de guerre).
+function pdpRoleRowHtml(player, fullyVisible) {
+  const R = typeof window !== "undefined" ? window.HM_ROLES : null;
+  if (!R || !fullyVisible || !player || !player.attrs) return "";
+  const ratings = positionRatings(player);
+  const prof = R.profileOf(player.attrs, ratings, 4, player.position);
+  if (!prof) return "";
+  const positions = prof.positions;
+  const tone = m => (m >= 80 ? "var(--ok, #33b4a1)" : m >= 65 ? "#9fd9a8" : m >= 50 ? "var(--amber)" : "var(--bad, #E2694F)");
+  const sw = R.strengthsOf(player.attrs);
+  const li = (txt, color) => `<div class="pdp-role-li"><span class="pdp-role-dot" style="background:${color}"></span>${escapeHtml(txt)}</div>`;
+  let h = `<div class="pdp2-row pdp2-row--role">`;
+  h += `<section class="pdp2-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp2-head"><h3>Rôle</h3><div class="pdp-role-pos" title="Postes">` +
+    positions.map(p => `<span class="${p === player.position ? "on" : ""}">${escapeHtml(POS_SHORT[p] || p)}</span>`).join("") + `</div></div>`;
+  h += `<div class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span> <small style="font-size:14px;color:var(--ink-dim);font-weight:700">· ${escapeHtml(POS_SHORT[prof.primary.position] || prof.primary.position)}</small></div>`;
+  h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
+  h += `<div class="pdp-role-sub">Maîtrise des rôles</div>`;
+  prof.fits.forEach(f => {
+    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
+  });
+  h += `<p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
+  h += `<section class="pdp2-card"><div class="pdp-role-sw"><div><div class="pdp-role-sub">Forces</div>` +
+    (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
+    `</div><div><div class="pdp-role-sub">Faiblesses</div>` +
+    (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
+  h += `</section></div>`;
+  return h;
+}
+
 function positionRatings(player) {
   const out = {};
   POSITIONS.forEach(pos => { out[pos] = positionRating(player, pos); });
@@ -34045,6 +34094,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     seasonHtml += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
   seasonHtml += `</section>`;
+  html += pdpRoleRowHtml(player, fullyVisible);
   html += `<div class="pdp2-row pdp2-row--profile"><div class="pdp2-side">`;
   html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profil</h3><span class="pdp2-meta">échelle 0–100</span></div>`;
   html += fullyVisible
