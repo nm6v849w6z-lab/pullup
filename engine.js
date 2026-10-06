@@ -110,6 +110,23 @@ const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivo
 // individuellement ; partout où le moteur avait besoin d'une valeur
 // "mental" (bonus clutch, malus de tilt, discussion de demande de
 // transfert), on calcule désormais mentalAverage(joueur) à la volée.
+// Audit des attributs (2026-10-06, mesuré : +20 sur un attribut, effectif
+// cloné, milliers de matchs) : un rôle propre par attribut, sans doublon.
+// Remplace ce qui précède quand ça diffère :
+// - "steal" : pari dans les lignes de passe (stealGambleRate, plus
+//   fréquent quand Interceptions > Défense extérieure) ; raté = tir ouvert.
+// - "penetration" : volume d'attaques du cercle (choix de la zone).
+// - "block" : dissuasion près du cercle, en plus des contres.
+// - "speed" seul pour les contre-attaques ; "acceleration" seul pour le
+//   premier pas (ACCEL_FIRST_STEP_PER_POINT).
+// - "decision" : refuser un tir très contesté (plus les pertes de balle).
+// - "composure" : pertes de balle SOUS PRESSION, money-time et série de
+//   ratés (remplace mentalAverage dans le match), fautes techniques.
+// - "determination" : progression à l'entraînement et motivation après une
+//   défaite (plus rien en match).
+// - "power" : duel contre la Force du défenseur (fautes provoquées, and-one).
+// Génération corrélée par familles (ATTR_FAMILIES) ; poids de la note par
+// poste (POSITION_KEY_WEIGHTS) recalés sur l'effet mesuré par poste.
 const ATTRS = [
   "midRange", "threePoint", "inside", "pass", "rebound",
   "block", "dribble", "agility", "defOutside", "defInside",
@@ -4939,7 +4956,9 @@ class Player {
         // le(s) poste(s) entraîné(s) progressent (demande explicite de
         // septembre 2026 : "pour les joueurs qui ne correspondent pas au
         // poste(s) entrainé(s) aucune caractéristique ne doit monter").
-        delta += growth * weight * progressRoom * rand(0.5, 1.3) * trainerMult;
+        // Détermination (audit des attributs 2026-10-06) : un joueur
+        // déterminé progresse plus vite sur ses programmes.
+        delta += growth * weight * progressRoom * rand(0.5, 1.3) * trainerMult * determinationTrainingMult(this);
       }
       if (decline > 0) {
         // Une caractéristique entraînée cette semaine décline moins vite.
@@ -7249,6 +7268,13 @@ class Team {
       this.chemistryResultStreak = prev < 0 ? prev - 1 : -1;
       delta = -(-this.chemistryResultStreak >= CHEMISTRY_STREAK_LENGTH ? CHEMISTRY_LOSS_STREAK : CHEMISTRY_LOSS);
       if (pa - pf > CHEMISTRY_BLOWOUT_MARGIN) delta -= CHEMISTRY_BLOWOUT_EXTRA;
+      // Détermination (audit des attributs 2026-10-06) : après une défaite,
+      // un joueur déterminé se remobilise (motivation en hausse), un joueur
+      // qui l'est peu accuse le coup. Centré sur 50 : aucun effet moyen.
+      this.players.forEach(p => {
+        const d = Math.round(((p.attrs && p.attrs.determination) ?? 50) - 50) * DETERMINATION_LOSS_FORM_PER_POINT;
+        if (Math.round(d)) p.form = clamp(Math.round((p.form || 0) + d), 1, 100);
+      });
     }
     this.applyChemistryDelta(delta);
     Vestiaire.onResult(this, pf, pa);
@@ -10311,15 +10337,45 @@ const POSITION_ATTR_PROFILE = {
     speed: "weak", acceleration: "weak", strength: "strong", vertical: "strong" },
 };
 
-function generateAttrsForPosition(position, tier) {
-  const generators = {
-    base: () => clamp(Math.round(rand(30, 65) * tier), 1, 99),
-    strong: () => clamp(Math.round(rand(55, 92) * tier), 1, 99),
-    weak: () => clamp(Math.round(rand(15, 45) * tier), 1, 99),
+// Génération corrélée (audit des attributs 2026-10-06) : les
+// caractéristiques d'une même famille partagent un tirage commun (le
+// « talent » du joueur dans ce domaine) mêlé à un tirage propre. Un bon
+// défenseur extérieur a souvent de bonnes interceptions et une bonne
+// anticipation ; un écart du type 81/38 reste possible mais devient rare.
+// Mélange 60/40 : moyenne inchangée, valeurs extrêmes moins fréquentes.
+const ATTR_FAMILIES = {
+  shooting: ["threePoint", "midRange", "freeThrow", "shotCreation"],
+  handle: ["dribble", "penetration"],
+  playmaking: ["pass", "vision", "decision"],
+  perimeterDefense: ["defOutside", "steal", "anticipation"],
+  interior: ["inside", "rebound", "block", "defInside"],
+  athleticism: ["speed", "acceleration", "agility", "vertical", "endurance"],
+  physique: ["strength", "power"],
+  mental: ["focus", "composure", "determination", "discipline", "leadership"],
+};
+const ATTR_FAMILY_SHARE = 0.6;
+const ATTR_FAMILY_OF = {};
+Object.keys(ATTR_FAMILIES).forEach(f => ATTR_FAMILIES[f].forEach(a => { ATTR_FAMILY_OF[a] = f; }));
+// Renvoie a => u ∈ [0, 1] pour un joueur (un tirage latent par famille).
+function correlatedUnitDraws() {
+  const latent = {};
+  return a => {
+    const f = ATTR_FAMILY_OF[a];
+    if (!f) return rand01();
+    if (latent[f] == null) latent[f] = rand01();
+    return ATTR_FAMILY_SHARE * latent[f] + (1 - ATTR_FAMILY_SHARE) * rand01();
   };
+}
+
+function generateAttrsForPosition(position, tier) {
+  const u = correlatedUnitDraws();
+  const ranges = { base: [30, 65], strong: [55, 92], weak: [15, 45] };
   const profile = POSITION_ATTR_PROFILE[position] || {};
   const attrs = {};
-  ATTRS.forEach(a => attrs[a] = generators[profile[a] || "base"]());
+  ATTRS.forEach(a => {
+    const [lo, hi] = ranges[profile[a] || "base"];
+    attrs[a] = clamp(Math.round((lo + u(a) * (hi - lo)) * tier), 1, 99);
+  });
   return attrs;
 }
 
@@ -10427,12 +10483,15 @@ function inferPosition(attrs, cardPosition) {
 // partout, égale à son overall. Même échelle que Player.overall(), bornée
 // à 0-100.
 // ---------------------------------------------------------------------
+// Recalé le 2026-10-06 (audit des attributs) : 75 % effet mesuré en match
+// (+20 sur un attribut, milliers de matchs) × profil du poste, 25 % anciens
+// poids (identité du poste). Voir DEV_NOTES.md.
 const POSITION_KEY_WEIGHTS = {
-  "Meneur": { pass: 22, dribble: 16, vision: 14, decision: 10, penetration: 10, speed: 8, acceleration: 8, steal: 6, threePoint: 6 },
-  "Arrière": { threePoint: 20, midRange: 16, shotCreation: 16, dribble: 12, penetration: 10, freeThrow: 8, acceleration: 6, defOutside: 6, speed: 6 },
-  "Ailier shooteur": { threePoint: 22, defOutside: 18, shotCreation: 12, midRange: 12, agility: 10, steal: 8, freeThrow: 6, anticipation: 6, vertical: 6 },
-  "Ailier fort": { rebound: 18, midRange: 18, strength: 16, power: 14, inside: 12, vertical: 8, agility: 8, defInside: 6 },
-  "Pivot": { block: 32, rebound: 20, defInside: 20, inside: 16, vertical: 12 },
+  "Meneur": { dribble: 20, agility: 14, steal: 13, defOutside: 11, speed: 10, acceleration: 10, shotCreation: 7, pass: 6, threePoint: 6, vision: 3 },
+  "Arrière": { dribble: 18, threePoint: 14, defOutside: 12, steal: 11, shotCreation: 10, speed: 9, midRange: 9, acceleration: 8, agility: 6, penetration: 3 },
+  "Ailier shooteur": { defOutside: 27, threePoint: 14, shotCreation: 10, agility: 10, steal: 8, rebound: 8, dribble: 8, inside: 6, strength: 6, midRange: 3 },
+  "Ailier fort": { rebound: 22, inside: 18, strength: 15, agility: 10, power: 9, steal: 7, defInside: 7, midRange: 5, shotCreation: 3, defOutside: 4 },
+  "Pivot": { rebound: 25, inside: 20, block: 13, strength: 12, defInside: 11, power: 6, defOutside: 4, discipline: 3, dribble: 3, vertical: 3 },
 };
 // Part des caractéristiques clés du poste dans la note (le reste = overall).
 const POSITION_RATING_KEY_SHARE = 0.65;
@@ -10568,6 +10627,32 @@ function attrsForCardPosition(position, makeAttrs) {
 // malgré le contact. Recalés le 2026-10-06 (+20 de Puissance : +0,0 pt
 // mesuré avant).
 const POWER_FOUL_PER_POINT = 0.003;
+// Audit des attributs (2026-10-06) : un rôle propre par attribut.
+// Interceptions — pari défensif (MatchEngine.playPossession).
+const STEAL_GAMBLE_BASE = 0.003;
+const STEAL_GAMBLE_PER_POINT = 0.0006;  // par point d'Interception au-dessus de la Défense extérieure
+const STEAL_GAMBLE_MAX = 0.035;
+const STEAL_GAMBLE_SUCCESS_BASE = 0.4;
+const STEAL_GAMBLE_SUCCESS_PER_POINT = 0.005;
+const STEAL_GAMBLE_MISS_OPENNESS = 14;
+function stealGambleRate(p) {
+  return clamp(STEAL_GAMBLE_BASE + (p.eff("steal") - p.eff("defOutside")) * STEAL_GAMBLE_PER_POINT, 0, STEAL_GAMBLE_MAX);
+}
+const ACCEL_FIRST_STEP_PER_POINT = 0.12;
+const PENETRATION_VOLUME_DIV = 50;
+const BLOCK_DETERRENCE_PER_POINT = 0.0018;
+// Écart moyen mesuré (meilleur protecteur − Jeu intérieur du tireur) : à
+// ce niveau, aucun effet ; l'adresse moyenne près du cercle ne bouge pas.
+const BLOCK_DETERRENCE_PIVOT = -4;
+const DECISION_REFUSAL_PER_POINT = 0.012;
+const COMPOSURE_PRESSURE_TOV_PER_POINT = 0.0012;
+// Détermination : vitesse de progression à l'entraînement (×0,8 à ×1,25) et
+// motivation après une défaite (Team.applyChemistryResult).
+const DETERMINATION_LOSS_FORM_PER_POINT = 0.06;
+function determinationTrainingMult(p) {
+  const d = p && p.attrs && typeof p.attrs.determination === "number" ? p.attrs.determination : 45;
+  return clamp(1 + (d - 45) * 0.006, 0.8, 1.25);
+}
 const POWER_AND_ONE_PER_POINT = 0.008;
 const SALARY_PEAK_BONUS_THRESHOLD = 90;
 // Réduit le 2026-10-04 (6/point, plafond 40 → 0,75/point, plafond 5) : une
@@ -10640,14 +10725,14 @@ function levelCoefficientFor(attrs, cardPosition) {
 // qu'avant, faire pencher le poste effectif d'un autre côté).
 function generateRawAttrsInRange(position, lo, hi, tier) {
   const span = hi - lo;
-  const generators = {
-    base: () => clamp(Math.round(rand(lo, hi) * tier), 1, 99),
-    strong: () => clamp(Math.round(rand(lo + span * 0.25, hi) * tier), 1, 99),
-    weak: () => clamp(Math.round(rand(lo, hi - span * 0.25) * tier), 1, 99),
-  };
+  const u = correlatedUnitDraws();
+  const ranges = { base: [lo, hi], strong: [lo + span * 0.25, hi], weak: [lo, hi - span * 0.25] };
   const profile = POSITION_ATTR_PROFILE[position] || {};
   const attrs = {};
-  ATTRS.forEach(a => attrs[a] = generators[profile[a] || "base"]());
+  ATTRS.forEach(a => {
+    const [a0, a1] = ranges[profile[a] || "base"];
+    attrs[a] = clamp(Math.round((a0 + u(a) * (a1 - a0)) * tier), 1, 99);
+  });
   return attrs;
 }
 
@@ -18731,7 +18816,9 @@ class MatchEngine {
   transitionChanceFromSpeed(team) {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
-    const avgSpeed = onCourt.reduce((s, p) => s + p.eff("speed") * 0.65 + p.eff("acceleration") * 0.35, 0) / onCourt.length;
+    // Vitesse seule (audit des attributs 2026-10-06 : l'Accélération ne
+    // sert plus qu'au premier pas, voir accelMismatch).
+    const avgSpeed = onCourt.reduce((s, p) => s + p.eff("speed"), 0) / onCourt.length;
     // Recalibré le 2026-09-28 (retour utilisateur : "c'est clair que le
     // chiffre de contre-attaque est un peu faible") : ~0,5 à 4 % des points
     // en transition avant, ~10 % visés désormais (100 matchs simulés) ;
@@ -19224,11 +19311,18 @@ class MatchEngine {
     // environ ±0.03 de chance de perte de balle pour un profil extrême (à
     // mettre en regard du plancher/plafond 0.03-0.35 posé par le clamp plus
     // bas).
-    tovChance -= (ballHandler.attrs.decision - 50) * 0.0006;
+    // Retiré (audit des attributs 2026-10-06) : la Décision porte désormais
+    // sur le choix du tir (refus d'un tir très contesté, voir DECISION_REFUSAL_PER_POINT),
+    // plus sur les pertes.
     // Sang-froid (audit 2026-09-29 : ne jouait qu'en fin de match serrée et
     // sur les fautes techniques) : un porteur calme garde le ballon sous
     // pression, d'autant plus face à une défense qui presse.
-    tovChance -= (ballHandler.attrs.composure - 50) * (0.0005 + Math.max(0, defense.pressure || 0) * 0.01);
+    // Audit des attributs 2026-10-06 : seulement SOUS PRESSION (pression
+    // collective du cinq adverse au-dessus de la moyenne ou défense
+    // pressante), pour ne plus doubler la Décision. Pression comparée au
+    // Dribble du porteur : neutre d'une division à l'autre.
+    const pressureLevel = Math.max(0, (pressure - ballHandler.eff("dribble")) / 40) + Math.max(0, defense.pressure || 0) * 10;
+    tovChance -= (ballHandler.attrs.composure - 50) * COMPOSURE_PRESSURE_TOV_PER_POINT * pressureLevel;
     // Défense sur écrans "Prise à deux" (double sur le porteur au screen,
     // pondéré par prWeight — voir plus haut) et garbage time "Adaptatif"
     // (imprécision des deux côtés en fin de match déséquilibrée) : ajoutés
@@ -19259,6 +19353,12 @@ class MatchEngine {
     }
     if (setPlay) tovChance -= SET_PLAY_TOV_BONUS;
     tovChance = clamp(tovChance, 0.03, 0.35);
+    // Interceptions — pari défensif (audit des attributs 2026-10-06) : un
+    // défenseur tente sa chance dans les lignes de passe d'autant plus que
+    // son Interception dépasse sa Défense extérieure (le « chasseur » 81/38
+    // parie souvent, un défenseur solide 80/80 rarement). Réussi : il vole le
+    // ballon ; raté : il est hors position et le tir qui suit est plus ouvert.
+    let gambleOpenness = 0;
 
     if (rand01() < tovChance) {
       ballHandler.stats.tov++;
@@ -19275,8 +19375,10 @@ class MatchEngine {
       // défenseur explosif referme les lignes de passe plus vite, sans pour
       // autant dominer le choix (poids réduit, l'agilité/le steal restent
       // les facteurs premiers d'une interception).
+      // Vitesse/Accélération retirées du choix du voleur (audit des
+      // attributs 2026-10-06 : une seule fonction par attribut).
       const stealer = weightedPick(onCourtDef, p =>
-        p.eff("agility") + p.eff("defOutside") + p.eff("steal") * 1.5 + (p.eff("speed") + p.eff("acceleration")) * 0.35
+        p.eff("agility") + p.eff("defOutside") + p.eff("steal") * 1.5
       );
       if (rand01() < 0.55) {
         stealer.stats.stl++;
@@ -19297,6 +19399,19 @@ class MatchEngine {
         this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
+    }
+    for (const g of onCourtDef) {
+      if (rand01() >= stealGambleRate(g)) continue;
+      if (rand01() < clamp(STEAL_GAMBLE_SUCCESS_BASE + (g.eff("steal") - ballHandler.eff("dribble")) * STEAL_GAMBLE_SUCCESS_PER_POINT, 0.12, 0.7)) {
+        ballHandler.stats.tov++;
+        ballHandler.consecutiveMisses++;
+        g.stats.stl++;
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: g.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, possession: this.teamKey(offTeam) });
+        if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
+        return { possessionOffense: false };
+      }
+      gambleOpenness = STEAL_GAMBLE_MISS_OPENNESS;
+      break;
     }
 
     // --- Faute simple, hors tir (retour utilisateur, 2026-09-24 : "il y a
@@ -19375,7 +19490,10 @@ class MatchEngine {
     const zoneAvg = key => five.reduce((s, p) => s + p.eff(key), 0) / five.length;
     const zi = zoneAvg("inside"), zm = zoneAvg("midRange"), zt = zoneAvg("threePoint");
     const zMean = (zi + zm + zt) / 3;
-    const wIn = Math.max(0.05, offense.inside * (1 + (zi - zMean) / 150));
+    // Pénétration (audit des attributs 2026-10-06) : un cinq de pénétrateurs
+    // attaque plus souvent le cercle (comparé à ses propres qualités de tir).
+    const zp = zoneAvg("penetration");
+    const wIn = Math.max(0.05, offense.inside * (1 + (zi - zMean) / 150) * (1 + (zp - zMean) / PENETRATION_VOLUME_DIV));
     const wMid = Math.max(0.05, offense.mid * (1 + (zm - zMean) / 150));
     let wThree = Math.max(0.05, offense.three * (1 + (zt - zMean) / 150));
     // Fin de match : menée de 3 dans les 40 dernières secondes, l'équipe
@@ -19542,7 +19660,9 @@ class MatchEngine {
     // l'intérieur), coefficient (0.05) volontairement plus faible que tous
     // les termes de mismatch déjà en place (0.22/0.11/0.10/0.08), un
     // complément, jamais un remplacement.
-    const accelMismatch = (shooter.eff("acceleration") - defender.eff("agility")) * 0.05;
+    // Poids relevé de 0.05 à ACCEL_FIRST_STEP_PER_POINT (audit des attributs
+    // 2026-10-06 : seul rôle de l'Accélération désormais).
+    const accelMismatch = (shooter.eff("acceleration") - defender.eff("agility")) * ACCEL_FIRST_STEP_PER_POINT;
     let mismatch = zone === "inside"
       ? (shooter.height - defender.height) * 0.22 + (shooter.eff("penetration") - defender.eff("defInside")) * 0.10 + strengthMismatch + accelMismatch
       : (shooter.eff("agility") - defender.eff("agility")) * 0.11 + accelMismatch;
@@ -19609,11 +19729,20 @@ class MatchEngine {
     const mates = onCourtOff.filter(p => p.id !== shooter.id);
     const matesAvg = mates.length ? mates.reduce((s, p) => s + p.eff(statForZone), 0) / mates.length : shooter.eff(statForZone);
     const isolatedPenalty = Math.max(0, shooter.eff(statForZone) - matesAvg - ISOLATED_GAP_FREE) * ISOLATED_GAP_PENALTY;
-    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus - isolatedPenalty + rand(-12, 12);
+    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus - isolatedPenalty + gambleOpenness + rand(-12, 12);
+
     let quality, qualityMod;
     if (openness > 8) { quality = "ouvert"; qualityMod = 0.08; }
     else if (openness > -10) { quality = "contesté"; qualityMod = 0; }
     else { quality = "très contesté"; qualityMod = -0.10; }
+    // Décision (audit des attributs 2026-10-06) : le choix du tir. Face à un
+    // tir très contesté, un joueur qui lit bien le jeu le refuse, ressort le
+    // ballon et retrouve un tir simplement contesté. Au-dessus de 45
+    // seulement (niveau courant) : la défense garde tout son poids face à
+    // un joueur moyen.
+    if (quality === "très contesté" && rand01() < clamp((shooter.eff("decision") - 45) * DECISION_REFUSAL_PER_POINT, 0, 0.6)) {
+      quality = "contesté"; qualityMod = 0;
+    }
 
     // Contre (retour utilisateur, 2026-09 : "il faut travailler sur l'impact
     // des caractéristiques [...] si pas encore fait") : mécanisme absent
@@ -19709,6 +19838,14 @@ class MatchEngine {
     // résultat, contre +8 points d'écart pour +20 de Défense extérieure).
     const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0022 : (effStat - 60) * 0.0019;
     let prob = base + attrDelta + qualityMod;
+    // Contre — dissuasion (audit des attributs 2026-10-06) : près du cercle,
+    // le meilleur contreur adverse (son défenseur direct, ou un protecteur
+    // de cercle en aide à 70 %) gêne aussi les tirs qu'il ne contre pas.
+    // Comparé au Jeu intérieur du tireur : neutre d'une division à l'autre.
+    if (zone === "inside" && !blocked) {
+      const rim = Math.max(defender.eff("block"), ...onCourtDef.map(p => p.eff("block") * 0.7));
+      prob -= (rim - shooter.eff("inside") - BLOCK_DETERRENCE_PIVOT) * BLOCK_DETERRENCE_PER_POINT;
+    }
     // Puissance, finition au contact (retour utilisateur 2026-10-06) : sur
     // un tir près du cercle AVEC faute, un tireur puissant marque quand même
     // plus souvent (« and-one ») au lieu de n'obtenir que deux lancers
@@ -19748,13 +19885,15 @@ class MatchEngine {
     // "mental" n'est plus stocké individuellement (retour utilisateur,
     // 2026-09, voir mentalAverage() au-dessus de PHYSICAL_ATTRS) : on
     // utilise ici la moyenne des 8 traits de MENTAL_ATTRS.
-    const mentalClutchBoost = clutch ? (mentalAverage(shooter) - 50) * 0.0012 : 0;
+    // Sang-froid seul (audit des attributs 2026-10-06 : plus la moyenne des
+    // 8 traits mentaux, qui faisait jouer la Discipline au money-time).
+    const mentalClutchBoost = clutch ? (shooter.eff("composure") - 50) * 0.0015 : 0;
     // 2) Malus de "tilt" : après 3 ratés/pertes de balle d'affilée (voir
     //    consecutiveMisses, mis à jour plus bas et incrémenté aussi sur
     //    perte de balle) - un mental élevé (>=70) annule totalement le
     //    malus, un mental bas peut aller jusqu'à -9 pts de %.
     const tiltPenalty = shooter.consecutiveMisses >= 3
-      ? clamp((70 - mentalAverage(shooter)) * 0.0015, 0, 0.09) : 0;
+      ? clamp((70 - shooter.eff("composure")) * 0.0015, 0, 0.09) : 0;
     // Leadership (retour utilisateur, 2026-09 : "trouve un intérêt aux carac
     // qui ne sont pas utilisées") : un capitaine (le meilleur Leadership du
     // cinq en jeu, pas forcément le tireur) aide toute l'équipe à mieux
@@ -19775,9 +19914,10 @@ class MatchEngine {
     // Sang-froid et la Détermination ("ne rien lâcher") aident CE joueur à
     // ne pas s'enfoncer après une mauvaise série, en complément du Mental,
     // qui reste le facteur premier (coefficient 0.0015, plafond 0.09).
-    const clutchComposure = (shooter.attrs.composure + shooter.attrs.determination) / 2;
-    const composureRelief = shooter.consecutiveMisses >= 3
-      ? clamp((clutchComposure - 50) * 0.0008, 0, 0.05) : 0;
+    // Retiré (audit des attributs 2026-10-06) : le Sang-froid porte déjà le
+    // malus de série ci-dessus, la Détermination joue sur l'entraînement et
+    // le moral après une défaite.
+    const composureRelief = 0;
     prob = clamp(prob + marginDamp + mentalClutchBoost - tiltPenalty + leadershipRelief + composureRelief + (setPlay ? SET_PLAY_SHOT_BONUS : 0), 0.10, 0.75);
     // Tir au buzzer (moins de 4 s à jouer, voir simulate()) : lancé dans
     // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
@@ -20441,6 +20581,7 @@ return {
   // définition (correctif "Cette enchère est déjà terminée" après un
   // redémarrage du process serveur, 2026-09).
   uid, reseedUidFromSave, bumpUidFloor, scanMaxId,
+  stealGambleRate, determinationTrainingMult, ATTR_FAMILIES, correlatedUnitDraws,
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,
   // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire
   // au-dessus de PHYSICAL_ATTRS, retour utilisateur 2026-09 : "entrainement

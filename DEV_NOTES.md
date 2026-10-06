@@ -20,16 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **🔵 Audit des attributs (2026-10-06) — pistes NON validées.** Mesure
-  (+20 sur un attribut, effectif D2 cloné, 2 000 matchs) : Défense
-  extérieure +5,1 pts, Rebond +3,8, Dribble +3,0, Agilité +2,9 … Contre
-  +0,3, Pénétration +0,1 (bruit ±0,3). Puissance corrigée (duel contre la
-  Force du défenseur : fautes provoquées + finition au contact, +1,7 pt ;
-  libellés de/el/zh distincts de la Force). Restent proposés : vrai rôle
-  pour Interceptions (pari défensif), Pénétration, Contre ; séparer
-  Vitesse/Accélération et Décision/Sang-froid ; identité propre pour la
-  Détermination ; génération corrélée ; poids de note par poste calés sur
-  l'effet mesuré.
+- **🔵 Audit des attributs (2026-10-06) — FAIT ET POUSSÉ ; reste à suivre.**
+  Rôles distincts (engine.js, en-tête « Audit des attributs ») : pari
+  d'Interception, Pénétration = volume d'attaques du cercle, dissuasion du
+  Contre, Vitesse seule en transition / Accélération seule au premier pas,
+  Décision = refus d'un tir très contesté, Sang-froid = pression + money-time
+  (plus de moyenne mentale en match), Détermination = entraînement + moral
+  après défaite, Puissance gardée (duel contre la Force). Génération
+  corrélée (ATTR_FAMILIES). POSITION_KEY_WEIGHTS : 75 % effet mesuré × profil
+  du poste + 25 % anciens poids. Mesure (+20, toute l'équipe, 1 200 matchs) :
+  Déf. ext. +4,7, Rebond +3,4, Dribble +3,3, Agilité +3,1, Jeu int. +2,8,
+  Interceptions +2,6, Force +2,2 … Pénétration ≈ +0,6, Passe +0,4,
+  Leadership ≈ 0. Reste : la Passe et la Pénétration pèsent peu en match ;
+  le moteur miroir de moteurbasket3.html (mode local, très divergent) n'a
+  pas reçu ces mécaniques.
 
 - **🟡 Sélections nationales (2026-10-05) — phase A FAITE ET POUSSÉE
   (élections, mandats, page Sélections : server/nationalTeams.js,
