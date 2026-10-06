@@ -2976,7 +2976,7 @@
   .pdp-role-desc{font-size:13.5px; color:var(--ink-dim); margin:0 0 12px;}
   .pdp-role-sub{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:4px 0 6px;}
   .pdp-role-fit{display:grid; grid-template-columns:minmax(120px,170px) 1fr 42px; gap:10px; align-items:center; padding:5px 0; font-size:13.5px;}
-  .pdp-role-fit b{font-weight:700;} .pdp-role-pref{color:var(--amber); font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; margin-left:4px;} .pdp-role-fit .pct{text-align:right; font-weight:800;}
+  .pdp-role-fit b{font-weight:700;} .pdp-role-fit .pct{text-align:right; font-weight:800;}
   .pdp-role-track{height:8px; border-radius:99px; background:var(--line); overflow:hidden;} .pdp-role-track i{display:block; height:100%; border-radius:99px;}
   .pdp-role-sw{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .pdp-role-li{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13.5px;}
@@ -20279,11 +20279,10 @@ function pdpRoleRowHtml(player, fullyVisible) {
   h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
   h += `</div>`; // identité
   h += `<div class="pdp-role-mastery"><div class="pdp-role-sub">Maîtrise des rôles</div>`;
-  // Rôle préféré (phase 4) : « ce joueur AIME jouer ce rôle ».
-  const pref = R.preferredRole(player.attrs, ratings, player.position, player.id);
+  // Mention « Préféré » retirée de la liste (demande utilisateur du
+  // 2026-10-06) ; le rôle préféré reste utilisé pour le moral (phase 4).
   prof.fits.forEach(f => {
-    const isPref = pref && pref.role === f.role && pref.position === f.position;
-    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}${isPref ? ` <span class="pdp-role-pref" title="Le rôle qu'il aime jouer">Préféré</span>` : ""}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
+    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
   });
   h += `</div></div>`; // maîtrise, corps
   // Phase 5 : évolution du rôle au fil de la carrière, et programmes
