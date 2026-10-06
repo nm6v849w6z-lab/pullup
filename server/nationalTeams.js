@@ -82,6 +82,8 @@ const DEFAULT_CONFIG = {
   // celle de l'All-Star) ; phase finale pendant la dernière semaine, du
   // lundi (jour 76 de la saison) au dimanche (jour 82), à 20h.
   windowWeeks: [2, 4, 6],
+  // Semaine du dimanche de l'All-Star (jamais de match international).
+  allStarWeek: 5,
   // Matchs internationaux (phase C) et gel automatique des convocations
   // (notifications aux clubs) : réglable par l'administration (« config »).
   matchesLive: true,
@@ -184,6 +186,8 @@ function managerAt(ref, leagues, world) {
   const lg = leagues.get(ref.leagueId);
   return lg ? managerOf(ref.leagueId, lg, ref.idx, world) : null;
 }
+// Identifiant public d'un manager (jamais sa clé) : choix du staff.
+function managerMid(key) { return require("crypto").createHash("sha1").update(`nat-staff:${key}`).digest("hex").slice(0, 12); }
 function displayName(m) { return (m && (m.pseudo || (m.clubName ? `Manager de ${m.clubName}` : null))) || "Manager"; }
 
 // --- Règles d'éligibilité ---------------------------------------------
@@ -398,6 +402,18 @@ function step(store, leagues, world, now) {
   if (seasonStart != null && now < seasonStart) due(seasonStart);
   // Groupes (intérim) : recalculés au plus toutes les heures.
   if (refreshSquads(store, leagues, world, now)) changed = true;
+  // Annuaire des managers (staff des sélections : adjoints, recruteurs),
+  // recalculé au plus toutes les heures.
+  if (!store.managerIndexAt || now - store.managerIndexAt >= cfg.squadRefreshMs) {
+    const list = [];
+    for (const [leagueId, lg] of leagues) (lg && lg.teams || []).forEach((t, idx) => {
+      const m = t && t.isHuman ? managerOf(leagueId, lg, idx, world) : null;
+      if (m) list.push({ mid: managerMid(m.key), key: m.key, ref: m.ref, pseudo: m.pseudo, clubName: m.clubName, country: m.country, division: m.division });
+    });
+    store.managerIndex = list;
+    store.managerIndexAt = now;
+    changed = true;
+  }
   // Phase B (server/nationalCoach.js) : vivier des sélectionneurs, gel des
   // convocations 3 jours avant le premier match, notifications en attente.
   const coach = require("./nationalCoach.js").step(store, leagues, world, now, season, seasonStart);
@@ -492,15 +508,21 @@ function refreshSquads(store, leagues, world, now, force = false) {
 }
 // Calendrier d'une saison : 3 fenêtres le dimanche + phase finale (lundi →
 // dimanche de la dernière semaine). `calendarStartAt` = jour 0 (mardi).
-function seasonCalendar(cfg, calendarStartAt, season, cat) {
-  if (typeof calendarStartAt !== "number") return [];
+// Instant (heure des matchs internationaux) du jour `day` de la saison
+// (jour 0 = mardi de la semaine de reprise).
+function seasonDayAt(cfg, calendarStartAt, day) {
   const Calendar = require("./calendar.js");
   // Jour 0 ramené au mardi de sa semaine (rythme hebdomadaire : la saison
   // démarre un mardi ; sinon, on se cale quand même sur la semaine).
   const p0 = Calendar.zonedLocalDateParts(calendarStartAt, "Europe/Paris");
   const wd = new Date(Date.UTC(p0.year, p0.month - 1, p0.day)).getUTCDay();
   const day0 = Calendar.addParisCalendarDays(p0, -((wd - 2 + 7) % 7));
-  const at = day => { const d = Calendar.addParisCalendarDays(day0, day); return Calendar.zonedEpochForLocalTime("Europe/Paris", d.year, d.month, d.day, cfg.matchHour); };
+  const d = Calendar.addParisCalendarDays(day0, day);
+  return Calendar.zonedEpochForLocalTime("Europe/Paris", d.year, d.month, d.day, cfg.matchHour);
+}
+function seasonCalendar(cfg, calendarStartAt, season, cat) {
+  if (typeof calendarStartAt !== "number") return [];
+  const at = day => seasonDayAt(cfg, calendarStartAt, day);
   const pos = cyclePos(cfg, season, cat);
   const phase = pos >= 0 ? cfg.cycle[pos] : null;
   const out = (cfg.windowWeeks || []).map((w, i) => ({ kind: "window", n: i + 1, at: at(7 * (w - 1) + 5) }));
@@ -663,7 +685,7 @@ function overview(store, me, season, now) {
   return {
     ok: true, season, cycle: { pos, phase: cfg.cycle[pos], length: cfg.cycle.length, mandateSeasons: cfg.mandateSeasons, startSeason: cfg.cycleStartSeason, categoryOffset: cfg.categoryOffset },
     teams, recentResults: recent,
-    me: me ? { myMandates: mandatesOfKey(store, me.key).map(publicMandate), country: me.country } : null,
+    me: me ? { myMandates: mandatesOfKey(store, me.key).map(publicMandate), country: me.country, ...require("./nationalCoach.js").staffOf(store, me.key) } : null,
     history: store.mandates.filter(m => m.endedAt).slice(-60).map(publicMandate),
   };
 }
@@ -671,7 +693,7 @@ function overview(store, me, season, now) {
 module.exports = {
   STORE_NAME, CATEGORIES, DEFAULT_CONFIG, emptyStore, isValidStore, configOf, loadStore, saveStore,
   teamIdOf, teamLabel, countryName, intlSeasonOf, cyclePos, isElectionSeason, mandateEndSeason, seasonStartOf, ensureTeams,
-  managerOf, managerAt, notify, experienceOf, evalRule, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
+  managerOf, managerAt, managerMid, notify, experienceOf, evalRule, seasonDayAt, canVote, canRun, activeMandate, mandatesOfKey, endMandate,
   openElection, currentElection, closeElection, breakTie, step,
   runForElection, withdrawCandidacy, castVote, resign, adminDismiss, adminCancelElection,
   publicElection, publicMandate, overview,
