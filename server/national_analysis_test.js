@@ -48,6 +48,9 @@ ok("droits : staff de la sélection (droit analysis), même catégorie");
 // 3) Fenêtres 1 et 2 jouées : équipe virtuelle et rapport.
 now = comp.matches.filter(m => m.w === 2)[0].at + 60e3;
 N.step(st, leagues, world, now);
+// Fin des directs (2026-10-06) : un match encore en diffusion reste caché.
+now = Math.max(...comp.matches.filter(m => m.w === 2).map(m => m.liveUntil || 0)) + 2000;
+N.step(st, leagues, world, now);
 const mine = comp.matches.filter(m => m.status === "played" && (m.home === TID || m.away === TID));
 assert.ok(mine.length >= 2, "au moins deux matchs joués");
 const d = C.analysisData(st, lyon, TID, OPP, now, ctx);

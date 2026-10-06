@@ -33,7 +33,8 @@ function fixture() {
   const m1 = comp.matches.find(m => m.w === 1);
   const lyon = N.managerOf("fr-1", lg, 0, world);
   C.adminAppoint(st, m1.home, lyon, 2, start + 3600e3, leagues);
-  const now = comp.matches.filter(m => m.w === 3)[0].at + 60e3;
+  // Après la fin des directs de la fenêtre 3 (score caché pendant la diffusion).
+  const now = comp.matches.filter(m => m.w === 3)[0].at + 6 * 3600e3;
   N.step(st, leagues, world, now);
   return C.analysisData(st, lyon, m1.home, m1.away, now, { season: 2, pool: null });
 }
