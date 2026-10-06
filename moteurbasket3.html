@@ -20296,7 +20296,7 @@ function pdpRoleRowHtml(player, fullyVisible) {
   }
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
   if (progs.length) h += `<div><div class="pdp-role-sub">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div></div>`;
-  h += `</div><p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
+  h += `</div></section>`;
   // Forces / Faiblesses : deux colonnes séparées, éléments compacts ;
   // compatibilité avec le cinq en pied de brique.
   h += `<section class="pdp2-card pdp-sw-card"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div><div class="pdp-role-sw">` +
