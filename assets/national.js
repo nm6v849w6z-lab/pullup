@@ -306,7 +306,7 @@
       h += '<div class="nt-cand' + (isWin ? " is-win" : "") + (c.withdrawn ? " is-out" : "") + '"><div class="nt-row"><span>' + flag(c.country) + " " + clubBtn(c.ref, c.pseudo, c.clubName) + (c.division ? ' <span class="nt-small">(' + esc(c.division) + ")</span>" : "") + '</span><span class="nt-sp"></span>' + right + "</div>" +
         '<div class="nt-quote">« ' + esc(c.title) + " »</div>" +
         // Expérience (bilans des mandats précédents, phase E).
-        ((c.experience || []).length ? '<div class="nt-small">Ancien sélectionneur : ' + c.experience.map(function (x) { return esc(x.label) + " (saisons " + esc(x.fromSeason) + "–" + esc(x.toSeason) + (x.played ? ", " + esc(x.wins) + " V – " + esc(x.losses) + " D" : "") + (x.best ? ", " + esc(x.best) : "") + ")"; }).join(" · ") + "</div>" : "") +
+        ((c.experience || []).length ? '<div class="nt-small">Ancien sélectionneur : ' + c.experience.map(function (x) { return "<span>" + esc(x.label) + " (saisons " + esc(x.fromSeason) + "–" + esc(x.toSeason) + (x.played ? ", " + esc(x.wins) + " V – " + esc(x.losses) + " D" : "") + (x.best ? ", " + esc(x.best) : "") + ")</span>"; }).join(" · ") + "</div>" : "") +
         (c.project ? "<details><summary>Voir le projet complet</summary><p class=\"nt-project\">" + esc(c.project) + "</p></details>" : "") +
         (st === "closed" ? '<div class="nt-bar"><i style="width:' + Math.round(100 * (counts[c.id] || 0) / maxV) + '%"></i></div>' : "") + "</div>";
     });
