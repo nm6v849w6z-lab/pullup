@@ -826,6 +826,8 @@
   @media(max-width:1250px){
     .compo-layout{grid-template-columns:1fr;}
     .compo-side{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr); align-items:start;}
+    /* Effectif seul (cohérence dans sa propre brique) : toute la largeur. */
+    .compo-side.is-solo{grid-template-columns:minmax(0, 1fr);}
   }
   /* Téléphone : cartes de poste empilées (M, A, AS, AF, P), plus de dessin
      de terrain, bilan puis effectif en dessous, sans défilement latéral. */
@@ -2802,7 +2804,9 @@
   .fog-kpi{background:var(--panel-2); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:3px;}
   .fog-kpi span{font-size:11.5px; color:var(--ink-dim);} .fog-kpi > b{font-size:17px;}
   .stf-fog{margin-top:14px;}
-  .fog-panel{margin-bottom:14px;} .fog-panel .scouting-actions{margin:0 0 4px;}
+  .fog-panel{margin-bottom:14px; scroll-margin-top:84px; border-radius:14px;}
+  .fog-panel--flash > .fog-card{animation:fogFlash 1.4s ease-out;}
+  @keyframes fogFlash{0%,35%{box-shadow:0 0 0 2px var(--amber);} 100%{box-shadow:0 0 0 2px transparent;}} .fog-panel .scouting-actions{margin:0 0 4px;}
   #teamDetailSection .eff-caracs th.fog-th, #teamDetailSection .eff-caracs td.fog-td{text-align:center !important;}
   .stf-fog .fog-go{padding:5px 12px; min-height:0; font-size:12.5px;}
   .stf-fog .fog-table td{vertical-align:middle;}
@@ -2930,8 +2934,41 @@
 
   .pdp2-row{display:grid; gap:18px;}
   /* Rôles de jeu (assets/roles.js, maquette validée le 2026-10-06). */
-  .pdp2-row--role{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  .pdp2-row--role{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); align-items:stretch;}
   @media (max-width:900px){ .pdp2-row--role{grid-template-columns:minmax(0,1fr);} }
+  /* Brique Rôle : identité à gauche, maîtrise des rôles à droite ; évolution
+     et programmes en pied, sur toute la largeur. */
+  .pdp-role-body{display:grid; grid-template-columns:minmax(0,1fr); row-gap:10px; align-items:start;}
+  @media (min-width:1100px){ .pdp-role-body{grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr); column-gap:28px;} }
+  @media (min-width:640px) and (max-width:900px){ .pdp-role-body{grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr); column-gap:24px;} }
+  .pdp-role-mastery .pdp-role-fit{grid-template-columns:minmax(0,1fr) minmax(70px,120px) 40px;}
+  .pdp-role-mastery .pdp-role-sub{margin-top:0;}
+  .pdp-role-body .pdp-role-name{margin-top:2px;}
+  .pdp-role-body .pdp-role-desc{margin-bottom:0;}
+  .pdp-role-foot{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px 28px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);}
+  .pdp-role-foot:empty{display:none;}
+  .pdp-role-foot .pdp-role-sub{margin-top:0;}
+  /* Brique Forces / Faiblesses : deux colonnes séparées par un filet,
+     compatibilité en pied. */
+  .pdp-sw-card{display:flex; flex-direction:column;}
+  .pdp-sw-card .pdp-role-sw{grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0;}
+  .pdp-sw-col{padding:2px 16px 2px 0; min-width:0;}
+  .pdp-sw-col + .pdp-sw-col{padding:2px 0 2px 16px; border-left:1px solid var(--line);}
+  .pdp-sw-col .pdp-role-sub{display:flex; align-items:center; gap:6px; margin:0 0 8px;}
+  .pdp-sw-col .pdp-role-sub b{font-size:10.5px; min-width:18px; height:18px; padding:0 5px; border-radius:99px; display:inline-grid; place-items:center; letter-spacing:0;}
+  .pdp-sw-col--ok .pdp-role-sub b{background:rgba(51,180,161,.16); color:var(--ok, #33b4a1);}
+  .pdp-sw-col--bad .pdp-role-sub b{background:rgba(226,105,79,.16); color:var(--bad, #E2694F);}
+  .pdp-sw-list{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:6px;}
+  .pdp-sw-list .pdp-role-li{padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid var(--line); font-weight:600; line-height:1.25;}
+  .pdp-sw-list .pdp-role-note{margin:0;}
+  .pdp-sw-foot{margin-top:auto; padding-top:14px; border-top:1px solid var(--line);}
+  .pdp-sw-card .pdp-role-sw{margin-bottom:14px;}
+  .pdp-sw-foot .pdp-compat{margin-top:0;}
+  @media (max-width:480px){
+    .pdp-sw-card .pdp-role-sw{grid-template-columns:minmax(0,1fr); row-gap:12px;}
+    .pdp-sw-col, .pdp-sw-col + .pdp-sw-col{padding:0; border-left:0;}
+    .pdp-sw-col + .pdp-sw-col{padding-top:12px; border-top:1px solid var(--line);}
+  }
   .pdp-role-pos{display:flex; gap:6px; align-items:center;}
   .pdp-role-pos .on{background:var(--amber); color:#1A0F02; border-color:var(--amber);}
   .pdp-role-pos span{font-size:11px; font-weight:900; letter-spacing:.05em; padding:4px 9px; border-radius:6px; border:1px solid var(--line); color:var(--ink-dim);}
@@ -2949,6 +2986,11 @@
   .coh-card{background:var(--compo-court-bg, var(--panel)); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
   .coh-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
   .coh-head h3{margin:0; font-size:14px; letter-spacing:.06em; text-transform:uppercase;}
+  /* Brique « Cohérence du cinq » de la page Ordres (sous Défense) : le
+     titre est celui de la brique, le contenu garde son style. */
+  .ordres-coh-card{gap:12px;}
+  .ordres-coh-card .coh-card{background:none; padding:0; margin:0; border-radius:0;}
+  .ordres-coh-card .coh-head{display:none;}
   .coh-kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;}
   .coh-kpi{background:var(--panel-2, rgba(255,255,255,.03)); border-radius:10px; padding:8px 10px;}
   .coh-kpi b{display:block; font-size:22px; font-weight:900;} .coh-kpi span{font-size:11.5px; color:var(--ink-dim);}
@@ -20232,34 +20274,42 @@ function pdpRoleRowHtml(player, fullyVisible) {
   let h = `<div class="pdp2-row pdp2-row--role">`;
   h += `<section class="pdp2-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp2-head"><h3>Rôle</h3><div class="pdp-role-pos" title="Postes">` +
     positions.map(p => `<span class="${p === player.position ? "on" : ""}">${escapeHtml(POS_SHORT[p] || p)}</span>`).join("") + `</div></div>`;
+  h += `<div class="pdp-role-body"><div class="pdp-role-id">`;
   h += `<div class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span> <small style="font-size:14px;color:var(--ink-dim);font-weight:700">· ${escapeHtml(POS_SHORT[prof.primary.position] || prof.primary.position)}</small></div>`;
   h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
-  h += `<div class="pdp-role-sub">Maîtrise des rôles</div>`;
+  h += `</div>`; // identité
+  h += `<div class="pdp-role-mastery"><div class="pdp-role-sub">Maîtrise des rôles</div>`;
   // Rôle préféré (phase 4) : « ce joueur AIME jouer ce rôle ».
   const pref = R.preferredRole(player.attrs, ratings, player.position, player.id);
   prof.fits.forEach(f => {
     const isPref = pref && pref.role === f.role && pref.position === f.position;
     h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}${isPref ? ` <span class="pdp-role-pref" title="Le rôle qu'il aime jouer">Préféré</span>` : ""}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
   });
+  h += `</div></div>`; // maîtrise, corps
   // Phase 5 : évolution du rôle au fil de la carrière, et programmes
   // d'entraînement qui développent le rôle principal.
   const hist = Array.isArray(player.roleHistory) ? player.roleHistory : [];
+  h += `<div class="pdp-role-foot">`;
   if (hist.length && hist[hist.length - 1].role !== prof.primary.role || hist.length >= 2) {
     const steps = hist.concat(hist.length && hist[hist.length - 1].role === prof.primary.role ? [] : [{ name: prof.primary.name, age: player.age }]);
-    h += `<div class="pdp-role-sub" style="margin-top:12px">Évolution du rôle</div><div class="pdp-role-evo">` +
-      steps.map(x => `<b><span>${escapeHtml(x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div>`;
+    h += `<div><div class="pdp-role-sub">Évolution du rôle</div><div class="pdp-role-evo">` +
+      steps.map(x => `<b><span>${escapeHtml(x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div></div>`;
   }
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
-  if (progs.length) h += `<div class="pdp-role-sub" style="margin-top:12px">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div>`;
-  h += `<p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
-  h += `<section class="pdp2-card"><div class="pdp-role-sw"><div><div class="pdp-role-sub">Forces</div>` +
+  if (progs.length) h += `<div><div class="pdp-role-sub">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div></div>`;
+  h += `</div><p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
+  // Forces / Faiblesses : deux colonnes séparées, éléments compacts ;
+  // compatibilité avec le cinq en pied de brique.
+  h += `<section class="pdp2-card pdp-sw-card"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div><div class="pdp-role-sw">` +
+    `<div class="pdp-sw-col pdp-sw-col--ok"><div class="pdp-role-sub">Forces <b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
     (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
-    `</div><div><div class="pdp-role-sub">Faiblesses</div>` +
-    (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
+    `</div></div><div class="pdp-sw-col pdp-sw-col--bad"><div class="pdp-role-sub">Faiblesses <b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
+    (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div></div>`;
   // Compatibilité avec le cinq majeur du manager (phase 2).
   const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
   const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
   if (comp) {
+    h += `<div class="pdp-sw-foot">`;
     const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
     h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
       `<div style="font-weight:800">Compatibilité avec votre cinq majeur</div>` +
@@ -20269,6 +20319,7 @@ function pdpRoleRowHtml(player, fullyVisible) {
     const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
     const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
     if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
+    h += `</div>`;
   }
   h += `</section></div>`;
   return h;
@@ -34186,7 +34237,6 @@ function renderPlayerDetail(teamIdx, playerId) {
     seasonHtml += `<div class="pdp2-head"><h3>Saison</h3></div><p class="pdp-locked-note">Aucun match joué cette saison pour l'instant.</p>`;
   }
   seasonHtml += `</section>`;
-  html += pdpRoleRowHtml(player, fullyVisible);
   html += `<div class="pdp2-row pdp2-row--profile"><div class="pdp2-side">`;
   html += `<section class="pdp2-card"><div class="pdp2-head"><h3>Profil</h3><span class="pdp2-meta">échelle 0–100</span></div>`;
   html += fullyVisible
@@ -34267,6 +34317,9 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</section>`;
 
   html += `</div>`; // row profile
+  // Rôle + Forces / Faiblesses : sous Profil, Profils de jeu et
+  // Caractéristiques (demande utilisateur du 2026-10-06).
+  html += pdpRoleRowHtml(player, fullyVisible);
 
   // == Derniers matchs | Poste + Profils de jeu ==
   html += `<div class="pdp2-row pdp2-row--games"><div class="pdp2-side">` + seasonHtml;
@@ -35544,7 +35597,7 @@ function teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) {
     html += `<div class="eff-kpi-sep"></div><div class="eff-kpi tde-kpi-scout">` +
       `<span class="eff-kpi-label">Caractéristiques estimées</span>` +
       `<span class="eff-kpi-line"><span class="eff-kpi-num">${count}</span><span class="eff-kpi-unit">/ ${ATTRS.length}</span>` +
-      `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button></span>` +
+      (teamDetailForeign ? "" : `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button>`) + `</span>` +
       `<span class="eff-meter eff-meter-lg"><span class="eff-meter-fill" style="width:${pct}%"></span></span></div>`;
   }
   return html + `</div>`;
@@ -35611,7 +35664,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     return `<div class="tde-locked-card"><div class="tde-locked-ico">${TDE_LOCK_ICON}</div>` +
       `<div class="tde-locked-text"><h3>Aucune caractéristique estimée</h3>` +
       `<p>Une séance vidéo estime une partie des caractéristiques de TOUT l'effectif de ${escapeHtml(team.name)}, une fois par saison. Plus votre analyste vidéo est bon, plus elle en estime, et plus les fourchettes sont étroites.</p></div>` +
-      `<button type="button" class="tde-locked-btn" data-fog-scroll>Voir l'analyse vidéo</button></div>`;
+      (teamDetailForeign ? "" : `<button type="button" class="tde-locked-btn" data-fog-scroll>Voir l'analyse vidéo</button>`) + `</div>`;
   }
   const keys = families.flatMap(f => f.keys);
   const value = (p, k) => (k === "physicalAvg" || k === "mentalAvg") ? teamDetailSortValue(p, k, team) : p.attrs[k];
@@ -35652,7 +35705,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     const hidden = ATTRS.filter(a => !revealedSet.has(a));
     if (hidden.length) {
       html += `<div class="tde-hidden-attrs"><div class="tde-hidden-head">${TDE_LOCK_ICON}<span>Encore cachées · ${hidden.length}</span>` +
-        `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button></div>` +
+        (teamDetailForeign ? "" : `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button>`) + `</div>` +
         `<div class="tde-hidden-chips">${hidden.map(a => `<span class="tde-chip">${escapeHtml(TRAINING_LABELS[a])}</span>`).join("")}</div></div>`;
     }
   }
@@ -40967,6 +41020,14 @@ function buildTeamPanel(team, side, opts = {}) {
   defStack.className = "prep-def-stack";
   colRight.appendChild(defStack);
   defStack.appendChild(defense);
+  // Cohérence du cinq (rôles, tactique) : sous Défense, près des choix
+  // tactiques qu'elle évalue (rempli par renderLineupEditor).
+  const cohesionHost = makeCard(isMain ? "ordresCardCohesion" : null, "Cohérence du cinq");
+  cohesionHost.classList.add("ordres-coh-card", "hidden");
+  const cohBody = document.createElement("div");
+  cohBody.className = "ordres-coh-body";
+  cohesionHost.appendChild(cohBody);
+  defStack.appendChild(cohesionHost);
   const defenseGrid = document.createElement("div");
   defenseGrid.className = "ordres-settings-grid";
   defense.appendChild(defenseGrid);
@@ -41099,7 +41160,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // Carte « Temps de jeu » : colonne de droite, sous le terrain.
   const minutesHost = document.createElement("div");
   minutesHost.className = "lineup-minutes-host";
-  refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost, roster: opts.roster });
+  refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost, cohesionContainer: cohesionHost, roster: opts.roster });
   refreshLineupEditor();
   if (editable) colLeft.appendChild(minutesHost);
   colRight.appendChild(adversaires);
@@ -41459,6 +41520,13 @@ function renderLineupEditor(team, container, opts = {}) {
 
   // --- Colonne : bilan + effectif (convocation) ---
   const side = el("div", "compo-side");
+  // Cohérence du cinq : dans sa propre brique, à côté d'Attaque / Défense
+  // quand la page la prévoit (opts.cohesionContainer, réorganisation du
+  // 2026-10-06 : elle allongeait la colonne de l'Effectif et laissait un
+  // grand vide sous le terrain) ; sinon dans la colonne, comme avant.
+  const cohHost = opts.cohesionContainer || null;
+  if (cohHost && cohHost.querySelector(".ordres-coh-body")) side.classList.add("is-solo");
+  if (cohHost) { const body = cohHost.querySelector(".ordres-coh-body"); if (body) body.innerHTML = ""; cohHost.classList.add("hidden"); }
   // Bilan (moyennes cinq majeur / banc, alertes) retiré (retour utilisateur
   // 2026-10-03) ; seul le cas bloquant reste signalé : titulaire manquant.
   if (missing) {
@@ -41468,7 +41536,8 @@ function renderLineupEditor(team, container, opts = {}) {
   } else {
     // Cohérence du cinq (rôles de jeu, phase 2).
     const coh = compoCohesionHtml(team);
-    if (coh) { const box = el("div", "compo-coh-wrap"); box.innerHTML = coh; side.appendChild(box); }
+    if (coh && cohHost && cohHost.querySelector(".ordres-coh-body")) { cohHost.querySelector(".ordres-coh-body").innerHTML = coh; cohHost.classList.remove("hidden"); }
+    else if (coh) { const box = el("div", "compo-coh-wrap"); box.innerHTML = coh; side.appendChild(box); }
   }
 
   // --- Effectif (convocation) : liste compacte à côté du terrain, ou
@@ -45563,10 +45632,38 @@ document.addEventListener("click", (e) => {
   teamDetailSubView = "effectif";
   renderTeamDetail(idx);
 });
+// « Voir l'analyse vidéo » / « Séance vidéo → » (page Effectif d'une
+// équipe) : amène au panneau d'analyse vidéo de l'équipe affichée. Corrigé
+// le 2026-10-06 (retour utilisateur : « le bouton ne fonctionne pas ») :
+// le panneau finissait caché sous la barre du haut (ou ne bougeait pas s'il
+// était déjà à l'écran), et il manquait si la page avait été re-rendue sur
+// une autre sous-vue — on le recrée alors pour l'équipe affichée.
+function openTeamVideoAnalysis() {
+  if (teamDetailIdx == null || teamDetailForeign || teamDetailIdx === myTeamIndex || !league.teams[teamDetailIdx]) return false;
+  let panel = document.querySelector("#teamDetailContent .fog-panel");
+  if (!panel) {
+    teamDetailSubView = "effectif";
+    renderTeamDetail(teamDetailIdx);
+    panel = document.querySelector("#teamDetailContent .fog-panel");
+  }
+  if (!panel) return false;
+  const bar = document.querySelector(".topbar, header.topbar, #topbar");
+  const offset = (bar ? bar.getBoundingClientRect().height : 64) + 16;
+  const top = panel.getBoundingClientRect().top + window.scrollY - offset;
+  if (typeof window.scrollTo === "function") {
+    try { window.scrollTo({ top: Math.max(0, top), behavior: "smooth" }); } catch (err) { window.scrollTo(0, Math.max(0, top)); }
+  }
+  panel.classList.remove("fog-panel--flash");
+  void panel.offsetWidth; // relance l'animation à chaque clic
+  panel.classList.add("fog-panel--flash");
+  const action = panel.querySelector("#runVideoSessionBtn");
+  if (action && action.focus) action.focus({ preventScroll: true });
+  return true;
+}
 document.addEventListener("click", (e) => {
   if (!e.target.closest("[data-fog-scroll]")) return;
-  const panel = document.querySelector("#teamDetailContent .fog-panel");
-  if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  e.preventDefault();
+  openTeamVideoAnalysis();
 });
 
 // Carte d'un poste : en poste / enchère en cours / à pourvoir.

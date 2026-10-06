@@ -162,6 +162,17 @@ if (!lockedCard || caracsTableBefore) throw new Error("❌ Sans séance vidéo, 
 if (doc.querySelectorAll("#teamDetailContent .attr-cell").length) throw new Error("❌ Aucune valeur de caractéristique ne devrait apparaître sans séance vidéo.");
 if (!lockedCard.querySelector('[data-fog-scroll]')) throw new Error("❌ L'encart devrait renvoyer vers l'analyse vidéo de la même page.");
 console.log("✅ La fiche adverse affiche toujours les infos publiques, et aucune caractéristique tant que rien n'est révélé (encart vers l'Analyse).");
+// Bouton « Voir l'analyse vidéo » (retour utilisateur 2026-10-06 : « le
+// bouton ne fonctionne pas ») : le clic amène au panneau d'analyse vidéo de
+// l'équipe affichée et le met en évidence.
+{
+  const fogPanel = doc.querySelector("#teamDetailContent .fog-panel");
+  lockedCard.querySelector("[data-fog-scroll]").click();
+  if (!fogPanel || !fogPanel.classList.contains("fog-panel--flash")) throw new Error("❌ Le clic sur « Voir l'analyse vidéo » devrait amener au panneau d'analyse vidéo.");
+  const head = fogPanel.querySelector(".fog-card-head b").textContent;
+  if (!head.includes(win.eval("league.teams[teamDetailIdx].name"))) throw new Error("❌ Le panneau devrait être celui de l'équipe affichée : " + head);
+  console.log("✅ « Voir l'analyse vidéo » ouvre l'analyse vidéo de " + head.replace("Analyse vidéo · ", ""));
+}
 
 // Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la
 // page d'une équipe (effectif [...] analyse de l'équipe)" — le bouton de
