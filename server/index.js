@@ -2843,8 +2843,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // Mode Sélectionneur (phase E) : mandats en cours du manager (bouton
         // de bascule dans la barre du haut), sans le reste de la page.
         if (req.method === "GET" && route.pathname === "/api/national/me") {
-          const mine = me ? NationalTeams.mandatesOfKey(natStore, me.key).map(m => ({ teamId: m.teamId, label: NationalTeams.teamLabel(m.teamId), country: natStore.teams[m.teamId].country, cat: natStore.teams[m.teamId].cat, fromSeason: m.fromSeason, toSeason: m.toSeason, unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) })) : [];
-          sendJson(res, 200, { ok: true, mandates: mine });
+          const mine = me ? NationalTeams.mandatesOfKey(natStore, me.key).map(m => ({ teamId: m.teamId, label: NationalTeams.teamLabel(m.teamId), country: natStore.teams[m.teamId].country, cat: natStore.teams[m.teamId].cat, fromSeason: m.fromSeason, toSeason: m.toSeason, role: "coach", unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) })) : [];
+          // Staff (adjoint, recruteur) : accès au mode Sélectionneur, menu
+          // filtré selon le rôle ; invitations en attente.
+          const staff = me ? require("./nationalCoach.js").staffOf(natStore, me.key) : { staffRoles: [], staffInvites: [] };
+          sendJson(res, 200, { ok: true, mandates: mine, staffRoles: staff.staffRoles, staffInvites: staff.staffInvites });
           return;
         }
         if (req.method === "GET" && route.pathname === "/api/national/overview") {
@@ -2881,27 +2884,44 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             try { body = req.__parsedBody !== undefined ? req.__parsedBody : await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
           }
           const teamId = req.method === "GET" ? route.searchParams.get("id") : body && body.teamId;
-          const coachCtx = { pool: await NationalCoach.loadPool(teamId, multiSavePath), season, calendarStartAt: ctx.league.calendarStartAt };
+          const coachCtx = { pool: await NationalCoach.loadPool(teamId, multiSavePath), season, calendarStartAt: ctx.league.calendarStartAt, opp: req.method === "GET" ? route.searchParams.get("opp") : (body && body.opp) || null };
+          let outC = null;
           if (req.method === "POST") {
+            // Droits vérifiés dans chaque action (nationalCoach.PERMS) :
+            // sélectionneur, adjoint, recruteur.
+            const NationalFriendlies = require("./nationalFriendlies.js");
             const COACH_ACTIONS = {
               "/api/national/coach/list": NationalCoach.setListMember,
               "/api/national/coach/convocation": NationalCoach.setConvocation,
               "/api/national/coach/replace": NationalCoach.replaceConvoked,
               "/api/national/coach/tactics": NationalCoach.setTactics,
               "/api/national/coach/seen": NationalCoach.markSeen,
+              // Staff : invitation (par mid de l'annuaire), réponse de
+              // l'invité, retrait (par le sélectionneur ou départ volontaire).
+              "/api/national/coach/staff/invite": NationalCoach.staffInvite,
+              "/api/national/coach/staff/respond": NationalCoach.staffRespond,
+              "/api/national/coach/staff/remove": NationalCoach.staffRemove,
+              // Matchs amicaux internationaux (sélectionneur seulement).
+              "/api/national/coach/friendly/request": NationalFriendlies.request,
+              "/api/national/coach/friendly/respond": NationalFriendlies.respond,
+              "/api/national/coach/friendly/cancel": NationalFriendlies.cancel,
             };
             const fnC = COACH_ACTIONS[route.pathname];
             if (!fnC) { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
-            const outC = fnC(natStore, me, body || {}, now, coachCtx);
+            outC = fnC(natStore, me, body || {}, now, coachCtx);
             if (!outC.ok) { sendJson(res, outC.status || 400, { ok: false, error: outC.error }); return; }
             try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
             // Notifications en attente : envoyées au prochain passage du monde.
-            if (Array.isArray(natStore.outbox) && natStore.outbox.length) {
+            // Amical accepté : le monde doit repasser à son heure (gel, match).
+            if ((Array.isArray(natStore.outbox) && natStore.outbox.length) || route.pathname.startsWith("/api/national/coach/friendly/")) {
               const cur = nextWorldDeadlineAt.get(multiSavePath);
               if (cur == null || now + 1000 < cur) nextWorldDeadlineAt.set(multiSavePath, now + 1000);
             }
           } else if (req.method !== "GET" || route.pathname !== "/api/national/coach") { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
           const view = NationalCoach.coachView(natStore, me, teamId, now, coachCtx);
+          // Invité qui refuse, membre qui quitte le staff : plus d'accès à
+          // la vue, on renvoie le résultat de l'action.
+          if (!view.ok && outC) { sendJson(res, 200, outC); return; }
           sendJson(res, view.ok ? 200 : (view.status || 400), view);
           return;
         }
