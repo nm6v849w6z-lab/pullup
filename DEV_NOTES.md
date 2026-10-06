@@ -20,6 +20,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🔵 Audit des attributs (2026-10-06) — pistes NON validées.** Mesure
+  (+20 sur un attribut, effectif D2 cloné, 2 000 matchs) : Défense
+  extérieure +5,1 pts, Rebond +3,8, Dribble +3,0, Agilité +2,9 … Contre
+  +0,3, Pénétration +0,1 (bruit ±0,3). Puissance corrigée (duel contre la
+  Force du défenseur : fautes provoquées + finition au contact, +1,7 pt ;
+  libellés de/el/zh distincts de la Force). Restent proposés : vrai rôle
+  pour Interceptions (pari défensif), Pénétration, Contre ; séparer
+  Vitesse/Accélération et Décision/Sang-froid ; identité propre pour la
+  Détermination ; génération corrélée ; poids de note par poste calés sur
+  l'effet mesuré.
+
 - **🟡 Sélections nationales (2026-10-05) — phase A FAITE ET POUSSÉE
   (élections, mandats, page Sélections : server/nationalTeams.js,
   assets/national.js) ; phases B à E À FAIRE.** Décisions de l'utilisateur :

@@ -9682,7 +9682,7 @@
       <div class="guide-entry" data-guide-id="caracs" data-guide-group="Mon équipe">
         <h3>Caractéristiques</h3>
         <p class="training-intro">29 caractéristiques (0 à 99) : Tir à mi-distance, Tir à 3 points, Jeu intérieur, Passe, Rebond, Contre, Dribble, Agilité, Défense extérieure, Défense intérieure, Mental, Endurance, Lancer franc, Pénétration, Création de tir, Interceptions, Puissance, Concentration, Anticipation, Leadership, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision. Sur chacune, plus le chiffre est élevé, mieux c'est, sans exception. La couleur donne le niveau en un coup d'œil : rouge en dessous de 45, grise de 45 à 64, verte de 65 à 79, dorée à partir de 80 (niveau élite).</p>
-        <p class="training-intro" style="margin-top:10px;">Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. Le Mental améliore la réussite au tir dans le money time et limite les dégâts d'une mauvaise série. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu. La Puissance augmente les fautes provoquées près du panier. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.</p>
+        <p class="training-intro" style="margin-top:10px;">Mental, Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. Le Mental améliore la réussite au tir dans le money time et limite les dégâts d'une mauvaise série. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.</p>
         <p class="training-intro" style="margin-top:10px;">Pénétration, Création de tir, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration aide à se créer un accès à la raquette. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Les Interceptions pèsent dans le choix du voleur de balle. La Vitesse et l'Accélération déclenchent des contre-attaques et aident à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre. La Décision réduit les pertes de balle ; la Vision améliore le choix du passeur. Le Sang-froid et la Détermination agissent comme le Mental. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.</p>
       </div>
 
@@ -20251,6 +20251,12 @@ function attrsForCardPosition(position, makeAttrs) {
 // génération). Le plafond garantit une prime maximale prévisible et
 // cohérente, atteinte dès qu'un pic est déjà nettement exceptionnel, sans
 // dépendre du reste du profil.
+// Puissance (voir MatchEngine.playPossession, powerFoulMod et
+// finition au contact) : fautes provoquées près du cercle et finition
+// malgré le contact. Recalés le 2026-10-06 (+20 de Puissance : +0,0 pt
+// mesuré avant).
+const POWER_FOUL_PER_POINT = 0.003;
+const POWER_AND_ONE_PER_POINT = 0.008;
 const SALARY_PEAK_BONUS_THRESHOLD = 90;
 // Réduit le 2026-10-04 (6/point, plafond 40 → 0,75/point, plafond 5) : une
 // seule caractéristique au-dessus de 90 multipliait le salaire jusqu'à ×3,5
@@ -26271,9 +26277,14 @@ class MatchEngine {
     // puissant provoque plus de contact au moment du tir - à distinguer de
     // la Force (strengthMismatch plus haut, qui se contente de créer un
     // passage AVANT le tir) : ici c'est le contact PENDANT le tir qui
-    // compte. Poids (0.0004) modeste, en complément de disciplineFoulMod
-    // déjà en place, jamais un remplacement.
-    const powerFoulMod = zone === "inside" ? (shooter.eff("power") - 50) * 0.0004 : 0;
+    // compte. Poids relevé de 0.0004 à POWER_FOUL_PER_POINT (retour
+    // utilisateur 2026-10-06 : « il faut pas que le poids soit de 0 » —
+    // +20 de Puissance ne changeait rien au score, mesuré +0,0 pt), voir
+    // aussi la finition au contact plus bas (« and-one »).
+    // Duel Puissance du tireur contre Force du défenseur (centré sur 0 à
+    // toutes les divisions : le nombre moyen de fautes ne bouge pas).
+    const powerEdge = zone === "inside" ? shooter.eff("power") - defender.eff("strength") : 0;
+    const powerFoulMod = powerEdge * POWER_FOUL_PER_POINT;
     const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
       + (zone === "inside" ? (postD.foulMod || 0) : 0) + disciplineFoulMod + powerFoulMod;
     // !blocked : un tir contré ne peut pas aussi être une faute sur le tir
@@ -26304,6 +26315,11 @@ class MatchEngine {
     // de dépendre pleinement des attributs — seul le % brut est compressé.
     const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0018 : (effStat - 60) * 0.0016;
     let prob = base + attrDelta + qualityMod;
+    // Puissance, finition au contact (retour utilisateur 2026-10-06) : sur
+    // un tir près du cercle AVEC faute, un tireur puissant marque quand même
+    // plus souvent (« and-one ») au lieu de n'obtenir que deux lancers
+    // francs. Même duel que powerFoulMod (Force du défenseur en face).
+    if (zone === "inside" && shootingFoul) prob += powerEdge * POWER_AND_ONE_PER_POINT;
     // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
     // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau
     // rejouées des milliers de fois produisaient déjà ~28% d'écarts ≥20 pts

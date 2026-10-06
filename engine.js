@@ -10563,6 +10563,12 @@ function attrsForCardPosition(position, makeAttrs) {
 // génération). Le plafond garantit une prime maximale prévisible et
 // cohérente, atteinte dès qu'un pic est déjà nettement exceptionnel, sans
 // dépendre du reste du profil.
+// Puissance (voir MatchEngine.playPossession, powerFoulMod et
+// finition au contact) : fautes provoquées près du cercle et finition
+// malgré le contact. Recalés le 2026-10-06 (+20 de Puissance : +0,0 pt
+// mesuré avant).
+const POWER_FOUL_PER_POINT = 0.003;
+const POWER_AND_ONE_PER_POINT = 0.008;
 const SALARY_PEAK_BONUS_THRESHOLD = 90;
 // Réduit le 2026-10-04 (6/point, plafond 40 → 0,75/point, plafond 5) : une
 // seule caractéristique au-dessus de 90 multipliait le salaire jusqu'à ×3,5
@@ -19654,9 +19660,14 @@ class MatchEngine {
     // puissant provoque plus de contact au moment du tir - à distinguer de
     // la Force (strengthMismatch plus haut, qui se contente de créer un
     // passage AVANT le tir) : ici c'est le contact PENDANT le tir qui
-    // compte. Poids (0.0004) modeste, en complément de disciplineFoulMod
-    // déjà en place, jamais un remplacement.
-    const powerFoulMod = zone === "inside" ? (shooter.eff("power") - 50) * 0.0004 : 0;
+    // compte. Poids relevé de 0.0004 à POWER_FOUL_PER_POINT (retour
+    // utilisateur 2026-10-06 : « il faut pas que le poids soit de 0 » —
+    // +20 de Puissance ne changeait rien au score, mesuré +0,0 pt), voir
+    // aussi la finition au contact plus bas (« and-one »).
+    // Duel Puissance du tireur contre Force du défenseur (centré sur 0 à
+    // toutes les divisions : le nombre moyen de fautes ne bouge pas).
+    const powerEdge = zone === "inside" ? shooter.eff("power") - defender.eff("strength") : 0;
+    const powerFoulMod = powerEdge * POWER_FOUL_PER_POINT;
     const foulDrawBase = (zone === "inside" ? 0.10 : 0.03) + (offense.drawFoul || 0) + shooter.aggressiveness / 900
       + (zone === "inside" ? (postD.foulMod || 0) : 0) + disciplineFoulMod + powerFoulMod;
     // !blocked : un tir contré ne peut pas aussi être une faute sur le tir
@@ -19698,6 +19709,11 @@ class MatchEngine {
     // résultat, contre +8 points d'écart pour +20 de Défense extérieure).
     const attrDelta = effStat >= 60 ? (effStat - 60) * 0.0022 : (effStat - 60) * 0.0019;
     let prob = base + attrDelta + qualityMod;
+    // Puissance, finition au contact (retour utilisateur 2026-10-06) : sur
+    // un tir près du cercle AVEC faute, un tireur puissant marque quand même
+    // plus souvent (« and-one ») au lieu de n'obtenir que deux lancers
+    // francs. Même duel que powerFoulMod (Force du défenseur en face).
+    if (zone === "inside" && shootingFoul) prob += powerEdge * POWER_AND_ONE_PER_POINT;
     // Frein anti-blowout de base (retour utilisateur : "on a un peu trop vite
     // de gros blowout") — même deux équipes RIGOUREUSEMENT de même niveau
     // rejouées des milliers de fois produisaient déjà ~28% d'écarts ≥20 pts
