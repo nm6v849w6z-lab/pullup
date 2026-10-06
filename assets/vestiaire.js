@@ -384,8 +384,12 @@
     const w = rows.reduce((s, r) => s + 10 + r.inf.value, 0);
     return Math.round(rows.reduce((s, r) => s + num(r.p.form, 50) * (10 + r.inf.value), 0) / w);
   }
+  // Cohésion = l'alchimie telle qu'affichée partout ailleurs (40-100) : le
+  // score global est la moyenne pondérée des trois jauges VISIBLES (retour
+  // utilisateur 2026-10-06 : « vestiaire tendu à 36 alors que les briques ne
+  // sont jamais sous 40 »).
   function cohesionScore(team) {
-    return Math.round(clamp((num(team.chemistry, 50) - CHEM_MIN) / (100 - CHEM_MIN) * 100, 0, 100));
+    return Math.round(clamp(num(team.chemistry, 50), CHEM_MIN, 100));
   }
   function overallScore(cohesion, mood, confidence) {
     return Math.round(0.4 * cohesion + 0.4 * mood + 0.2 * confidence);
@@ -421,9 +425,15 @@
       transferRequest: !!r.p.transferRequestActive, ...r.sat,
     }));
     const byId = new Map(players.map(p => [sid(p.id), p]));
+    // Une concurrence au même poste n'est une TENSION que si elle se vit mal
+    // (remplaçant frustré) ou s'il y a un contentieux : deux concurrents
+    // satisfaits ne se disputent pas (retour utilisateur 2026-10-06).
+    const realTension = e => e.rel <= -10 || (e.why.includes("rivals") &&
+      [e.a, e.b].some(p => ctx.role.get(sid(p.id)) !== "starter" && num(p.form, 50) < 45));
     const relations = pairs
-      .filter(e => e.v >= 0.6 || e.v <= -0.15 || Math.abs(e.rel) >= 15)
-      .map(e => ({ a: e.a.id, b: e.b.id, v: e.v, kind: e.v >= 0.6 ? "good" : e.v < 0 ? "tension" : "neutral", why: e.why.map(w => WHY_TEXT[w] || w), history: e.rel }))
+      .map(e => ({ e, kind: e.v >= 0.6 ? "good" : (e.v < 0 && realTension(e)) ? "tension" : "neutral" }))
+      .filter(({ e, kind }) => kind !== "neutral" || Math.abs(e.rel) >= 15)
+      .map(({ e, kind }) => ({ a: e.a.id, b: e.b.id, v: e.v, kind, why: e.why.map(w => WHY_TEXT[w] || w), history: e.rel }))
       .sort((x, y) => Math.abs(y.v) - Math.abs(x.v)).slice(0, 30);
 
     const problems = []; const positives = [];
@@ -436,12 +446,12 @@
     rivals.forEach(r => problems.push({ key: "tension", sev: r.v <= -0.4 ? 2 : 1, players: [r.a, r.b], text: `Tension entre ${byId.get(sid(r.a)).name} et ${byId.get(sid(r.b)).name} (${r.why.filter(w => w === WHY_TEXT.rivals || w === WHY_TEXT["history-"]).join(", ") || "rivalité"})`, action: "lineup" }));
     groups.filter(g => g.status.key === "frustrated").forEach(g => problems.push({ key: "group", sev: 2, players: g.ids, text: `${g.name} : groupe frustré`, action: "lineup" }));
     if (num(team.chemistryResultStreak) <= -3) problems.push({ key: "streak", sev: 2, text: `${-team.chemistryResultStreak} défaites de suite pèsent sur le groupe` });
-    if (cohesion < 25) problems.push({ key: "cohesion", sev: 2, text: "Le groupe manque de repères (cohésion faible)" });
+    if (cohesion < 50) problems.push({ key: "cohesion", sev: 2, text: "Le groupe manque de repères (cohésion faible)" });
     if (!leaders.length && players.length >= 5) problems.push({ key: "no-leader", sev: 1, text: "Aucun leader naturel dans le vestiaire" });
 
     leaders.filter(p => p.form >= 52).forEach(p => positives.push({ key: "leader", player: p.id, text: `${p.name} tient le vestiaire` }));
     if (num(team.chemistryResultStreak) >= 3) positives.push({ key: "streak", text: `${team.chemistryResultStreak} victoires de suite : le groupe y croit` });
-    if (cohesion >= 65) positives.push({ key: "cohesion", text: "Groupe très soudé" });
+    if (cohesion >= 80) positives.push({ key: "cohesion", text: "Groupe très soudé" });
     const happy = players.filter(p => p.mood === "happy" || p.mood === "content").length;
     if (players.length && happy / players.length >= 0.6) positives.push({ key: "happy", text: `${happy} joueurs sur ${players.length} satisfaits de leur situation` });
     if ((team.mentorships || []).length) positives.push({ key: "mentor", text: `${team.mentorships.length} tutorat${team.mentorships.length > 1 ? "s" : ""} en cours entre anciens et jeunes` });

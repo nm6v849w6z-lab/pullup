@@ -135,14 +135,14 @@
 
   function overviewHtml(v) {
     var why = v.problems.length ? v.problems[0].text : v.positives.length ? v.positives[0].text : "Rien à signaler pour l'instant.";
-    var trendIcon = v.trend.key === "up" ? ICON.up : v.trend.key === "down" ? ICON.down : ICON.flat;
+    var trendIcon = v.trend.key === "up" ? ICON.up : v.trend.key === "down" ? ICON.down : v.trend.key === "flat" ? ICON.flat : "";
     var leaders = v.players.filter(function (p) { return p.level === "leader"; });
     var hero = '<div class="vs-card"><div class="vs-hero">' + ring(v.state.score, STATE_COLOR[v.state.key]) +
       '<div class="vs-hero-main"><p class="vs-state" style="color:' + STATE_COLOR[v.state.key] + '">' + esc(v.state.label) + '</p>' +
       '<p class="vs-why">' + esc(why) + '</p>' +
       '<span class="vs-trend">' + trendIcon + esc(v.trend.label) + '</span></div></div></div>';
     var gauges = '<div class="vs-card"><div class="vs-gauges">' +
-      gauge("Cohésion", v.cohesion, "L'alchimie du groupe (de 40 à 100) : se construit en jouant et en gagnant ensemble, s'abîme quand l'effectif change.", v.chemistry) +
+      gauge("Cohésion", v.cohesion, "L'alchimie du groupe (de 40 à 100) : se construit en jouant et en gagnant ensemble, s'abîme quand l'effectif change.") +
       gauge("Moral", v.mood, v.counts.satisfied + " satisfait" + (v.counts.satisfied > 1 ? "s" : "") + ", " + v.counts.frustrated + " frustré" + (v.counts.frustrated > 1 ? "s" : "") + ". Les joueurs influents pèsent plus.") +
       gauge("Confiance", v.confidence, "Portée par les derniers résultats.") + '</div></div>';
     var pos = v.positives.length ? v.positives.map(function (x) { return '<li><span class="vs-ico" style="color:var(--vs-good)">' + ICON.plus + '</span><span>' + esc(x.text) + '</span></li>'; }).join("") : '<li><span class="vs-empty">Pas encore de point fort marquant.</span></li>';
@@ -246,7 +246,7 @@
     function path(key, f) { return hist.map(function (h, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(f ? f(h) : h[key]).toFixed(1); }).join(" "); }
     var grid = [0, 25, 50, 75, 100].map(function (v) { return '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="rgba(255,255,255,.07)"/><text x="' + (L - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '</text>'; }).join("");
     var labels = hist.map(function (h, i) { return (i === 0 || i === n - 1 || i % 4 === 0) ? '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">J' + h.w + '</text>' : ""; }).join("");
-    var cohesion = function (h) { return Math.max(0, Math.min(100, (h.chem - 40) / 60 * 100)); };
+    var cohesion = function (h) { return Math.max(0, Math.min(100, h.chem)); };
     return '<svg class="vs-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Évolution du vestiaire">' + grid + labels +
       '<path d="' + path("score") + '" fill="none" stroke="var(--amber,#f0a330)" stroke-width="2.6"/>' +
       '<path d="' + path(null, cohesion) + '" fill="none" stroke="var(--vs-good)" stroke-width="1.6" stroke-dasharray="4 3"/>' +
