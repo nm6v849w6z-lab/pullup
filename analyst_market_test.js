@@ -13,6 +13,8 @@
 // par niveau, cooldown quotidien ancré Paris, union des révélations lors
 // d'une remontée en niveau, refus sans analyste).
 const E = require("./engine.js");
+// Brouillard de guerre (2026-10-06) : rapports par club et par saison.
+const reportOf = (lg, t, oppIdx) => E.Fog.reportFor(lg.teams[t], lg.teams[oppIdx].name, lg.seasonNumber || 1);
 const {
   generateTeam, generateLeague, serializeTeam, teamFromSave, serializeLeague, leagueFromSave,
   ATTRS, TRAINER_LEVELS, TRAINER_BASE_SALARY,
@@ -177,9 +179,17 @@ function nextParisDayAt(ms) {
     if (res.analystLevel !== level) throw new Error("❌ analystLevel renvoyé devrait être celui de l'analyste en poste.");
     if (new Set(res.revealed).size !== res.revealed.length) throw new Error("❌ Aucune caractéristique révélée en double.");
     if (res.revealed.some(a => !ATTRS.includes(a))) throw new Error("❌ Toutes les caractéristiques révélées devraient venir de ATTRS.");
-    if (JSON.stringify(lg.teams[0].scoutedAttrs["1"]) !== JSON.stringify(res.revealed)) {
-      throw new Error("❌ Team.scoutedAttrs[opponentIdx] devrait être mis à jour avec exactement les caractéristiques révélées.");
+    const rep = reportOf(lg, 0, 1);
+    if (!rep || JSON.stringify(rep.keys) !== JSON.stringify(res.revealed)) {
+      throw new Error("❌ Le rapport de l'analyste (scoutReports) devrait porter exactement les caractéristiques révélées.");
     }
+    // Brouillard de guerre : aucune valeur exacte, des intervalles par joueur.
+    const half = E.Fog.levelCfg(level).half;
+    lg.teams[1].players.forEach(p => {
+      const e = rep.p[p.id];
+      if (!e) throw new Error("❌ Chaque joueur adverse devrait figurer dans le rapport.");
+      res.revealed.forEach(k => { const r = e.a[k]; if (!r || r[1] - r[0] !== 2 * half) throw new Error(`❌ Intervalle ${k} de largeur ${2 * half} attendu (niveau ${level}) : ${JSON.stringify(r)}`); });
+    });
   });
   console.log("✅ Le nombre de caractéristiques révélées suit ANALYST_REVEAL_COUNT_BY_LEVEL (1/2/3/4/5) à chaque niveau — jamais 10/10, même au niveau 5.");
 }
@@ -221,7 +231,7 @@ function nextParisDayAt(ms) {
   if (muchLater.ok !== false || muchLater.reason !== "already-scouted") {
     throw new Error("❌ Un adversaire déjà scouté devrait rester définitivement refusé ('already-scouted'), même bien plus tard et même avec un meilleur analyste.");
   }
-  if (lg.teams[0].scoutedAttrs["1"].length !== 1) {
+  if (reportOf(lg, 0, 1).keys.length !== 1) {
     throw new Error("❌ scoutedAttrs pour cet adversaire ne devrait JAMAIS grandir après la toute première séance (plus d'union) — resté à 1 (niveau 1 de la 1re séance).");
   }
   console.log("✅ Un adversaire déjà scouté reste refusé pour le reste de la saison, quel que soit le temps écoulé ou le niveau de l'analyste — jamais de 'plus de caractéristiques' en rescoutant.");
@@ -268,8 +278,8 @@ function nextParisDayAt(ms) {
 // ---------------------------------------------------------------------
 {
   const lg = freshLeague();
-  console.log("\nAucun analyste, aucune séance : scoutedAttrs pour l'adversaire 1 :", lg.teams[0].scoutedAttrs["1"]);
-  if (lg.teams[0].scoutedAttrs["1"] !== undefined) throw new Error("❌ Sans séance vidéo, aucune caractéristique ne devrait être marquée révélée pour un adversaire.");
+  console.log("\nAucun analyste, aucune séance : rapport pour l'adversaire 1 :", reportOf(lg, 0, 1));
+  if (reportOf(lg, 0, 1) !== null) throw new Error("❌ Sans séance vidéo, aucune caractéristique ne devrait être marquée révélée pour un adversaire.");
   console.log("✅ Sans analyste/séance, aucune caractéristique adverse n'est révélée (baseline : nom/poste/taille/salaire restent gérés séparément côté UI, jamais par ce champ).");
 }
 
@@ -294,9 +304,8 @@ function nextParisDayAt(ms) {
   console.log("videoAnalyst.baseSalary avant :", lg.teams[0].videoAnalyst.baseSalary, "| après round-trip :", teamBack.videoAnalyst.baseSalary);
   if (teamBack.videoAnalyst.baseSalary !== 9999) throw new Error("❌ videoAnalyst.baseSalary (9999) devrait survivre à un aller-retour de sauvegarde.");
 
-  console.log("scoutedAttrs avant :", lg.teams[0].scoutedAttrs, "| après round-trip :", teamBack.scoutedAttrs);
-  if (JSON.stringify(teamBack.scoutedAttrs) !== JSON.stringify(lg.teams[0].scoutedAttrs)) {
-    throw new Error("❌ scoutedAttrs devrait survivre intégralement (mêmes clés, mêmes caractéristiques révélées) à un aller-retour de sauvegarde.");
+  if (JSON.stringify(teamBack.scoutReports) !== JSON.stringify(lg.teams[0].scoutReports) || !Object.keys(teamBack.scoutReports).length) {
+    throw new Error("❌ scoutReports devrait survivre intégralement (mêmes clés, mêmes caractéristiques révélées) à un aller-retour de sauvegarde.");
   }
   if (teamBack.lastVideoSessionAt !== lg.teams[0].lastVideoSessionAt) {
     throw new Error("❌ lastVideoSessionAt devrait survivre à un aller-retour de sauvegarde (sinon le cooldown se réinitialiserait à chaque rechargement).");
@@ -313,6 +322,7 @@ function nextParisDayAt(ms) {
   const oldStyleSavedTeam = serializeTeam(lg.teams[0]);
   delete oldStyleSavedTeam.videoAnalyst;
   delete oldStyleSavedTeam.scoutedAttrs;
+  delete oldStyleSavedTeam.scoutReports;
   delete oldStyleSavedTeam.lastVideoSessionAt;
   const oldStyleSavedLeague = serializeLeague(lg);
   delete oldStyleSavedLeague.analystListings;
@@ -322,7 +332,7 @@ function nextParisDayAt(ms) {
   const lgBack = leagueFromSave(oldStyleSavedLeague, teamBack);
   console.log("\nAncienne sauvegarde (sans marché des analystes) — videoAnalyst :", teamBack.videoAnalyst, "| scoutedAttrs :", teamBack.scoutedAttrs, "| analystListings :", lgBack.analystListings);
   if (teamBack.videoAnalyst !== null) throw new Error("❌ Sans videoAnalyst sauvegardé, le repli devrait être null (aucun analyste).");
-  if (typeof teamBack.scoutedAttrs !== "object" || Object.keys(teamBack.scoutedAttrs).length !== 0) throw new Error("❌ Sans scoutedAttrs sauvegardé, le repli devrait être {} (aucun adversaire scouté).");
+  if (typeof teamBack.scoutReports !== "object" || Object.keys(teamBack.scoutReports).length !== 0) throw new Error("❌ Sans scoutReports sauvegardé, le repli devrait être {} (aucun adversaire scouté).");
   if (teamBack.lastVideoSessionAt !== null) throw new Error("❌ Sans lastVideoSessionAt sauvegardé, le repli devrait être null (aucune séance encore utilisée).");
   if (!Array.isArray(lgBack.analystListings) || lgBack.analystListings.length !== 0) throw new Error("❌ analystListings absent d'une ancienne sauvegarde devrait redevenir un tableau vide, pas planter.");
   console.log("✅ Une ancienne sauvegarde (sans marché des analystes vidéo) reste chargeable, avec des défauts propres.");

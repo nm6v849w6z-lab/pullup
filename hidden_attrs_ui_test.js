@@ -41,9 +41,10 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
 
   // 2) Niveau de l'adversaire (tableau de bord) : celui du serveur, identique à l'ancien calcul.
   const level = t => Math.round(t.players.reduce((s, p) => s + p.overall(), 0) / t.players.length);
+  // Brouillard de guerre (2026-10-06) : plus de niveau moyen pour un adversaire.
   for (let i = 1; i < 10; i++) {
     const got = E(`dashboardTeamLevel(league.teams[${i}])`);
-    if (got !== level(real.teams[i])) fail(`niveau du club ${i} : ${got} au lieu de ${level(real.teams[i])}`);
+    if (got !== null) fail(`niveau du club ${i} : ${got} au lieu de null`);
   }
   if (E("dashboardTeamLevel(teamA)") !== level(real.teams[0])) fail("son propre niveau.");
   ok("niveau des adversaires (tableau de bord) : même valeur qu'avant, calculée par le serveur");
@@ -52,16 +53,19 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   const res = await win.eval(`performVideoSession(${opp})`);
   if (!res.ok || !res.revealed.length) fail(`séance vidéo : ${JSON.stringify(res).slice(0, 200)}`);
   const p0 = oppPlayers[0];
+  // Brouillard de guerre : intervalle estimé (± 3 au niveau 3), proche de la
+  // vraie valeur (erreur possible de 4 points au plus à ce niveau).
   res.revealed.forEach(k => {
-    const v = E(`league.teams[${opp}].players.find(p => p.id === ${p0.id}).attrs.${k}`);
-    if (v !== p0.attrs[k]) fail(`${k} révélé : ${v} au lieu de ${p0.attrs[k]}`);
+    const r = E(`JSON.stringify(league.teams[${opp}].players.find(p => p.id === ${p0.id}).fog.a.${k})`);
+    const [lo, hi] = JSON.parse(r);
+    if (hi - lo !== 6 || p0.attrs[k] < lo - 4 || p0.attrs[k] > hi + 4) fail(`${k} estimé : ${r} pour ${p0.attrs[k]}`);
   });
   const vis = E(`computePlayerVisibility(${opp}, league.teams[${opp}].players.find(p => p.id === ${p0.id})).visibleAttrs`);
   if (JSON.stringify([...vis].sort()) !== JSON.stringify([...res.revealed].sort())) fail(`visibles après séance : ${vis}`);
   E(`showPlayerDetail(${opp}, ${p0.id})`);
   const pd = doc.getElementById("playerDetailContent");
   if (/NaN|undefined/.test(pd.textContent)) fail("fiche joueur adverse : ni NaN ni undefined.");
-  const shown = [...pd.querySelectorAll(".pdp-attr-value")].map(e => e.textContent.trim()).filter(t => /^\d+$/.test(t));
+  const shown = [...pd.querySelectorAll(".pdp-attr-value")].map(e => e.textContent.trim()).filter(t => /^\d+ – \d+$/.test(t));
   if (shown.length !== res.revealed.length) fail(`fiche joueur : ${shown.length} valeurs affichées pour ${res.revealed.length} révélées.`);
   E(`showTeamDetail(${opp})`);
   const td = doc.getElementById("teamDetailContent");

@@ -536,10 +536,16 @@ function freshTeamAndLeague() {
   const sessionRes = actions.runVideoSession(team, teamIndex, league, { opponentIdx }, T0);
   if (!sessionRes.ok) throw new Error(`❌ runVideoSession à un teamIndex non nul devrait fonctionner : ${sessionRes.error}`);
   if (sessionRes.opponentIdx !== opponentIdx) throw new Error("❌ runVideoSession devrait renvoyer le bon opponentIdx.");
-  if (JSON.stringify(team.scoutedAttrs[String(opponentIdx)]) !== JSON.stringify(sessionRes.revealed)) {
-    throw new Error("❌ runVideoSession devrait mettre à jour Team.scoutedAttrs de CETTE équipe (teamIndex=1), pas celle de l'équipe 0.");
+  const Fog = require("../assets/scouting-fog.js");
+  const oppName = league.teams[opponentIdx].name;
+  const myRep = Fog.reportFor(team, oppName, league.seasonNumber || 1);
+  if (!myRep || JSON.stringify(myRep.keys) !== JSON.stringify(sessionRes.revealed)) {
+    throw new Error("❌ runVideoSession devrait ajouter le rapport à CETTE équipe (teamIndex=1), pas celle de l'équipe 0.");
   }
-  if (league.teams[0].scoutedAttrs[String(opponentIdx)]) throw new Error("❌ runVideoSession à teamIndex=1 ne devrait pas avoir touché le scoutisme de l'équipe 0.");
+  // Brouillard de guerre : la réponse ne contient que des intervalles.
+  if (sessionRes.revealedAttrs) throw new Error("❌ Plus aucune valeur exacte renvoyée par la séance vidéo.");
+  Object.values(sessionRes.fog || {}).forEach(v => Object.values(v.a).forEach(r => { if (!Array.isArray(r) || r[1] <= r[0]) throw new Error("❌ Intervalle attendu : " + JSON.stringify(r)); }));
+  if (Fog.reportFor(league.teams[0], oppName, league.seasonNumber || 1)) throw new Error("❌ runVideoSession à teamIndex=1 ne devrait pas avoir touché le scoutisme de l'équipe 0.");
   console.log("✅ runVideoSession fonctionne correctement pour un teamIndex non nul (1), isolé de l'équipe 0.");
 }
 

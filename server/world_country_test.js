@@ -146,7 +146,10 @@ const ok = m => console.log("✅ " + m);
     assert.ok(frLg.listPlayerForSale(4, listedFr.id, 80000, now), "annonce française");
     // Scouting du manager : 2 caractéristiques révélées chez le club 2 ;
     // analyste vidéo pour une séance sur le club 3.
-    frLg.teams[0].scoutedAttrs = { 2: ["pass", "rebound"] };
+    // Brouillard de guerre : rapport de l'analyste (niveau 2) sur le club 2.
+    Engine.Fog.CONFIG.eligibleAttrs = ["pass", "rebound"];
+    Engine.Fog.addReport(frLg.teams[0], Engine.Fog.makeReport(frLg.teams[2], { level: 2, season: frLg.seasonNumber || 1, now: Date.now(), attrs: Engine.ATTRS, overall: p => p.overall() }));
+    Engine.Fog.CONFIG.eligibleAttrs = null;
     frLg.teams[0].videoAnalyst = { level: 3, weeksEmployed: 0, baseSalary: 15000 };
     frLg.teams[0].lastVideoSessionAt = null;
     await store.saveMultiLeague(frLg, multi);
@@ -198,17 +201,20 @@ const ok = m => console.log("✅ " + m);
       }));
       // Club 2 : seulement les 2 caractéristiques révélées ; club 5 (non scouté) : aucune.
       save.league.teams[2].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(Object.keys(p.attrs).sort(), ["pass", "rebound"]));
-      assert.ok(save.league.teams[2].players.every(p => p.attrs.pass === frLg.teams[2].players.find(x => x.id === p.id).attrs.pass), "valeurs révélées exactes");
+      // Brouillard de guerre : intervalles (± 4 au niveau 2), attrs = milieu.
+      assert.ok(save.league.teams[2].players.filter(p => !openFr.has(p.id)).every(p => p.fog && p.fog.a.pass[1] - p.fog.a.pass[0] === 8 && p.attrs.pass === Math.round((p.fog.a.pass[0] + p.fog.a.pass[1]) / 2) && Array.isArray(p.fog.o) && p.fog.conf === 2), "intervalles de l'analyste, jamais la valeur exacte");
+      assert.ok(save.league.teams[5].players.filter(p => !openFr.has(p.id)).every(p => p.fog && p.fog.conf === 0 && p.fog.o[1] - p.fog.o[0] === 25 && Array.isArray(p.salaryRange)), "sans rapport : note en fourchette de 25, salaire en fourchette");
       save.league.teams[5].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(p.attrs, {}));
       // Niveau de chaque club et estimations calculés par le serveur.
-      const lvl = t => Math.round(t.players.reduce((a, p) => a + p.overall(), 0) / t.players.length);
-      save.league.teams.forEach((t, i) => { if (i !== save.myTeamIndex) assert.strictEqual(t.publicLevel, lvl(frLg.teams[i]), `niveau du club ${i}`); });
+      // Niveau moyen des adversaires retiré (il trahissait les notes).
+      save.league.teams.forEach((t, i) => { if (i !== save.myTeamIndex) assert.strictEqual(t.publicLevel, undefined, `niveau du club ${i} non envoyé`); });
       assert.ok(save.league.saleValuations && me.players.every(p => Object.prototype.hasOwnProperty.call(save.league.saleValuations, p.id)), "estimations de vente de ses joueurs");
       // Séance vidéo : les valeurs révélées arrivent dans la réponse.
       const vs = await (await fetch(`http://127.0.0.1:${server.address().port}/api/staff/video-session`, { method: "POST", headers: { "Content-Type": "application/json", "X-TipIn-Token": tok }, body: JSON.stringify({ opponentIdx: 3 }) })).json();
       assert.ok(vs.ok && vs.revealed.length > 0, JSON.stringify(vs).slice(0, 200));
       const frNow = await World.loadLeague(world, "fr-1", multi);
-      frNow.teams[3].players.forEach(p => assert.deepStrictEqual(vs.revealedAttrs[p.id], Object.fromEntries(vs.revealed.map(k => [k, p.attrs[k]]))));
+      assert.ok(!vs.revealedAttrs, "plus de valeurs exactes dans la réponse");
+      frNow.teams[3].players.forEach(p => assert.deepStrictEqual(Object.keys(vs.fog[p.id].a).sort(), [...vs.revealed].sort()));
       const save2 = await get("/api/save", tok);
       save2.league.teams[3].players.filter(p => !openFr.has(p.id)).forEach(p => assert.deepStrictEqual(Object.keys(p.attrs).sort(), [...vs.revealed].sort()));
       assert.strictEqual(typeof save.league.teams[4].players.find(p => p.id === listedFr.id).potential, "number", "adversaire sur le marché : potentiel (palier affiché par le marché)");

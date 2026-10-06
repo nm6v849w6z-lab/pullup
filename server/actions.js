@@ -1585,10 +1585,14 @@ function runVideoSession(team, teamIndex, league, body, now) {
     };
     return fail(reasons[result.reason] || "Séance vidéo refusée.");
   }
-  // Valeurs révélées (le navigateur ne reçoit plus les caractéristiques
-  // non scoutées des adversaires, voir server/publicPlayers.js).
-  const revealedAttrs = require("./publicPlayers.js").revealedAttrsFor(league.teams[opponentIdx], result.revealed);
-  return { ok: true, opponentIdx: result.opponentIdx, revealed: result.revealed, revealedAttrs, analystLevel: result.analystLevel };
+  // Brouillard de guerre (assets/scouting-fog.js) : le rapport (estimations
+  // figées) et la vue à jour de chaque joueur adverse, jamais de valeur exacte.
+  const Fog = require("../assets/scouting-fog.js");
+  const opp = league.teams[opponentIdx];
+  const season = league.seasonNumber || 1;
+  const fog = {};
+  (opp.players || []).forEach(p => { fog[p.id] = Fog.viewFor(team, p, { season, overall: p.overall() }); });
+  return { ok: true, opponentIdx: result.opponentIdx, revealed: result.revealed, analystLevel: result.analystLevel, season, report: Fog.reportFor(team, opp.name, season), fog };
 }
 
 // Scouting Pro (retour utilisateur, 2026-09 — voir le grand commentaire en

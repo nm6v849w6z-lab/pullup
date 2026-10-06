@@ -202,7 +202,9 @@ if (attrHeaders.length !== revealed.length) throw new Error(`❌ Seules les ${re
 if (!attrHeaders.every(th => th.hasAttribute("data-team-sort") && revealed.includes(th.dataset.teamSort))) {
   throw new Error("❌ Chaque colonne affichée doit correspondre à une caractéristique révélée, et être triable.");
 }
-const valueCells = caracsTable.querySelectorAll("tbody .attr-cell").length;
+// Brouillard de guerre : fourchettes estimées (jamais de valeur exacte).
+const valueCells = caracsTable.querySelectorAll("tbody span.fog-cell:not(.fog-lock)").length;
+if (![...caracsTable.querySelectorAll("tbody span.fog-cell:not(.fog-lock)")].every(e => /^\d+ – \d+$/.test(e.textContent.trim()))) throw new Error("❌ Chaque valeur adverse devrait être une fourchette « min – max ».");
 if (valueCells !== opponentRosterSize * revealed.length) throw new Error(`❌ Attendu ${opponentRosterSize * revealed.length} valeurs, obtenu ${valueCells}.`);
 const hiddenChips = doc.querySelectorAll("#teamDetailContent .tde-hidden-attrs .tde-chip").length;
 if (hiddenChips !== ATTRS_COUNT - revealed.length) throw new Error(`❌ ${ATTRS_COUNT - revealed.length} caractéristiques devraient être listées comme encore cachées, obtenu ${hiddenChips}.`);
@@ -222,7 +224,7 @@ console.log("\nBouton de séance vidéo après scoutage de cet adversaire :", se
 if (sessionBtnAfter) throw new Error("❌ Après avoir scouté cet adversaire, le bouton actif ne devrait plus être présent (remplacé par un message désactivé).");
 const scoutingActionsText = doc.querySelector("#teamDetailContent .scouting-actions").textContent;
 console.log("Message affiché (adversaire déjà scouté) :", scoutingActionsText);
-if (!scoutingActionsText.includes("scoutée")) throw new Error("❌ Le panneau devrait expliquer que CET adversaire a déjà été scouté cette saison (raison permanente).");
+if (!scoutingActionsText.includes("analysée cette saison")) throw new Error("❌ Le panneau devrait expliquer que CET adversaire a déjà été scouté cette saison (raison permanente).");
 if (scoutingActionsText.includes("déjà utilisée aujourd'hui") || scoutingActionsText.includes("revenez demain")) {
   throw new Error("❌ Le message pour un adversaire déjà scouté ne doit PAS être le message de cooldown quotidien ('revenez demain') — ce sont deux raisons distinctes.");
 }
@@ -252,8 +254,9 @@ await flush(dom);
 const saved = readRawSave(savePath);
 console.log("\nSauvegarde brute — videoAnalyst :", saved.team.videoAnalyst, "| scoutedAttrs :", saved.team.scoutedAttrs);
 if (!saved.team.videoAnalyst || saved.team.videoAnalyst.level !== 3) throw new Error("❌ videoAnalyst devrait être persisté dans la sauvegarde brute.");
-if (!saved.team.scoutedAttrs || !saved.team.scoutedAttrs[String(opponentIdx)] || saved.team.scoutedAttrs[String(opponentIdx)].length !== 3) {
-  throw new Error("❌ scoutedAttrs devrait être persisté dans la sauvegarde brute, avec les 3 caractéristiques révélées.");
+const savedReports = Object.values(saved.team.scoutReports || {}).flat();
+if (savedReports.length !== 1 || savedReports[0].keys.length !== 3) {
+  throw new Error("❌ scoutReports devrait être persisté dans la sauvegarde brute, avec les 3 caractéristiques révélées.");
 }
 if (typeof saved.team.lastVideoSessionAt !== "number") throw new Error("❌ lastVideoSessionAt devrait être persisté (nombre) dans la sauvegarde brute.");
 
@@ -262,8 +265,8 @@ const dom2 = await openGame(html, baseUrl);
 const win2 = dom2.window;
 console.log("Après rechargement complet — videoAnalyst :", getTeamA(win2).videoAnalyst, "| scoutedAttrs :", getTeamA(win2).scoutedAttrs);
 if (!getTeamA(win2).videoAnalyst || getTeamA(win2).videoAnalyst.level !== 3) throw new Error("❌ videoAnalyst devrait survivre à un rechargement complet de la page.");
-if (!getTeamA(win2).scoutedAttrs[String(opponentIdx)] || getTeamA(win2).scoutedAttrs[String(opponentIdx)].length !== 3) {
-  throw new Error("❌ scoutedAttrs devrait survivre à un rechargement complet de la page.");
+if (Object.values(getTeamA(win2).scoutReports || {}).flat().filter(r => r.keys.length === 3).length !== 1) {
+  throw new Error("❌ scoutReports devrait survivre à un rechargement complet de la page.");
 }
 console.log("✅ videoAnalyst, scoutedAttrs et lastVideoSessionAt survivent tous à un rechargement complet de la page (nouvelle session).");
 

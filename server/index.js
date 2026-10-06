@@ -2097,18 +2097,20 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // le scouting (joueurs sur le marché : toutes) ; niveau de chaque club
         // et estimations de vente calculés ici. Voir server/publicPlayers.js.
         {
-          const levels = {};
-          ctx.league.teams.forEach((t, i) => { levels[i] = PublicPlayers.teamPublicLevel(t); });
+          // Brouillard de guerre (assets/scouting-fog.js) : notes réelles
+          // pour la fourchette des joueurs jamais analysés, jamais envoyées.
+          const ovrById = {};
+          ctx.league.teams.forEach(t => (t.players || []).forEach(p => { ovrById[p.id] = p.overall(); }));
           (payload.league.guestTeams || []).forEach(g => {
             if (!g || !g.team) return;
-            try { levels[g.localIdx] = PublicPlayers.teamPublicLevel(Engine.teamFromSave(g.team)); } catch (e) { /* invité illisible : pas de niveau */ }
+            try { Engine.teamFromSave(g.team).players.forEach(p => { ovrById[p.id] = p.overall(); }); } catch (e) { /* invité illisible */ }
           });
           const me = ctx.league.teams[ctx.teamIndex];
           const valuations = {};
           if (me) me.players.forEach(p => { valuations[p.id] = PublicPlayers.comparableSalesValuation(ctx.league, p, now); });
           payload.league.saleValuations = valuations;
           PublicPlayers.sanitizeOwnLeagueForViewer(payload.league, ctx.teamIndex, {
-            scouted: (me && me.scoutedAttrs) || {}, levels, attrKeys: Engine.ATTRS,
+            viewer: me || null, season: ctx.league.seasonNumber || 1, ovrById,
           });
         }
         // Zones du classement réellement en jeu (montée / barrage / descentes),

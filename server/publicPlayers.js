@@ -1,4 +1,5 @@
 "use strict";
+const Fog = require("../assets/scouting-fog.js");
 
 // =====================================================================
 // INFORMATIONS CACHÉES DES JOUEURS DES AUTRES CLUBS (2026-09-30, fuite
@@ -43,7 +44,7 @@ const FOREIGN_EXTRA_PLAYER_FIELDS = ["attrs", "aggressiveness"];
 // Données de club privées d'un autre club (supprimées : le navigateur
 // reprend alors ses valeurs par défaut, voir teamFromSave).
 const PRIVATE_TEAM_FIELDS = [
-  "scoutedAttrs", "scoutingUnlocks", "scoutingAdWatchLog", "scoutingAdTickets",
+  "scoutedAttrs", "scoutReports", "scoutingUnlocks", "scoutingAdWatchLog", "scoutingAdTickets",
   "youthCandidates", "youthPlayers", "pendingYouthDecisions",
   "feed", "pendingInterviews", "pendingRecapEvents", "marketAlertSeen", "ordersHistory", "matchOrdersUsed",
   // Signets du manager (2026-10-04) : personnels.
@@ -75,33 +76,47 @@ function pickAttrs(attrs, keys) {
   return out;
 }
 
-// Un joueur d'un club adverse : caractéristiques révélées seulement.
-function sanitizeOpponentPlayer(p, revealedKeys, listed, allAttrKeys) {
+// Un joueur d'un club adverse. Brouillard de guerre (2026-10-06, voir
+// assets/scouting-fog.js) : AUCUNE valeur exacte. `p.fog` porte les
+// intervalles des rapports de l'analyste du manager (note, potentiel en
+// étoiles, caractéristiques révélées, confiance, historique) ; `attrs` ne
+// contient que le milieu des intervalles révélés (calculs du navigateur),
+// salaire en fourchette (`salaryRange`, `salary` = son milieu).
+function sanitizeOpponentPlayer(p, listed, fogCtx) {
   const keepAll = listed.has(p.id);
   const potential = p.potential;
   stripFields(p, HIDDEN_PLAYER_FIELDS);
   delete p.aggressiveness;
   if (keepAll) { if (potential !== undefined) p.potential = potential; return; }
-  const keys = (revealedKeys || []).filter(k => allAttrKeys.includes(k));
-  if (allAttrKeys.length && keys.length === allAttrKeys.length) return; // entièrement scouté
-  p.attrs = pickAttrs(p.attrs, keys);
+  if (fogCtx && fogCtx.viewer) {
+    const ovr = fogCtx.ovrById && typeof fogCtx.ovrById[p.id] === "number" ? fogCtx.ovrById[p.id] : 50;
+    const view = Fog.viewFor(fogCtx.viewer, p, { season: fogCtx.season, overall: ovr });
+    const attrs = {};
+    Object.keys(view.a).forEach(k => { attrs[k] = Fog.mid(view.a[k]); });
+    p.attrs = attrs;
+    p.fog = view;
+    const sr = Fog.salaryRange(p.id, p.salary);
+    if (sr) { p.salaryRange = sr; p.salary = Fog.mid(sr); }
+  } else {
+    p.attrs = {};
+  }
   p.attrsHidden = true;
 }
 
 // /api/save : `leagueOut` = payload.league (sérialisé, modifiable).
-// `opts.scouted` : Team.scoutedAttrs du manager ({ idx: [clés] }) ;
-// `opts.levels` : { idx: niveau } (voir teamPublicLevel) ;
-// `opts.attrKeys` : Engine.ATTRS.
+// `opts.viewer` : Team du manager (ses rapports d'analyste) ;
+// `opts.season` : numéro de la saison en cours ;
+// `opts.ovrById` : { idJoueur: note } (fourchette des joueurs jamais
+// analysés). Le niveau moyen des clubs adverses n'est plus envoyé (il
+// trahissait les notes, décision du 2026-10-06).
 function sanitizeOwnLeagueForViewer(leagueOut, viewerIdx, opts = {}) {
   if (!leagueOut || !Array.isArray(leagueOut.teams)) return leagueOut;
   const listed = openListingPlayerIds(leagueOut.transferListings);
-  const scouted = opts.scouted || {};
-  const levels = opts.levels || {};
-  const attrKeys = opts.attrKeys || [];
-  const clean = (t, idx) => {
+  const fogCtx = { viewer: opts.viewer || null, season: opts.season || 1, ovrById: opts.ovrById || {} };
+  const clean = (t) => {
     sanitizeTeamPrivate(t, PRIVATE_TEAM_FIELDS);
-    if (typeof levels[idx] === "number") t.publicLevel = levels[idx];
-    (t.players || []).forEach(p => sanitizeOpponentPlayer(p, scouted[String(idx)], listed, attrKeys));
+    delete t.publicLevel;
+    (t.players || []).forEach(p => sanitizeOpponentPlayer(p, listed, fogCtx));
   };
   leagueOut.teams.forEach((t, i) => { if (t && i !== viewerIdx) clean(t, i); });
   (leagueOut.guestTeams || []).forEach(g => {

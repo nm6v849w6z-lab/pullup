@@ -91,7 +91,8 @@ try {
 
   // --- Adversaire partiellement scouté : seules les caracs révélées. ---
   const oppIdx = Number(oppLink.dataset.teamIdx);
-  win.eval(`teamA.scoutedAttrs = teamA.scoutedAttrs || {}; teamA.scoutedAttrs["${oppIdx}"] = ["midRange", "speed"];`);
+  // Brouillard de guerre : estimations de l'analyste (fourchettes ± 3).
+  win.eval(`league.teams[${oppIdx}].players.forEach(p => { p.fog = { o: [60, 70], s: null, a: { midRange: [p.attrs.midRange - 3, p.attrs.midRange + 3], speed: [p.attrs.speed - 3, p.attrs.speed + 3] }, aAge: {}, conf: 3, hist: [] }; });`);
   table = openEffectif(oppLink, "caracs");
   const attrCols = [...table.querySelectorAll("thead th.eff-th-attr")].map(th => th.dataset.teamSort);
   console.log("Colonnes affichées après révélation de midRange + speed :", attrCols.join(", "));

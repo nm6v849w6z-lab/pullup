@@ -2766,6 +2766,50 @@
     padding:2px 6px; border-radius:6px;
   }
   .pdp-pill.locked{background:var(--panel-2); color:var(--ink-faint);}
+  /* Brouillard de guerre (analyste vidéo, 2026-10-06). */
+  .fog-ic{width:13px; height:13px; vertical-align:-2px; margin-right:5px; flex:none; color:var(--amber);}
+  .pdp-attr-row .lbl .fog-ic + *{margin-left:0;}
+  .pdp-attr-row:not(.fog-row) .lbl .fog-ic, .fog-lock .fog-ic{color:var(--ink-faint);}
+  .fog-row .pdp2-bar.fog-bar span{display:block; height:100%; border-radius:4px; background:linear-gradient(90deg, rgba(240,162,60,.5), rgba(240,162,60,.95));}
+  .fog-val{color:var(--amber); font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .fog-old{opacity:.65;}
+  .fog-age{color:var(--ink-faint); font-weight:500;}
+  .fog-cell{color:var(--amber); font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .fog-cell.fog-lock .fog-ic{margin:0;}
+  .fog-conf{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap;}
+  .fog-conf i{display:inline-flex; gap:2px;} .fog-conf i b{width:5px; height:10px; border-radius:2px; background:currentColor; opacity:.25;} .fog-conf i b.on{opacity:1;}
+  .fog-conf.c4{background:rgba(51,180,161,.15); color:#4fd1b8;} .fog-conf.c3{background:rgba(111,182,255,.14); color:#6FB6FF;}
+  .fog-conf.c2{background:rgba(240,162,60,.15); color:var(--amber);} .fog-conf.c1{background:rgba(226,105,79,.15); color:var(--danger);}
+  .fog-conf.c0{background:var(--panel-2); color:var(--ink-faint);}
+  .fog-stars{display:inline-flex; gap:1px; vertical-align:-2px; margin-left:6px;}
+  .fog-star{width:13px; height:13px; color:var(--line); display:inline-flex;} .fog-star svg{width:100%; height:100%;}
+  .fog-star.on{color:var(--amber);} .fog-star.half{color:var(--amber); opacity:.7;} .fog-star.maybe{color:var(--amber); opacity:.35;}
+  .fog-stars-txt{margin-left:6px; font-size:11.5px; color:var(--ink-dim); white-space:nowrap;}
+  .pdp2-info-v .fog-stars:first-child{margin-left:0;}
+  .fog-ring .fog-ring-num{font-size:19px; font-weight:900; color:var(--amber); white-space:nowrap;}
+  .fog-ring-conf{margin:6px 0 2px;}
+  .fog-legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; font-size:12px; color:var(--ink-dim);}
+  .fog-hist{margin-top:12px; border-top:1px solid var(--line); padding-top:10px;}
+  .fog-hist-head{display:flex; align-items:center; gap:4px; margin-bottom:6px;}
+  .fog-table{width:100%; border-collapse:collapse; font-size:12.5px;} .fog-table th{color:var(--ink-dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; text-align:left; padding:5px 6px;}
+  .fog-table td{border-top:1px solid var(--line); padding:6px; vertical-align:top;}
+  .fog-chip{display:inline-block; background:var(--panel-2); border-radius:6px; padding:2px 6px; margin:1px 2px 1px 0; white-space:nowrap; color:var(--amber);}
+  .fog-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px;}
+  .fog-card-head{display:flex; align-items:center; gap:4px; flex-wrap:wrap;} .fog-card-head b{margin-right:auto;}
+  .fog-tag{font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:3px 8px; border-radius:6px;}
+  .fog-tag.ok{background:rgba(51,180,161,.15); color:#4fd1b8;} .fog-tag.old{background:rgba(240,162,60,.15); color:var(--amber);} .fog-tag.no{background:var(--panel-2); color:var(--ink-dim);}
+  .fog-kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; margin:10px 0 6px;}
+  .fog-kpi{background:var(--panel-2); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:3px;}
+  .fog-kpi span{font-size:11.5px; color:var(--ink-dim);} .fog-kpi > b{font-size:17px;}
+  .stf-fog{margin-top:14px;}
+  .stf-fog .fog-go{padding:5px 12px; min-height:0; font-size:12.5px;}
+  .stf-fog .fog-table td{vertical-align:middle;}
+  .pdp2 .fog-row .pdp2-bar{flex-basis:44px;}
+  .pdp2 .fog-row .pdp-attr-value.fog-val{font-size:14px; min-width:0;}
+  .pdp2 .fog-row .lbl .fog-ic{margin-right:4px;}
+  .fog-table td:nth-child(4){white-space:nowrap;}
+  .fog-card .sub{font-size:13px; color:var(--ink-dim); margin:6px 0 0;}
+  .fog-lvl{display:flex; gap:3px;} .fog-lvl b{width:14px; height:5px; border-radius:3px; background:var(--line);} .fog-lvl b.on{background:var(--amber);}
   .pdp-attr-value{min-width:22px; text-align:right; font-weight:800; font-size:12.5px;}
   .pdp-attr-value.attr-tier-red{color:var(--attr-tier-red);}
   .pdp-attr-value.attr-tier-orange{color:var(--attr-tier-amber);}
@@ -8358,6 +8402,8 @@
 <script src="assets/achievements.js" defer></script>
 <!-- Dynamique de groupe (partagé avec engine.js). -->
 <script src="assets/vestiaire.js" defer></script>
+<!-- Analyste vidéo, brouillard de guerre (partagé avec engine.js). -->
+<script src="assets/scouting-fog.js" defer></script>
 <script src="assets/vestiaire-ui.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
@@ -8864,6 +8910,7 @@
       </div>
       <div id="staffFeedback" role="status" aria-live="polite"></div>
       <div class="stf-grid" id="staffSlots"></div>
+      <div id="staffFogReports"></div>
       <div class="stf-foot">
         <button type="button" class="stf-btn stf-btn--ghost" data-staff-recruit="all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16l-1.5 12h-13zM9 7a3 3 0 0 1 6 0"/></svg><span>Voir tout le staff sur le marché</span></button>
       </div>
@@ -9737,7 +9784,7 @@
       <div class="guide-entry" data-guide-id="scoutisme" data-guide-group="Compétitions">
         <h3>Scoutisme</h3>
         <p class="training-intro">Cliquez sur une équipe adverse (classement, calendrier, Coupe) pour ouvrir sa <b>fiche d'équipe</b> : un aperçu (résumé, maillots, palmarès, dernière interview), ses résultats et son calendrier vus depuis ce club (vos matchs contre lui sont marqués "Contre vous"), son effectif et l'analyse d'équipe.</p>
-        <p class="training-intro" style="margin-top:10px;">Nom, poste, taille et salaire des joueurs adverses sont toujours visibles, mais leurs caractéristiques restent cachées tant qu'elles n'ont pas été révélées : l'onglet Caractéristiques de l'effectif adverse n'affiche QUE les caracs révélées. Recrutez un <b>analyste vidéo</b> (onglet Staff) pour faire une séance vidéo sur un adversaire (une par jour, une seule fois par adversaire et par saison) : elle révèle définitivement une partie de ses caractéristiques, plus ou moins selon le niveau de l'analyste. L'<b>analyse d'équipe</b> d'un adversaire montre gratuitement les stratégies qu'il a utilisées (attaque, défense, rythme) et les statistiques de ses joueurs. Le <b>Scouting Pro</b> complet (plan de match, cinq de départ suggéré, profil et style de jeu, zones de tir, forme récente) se débloque une fois par mois en regardant une pub, ou sans limite avec le <button type="button" class="gd-link" data-guide-goto="premium">Premium</button>. L'analyse de votre propre équipe (comment vos adversaires vous voient) est réservée au Premium.</p>
+        <p class="training-intro" style="margin-top:10px;">Nom, poste et taille des joueurs adverses sont toujours visibles ; leur salaire n'est qu'une fourchette et aucune de leurs valeurs n'est jamais exacte. Recrutez un <b>analyste vidéo</b> (onglet Staff) pour faire une séance vidéo sur un adversaire (une par jour, une fois par adversaire et par saison) : elle estime une partie des caractéristiques de tout son effectif sous forme de fourchettes, plus nombreuses et plus étroites selon le niveau de l'analyste, avec un niveau de confiance. Une estimation peut se tromper, et un ancien rapport perd en fiabilité d'une saison à l'autre. L'<b>analyse d'équipe</b> d'un adversaire montre gratuitement les stratégies qu'il a utilisées (attaque, défense, rythme) et les statistiques de ses joueurs. Le <b>Scouting Pro</b> complet (plan de match, cinq de départ suggéré, profil et style de jeu, zones de tir, forme récente) se débloque une fois par mois en regardant une pub, ou sans limite avec le <button type="button" class="gd-link" data-guide-goto="premium">Premium</button>. L'analyse de votre propre équipe (comment vos adversaires vous voient) est réservée au Premium.</p>
       </div>
 
       <div class="guide-entry" data-guide-id="statshebdo" data-guide-group="Compétitions">
@@ -16122,6 +16169,8 @@ const CHEMISTRY_ARRIVAL_SHARE = 0.5;
 const CHEMISTRY_MIN = 40; // plancher de l'alchimie (voir engine.js)
 // Dynamique de groupe : module partagé assets/vestiaire.js (chargé en defer).
 function vestiaireApi() { return (typeof window !== "undefined" && window.HM_VESTIAIRE) || null; }
+// Brouillard de guerre : module partagé assets/scouting-fog.js (chargé en defer).
+function fogApi() { return (typeof window !== "undefined" && window.HM_FOG) || null; }
 function chemistryRosterImportance(rank) {
   return clamp(1 - (rank - 1) / (CHEMISTRY_ROSTER_CHANGE_MAX_RANK - 1), 0, 1);
 }
@@ -16885,6 +16934,8 @@ class Team {
     // ligue multi-manager.
     this.scoutedAttrs = {};
     this.lastVideoSessionAt = null;
+    // Rapports de l'analyste vidéo (assets/scouting-fog.js), voir engine.js.
+    this.scoutReports = {};
 
     // Scouting Pro (voir engine.js, miroir identique — grand commentaire de
     // Team.constructor) : rapport payant (pub factice ou "Passer Pro")
@@ -23541,26 +23592,20 @@ class League {
     if (!team) return { ok: false, reason: "invalid-team" };
     if (!team.videoAnalyst) return { ok: false, reason: "no-analyst" };
     if (opponentIdx === teamIndex || !this.teams[opponentIdx]) return { ok: false, reason: "invalid-opponent" };
-    const key = String(opponentIdx);
-    if (team.scoutedAttrs[key] && team.scoutedAttrs[key].length > 0) {
-      return { ok: false, reason: "already-scouted" };
-    }
+    // Brouillard de guerre (2026-10-06), miroir d'engine.js.
+    const Fog = fogApi();
+    const opp = this.teams[opponentIdx];
+    const season = this.seasonNumber || 1;
+    if (Fog && Fog.reportFor(team, opp.name, season)) return { ok: false, reason: "already-scouted" };
     if (team.lastVideoSessionAt != null && sameParisCalendarDay(team.lastVideoSessionAt, now)) {
       return { ok: false, reason: "cooldown" };
     }
     const level = team.videoAnalyst.level;
-    const revealCount = ANALYST_REVEAL_COUNT_BY_LEVEL[level] || 0;
-    // Tirage frais dans ATTRS — jamais d'union à faire avec un éventuel
-    // scoutage précédent : la garde "already-scouted" ci-dessus garantit
-    // qu'on n'atteint jamais ce point pour un adversaire déjà scouté.
-    const drawn = shuffleIndices(ATTRS).slice(0, revealCount);
-    // Ordre stable (celui d'ATTRS) plutôt que l'ordre de tirage — plus
-    // lisible côté UI (mêmes colonnes toujours dans le même ordre d'une
-    // équipe à l'autre).
-    const revealed = ATTRS.filter(a => drawn.includes(a));
-    team.scoutedAttrs[key] = revealed;
+    if (!Fog) return { ok: false, reason: "invalid-team" };
+    const report = Fog.makeReport(opp, { level, season, now, attrs: ATTRS, overall: p => p.overall() });
+    Fog.addReport(team, report);
     team.lastVideoSessionAt = now;
-    return { ok: true, opponentIdx, revealed, analystLevel: level };
+    return { ok: true, opponentIdx, revealed: report.keys, analystLevel: level, season };
   }
 }
 
@@ -24542,6 +24587,7 @@ function serializeTeam(team) {
     // premier redémarrage du serveur.
     videoAnalyst: team.videoAnalyst ? { ...team.videoAnalyst } : null,
     scoutedAttrs: team.scoutedAttrs || {},
+    scoutReports: team.scoutReports || {},
     lastVideoSessionAt: typeof team.lastVideoSessionAt === "number" ? team.lastVideoSessionAt : null,
     // Scouting Pro (voir engine.js, miroir identique) : même raison de
     // persistance que scoutedAttrs juste au-dessus.
@@ -24746,6 +24792,10 @@ function playerFromSave(pdata) {
     nationality: pdata.nationality,
   });
   if (hidden) { p.attrsHidden = true; p.receivedAttrKeys = receivedKeys; }
+  // Brouillard de guerre (server/publicPlayers.js, assets/scouting-fog.js) :
+  // intervalles de l'analyste (jamais de valeur exacte d'un adversaire).
+  if (pdata.fog && typeof pdata.fog === "object") p.fog = pdata.fog;
+  if (Array.isArray(pdata.salaryRange)) p.salaryRange = pdata.salaryRange;
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
   p.homegrownClub = typeof pdata.homegrownClub === "string" ? pdata.homegrownClub : null;
@@ -25047,6 +25097,7 @@ function teamFromSave(data) {
   // pour une sauvegarde d'avant cette fonctionnalité — aucun adversaire
   // scouté, comme au tout premier lancement.
   team.scoutedAttrs = data.scoutedAttrs && typeof data.scoutedAttrs === "object" ? data.scoutedAttrs : {};
+  team.scoutReports = data.scoutReports && typeof data.scoutReports === "object" ? data.scoutReports : {};
   team.lastVideoSessionAt = typeof data.lastVideoSessionAt === "number" ? data.lastVideoSessionAt : null;
   // Scouting Pro (voir engine.js, miroir identique) : mêmes défauts que le
   // constructeur Team pour une sauvegarde d'avant cette fonctionnalité.
@@ -32139,19 +32190,66 @@ document.getElementById("closePlayerDetailBtn").addEventListener("click", hidePl
 // (teamA.scoutedAttrs) sont visibles. `fullyVisible` : la note globale et
 // le radar mélangent les 29 caractéristiques, affichés seulement une fois
 // l'équipe entièrement scoutée (sinon fuite d'info par la bande).
+// ---------------------------------------------------------------------
+// Brouillard de guerre (analyste vidéo, maquette validée le 2026-10-06) :
+// rendu des intervalles envoyés par le serveur (player.fog). Loupe =
+// estimée par l'analyste, cadenas = jamais analysée, étoiles = potentiel.
+const FOG_MAG_SVG = `<svg class="fog-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const FOG_LOCK_SVG = `<svg class="fog-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.6" fill="currentColor"/><path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>`;
+const FOG_STAR_SVG = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6l1.9 4 4.4.5-3.3 3 .9 4.4L8 11.3l-3.9 2.2.9-4.4-3.3-3 4.4-.5z" fill="currentColor"/></svg>`;
+const FOG_FILM_SVG = `<svg class="fog-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 6v4l3.2-2z" fill="currentColor"/></svg>`;
+const FOG_CONF_LABELS = ["Aucun rapport", "Faible", "Moyenne", "Bonne", "Très bonne"];
+function fogRangeText(r) { return Array.isArray(r) ? (r[0] === r[1] ? String(r[0]) : `${r[0]} – ${r[1]}`) : "?"; }
+function fogConfHtml(conf, short) {
+  const c = Math.max(0, Math.min(4, conf || 0));
+  if (!c) return `<span class="fog-conf c0">${escapeHtml(FOG_CONF_LABELS[0])}</span>`;
+  const label = FOG_CONF_LABELS[c];
+  return `<span class="fog-conf c${c}" title="Confiance ${escapeHtml(label.toLowerCase())}"><i>${[1, 2, 3, 4].map(i => `<b class="${i <= c ? "on" : ""}"></b>`).join("")}</i>${escapeHtml(short ? label : "Confiance " + label.toLowerCase())}</span>`;
+}
+// Étoiles de potentiel : `v` (0,5 à 5) exact, ou intervalle [min, max] estimé.
+function fogStarsHtml(v, compact) {
+  const lo = Array.isArray(v) ? v[0] : v, hi = Array.isArray(v) ? v[1] : v;
+  if (typeof lo !== "number") return "";
+  const star = i => {
+    const fill = i + 1 <= lo ? "on" : i + 0.5 <= lo ? "half" : i + 0.5 <= hi ? "maybe" : "";
+    return `<span class="fog-star ${fill}">${FOG_STAR_SVG}</span>`;
+  };
+  const txt = s => String(s).replace(".", ",");
+  const label = lo === hi ? `${txt(lo)} / 5` : `${txt(lo)} à ${txt(hi)}`;
+  return `<span class="fog-stars" title="Potentiel : ${escapeHtml(label)} étoiles">${[0, 1, 2, 3, 4].map(star).join("")}</span>${compact ? "" : `<span class="fog-stars-txt">${escapeHtml(label)}</span>`}`;
+}
+function fogPotentialStars(potential) { const F = fogApi(); return F ? F.starsOf(potential) : null; }
+// Caractéristiques révélées d'un effectif adverse (union des rapports).
+function fogTeamKeys(team) {
+  const set = new Set();
+  (team.players || []).forEach(p => { if (p.fog && p.fog.a) Object.keys(p.fog.a).forEach(k => set.add(k)); });
+  return set;
+}
+function fogSalaryText(p) {
+  return Array.isArray(p.salaryRange) ? `${formatMoney(p.salaryRange[0])} – ${formatMoney(p.salaryRange[1])}` : formatMoney(p.salary);
+}
+function fogReportLine(fog) {
+  if (!fog || !fog.season) return "Aucun rapport de l'analyste vidéo.";
+  const d = fog.at ? new Date(fog.at).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+  return `Rapport du ${d} · saison ${fog.season} · analyste niveau ${fog.level}`;
+}
+
 function computePlayerVisibility(teamIdx, player) {
   const isOwnTeam = teamIdx === myTeamIndex;
   const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
   const onMarket = Boolean(openListing);
-  const revealedSet = (isOwnTeam || onMarket) ? null : new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  // Brouillard de guerre (2026-10-06) : un adversaire n'a que des
+  // intervalles (player.fog), jamais de note exacte, quel que soit le scouting.
+  const fog = (isOwnTeam || onMarket) ? null : (player.fog || null);
+  const revealedSet = (isOwnTeam || onMarket) ? null : new Set(fog ? Object.keys(fog.a || {}) : []);
   // Caractéristiques non envoyées par le serveur (autre championnat) : rien
   // à montrer, quoi qu'il arrive.
   const received = player.attrsHidden ? new Set(player.receivedAttrKeys || []) : null;
   const visibleAttrs = ATTRS.filter(a => (isOwnTeam || onMarket || revealedSet.has(a)) && (!received || received.has(a)));
   return {
-    isOwnTeam, openListing, onMarket,
+    isOwnTeam, openListing, onMarket, fog,
     visibleAttrs, visibleAttrsSet: new Set(visibleAttrs),
-    fullyVisible: visibleAttrs.length === ATTRS.length,
+    fullyVisible: !fog && !player.attrsHidden && visibleAttrs.length === ATTRS.length,
   };
 }
 
@@ -32441,17 +32539,22 @@ function pdpCompareAttrRowHtml(attr, playerA, visA, playerB, visB) {
   const bVisible = visB.has(attr);
   const aVal = aVisible ? playerA.attrs[attr] : null;
   const bVal = bVisible ? playerB.attrs[attr] : null;
+  // Brouillard de guerre : un adversaire n'a qu'un intervalle estimé ;
+  // « meilleur » seulement si les deux intervalles ne se chevauchent pas.
+  const rng = (p, v) => (p.fog && p.fog.a && p.fog.a[attr]) || [v, v];
+  const aR = aVisible ? rng(playerA, aVal) : null, bR = bVisible ? rng(playerB, bVal) : null;
   const bothVisible = aVisible && bVisible;
-  const aWin = bothVisible && aVal > bVal;
-  const bWin = bothVisible && bVal > aVal;
-  const aClass = aVisible ? `cmp-val ${attrColorTier(aVal)}${aWin ? " win" : ""}` : "cmp-val locked";
-  const bClass = bVisible ? `cmp-val ${attrColorTier(bVal)}${bWin ? " win" : ""}` : "cmp-val locked";
+  const aWin = bothVisible && aR[0] > bR[1];
+  const bWin = bothVisible && bR[0] > aR[1];
+  const fogA = aVisible && aR[0] !== aR[1], fogB = bVisible && bR[0] !== bR[1];
+  const aClass = aVisible ? `cmp-val ${fogA ? "fog-val" : attrColorTier(aVal)}${aWin ? " win" : ""}` : "cmp-val locked";
+  const bClass = bVisible ? `cmp-val ${fogB ? "fog-val" : attrColorTier(bVal)}${bWin ? " win" : ""}` : "cmp-val locked";
   const barState = win => !bothVisible ? "lead" : (win ? "lead" : (aVal === bVal ? "even" : ""));
-  return `<div class="compare-row"><span class="${aClass}">${aVisible ? aVal : "?"}</span>` +
+  return `<div class="compare-row"><span class="${aClass}">${aVisible ? fogRangeText(aR) : "?"}</span>` +
     compareBarHtml("a", aVal, barState(aWin)) +
     `<span class="cmp-label">${escapeHtml(label)}</span>` +
     compareBarHtml("b", bVal, barState(bWin)) +
-    `<span class="${bClass}">${bVisible ? bVal : "?"}</span></div>`;
+    `<span class="${bClass}">${bVisible ? fogRangeText(bR) : "?"}</span></div>`;
 }
 
 // Bilan d'un groupe de caractéristiques : victoires UNIQUEMENT sur celles
@@ -32462,10 +32565,12 @@ function compareGroupStats(attrs, playerA, visA, playerB, visB) {
   const common = attrs.filter(a => visA.has(a) && visB.has(a));
   let winsA = 0, winsB = 0, ties = 0;
   common.forEach(a => {
-    const x = playerA.attrs[a], y = playerB.attrs[a];
-    if (x > y) winsA++; else if (y > x) winsB++; else ties++;
+    // Brouillard de guerre : intervalles qui se chevauchent = égalité.
+    const rA = (playerA.fog && playerA.fog.a && playerA.fog.a[a]) || [playerA.attrs[a], playerA.attrs[a]];
+    const rB = (playerB.fog && playerB.fog.a && playerB.fog.a[a]) || [playerB.attrs[a], playerB.attrs[a]];
+    if (rA[0] > rB[1]) winsA++; else if (rB[0] > rA[1]) winsB++; else ties++;
   });
-  const fullAvg = (player, vis) => attrs.every(a => vis.has(a))
+  const fullAvg = (player, vis) => !player.fog && attrs.every(a => vis.has(a))
     ? Math.round(attrs.reduce((acc, a) => acc + player.attrs[a], 0) / attrs.length) : null;
   return { count: common.length, winsA, winsB, ties, avgA: fullAvg(playerA, visA), avgB: fullAvg(playerB, visB) };
 }
@@ -33034,7 +33139,17 @@ function pdpAttrRowHtml(player, attr, visible, ups) {
   const label = TRAINING_LABELS[attr] || ATTR_SHORT[attr];
   if (!visible) {
     return `<div class="pdp-attr-row"><span class="lbl">${escapeHtml(label)}</span><span class="pdp2-bar"></span>` +
-      `<span class="pdp-pill locked" title="Non révélé, faites une séance vidéo pour débloquer cette caractéristique">?</span></div>`;
+      `<span class="pdp-pill locked" title="Jamais analysée : faites une séance vidéo pour l'estimer">?</span></div>`;
+  }
+  const fr = player.fog && player.fog.a && player.fog.a[attr];
+  if (fr) {
+    // Brouillard de guerre : intervalle estimé (plus pâle si le rapport date
+    // d'une saison précédente).
+    const old = player.fog.aAge && player.fog.aAge[attr] > 0;
+    const left = clamp(fr[0], 0, 100), width = Math.max(2, clamp(fr[1], 0, 100) - left);
+    return `<div class="pdp-attr-row fog-row${old ? " fog-old" : ""}"><span class="lbl">${FOG_MAG_SVG}${escapeHtml(label)}${old ? ` <small class="fog-age">· saison ${player.fog.season - player.fog.aAge[attr]}</small>` : ""}</span>` +
+      `<span class="pdp2-bar fog-bar"><span style="margin-left:${left}%;width:${width}%"></span></span>` +
+      `<span class="pdp-attr-value fog-val">${fogRangeText(fr)}</span><span class="pdp-attr-up" aria-hidden="true"></span></div>`;
   }
   const value = player.attrs[attr];
   // Petit triangle vert si la caractéristique a progressé au dernier
@@ -33703,8 +33818,12 @@ function renderPlayerDetail(teamIdx, playerId) {
   const tile = (label, value, cls = "") => `<div class="pdp2-info${cls ? " " + cls : ""}"><span class="pdp2-info-k">${label}</span><span class="pdp2-info-v">${value}</span></div>`;
   const tiles = [tile("Âge", `${player.age} ans`), tile("Taille", `${player.height} cm`)];
   if (isOwnTeam) {
-    tiles.push(tile("Potentiel", `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>`));
+    tiles.push(tile("Potentiel", `<span class="potential-tier" title="Palier de potentiel : ${potentialTierIndex(player.potential)}/10">${escapeHtml(potentialTierLabel(player.potential))}</span>${fogStarsHtml(fogPotentialStars(player.potential), true)}`));
     tiles.push(tile("Salaire", `${formatMoney(player.salary)} <small>/ sem.</small>`));
+  } else if (player.fog) {
+    // Brouillard de guerre : potentiel estimé (étoiles), salaire en fourchette.
+    tiles.push(tile("Potentiel estimé", player.fog.s ? fogStarsHtml(player.fog.s) : `${FOG_LOCK_SVG} <small>inconnu</small>`));
+    if (Array.isArray(player.salaryRange)) tiles.push(tile("Salaire estimé", `${fogSalaryText(player)} <small>/ sem.</small>`));
   }
   if (typeof player.contractUntilSeason === "number") {
     const last = isLastContractSeason(player, league.contractSeason());
@@ -33798,6 +33917,12 @@ function renderPlayerDetail(teamIdx, playerId) {
     } else if (best !== player.position) {
       html += `<p class="pdp2-bestpos" data-pdp-bestpos="${escapeHtml(best)}"><span>Meilleur poste :</span> <b>${escapeHtml(POS_SHORT[best])}</b> <i>${escapeHtml(best)}</i></p>`;
     }
+  } else if (player.fog) {
+    // Brouillard de guerre : note estimée (intervalle) et confiance.
+    const f = player.fog;
+    html += `<div class="pdp2-ring pdp2-ring--locked fog-ring" title="Note estimée"><div class="pdp2-ring-center"><span class="fog-ring-num">${fogRangeText(f.o)}</span><span class="pdp2-ring-lbl">Note estimée</span></div></div>` +
+      `<p class="pdp2-center fog-ring-conf">${fogConfHtml(f.conf)}</p>` +
+      `<p class="pdp-locked-note pdp2-center">${FOG_FILM_SVG} ${escapeHtml(fogReportLine(f))}</p>`;
   } else {
     html += `<div class="pdp2-ring pdp2-ring--locked"><div class="pdp2-ring-center"><span class="pdp2-ring-q">?</span><span class="pdp2-ring-lbl">Note</span></div></div>` +
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
@@ -33915,6 +34040,18 @@ function renderPlayerDetail(teamIdx, playerId) {
     : playerDetailForeign
       ? `<div class="pdp-scouting">Joueur d'un autre championnat : caractéristiques visibles seulement s'il est mis en vente sur le marché.</div>`
       : `<div class="pdp-scouting">Pas encore assez de caractéristiques révélées pour un rapport de scouting (faites une séance vidéo pour en débloquer).</div>`;
+  if (player.fog) {
+    // Brouillard de guerre : légende, puis historique des rapports (chacun
+    // garde la valeur observée à l'époque et perd en fiabilité avec le temps).
+    html += `<div class="fog-legend"><span>${FOG_MAG_SVG} estimée par l'analyste</span><span class="fog-old">${FOG_MAG_SVG} ancien rapport, moins fiable</span><span>${FOG_LOCK_SVG} jamais analysée</span></div>`;
+    const hist = player.fog.hist || [];
+    if (hist.length) {
+      html += `<div class="fog-hist"><div class="fog-hist-head">${FOG_FILM_SVG}<b>Rapports de l'analyste vidéo</b></div><table class="fog-table"><thead><tr><th>Saison</th><th>Club</th><th>Analyste</th><th>Note</th><th>Caractéristiques</th><th>Fiabilité aujourd'hui</th></tr></thead><tbody>` +
+        hist.map(h => `<tr><td>${h.season}</td><td>${escapeHtml(h.club || "")}</td><td>Niv. ${h.level}</td><td>${fogRangeText(h.o)}</td>` +
+          `<td>${Object.keys(h.a || {}).map(k => `<span class="fog-chip">${escapeHtml(ATTR_SHORT[k] || k)} ${fogRangeText(h.a[k])}</span>`).join(" ") || "–"}</td><td>${fogConfHtml(h.conf, true)}</td></tr>`).join("") +
+        `</tbody></table></div>`;
+    }
+  }
   html += `</section>`;
 
   html += `</div>`; // row profile
@@ -35186,12 +35323,14 @@ function teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) {
     kpi("Joueurs", n, "") + `<div class="eff-kpi-sep"></div>` +
     kpi("Âge moyen", avg(p => p.age).toFixed(1).replace(".", ","), "ans") + `<div class="eff-kpi-sep"></div>` +
     kpi("Taille moyenne", Math.round(avg(p => p.height)), "cm") + `<div class="eff-kpi-sep"></div>` +
-    kpi("Masse salariale", formatMoney(team.players.reduce((s, p) => s + p.salary, 0)), "/ sem.");
+    (isOwnTeam || !team.players.some(p => Array.isArray(p.salaryRange))
+      ? kpi("Masse salariale", formatMoney(team.players.reduce((s, p) => s + p.salary, 0)), "/ sem.")
+      : kpi("Masse salariale estimée", `${formatMoney(team.players.reduce((s, p) => s + (p.salaryRange ? p.salaryRange[0] : p.salary), 0))} – ${formatMoney(team.players.reduce((s, p) => s + (p.salaryRange ? p.salaryRange[1] : p.salary), 0))}`, "/ sem."));
   if (!isOwnTeam) {
     const count = revealedSet.size;
     const pct = Math.round(count / ATTRS.length * 100);
     html += `<div class="eff-kpi-sep"></div><div class="eff-kpi tde-kpi-scout">` +
-      `<span class="eff-kpi-label">Caractéristiques révélées</span>` +
+      `<span class="eff-kpi-label">Caractéristiques estimées</span>` +
       `<span class="eff-kpi-line"><span class="eff-kpi-num">${count}</span><span class="eff-kpi-unit">/ ${ATTRS.length}</span>` +
       `<button type="button" class="tde-kpi-link" data-team-detail-subview="analyse">Séance vidéo →</button></span>` +
       `<span class="eff-meter eff-meter-lg"><span class="eff-meter-fill" style="width:${pct}%"></span></span></div>`;
@@ -35238,7 +35377,7 @@ function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
       html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}${effRoleMarkHtml(role)}${cross || ""}${retirementBadgeHtml(p)}</span></td>` +
         `<td>${effPosBadgeHtml(p.position)}</td>` +
-        `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${formatMoney(p.salary)}</td>` +
+        `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${isOwnTeam ? formatMoney(p.salary) : fogSalaryText(p)}</td>` +
         `<td class="eff-td-condition">${effConditionHtml(p, now, recovery(p))}</td>` +
         `<td>${evaluationSquaresHtml(p)}</td>` +
         `<td class="eff-num tde-stat">${gp}</td><td class="eff-num tde-stat tde-stat-main">${stat("pts")}</td>` +
@@ -35258,8 +35397,8 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     : TDE_ATTR_FAMILIES.map(f => ({ label: f.label, keys: f.keys.filter(k => revealedSet.has(k)) })).filter(f => f.keys.length);
   if (!families.length) {
     return `<div class="tde-locked-card"><div class="tde-locked-ico">${TDE_LOCK_ICON}</div>` +
-      `<div class="tde-locked-text"><h3>Aucune caractéristique révélée</h3>` +
-      `<p>Une séance vidéo révèle une partie des caractéristiques de TOUT l'effectif de ${escapeHtml(team.name)}, définitivement pour la saison. Plus votre analyste vidéo est bon, plus elle en révèle.</p></div>` +
+      `<div class="tde-locked-text"><h3>Aucune caractéristique estimée</h3>` +
+      `<p>Une séance vidéo estime une partie des caractéristiques de TOUT l'effectif de ${escapeHtml(team.name)}, une fois par saison. Plus votre analyste vidéo est bon, plus elle en estime, et plus les fourchettes sont étroites.</p></div>` +
       `<button type="button" class="tde-locked-btn" data-team-detail-subview="analyse">Aller à l'Analyse d'équipe</button></div>`;
   }
   const keys = families.flatMap(f => f.keys);
@@ -35271,20 +35410,29 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
   const sorted = teamDetailSortPlayers(team.players, team, isOwnTeam, revealedSet, defaultCmp, ["name", "position", ...keys]);
 
   let html = `<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs tde-caracs"><thead>` +
-    `<tr class="eff-family-row"><td colspan="2"></td>` +
-    families.map(f => `<td colspan="${f.keys.length}" class="eff-family"><span>${escapeHtml(f.label)}</span></td>`).join("") + `</tr><tr>` +
-    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") +
+    `<tr class="eff-family-row"><td colspan="${isOwnTeam ? 2 : 3}"></td>` +
+    families.map(f => `<td colspan="${f.keys.length}" class="eff-family"><span>${escapeHtml(f.label)}</span></td>`).join("") + (isOwnTeam ? "" : `<td></td>`) + `</tr><tr>` +
+    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") + (isOwnTeam ? "" : `<th class="eff-th" title="Note estimée">Note</th>`) +
     families.map((f, fi) => f.keys.map((k, ki) => H(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
       cls: `eff-th-attr${ki === 0 && fi > 0 ? " eff-gstart" : ""}`,
       title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
-    })).join("")).join("") + `</tr></thead><tbody>`;
+    })).join("")).join("") + (isOwnTeam ? "" : `<th class="eff-th">Confiance</th>`) + `</tr></thead><tbody>`;
   sorted.forEach(p => {
     html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${effPosBadgeHtml(p.position)}</td>`;
+    if (!isOwnTeam) html += `<td class="eff-num fog-cell">${p.fog ? fogRangeText(p.fog.o) : "?"}</td>`;
     families.forEach((f, fi) => f.keys.forEach((k, ki) => {
+      if (!isOwnTeam) {
+        // Brouillard de guerre : fourchette estimée, cadenas si jamais analysée.
+        const r = p.fog && p.fog.a && p.fog.a[k];
+        const old = r && p.fog.aAge && p.fog.aAge[k] > 0;
+        html += `<td class="${ki === 0 && fi > 0 ? "eff-gstart" : ""}">${r ? `<span class="fog-cell${old ? " fog-old" : ""}">${fogRangeText(r)}</span>` : `<span class="fog-cell fog-lock" title="Jamais analysée">${FOG_LOCK_SVG}</span>`}</td>`;
+        return;
+      }
       const v = value(p, k);
       const isBest = v === best[k];
       html += `<td class="${ki === 0 && fi > 0 ? "eff-gstart" : ""}"><span class="attr-cell eff-attr ${attrColorTier(v)}${isBest ? " eff-best" : ""}"${isBest ? ` title="Meilleur de l'équipe"` : ""}><span class="attr-val">${v}</span></span></td>`;
     }));
+    if (!isOwnTeam) html += `<td>${fogConfHtml(p.fog ? p.fog.conf : 0, true)}</td>`;
     html += `</tr>`;
   });
   html += `</tbody></table></div>`;
@@ -35346,7 +35494,8 @@ function teamDetailEffectifStatsHtml(teamIdx, team, isOwnTeam, revealedSet) {
 function teamDetailEffectifHtml(teamIdx) {
   const team = league.teams[teamIdx];
   const isOwnTeam = teamIdx === myTeamIndex;
-  const revealedSet = new Set((teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || []);
+  // Brouillard de guerre : caractéristiques estimées par l'analyste vidéo.
+  const revealedSet = isOwnTeam ? new Set() : fogTeamKeys(team);
   let html = `<div class="tde-effectif">` + teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) +
     teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet);
   if (teamDetailEffectifView === "caracs") html += teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet);
@@ -35657,8 +35806,14 @@ function teamDetailAnalyseHtml(teamIdx) {
       premiumLinkHtml() + `</div></div>`;
   }
 
-  const alreadyScoutedList = (teamA.scoutedAttrs && teamA.scoutedAttrs[String(teamIdx)]) || [];
-  const alreadyScouted = alreadyScoutedList.length > 0;
+  // Brouillard de guerre (maquette validée le 2026-10-06) : rapport de
+  // l'analyste pour ce club (une analyse par saison), puis le bouton.
+  const Fog = fogApi();
+  const season = league.seasonNumber || 1;
+  const reports = (Fog && teamA.scoutReports && teamA.scoutReports[Fog.clubKey(team.name)]) || [];
+  const current = reports.find(r => r.season === season) || null;
+  const last = reports[0] || null;
+  const alreadyScouted = !!current;
   const hasAnalyst = !!teamA.videoAnalyst;
   const now = Date.now();
   // Même définition de "jour civil à Paris" que League.runVideoSession
@@ -35667,30 +35822,44 @@ function teamDetailAnalyseHtml(teamIdx) {
   // ce soit côté moteur (la vraie décision reste dans runVideoSession).
   const usedToday = teamA.lastVideoSessionAt != null && sameParisCalendarDay(teamA.lastVideoSessionAt, now);
   const analystLevel = hasAnalyst ? teamA.videoAnalyst.level : 0;
-  const revealCount = hasAnalyst ? (ANALYST_REVEAL_COUNT_BY_LEVEL[analystLevel] || 0) : 0;
+  const cfg = Fog && hasAnalyst ? Fog.levelCfg(analystLevel) : null;
+  const revealCount = cfg ? cfg.reveal : 0;
 
-  // Retour utilisateur (2026-09, voir League.runVideoSession) : "déjà
-  // scouté cette saison" (PERMANENT pour CET adversaire) et "revenez
-  // demain" (cooldown quotidien, mais CET adversaire reste scoutable un
-  // autre jour) sont deux situations différentes pour le manager, le
-  // message et le titre du bouton doivent rester distincts, pas un
-  // "indisponible" générique commun aux deux cas. On teste alreadyScouted
-  // AVANT usedToday, dans le même ordre de priorité que League.runVideoSession
-  // ("already-scouted" prime sur "cooldown").
+  // "Déjà analysée cette saison" (jusqu'à la saison suivante) et "revenez
+  // demain" (rythme quotidien) restent deux messages distincts, dans le même
+  // ordre de priorité que League.runVideoSession.
   let buttonHtml;
   if (!hasAnalyst) {
     buttonHtml = `<button class="secondary" disabled title="Recrutez un analyste vidéo (onglet Staff) pour débloquer les séances vidéo">Faire une séance vidéo</button>` +
-      `<p class="sub">Aucun analyste vidéo sous contrat, recrutez-en un dans l'onglet <b>Staff</b> pour révéler les caractéristiques de vos adversaires.</p>`;
+      `<p class="sub">Aucun analyste vidéo sous contrat, recrutez-en un dans l'onglet <b>Staff</b> pour estimer les caractéristiques de vos adversaires.</p>`;
   } else if (alreadyScouted) {
-    buttonHtml = `<button class="secondary" disabled title="Cette équipe a déjà été scoutée cette saison">Déjà scoutée cette saison</button>` +
-      `<p class="sub">Cette équipe a déjà été scoutée cette saison (${alreadyScoutedList.length}/${ATTRS.length} caractéristiques révélées, définitif), impossible de la rescouter avant la saison prochaine, même avec un meilleur analyste.</p>`;
+    buttonHtml = `<button class="secondary" disabled title="Cette équipe a déjà été analysée cette saison">Déjà analysée cette saison</button>` +
+      `<p class="sub">Prochaine analyse de ce club : saison ${season + 1}.</p>`;
   } else if (usedToday) {
     buttonHtml = `<button class="secondary" disabled title="Une séance a déjà été utilisée aujourd'hui">Séance déjà utilisée aujourd'hui</button>` +
-      `<p class="sub">Une seule NOUVELLE équipe scoutée par jour (tous adversaires confondus), revenez demain pour scouter celle-ci.</p>`;
+      `<p class="sub">Une seule NOUVELLE équipe analysée par jour (tous adversaires confondus), revenez demain pour analyser celle-ci.</p>`;
   } else {
-    buttonHtml = `<button class="secondary" id="runVideoSessionBtn" data-opponent-idx="${teamIdx}">Faire une séance vidéo (révèle ${revealCount}/${ATTRS.length} caractéristiques, niveau ${analystLevel})</button>`;
+    buttonHtml = `<button class="secondary" id="runVideoSessionBtn" data-opponent-idx="${teamIdx}">Faire une séance vidéo (${revealCount} caractéristique${revealCount > 1 ? "s" : ""} par joueur, ± ${cfg.half}, niveau ${analystLevel})</button>`;
   }
-  let html = `<div class="scouting-actions">${buttonHtml}</div>`;
+  const shown = current || last;
+  let card = `<div class="fog-card"><div class="fog-card-head">${FOG_FILM_SVG}<b>Analyse vidéo · ${escapeHtml(team.name)}</b>` +
+    `<span class="fog-tag ${current ? "ok" : last ? "old" : "no"}">${current ? "Faite cette saison" : last ? `Dernière : saison ${last.season}` : "Aucun rapport"}</span></div>`;
+  if (shown) {
+    const scfg = Fog.levelCfg(shown.level);
+    const age = Math.max(0, season - shown.season);
+    const lvlBars = [1, 2, 3, 4, 5].map(i => `<b class="${i <= shown.level ? "on" : ""}"></b>`).join("");
+    card += `<div class="fog-kpis">` +
+      `<div class="fog-kpi"><span>Saison</span><b>${shown.season}</b></div>` +
+      `<div class="fog-kpi"><span>Analyste</span><b>Niv. ${shown.level}</b><i class="fog-lvl">${lvlBars}</i></div>` +
+      `<div class="fog-kpi"><span>Par joueur</span><b>${shown.keys.length} / ${ATTRS.length}</b></div>` +
+      `<div class="fog-kpi"><span>Précision</span><b>± ${scfg.half + age * Fog.CONFIG.agingHalfPerSeason}</b></div>` +
+      `<div class="fog-kpi"><span>Confiance</span><b>${fogConfHtml(Fog.confidence(shown.level, age), true)}</b></div></div>` +
+      `<p class="sub">${escapeHtml(fogReportLine({ season: shown.season, at: shown.at, level: shown.level }))} · caractéristiques estimées : ${shown.keys.map(k => escapeHtml(TRAINING_LABELS[k] || k)).join(", ")}.</p>`;
+  } else {
+    card += `<p class="sub">Aucune caractéristique de cet effectif n'a encore été estimée. Une séance vidéo estime des caractéristiques de TOUS ses joueurs, une fois par saison : plus votre analyste est bon, plus elle en estime et plus les fourchettes sont étroites. Une estimation n'est jamais certaine.</p>`;
+  }
+  card += `</div>`;
+  let html = card + `<div class="scouting-actions">${buttonHtml}</div>`;
   html += `<div id="scoutingFeedback"></div>`;
   // Scouting Pro (retour utilisateur, 2026-09 : "analyse des équipes
   // adverses (« Scouting Pro ») [...]") : rapport SUPPLÉMENTAIRE, gagné par
@@ -40056,7 +40225,7 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
   if (!result.ok) {
     const reasons = {
       "no-analyst": "Aucun analyste vidéo sous contrat.",
-      "already-scouted": "Cette équipe a déjà été scoutée cette saison.",
+      "already-scouted": "Cette équipe a déjà été analysée cette saison.",
       "cooldown": "Une séance vidéo a déjà été utilisée aujourd'hui.",
       "invalid-opponent": "Adversaire invalide.",
     };
@@ -40064,7 +40233,7 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
     btn.disabled = false;
     return;
   }
-  setFeedback(`Séance vidéo terminée : ${result.revealed.length}/${ATTRS.length} caractéristiques révélées pour cette équipe (définitif pour cette saison).`, true);
+  setFeedback(`Séance vidéo terminée : ${result.revealed.length} caractéristique${result.revealed.length > 1 ? "s" : ""} estimée${result.revealed.length > 1 ? "s" : ""} pour tout l'effectif.`, true);
   renderTeamDetail(teamDetailIdx);
 });
 
@@ -40081,21 +40250,20 @@ document.getElementById("teamDetailContent").addEventListener("click", async (e)
 async function performVideoSession(opponentIdx) {
   const result = await runVideoSessionOnServer(opponentIdx);
   if (result.ok) {
-    teamA.scoutedAttrs = teamA.scoutedAttrs || {};
-    teamA.scoutedAttrs[String(result.opponentIdx)] = result.revealed;
     teamA.lastVideoSessionAt = Date.now();
-    // Valeurs révélées (seules les caractéristiques scoutées arrivent du
-    // serveur, voir server/publicPlayers.js).
+    // Brouillard de guerre : rapport figé et estimations à jour de chaque
+    // joueur adverse (jamais de valeur exacte, voir server/actions.js).
+    const Fog = fogApi();
+    if (Fog && result.report) Fog.addReport(teamA, result.report);
     const opp = league.teams[result.opponentIdx];
-    if (opp && result.revealedAttrs) {
+    if (opp && result.fog) {
       opp.players.forEach(p => {
-        const vals = result.revealedAttrs[p.id];
-        if (!vals) return;
-        Object.keys(vals).forEach(k => { if (typeof vals[k] === "number") p.attrs[k] = vals[k]; });
-        if (p.attrsHidden) {
-          p.receivedAttrKeys = ATTRS.filter(a => (p.receivedAttrKeys || []).includes(a) || typeof vals[a] === "number");
-          if (p.receivedAttrKeys.length === ATTRS.length) p.attrsHidden = false;
-        }
+        const view = result.fog[p.id];
+        if (!view) return;
+        p.fog = view;
+        Object.keys(view.a || {}).forEach(k => { p.attrs[k] = Math.round((view.a[k][0] + view.a[k][1]) / 2); });
+        p.attrsHidden = true;
+        p.receivedAttrKeys = Object.keys(view.a || {});
       });
     }
   }
@@ -45030,7 +45198,7 @@ function staffEffectLines(roleKey, level, specialty) {
     // Pas de nombre de caractéristiques révélées (retour utilisateur 2026-09 :
     // masqué sur la page Staff et sur le marché, voir client_scouting_test).
     lines.push("Une séance vidéo par jour sur vos adversaires");
-    lines.push("Plus il est bon, plus vous en voyez");
+    lines.push("Plus il est bon, plus les estimations sont nombreuses et précises");
   } else if (roleKey === "recruiter") {
     // Tirage une fois par semaine, à la mise à jour du lundi (Team.trainWeek →
     // refreshYouthCandidates), malgré le nom de la constante.
@@ -45053,7 +45221,7 @@ function staffEffectHtml(roleKey, level, specialty) {
 // Ce que le poste apporte, pour une carte « Poste à pourvoir ».
 const STAFF_ROLE_PITCH = {
   coach: ["Plans individuels et progression des fondamentaux", "Sans entraîneur, aucun plan individuel"],
-  analyst: ["Révèle les caractéristiques de vos adversaires", "Plus il est bon, plus vous en voyez"],
+  analyst: ["Estime les caractéristiques de vos adversaires", "Plus il est bon, plus les estimations sont nombreuses et précises"],
   recruiter: ["Vous propose de jeunes prospects pour l'académie", "Plus il est bon, plus ils sont nombreux et talentueux"],
   doctor: ["Raccourcit les blessures (jusqu'à −35 %)"],
   physio: ["Moins de blessures, meilleure récupération"],
@@ -45092,8 +45260,41 @@ function renderStaffPanel() {
   document.getElementById("staffFilled").innerHTML = `${filled}<span class="stf-unit"> / ${STAFF_ROLES.length}</span>`;
   const now = Date.now();
   document.getElementById("staffSlots").innerHTML = STAFF_ROLES.map(r => staffCardHtml(r, now)).join("");
+  const fogEl = document.getElementById("staffFogReports");
+  if (fogEl) fogEl.innerHTML = staffFogReportsHtml();
   mkUpdateBadge();
 }
+
+// Brouillard de guerre (maquette validée le 2026-10-06) : suivi des
+// rapports de l'analyste vidéo pour chaque adversaire du championnat.
+function staffFogReportsHtml() {
+  const Fog = fogApi();
+  if (!Fog || !league || !teamA) return "";
+  const season = league.seasonNumber || 1;
+  const rows = league.teams.map((t, i) => ({ t, i })).filter(x => x.i !== myTeamIndex && x.t);
+  if (!rows.length) return "";
+  const body = rows.map(({ t, i }) => {
+    const reports = (teamA.scoutReports && teamA.scoutReports[Fog.clubKey(t.name)]) || [];
+    const last = reports[0] || null;
+    const done = last && last.season === season;
+    const age = last ? Math.max(0, season - last.season) : 0;
+    const when = last ? `Saison ${last.season}${last.at ? " · " + new Date(last.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}` : "–";
+    return `<tr><td>${teamLinkHtml(i, t.name)}</td><td>${escapeHtml(when)}</td><td>${last ? last.level : "–"}</td>` +
+      `<td>${fogConfHtml(last ? Fog.confidence(last.level, age) : 0, true)}</td>` +
+      `<td>${done ? `<span class="fog-tag ok">Fait</span>` : `<button type="button" class="stf-btn stf-btn--ghost fog-go" data-fog-analyse="${i}">Analyser</button>`}</td></tr>`;
+  }).join("");
+  return `<div class="fog-card stf-fog"><div class="fog-card-head">${FOG_FILM_SVG}<b>Rapports de l'analyste vidéo</b><span class="fog-tag ${teamA.videoAnalyst ? "ok" : "no"}">${teamA.videoAnalyst ? `Analyste niveau ${teamA.videoAnalyst.level}` : "Aucun analyste"}</span></div>` +
+    `<table class="fog-table"><thead><tr><th>Adversaire</th><th>Dernier rapport</th><th>Niveau</th><th>Confiance</th><th></th></tr></thead><tbody>${body}</tbody></table>` +
+    `<p class="sub" style="margin:8px 0 0">Une analyse par adversaire et par saison (une nouvelle équipe par jour). Les estimations ne sont jamais certaines et perdent en fiabilité avec le temps.</p></div>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-fog-analyse]");
+  if (!b) return;
+  const idx = Number(b.dataset.fogAnalyse);
+  showTeamDetail(idx);
+  teamDetailSubView = "analyse";
+  renderTeamDetail(idx);
+});
 
 // Carte d'un poste : en poste / enchère en cours / à pourvoir.
 function staffCardHtml(role, now) {
@@ -46282,8 +46483,9 @@ function dashboardTeamRef(idx, team) {
 // tableau de bord (voir renderClubSection ci-dessus) et que d'autres écrans
 // (Scouting Pro) : jamais recalculée différemment d'un écran à l'autre.
 function dashboardTeamLevel(team) {
-  // Adversaire : niveau calculé par le serveur (caractéristiques non reçues).
-  if (typeof team.publicLevel === "number" && team.players.some(p => p.attrsHidden)) return team.publicLevel;
+  // Adversaire : plus de niveau moyen (il trahissait les notes exactes,
+  // brouillard de guerre, décision du 2026-10-06).
+  if (team.players.some(p => p.attrsHidden)) return null;
   if (!team.players.length) return 0;
   return Math.round(team.players.reduce((s, p) => s + p.overall(), 0) / team.players.length);
 }

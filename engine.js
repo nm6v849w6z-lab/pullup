@@ -13,6 +13,9 @@
   // Dynamique de groupe (« Vestiaire », 2026-10-06) : module partagé avec le
   // navigateur (window.HM_VESTIAIRE), voir assets/vestiaire.js.
   const Vestiaire = require("./assets/vestiaire.js");
+  // Analyste vidéo, brouillard de guerre (2026-10-06) : rapports figés en
+  // intervalles, voir assets/scouting-fog.js (window.HM_FOG côté navigateur).
+  const Fog = require("./assets/scouting-fog.js");
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
@@ -6481,6 +6484,10 @@ class Team {
     // par jour", même esprit que "training/economy once per day").
     this.scoutedAttrs = {};
     this.lastVideoSessionAt = null;
+    // Rapports de l'analyste vidéo par club adverse (assets/scouting-fog.js),
+    // par saison, avec historique : remplace scoutedAttrs (indexé par la
+    // position du club dans la ligue, qui change avec les montées).
+    this.scoutReports = {};
 
     // Scouting Pro (retour utilisateur, 2026-09 : "analyse des équipes
     // adverses (« Scouting Pro ») en mode payant + accès gratuit via pub
@@ -15769,26 +15776,20 @@ class League {
     if (!team) return { ok: false, reason: "invalid-team" };
     if (!team.videoAnalyst) return { ok: false, reason: "no-analyst" };
     if (opponentIdx === teamIndex || !this.teams[opponentIdx]) return { ok: false, reason: "invalid-opponent" };
-    const key = String(opponentIdx);
-    if (team.scoutedAttrs[key] && team.scoutedAttrs[key].length > 0) {
-      return { ok: false, reason: "already-scouted" };
-    }
+    // Brouillard de guerre (2026-10-06) : un rapport par club adverse et par
+    // saison, rangé par NOM de club (stable malgré montées/descentes, et
+    // remis à zéro naturellement par la saison suivante).
+    const opp = this.teams[opponentIdx];
+    const season = this.seasonNumber || 1;
+    if (Fog.reportFor(team, opp.name, season)) return { ok: false, reason: "already-scouted" };
     if (team.lastVideoSessionAt != null && sameParisCalendarDay(team.lastVideoSessionAt, now)) {
       return { ok: false, reason: "cooldown" };
     }
     const level = team.videoAnalyst.level;
-    const revealCount = ANALYST_REVEAL_COUNT_BY_LEVEL[level] || 0;
-    // Tirage frais dans ATTRS — jamais d'union à faire avec un éventuel
-    // scoutage précédent : la garde "already-scouted" ci-dessus garantit
-    // qu'on n'atteint jamais ce point pour un adversaire déjà scouté.
-    const drawn = shuffleIndices(ATTRS).slice(0, revealCount);
-    // Ordre stable (celui d'ATTRS) plutôt que l'ordre de tirage — plus
-    // lisible côté UI (mêmes colonnes toujours dans le même ordre d'une
-    // équipe à l'autre).
-    const revealed = ATTRS.filter(a => drawn.includes(a));
-    team.scoutedAttrs[key] = revealed;
+    const report = Fog.makeReport(opp, { level, season, now, attrs: ATTRS, overall: p => p.overall() });
+    Fog.addReport(team, report);
     team.lastVideoSessionAt = now;
-    return { ok: true, opponentIdx, revealed, analystLevel: level };
+    return { ok: true, opponentIdx, revealed: report.keys, analystLevel: level, season };
   }
 }
 
@@ -17097,6 +17098,7 @@ function serializeTeam(team) {
     // premier redémarrage du serveur.
     videoAnalyst: team.videoAnalyst ? { ...team.videoAnalyst } : null,
     scoutedAttrs: team.scoutedAttrs || {},
+    scoutReports: team.scoutReports || {},
     lastVideoSessionAt: typeof team.lastVideoSessionAt === "number" ? team.lastVideoSessionAt : null,
     // Scouting Pro (voir Team.constructor plus haut) : DOIT survivre au
     // rechargement comme le reste du staff/scoutisme juste au-dessus, sinon
@@ -17694,6 +17696,7 @@ function teamFromSave(data) {
   // pour une sauvegarde d'avant cette fonctionnalité — aucun adversaire
   // scouté, comme au tout premier lancement.
   team.scoutedAttrs = data.scoutedAttrs && typeof data.scoutedAttrs === "object" ? data.scoutedAttrs : {};
+  team.scoutReports = data.scoutReports && typeof data.scoutReports === "object" ? data.scoutReports : {};
   team.lastVideoSessionAt = typeof data.lastVideoSessionAt === "number" ? data.lastVideoSessionAt : null;
   // Scouting Pro (voir serializeTeam ci-dessus) : `false`/`{}`/`[]` par
   // défaut (déjà les valeurs posées par le constructeur Team) pour une
@@ -20228,7 +20231,7 @@ return {
   trainingEfficiencyFor, slotTrainingWeightsFor, TRAINING_STALL_WEEKS, trainingAdviceFor, PHYSICAL_DAY_FACTOR, applyPhysicalDayTo,
   TACTIC_DAILY_GAIN_CURVE, tacticDailyGainForLevel, TACTIC_TIERS, tacticTierFor, COLLECTIVE_DAY_OPTIONS, TRAINING_PLAN_WEEKS_AHEAD, PARIS_DAY_MS, parisWeekStartDayIndex,
   LEGACY_TRAINING_ROOM_DIVISOR, migrateTrainingSlots, serializeTrainingV2State, restoreTrainingV2State, CPU_IMPLICIT_COACH_LEVEL, CPU_BACKGROUND_TRAINING_WEIGHT, cpuTrainingSlots,
-  ANALYST_REVEAL_COUNT_BY_LEVEL,
+  ANALYST_REVEAL_COUNT_BY_LEVEL, Fog,
   // Académie de jeunes (voir le grand commentaire au-dessus de MAX_YOUTH_ROSTER_SIZE) :
   MAX_YOUTH_ROSTER_SIZE, YOUTH_TRAINEE_WEEKLY_SALARY, YOUTH_CANDIDATE_QUEUE_MAX, YOUTH_CANDIDATE_EXPIRY_MS,
   YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL, YOUTH_QUALITY_TIER_BY_LEVEL, YOUTH_STANDOUT_CHANCE_BY_LEVEL,

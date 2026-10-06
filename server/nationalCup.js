@@ -167,7 +167,7 @@ function guestForTeam(Engine, team, ref) {
   // Données privées du club invité (ordres préparés, marché, sponsors…).
   ["plannedTactics", "matchOrdersUsed", "tacticPresets", "ordersHistory", "marketWatchlist", "marketAlerts", "marketAlertSeen", "bookmarks",
     "sponsorOffers", "sponsorContracts", "sponsorHistory", "scoutingAdTickets", "scoutingUnlocks", "scoutingAdWatchLog",
-    "scoutedAttrs", "pendingInterviews", "pendingYouthDecisions", "youthCandidates", "trainingHistory", "lastTrainingReport",
+    "scoutedAttrs", "scoutReports", "pendingInterviews", "pendingYouthDecisions", "youthCandidates", "trainingHistory", "lastTrainingReport",
     "collectiveTrainingLog"].forEach(k => { delete data[k]; });
   data.budget = 0;
   data.isHuman = !!team.isHuman;
