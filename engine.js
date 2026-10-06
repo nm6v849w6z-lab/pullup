@@ -3996,6 +3996,14 @@ function isCurrentlyInjured(player, now = Date.now()) {
   return typeof player.injuryUntil === "number" && now < player.injuryUntil;
 }
 
+// Joueur retenu par sa sélection nationale à cet instant (convocation
+// figée : jour du match d'une fenêtre, ou toute la phase finale — voir
+// server/nationalCoach.js:applyNationalDuty). Il ne joue alors pas les
+// matchs amicaux de son club (retour utilisateur 2026-10-06).
+function isOnNationalDuty(player, at = Date.now()) {
+  return Array.isArray(player && player.nationalDuty) && player.nationalDuty.some(d => d && at >= d.from && at < d.to);
+}
+
 // Nombre de jours ENCORE à courir avant la fin de la blessure (arrondi au
 // jour supérieur : un joueur blessé "aujourd'hui" pour 3 jours doit encore
 // afficher "3 jours" et non "2", tant qu'il reste ne serait-ce qu'une
@@ -16825,6 +16833,8 @@ function serializePlayerRecord(p) {
     ...(Array.isArray(p.injuryHistory) && p.injuryHistory.length ? { injuryHistory: p.injuryHistory.map(e => ({ ...e })) } : {}),
     // Retraite (voir RETIREMENT_ANNOUNCE_CHANCE_BY_AGE).
     retiringAfterSeason: !!p.retiringAfterSeason,
+    // Périodes avec sa sélection nationale (voir isOnNationalDuty).
+    ...(Array.isArray(p.nationalDuty) && p.nationalDuty.length ? { nationalDuty: p.nationalDuty.map(d => ({ from: d.from, to: d.to, gid: d.gid || null, team: d.team || null })) } : {}),
     retirementWeeks: p.retirementWeeks || 0,
     retirementTalks: Array.isArray(p.retirementTalks) ? p.retirementTalks.slice() : [],
     retirementQuote: p.retirementQuote ?? null,
@@ -17468,6 +17478,7 @@ function playerFromSave(pdata) {
   p.clubSinceSeason = typeof pdata.clubSinceSeason === "number" ? pdata.clubSinceSeason : null;
   p.injuryHistory = Array.isArray(pdata.injuryHistory) ? pdata.injuryHistory.filter(e => e && typeof e === "object").map(e => ({ ...e })) : [];
   if (typeof pdata.retiringAfterSeason === "boolean") p.retiringAfterSeason = pdata.retiringAfterSeason;
+  if (Array.isArray(pdata.nationalDuty)) p.nationalDuty = pdata.nationalDuty.filter(d => d && typeof d.from === "number" && typeof d.to === "number").map(d => ({ from: d.from, to: d.to, gid: d.gid || null, team: d.team || null }));
   if (typeof pdata.retirementWeeks === "number") p.retirementWeeks = pdata.retirementWeeks;
   if (Array.isArray(pdata.retirementTalks)) p.retirementTalks = pdata.retirementTalks.filter(n => Number.isInteger(n));
   if (typeof pdata.retirementQuote === "string") p.retirementQuote = pdata.retirementQuote;
@@ -20256,7 +20267,7 @@ return {
   CONDITION_STATES, conditionStateFor, currentCondition, conditionLossForMinutes,
   CONDITION_DAY_MS, CONDITION_RECOVERY_PER_DAY, CONDITION_RECOVERY_PER_DAY_TRAINED, conditionRestDays,
   // Blessures persistantes (voir le grand commentaire au-dessus d'INJURY_TYPES) :
-  INJURY_TYPES, rollInjury, isCurrentlyInjured, injuryDaysRemaining,
+  INJURY_TYPES, rollInjury, isCurrentlyInjured, isOnNationalDuty, injuryDaysRemaining,
   // Motivation du joueur (voir le commentaire de motivationLabel au-dessus
   // de "class Player") :
   motivationLabel,

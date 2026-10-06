@@ -222,7 +222,8 @@ function buildFriendlyTeam(Engine, real, lineup, at, orders = null) {
   const POS = Engine.POSITIONS || FALLBACK_POSITIONS;
   const pool = friendlyPool(real);
   const byId = new Map(pool.map(p => [String(p.id), p]));
-  const fit = p => p && !(Engine.isCurrentlyInjured && Engine.isCurrentlyInjured(p, at));
+  // Ni blessé, ni retenu par sa sélection nationale ce jour-là.
+  const fit = p => p && !(Engine.isCurrentlyInjured && Engine.isCurrentlyInjured(p, at)) && !(Engine.isOnNationalDuty && Engine.isOnNationalDuty(p, at));
   const chosen = new Set();
   const take = ids => ids.map(id => byId.get(String(id))).filter(p => fit(p) && !chosen.has(p.id) && chosen.add(p.id));
   const starters = take(lineup.starters || []);
@@ -273,7 +274,7 @@ function applyFriendlyOrders(Engine, shell, real, orders, at) {
   // convocation décide qui joue) + les jeunes cités dans la feuille.
   const youthIds = new Set((real.youthPlayers || []).map(p => String(p.id)));
   shell.players = pool.filter(p => !youthIds.has(String(p.id)) || used.has(String(p.id)));
-  const fit = p => !(Engine.isCurrentlyInjured && Engine.isCurrentlyInjured(p, at));
+  const fit = p => !(Engine.isCurrentlyInjured && Engine.isCurrentlyInjured(p, at)) && !(Engine.isOnNationalDuty && Engine.isOnNationalDuty(p, at));
   const byOverall = (a, b) => (b.overall ? b.overall() : 0) - (a.overall ? a.overall() : 0);
   POS.forEach(pos => {
     if (lineup.starters[pos] != null) return;

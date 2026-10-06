@@ -49,6 +49,23 @@ N.step(st, leagues, world, frConvAt);
 const conv = C.convocationOf(st, TID, m1.gid);
 const frPlayers = all.filter(p => p.nationality === CC);
 assert.ok(conv && conv.frozenAt && conv.players.length === Math.min(15, frPlayers.length), `convocation figée (${conv && conv.players.length} sur ${frPlayers.length} Français)`);
+// Convoqués retenus par leur sélection le jour du match : jamais dans un
+// amical de leur club ce dimanche-là (retour utilisateur 2026-10-06).
+{
+  const Friendlies = require("./friendlies.js");
+  const convoked = frPlayers.filter(p => conv.players.some(r => r.p === p.id && r.n === p.name));
+  const p0 = convoked[0];
+  const club = lg.teams.find(t => t.players.includes(p0));
+  const sundayAfternoon = m1.at - 4 * 3600e3;
+  assert.ok(Engine.isOnNationalDuty(p0, sundayAfternoon) && !Engine.isOnNationalDuty(p0, m1.at - 30 * 3600e3), "retenu le dimanche du match, pas la veille");
+  const shell = Friendlies.buildFriendlyTeam(Engine, club, { starters: [p0.id], bench: [] }, sundayAfternoon);
+  assert.ok(!shell.players.includes(p0), "amical du dimanche : le convoqué est remplacé");
+  const shellSat = Friendlies.buildFriendlyTeam(Engine, club, { starters: [p0.id], bench: [] }, m1.at - 30 * 3600e3);
+  assert.ok(shellSat.players.includes(p0), "amical de la veille : il joue");
+  const back = Engine.playerFromSave(JSON.parse(JSON.stringify(Engine.serializePlayerRecord(p0))));
+  assert.ok(Engine.isOnNationalDuty(back, sundayAfternoon), "période en sélection gardée à la sauvegarde");
+  ok("convoqué retenu par sa sélection le jour du match : absent des amicaux de son club ce jour-là");
+}
 const idsBefore = frPlayers.map(p => p.id);
 const logBefore = frPlayers.map(p => p.matchLog.length);
 N.step(st, leagues, world, m1.at + 60e3);

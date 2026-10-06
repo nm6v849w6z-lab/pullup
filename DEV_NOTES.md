@@ -63,8 +63,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     classement 2/1 pt ; qualif continentale Europe 8/10 (2 premiers + 2
     meilleurs 3es), Amérique et Asie tous ; saison Coupe du monde : groupes
     = têtes de série. Onglet Qualifications, feuille de match. Config
-    `matchesLive`. Reste à voir : amical d'un club le dimanche d'une fenêtre
-    pour un convoqué (pas bloqué).
+    `matchesLive`. Amical du dimanche d'une fenêtre : convoqués exclus (2026-10-06).
   - FAIT (2026-10-05) phase D (server/nationalMatches.js, store.finals) :
     tournois de la dernière semaine (lundi → dimanche 20h ; poules, quarts
     vendredi à 8, demies samedi, finale + 3e place dimanche ; format selon
@@ -83,9 +82,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     convocations à finaliser ; statistiques en sélection ; bilan de mandat
     m.report à la fin, caps store.caps ; expérience des candidats aux
     élections). Exemptés d'une fenêtre : pas de rassemblement.
-  - Reste : traductions des écrans B à E ; amical d'un club le dimanche
-    d'une fenêtre pour un convoqué (pas bloqué) ; pas de classement
-    mondial FIBA (le bilan le signale). UI dans des fichiers assets/ séparés (limite 4 Mo
+  - FAIT (2026-10-06) : convoqué retenu par sa sélection (Player.nationalDuty,
+    posé au gel, retiré au remplacement, Engine.isOnNationalDuty) → absent
+    des amicaux de son club ce jour-là (toute la semaine en phase finale).
+  - Reste : traductions des écrans B à E ; pas de classement mondial FIBA
+    (le bilan le signale). UI dans des fichiers assets/ séparés (limite 4 Mo
     de la page).
 
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-02), committé localement — Ligues

@@ -232,6 +232,16 @@ function step(store, leagues, world, now, season, calendarStartAt) {
       changed = true;
     }
   }
+  // Joueurs des listes figées : retenus par leur sélection (jour du match ou
+  // phase finale), donc absents des amicaux de leur club.
+  if (typeof calendarStartAt === "number" && cfg.matchesLive) {
+    for (const team of Object.values(store.teams)) {
+      for (const g of gatheringsOf(store, team, season, calendarStartAt)) {
+        const conv = convocationOf(store, team.id, g.gid);
+        if (conv && conv.frozenAt && now < g.endAt + 6 * 3600 * 1000 && applyNationalDuty(store, team, g, conv, leagues, world, now)) changed = true;
+      }
+    }
+  }
   // Historique borné : 3 saisons de convocations par sélection.
   Object.values(store.convocations || {}).forEach(byTeam => {
     Object.keys(byTeam).forEach(gid => { if (byTeam[gid].season < season - 2) { delete byTeam[gid]; changed = true; } });
@@ -242,6 +252,32 @@ function step(store, leagues, world, now, season, calendarStartAt) {
     store.outbox = [];
   }
   return { changed, pools, due };
+}
+// Période « en sélection » posée sur les VRAIS joueurs d'une liste figée
+// (Player.nationalDuty, sauvegardé avec le joueur, lu par
+// Engine.isOnNationalDuty) : de minuit le jour du premier match (20h) au
+// lendemain matin du dernier. Retirée aux joueurs remplacés. Recalculée
+// seulement quand la liste change (conv.dutyKey).
+function applyNationalDuty(store, team, g, conv, leagues, world, now) {
+  const key = conv.players.map(refKey).sort().join(",");
+  if (conv.dutyKey === key) return false;
+  const want = new Set(conv.players.map(refKey));
+  const before = new Set(conv.dutyRefs || []);
+  const from = g.startAt - 20 * 3600 * 1000, to = g.endAt + 4 * 3600 * 1000;
+  for (const [, lg] of leagues) {
+    for (const t of (lg && lg.teams) || []) {
+      for (const p of (t && t.players) || []) {
+        const k = refKey(refOf(p));
+        if (!want.has(k) && !before.has(k)) continue;
+        const keep = (Array.isArray(p.nationalDuty) ? p.nationalDuty : []).filter(d => d.gid !== `${team.id}:${g.gid}` && d.to > now - 7 * DAY);
+        if (want.has(k)) keep.push({ from, to, gid: `${team.id}:${g.gid}`, team: team.id });
+        p.nationalDuty = keep;
+      }
+    }
+  }
+  conv.dutyKey = key;
+  conv.dutyRefs = [...want];
+  return true;
 }
 function freezeConvocation(store, team, g, m, leagues, world, now) {
   const cfg = NT().configOf(store);
@@ -602,5 +638,5 @@ module.exports = {
   LIMITS, refOf, refKey, sameRef, cleanRef, poolStoreName, loadPool, savePool, coachPlayer, buildPool, matchEff,
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
-  coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen,
+  coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
 };
