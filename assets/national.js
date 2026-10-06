@@ -722,7 +722,8 @@
   // --- Rendu / données ------------------------------------------------------
   function paint() {
     var holder = document.getElementById("nationalContent");
-    if (!holder) return;
+    // Mode Sélectionneur : le contenu appartient à assets/national-coach.js.
+    if (!holder || document.body.classList.contains("nc-mode")) return;
     holder.innerHTML = ui.teamId ? teamHtml() : ui.electionId ? electionHtml() : overviewHtml();
   }
   function api(path, body) {
@@ -775,6 +776,7 @@
   }
 
   function onClick(e) {
+    if (document.body.classList.contains("nc-mode")) return;
     var th = e.target.closest ? e.target.closest("th[data-nt-sort]") : null;
     if (th && ui.teamId) {
       var k = th.dataset.ntSort, st = ui.groupSort || {};

@@ -1,7 +1,10 @@
-// Mode Sélectionneur (phase E, assets/national-coach.js) côté navigateur :
-// bouton dans la barre du haut seulement avec un mandat, bascule vers un
-// environnement séparé (menu latéral propre, barre du haut de la sélection,
-// rubriques du club masquées), retour au mode Club, mode mémorisé.
+// Mode Sélectionneur (assets/national-coach.js) côté navigateur, refonte du
+// 2026-10-06 : entrée par le bouton du tableau de bord du club (à côté de
+// « Analyse de mon équipe ») seulement avec un mandat, rien dans la barre du
+// haut en mode Club ; environnement séparé (menu latéral propre filtré par
+// rôle, rubriques nationales seulement) ; « Retour au mode Club » à
+// l'intérieur du mode ; postes aux abréviations du jeu ; tableau triable ;
+// Convocations en une seule page ; plus de rubrique « Joueurs suivis ».
 process.env.BASKET_ADMIN_TOKEN = process.env.BASKET_ADMIN_TOKEN || "admintest-mode";
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
@@ -15,7 +18,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   await dom.window.__gameReady; await flush(dom);
   let win = dom.window, doc = win.document;
   await new Promise(r => setTimeout(r, 800));
-  assert(!doc.getElementById("ncModeBtn"), "sans mandat : pas de bouton Mode Sélectionneur");
+  assert(!doc.querySelector("[data-nc-enter]") && !doc.getElementById("ncModeBtn"), "sans mandat : aucun bouton Mode Sélectionneur");
   const club = win.eval("teamA.name");
   const res = await fetch(baseUrl.replace(/\/?(\?.*)?$/, "/") + "api/admin/national", { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": process.env.BASKET_ADMIN_TOKEN }, body: JSON.stringify({ action: "appoint", teamId: "fr-A", club }) }).then(r => r.json());
   assert(res.ok, "nomination de test (admin)");
@@ -23,28 +26,57 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   dom = await openGame(html, baseUrl);
   await dom.window.__gameReady; await flush(dom);
   win = dom.window; doc = win.document;
-  await wait(() => doc.getElementById("ncModeBtn"), "bouton du mode");
-  const btn = doc.getElementById("ncModeBtn");
-  assert(/Mode Sélectionneur/.test(btn.textContent) && btn.querySelector(".nat-flag"), "barre du haut : bouton « Mode Sélectionneur » avec le drapeau");
+  win.eval("TAB_HANDLERS.club()");
+  await wait(() => doc.querySelector("#ncDashSlot [data-nc-enter]"), "bouton du tableau de bord");
+  const btn = doc.querySelector("#ncDashSlot [data-nc-enter]");
+  assert(/Mode Sélectionneur/.test(btn.textContent) && btn.querySelector(".nat-flag"), "tableau de bord : « Mode Sélectionneur » avec le drapeau, à côté de l'analyse");
+  assert(btn.closest(".hm-head") && btn.closest(".hm-head").querySelector(".hm-head__analyse-btn"), "même en-tête que « Analyse de mon équipe »");
+  assert(!doc.getElementById("ncModeBtn"), "mode Club : rien dans la barre du haut");
   btn.click();
   await wait(() => doc.body.classList.contains("nc-mode") && doc.getElementById("ncSidebar") && win.HM_NATIONAL_COACH.state.view, "entrée dans le mode");
   await flush(dom); await new Promise(r => setTimeout(r, 300));
   const side = doc.getElementById("ncSidebar").textContent;
-  assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Joueurs suivis", "Convocations", "Tactique", "Calendrier", "Qualifications", "Compétition", "Statistiques", "Notifications", "Mandat"].every(x => side.includes(x)), "menu latéral propre au mode Sélectionneur");
-  assert(/France A/.test(doc.getElementById("ncTopTitle").textContent) && /Sélectionneur/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : France A, sélectionneur");
-  assert(/Prochain match/.test(doc.getElementById("nationalContent").textContent) && /Mandat/.test(doc.getElementById("nationalContent").textContent), "tableau de bord de la sélection");
-  assert(!/Budget|Donnez vos ordres/.test(doc.getElementById("nationalContent").textContent), "rien du club dans le contenu");
-  const css = doc.getElementById("ncModeCss").textContent;
-  assert(/body\.nc-mode #sidebar > :not\(\.sidebar-brand\):not\(#ncSidebar\)\{display:none/.test(css) && /topbar-right > :not\(#ncModeBtn\)/.test(css), "menu et barre du haut du club masqués en mode Sélectionneur");
-  for (const nav of ["notifications", "mandat", "joueurs", "tactique", "calendrier"]) {
-    doc.querySelector(`[data-nc-nav="${nav}"]`).click();
+  assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Tactique", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
+  assert(!/Joueurs suivis|Convocations/.test(side), "plus de rubrique « Joueurs suivis » ni de doublon Convocations / Convoqués");
+  assert(/Retour au mode Club/.test(doc.getElementById("ncModeBtn").textContent), "en mode : « Retour au mode Club » dans l'environnement Sélectionneur");
+  assert(/France A/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : la sélection");
+  const content = () => doc.getElementById("nationalContent");
+  assert(/Prochain match/.test(content().textContent) && !/Budget|Donnez vos ordres/.test(content().textContent), "tableau de bord de la sélection, rien du club");
+  for (const nav of ["joueurs", "preselection", "convocations", "tactique", "calendrier", "amicaux", "analyse", "staff", "notifications", "mandat"]) {
+    doc.querySelector(`#ncSidebar [data-nc-nav="${nav}"]`).click();
     await wait(() => doc.querySelector(`.nc-side-link.on[data-nc-nav="${nav}"]`), "rubrique " + nav);
   }
-  assert(doc.querySelector('[data-nc-nav="calendrier"].on'), "rubriques accessibles depuis le menu");
-  assert(/nc-mode/.test(win.localStorage.getItem("hm-nat-mode") ? "nc-mode" : ""), "mode mémorisé pour le prochain chargement");
-  doc.getElementById("ncModeBtn").click();
+  // Joueurs sélectionnables : pas de carte de rassemblement, colonnes, tri.
+  doc.querySelector('#ncSidebar [data-nc-nav="joueurs"]').click();
+  await wait(() => doc.querySelector(".nc-side-link.on[data-nc-nav=joueurs]"), "joueurs");
+  const st = win.HM_NATIONAL_COACH.state;
+  if (st.view.pool && st.view.pool.players.length) {
+    assert(!content().querySelector(".nc-next") && !/CONVOQUÉS|Convoqués\s*0/i.test(content().textContent), "Sélectionnables : ni carte de rassemblement ni bloc des convoqués");
+    const heads = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
+    assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "MJ", "Pts", "Forme récente"].every(h => heads.includes(h)), "colonnes : identité, caractéristiques, moyennes, stats, forme récente");
+    assert(!/\b(MEN|ARR|AIS|AIF|PIV)\b/.test(content().textContent) && content().querySelector(".eff-pos"), "postes aux abréviations du jeu (badges de l'Effectif)");
+    const ageOf = () => [...content().querySelectorAll("tbody tr.eff-row")].map(tr => Number(tr.children[1].textContent));
+    content().querySelector('th[data-nc-sort="age"]').click();
+    const a1 = ageOf();
+    assert(a1.every((v, i) => !i || a1[i - 1] <= v), "tri par âge (croissant)");
+    content().querySelector('th[data-nc-sort="age"]').click();
+    const a2 = ageOf();
+    assert(a2.every((v, i) => !i || a2[i - 1] >= v), "second clic : tri inversé");
+  } else console.log("ℹ️ vivier pas encore calculé : tableau non vérifié");
+  // Rôle recruteur : menu filtré.
+  st.view.perms = ["view", "watch", "analysis"]; st.view.role = "scout"; st.nav = "dashboard";
+  doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
+  const side2 = doc.getElementById("ncSidebar").textContent;
+  assert(/Joueurs sélectionnables/.test(side2) && /Analyse des adversaires/.test(side2) && !/Tactique|Matchs amicaux|Staff|Convoqués|Mandat/.test(side2), "recruteur : joueurs et analyse seulement");
+  st.view.perms = ["view", "watch", "preselectView", "convocView", "tactics", "feed", "analysis", "calendar"]; st.view.role = "assistant";
+  doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
+  const side3 = doc.getElementById("ncSidebar").textContent;
+  assert(/Tactique/.test(side3) && /Convoqués/.test(side3) && !/Matchs amicaux|Staff|Mandat|Statistiques/.test(side3), "adjoint : pas d'administration (amicaux, staff, mandat)");
+  assert(win.localStorage.getItem("hm-nat-mode") === "fr-A", "mode mémorisé pour le prochain chargement");
+  doc.querySelector("#ncSidebar [data-nc-exit]").click();
   await flush(dom);
-  assert(!doc.body.classList.contains("nc-mode") && !doc.getElementById("ncSidebar") && /Mode Sélectionneur/.test(doc.getElementById("ncModeBtn").textContent), "retour au mode Club");
+  assert(!doc.body.classList.contains("nc-mode") && !doc.getElementById("ncSidebar") && !doc.getElementById("ncModeBtn"), "retour au mode Club (depuis le menu du mode)");
+  await wait(() => doc.querySelector("#ncDashSlot [data-nc-enter]"), "bouton du tableau de bord après le retour");
   dom.window.close(); server.close();
   console.log("\n🏁 national_mode_ui_test.js : mode Sélectionneur conforme.");
   process.exit(0);
