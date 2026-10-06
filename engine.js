@@ -2224,6 +2224,7 @@ function transferPlayerBetweenTeams(seller, buyer, playerId, amount, now) {
   }
   buyer.players.push(player);
   recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: seller.name, to: buyer.name, fee: amount || 0 });
+  Vestiaire.noteRoster(buyer, player, "arrival", now);
   // Recrue : connaissance tactique individuelle remise à 40 (voir
   // PLAYER_TACTICAL_KNOWLEDGE_RECRUIT).
   resetPlayerTacticalKnowledge(player);
@@ -5548,6 +5549,9 @@ function teamSeasonNo(team) {
 // pour reconstituer les feuilles de match déjà jouées.
 const DEPARTED_MATCH_LOG_MAX = 600;
 function archiveDepartedMatchLog(team, p) {
+  // Tout départ passe ici (transfert, vente, licenciement, fin de contrat) :
+  // journal du vestiaire mis à jour tout de suite (voir assets/vestiaire.js).
+  Vestiaire.noteRoster(team, p, "departure");
   if (!team || !p || !Array.isArray(p.matchLog) || !p.matchLog.length) return;
   const rows = p.matchLog
     .filter(e => e && e.competition !== "friendly" && (!e.team || e.team === team.name))
@@ -5826,11 +5830,13 @@ function rosterRankOf(players, playerId) {
 // État affiché pour Team.chemistry (voir moraleLabel plus haut, mêmes
 // seuils, même esprit : la valeur exacte reste interne, seul l'état est
 // montré au manager).
+// Recalibré le 2026-10-06 sur la plage RÉELLE 40-100 (plancher CHEMISTRY_MIN) :
+// « Vestiaire fracturé » était devenu inatteignable.
 function chemistryLabel(chemistry) {
-  if (chemistry >= 85) return "Alchimie parfaite";
-  if (chemistry >= 65) return "Bonne cohésion";
-  if (chemistry >= 45) return "Cohésion correcte";
-  if (chemistry >= 25) return "Tensions dans le groupe";
+  if (chemistry >= 88) return "Alchimie parfaite";
+  if (chemistry >= 74) return "Bonne cohésion";
+  if (chemistry >= 60) return "Cohésion correcte";
+  if (chemistry >= 48) return "Tensions dans le groupe";
   return "Vestiaire fracturé";
 }
 
@@ -6136,7 +6142,8 @@ function feedStaffPlaceholderName(level) {
 
 function feedMoodEntry(feed, week, category, value, cfg) {
   const key = `mood_${cfg.keyPrefix || category}`;
-  const zone = value < 30 ? "low" : value > 70 ? "high" : null;
+  // Seuils propres à la jauge (alchimie : plage réelle 40-100, voir CHEMISTRY_MIN).
+  const zone = value < (cfg.lowBelow ?? 30) ? "low" : value > (cfg.highAbove ?? 70) ? "high" : null;
   const existing = feed.entries.find(e => e.key === key);
   if (!zone) {
     removeByKey(feed, key);
@@ -6177,9 +6184,10 @@ function checkThresholds(feed, state) {
     href: "/supporters",
   });
   feedMoodEntry(feed, w, "club", state.chemistry, {
+    lowBelow: 50, highAbove: 85,
     low: ["Tensions dans le vestiaire", "Alchimie à {v}/100. Les résultats risquent d'en pâtir."],
     high: ["Un groupe soudé", "Alchimie à {v}/100. L'équipe joue ensemble."],
-    href: "/effectif",
+    href: "/vestiaire",
     keyPrefix: "chemistry",
   });
 }
@@ -8656,6 +8664,7 @@ class Team {
     // Jeune promu : garde ce qu'il a appris en amical, 40 ailleurs.
     player.tacticalKnowledge = copyTacticalKnowledge(player.tacticalKnowledge);
     this.players.push(player);
+    Vestiaire.noteRoster(this, player, "youth", now);
     ensureJerseyNumbers(this);
     // Palmarès du club (voir this.academyGraduates au constructeur) : cette
     // promotion EST l'évènement qui compte pour ce compteur, incrémenté
@@ -14360,6 +14369,7 @@ class League {
     if (buyer.isHuman && amount > 0) buyer.recordTransaction(`${FREE_AGENT_SIGNING_LABEL} : ${player.name}`, -amount);
     buyer.players.push(player);
     recordPlayerEvent(player, { type: "transfer", at: now != null ? now : Date.now(), season: teamSeasonNo(buyer), from: listing.formerTeamName || null, to: buyer.name, fee: amount, freeAgent: true });
+    Vestiaire.noteRoster(buyer, player, "arrival", now);
     // Historique : signature d'un agent libre (provenance « Agent libre »,
     // ancien club noté à part). `buyerRef` : club d'un autre championnat
     // (marché mondial).

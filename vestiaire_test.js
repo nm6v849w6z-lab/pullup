@@ -175,4 +175,26 @@ function team(name = "Vestiaire Test") {
   }
 })();
 
+// 9) Mouvements d'effectif immédiats (club humain) : vente forcée →
+//    départ journalisé tout de suite, pas de doublon la semaine suivante ;
+//    un club CPU n'enregistre rien.
+(function testImmediateRoster() {
+  const t = team(); t.isHuman = true;
+  t.trainWeek(1, Date.now());
+  const p = t.players.find(x => !Object.values(t.lineup.starters).includes(x.id));
+  p.forSale = true;
+  assert.ok(t.sellPlayer(p.id) !== false, "vente forcée");
+  assert.strictEqual(t.locker.log.filter(e => e.t === "departure" && e.p === p.id).length, 1, "départ journalisé tout de suite");
+  t.trainWeek(1, Date.now());
+  assert.strictEqual(t.locker.log.filter(e => e.t === "departure" && e.p === p.id).length, 1, "pas de doublon à la semaine suivante");
+  const newcomer = team("Autre").players[0];
+  t.players.push(newcomer);
+  V.noteRoster(t, newcomer, "arrival");
+  t.trainWeek(1, Date.now());
+  assert.strictEqual(t.locker.log.filter(e => e.t === "arrival" && e.p === newcomer.id).length, 1, "arrivée journalisée une seule fois");
+  const cpu = team("CPU"); cpu.isHuman = false;
+  V.noteRoster(cpu, cpu.players[0], "departure");
+  assert.strictEqual((cpu.locker.log || []).length, 0, "club CPU : rien");
+})();
+
 console.log("vestiaire_test OK");

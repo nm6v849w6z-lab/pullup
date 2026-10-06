@@ -605,6 +605,28 @@
     return { events, chemDelta };
   }
 
+  // Mouvement d'effectif IMMÉDIAT (transfert, vente, agent libre, promotion
+  // d'un jeune, licenciement) : journalisé tout de suite plutôt qu'à la
+  // semaine suivante, et reporté dans `last` pour que weeklyUpdate ne le
+  // compte pas deux fois. Clubs humains seulement. kind : "arrival" |
+  // "departure" | "youth".
+  function noteRoster(team, player, kind, now) {
+    if (!team || !player || !team.isHuman) return;
+    const l = ensure(team);
+    const id = sid(player.id);
+    if (kind === "departure") {
+      if (l.last && l.last.p) delete l.last.p[id];
+      Object.keys(l.relations).forEach(k => { if (k.split("|").includes(id)) delete l.relations[k]; });
+      pushLog(team, { t: "departure", p: player.id, n: player.name });
+      return;
+    }
+    if (l.last && l.last.p) {
+      const role = roleOf(team, player);
+      l.last.p[id] = [role === "starter" ? 2 : role === "rotation" ? 1 : 0, Math.round(num(player.form, 50)), player.transferRequestActive ? 1 : 0, isInjured(player, num(now, Date.now())) ? 1 : 0, num(player.contractUntilSeason, 0), String(player.name || "").slice(0, 40)];
+    }
+    pushLog(team, { t: kind === "youth" ? "youth" : "arrival", p: player.id, n: player.name });
+  }
+
   // Résultat d'un match officiel (Team.applyChemistryResult) : séries et
   // gros écarts seulement, le reste est déjà porté par l'alchimie.
   function onResult(team, pf, pa) {
@@ -659,7 +681,7 @@
     PLAYTIME_FORM_GAIN, PLAYTIME_FORM_CAP, PLAYTIME_MIN_SECONDS, CONTAGION_MAX, LEADER_FORM_EFFECT, LEADER_PULL_FLOOR,
     emptyLocker, sanitize, ensure, serialize, pushLog,
     buildContext, influenceOf, satisfactionOf, hierarchy, affinity, detectGroups, allPairs,
-    moodOf, stateOf, buildView, weeklyUpdate, onResult, eventText, pairKey,
+    moodOf, stateOf, buildView, weeklyUpdate, onResult, noteRoster, eventText, pairKey,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.HM_VESTIAIRE = api;
