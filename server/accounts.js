@@ -330,6 +330,8 @@ function takeOverCpuClub(league, clubName) {
   // transferts repart de zéro, et « Mon historique » commence ici.
   team.transferHistory = [];
   team.managerSince = Date.now();
+  // Mémoire historique : managers successifs du club.
+  team.managerHistory = (Array.isArray(team.managerHistory) ? team.managerHistory : []).concat([{ since: team.managerSince, until: null, pseudo: null, fromSeason: Engine.histSeasonOf ? Engine.histSeasonOf(team) : null }]).slice(-20);
   // Succès : nouveau club, compteurs à zéro.
   team.achStats = { migrated: true };
   team.achTiers = {};

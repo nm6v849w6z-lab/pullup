@@ -2002,6 +2002,19 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         });
         return;
       }
+      // Mémoire historique (assets/history.js) : journal d'un club (le sien
+      // par défaut, `club` = nom d'un autre club). L'histoire est publique.
+      if (route.pathname === "/api/history/club" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { error: ctx.error }); return; }
+        const me = ctx.league.teams[ctx.teamIndex];
+        const club = String(route.searchParams.get("club") || (me && me.name) || "").slice(0, 80);
+        if (!club) { sendJson(res, 400, { ok: false, error: "Club manquant." }); return; }
+        await store.flushHistoryQueue(multiSavePath);
+        const events = await store.loadClubHistory(club, multiSavePath);
+        sendJson(res, 200, { ok: true, club, events: (events || []).slice().reverse() });
+        return;
+      }
       // Managers connectés (barre du haut) : uniquement un nombre, aucune
       // donnée personnelle. La présence vient des requêtes authentifiées
       // (resolvePlayerContext) : un jeton non vérifié ne compte jamais.

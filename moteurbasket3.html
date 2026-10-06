@@ -7694,6 +7694,29 @@
      peu vide sous palmarès") : Palmarès, Hall of Fame et Classement mondial
      empilés à gauche, Records à droite — plus de trou sous un panneau court. */
   .hc-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px; align-items:stretch;}
+  /* Mémoire historique (2026-10-06). */
+  .hc-tabs{margin:14px 0 16px;}
+  .hc-small{font-size:12.5px; color:var(--ink-dim);}
+  .hc-tl{position:relative; padding-left:24px;} .hc-tl:before{content:""; position:absolute; left:7px; top:6px; bottom:6px; width:2px; background:var(--line);}
+  .hc-tl-season{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 4px;}
+  .hc-ev{position:relative; padding:8px 0 10px;} .hc-ev:before{content:""; position:absolute; left:-21px; top:13px; width:10px; height:10px; border-radius:50%; background:#3d4c66; box-shadow:0 0 0 3px var(--panel);}
+  .hc-ev.i4:before{background:#e8c547; width:14px; height:14px; left:-23px; top:11px;} .hc-ev.i3:before{background:var(--amber);} .hc-ev.i2:before{background:#6FB6FF;}
+  .hc-ev-t{display:flex; align-items:center; gap:8px; flex-wrap:wrap;} .hc-ev-d{font-size:12px; color:var(--ink-faint);}
+  .hc-ev-txt{margin-top:4px; font-size:14px; color:var(--ink);}
+  .hc-tag{font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:3px 7px; border-radius:5px;}
+  .hc-tag.g{background:rgba(232,197,71,.16); color:#e8c547;} .hc-tag.a{background:rgba(240,162,60,.15); color:var(--amber);} .hc-tag.b{background:rgba(111,182,255,.14); color:#6FB6FF;}
+  .hc-tag.r{background:rgba(226,105,79,.15); color:var(--danger);} .hc-tag.v{background:rgba(180,140,255,.15); color:#b48cff;}
+  .hc-leg{display:grid; grid-template-columns:46px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line);} .hc-leg:first-child{border-top:0;}
+  .hc-av{width:46px; height:46px; border-radius:50%; background:var(--panel-2); display:grid; place-items:center; font-weight:900; color:var(--ink-dim); overflow:hidden;}
+  .hc-tier{font-size:11px; font-weight:800; padding:4px 9px; border-radius:999px; white-space:nowrap;}
+  .hc-tier.t3{background:linear-gradient(90deg,#8a6a12,#e8c547); color:#1a1202;} .hc-tier.t2{background:rgba(240,162,60,.18); color:var(--amber);} .hc-tier.t1{background:rgba(111,182,255,.14); color:#6FB6FF;}
+  .hc-riv{padding:12px 0; border-top:1px solid var(--line);} .hc-riv:first-child{border-top:0;}
+  .hc-riv-top{display:flex; align-items:center; gap:10px; justify-content:space-between;}
+  .hc-riv-badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px;}
+  .hc-riv-badge.leg{background:linear-gradient(90deg,#8a6a12,#e8c547); color:#1a1202;} .hc-riv-badge.int{background:rgba(226,105,79,.16); color:var(--danger);}
+  .hc-riv-badge.forte{background:rgba(240,162,60,.16); color:var(--amber);} .hc-riv-badge.mod{background:rgba(111,182,255,.14); color:#6FB6FF;} .hc-riv-badge.faible{background:var(--panel-2); color:var(--ink-dim);}
+  .hc-gauge{height:10px; border-radius:6px; background:var(--panel-2); overflow:hidden; margin:8px 0 6px;} .hc-gauge b{display:block; height:100%; background:linear-gradient(90deg,#6FB6FF,#F5A13A,#E2694F);}
+  .hc-mgr{display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--line);} .hc-mgr:first-child{border-top:0;} .hc-mgr.is-cur b{color:var(--amber);}
   .hc-wide{grid-column:1 / -1;}
   .hc-panel{min-width:0;}
   /* Profil du manager (2026-09-30) — voir renderManagerProfile. Même
@@ -8406,6 +8429,8 @@
 <script src="assets/vestiaire.js" defer></script>
 <!-- Analyste vidéo, brouillard de guerre (partagé avec engine.js). -->
 <script src="assets/scouting-fog.js" defer></script>
+<!-- Mémoire historique des franchises (partagé avec engine.js). -->
+<script src="assets/history.js" defer></script>
 <script src="assets/vestiaire-ui.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
@@ -24625,6 +24650,10 @@ function serializeTeam(team) {
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    // Mémoire historique (assets/history.js), voir engine.js.
+    rivalryScores: team.rivalryScores && typeof team.rivalryScores === "object" ? team.rivalryScores : {},
+    franchiseBests: team.franchiseBests || null,
+    managerHistory: Array.isArray(team.managerHistory) ? team.managerHistory : [],
     // Succès du manager (voir awardSeasonHonours / MANAGER_ACHIEVEMENTS).
     achStats: team.achStats && typeof team.achStats === "object" ? team.achStats : {},
     achTiers: team.achTiers && typeof team.achTiers === "object" ? team.achTiers : {},
@@ -25198,6 +25227,9 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.rivalryScores = data.rivalryScores && typeof data.rivalryScores === "object" ? data.rivalryScores : {};
+  team.franchiseBests = data.franchiseBests && typeof data.franchiseBests === "object" ? data.franchiseBests : null;
+  team.managerHistory = Array.isArray(data.managerHistory) ? data.managerHistory : [];
   // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
   // (Liste déclarée plus bas dans le fichier : garde-fou si appelé avant.)
   // Succès (2026-10-05, voir assets/achievements.js et engine.js:achEvaluate).
@@ -56829,13 +56861,121 @@ function renderHistoireSection() {
   // du manager ont déménagé sur son profil (voir renderManagerProfile), les
   // récompenses de la saison sur la page Ligue (renderLeagueHonorsPanel), le
   // Classement mondial dans l'onglet Statistiques.
-  html += `<div class="hc-grid">`;
-  html += `<section class="lg-panel hc-panel hc-wide" id="hcPalmares"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
-  html += `<section class="lg-panel hc-panel" id="hcRecords"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
-  html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
-  html += `</div>`;
+  // Mémoire historique (maquette validée le 2026-10-06) : la page existante
+  // est complétée par des sous-onglets, même forme de menu que le Calendrier.
+  const tabs = [["chrono", "Chronologie"], ["legendes", "Légendes"], ["palmares", "Palmarès et records"], ["rivalites", "Rivalités"], ["managers", "Managers"]];
+  if (!tabs.some(t => t[0] === histoireView)) histoireView = "chrono";
+  html += `<div class="cal-toolbar hc-tabs" role="tablist" aria-label="Histoire du club">` +
+    tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${histoireView === k}" class="cal-filter${histoireView === k ? " active" : ""}" data-hc-view="${k}">${escapeHtml(l)}</button>`).join("") + `</div>`;
+  if (histoireView === "palmares") {
+    html += `<div class="hc-grid">`;
+    html += `<section class="lg-panel hc-panel hc-wide" id="hcPalmares"><div class="lg-panel-title"><h2>Palmarès</h2></div>${hcPalmaresHtml(team, idx)}</section>`;
+    html += `<section class="lg-panel hc-panel" id="hcRecords"><div class="lg-panel-title"><h2>Records du club</h2><span>Saisons archivées + saison en cours</span></div>${hcRecordsHtml(idx)}</section>`;
+    html += `<section class="lg-panel hc-panel" id="hcHallOfFame"><div class="lg-panel-title"><h2>Hall of Fame</h2></div>${hcHallOfFameHtml(team, idx)}</section>`;
+    html += `</div>`;
+  } else if (histoireView === "legendes") {
+    html += `<section class="lg-panel hc-panel" id="hcLegends"><div class="lg-panel-title"><h2>Légendes du club</h2><span>Calculées d'après leur carrière au club</span></div>${hcLegendsHtml(team, idx)}</section>`;
+  } else if (histoireView === "rivalites") {
+    html += `<section class="lg-panel hc-panel" id="hcRivalries"><div class="lg-panel-title"><h2>Rivalités</h2><span>Nées des matchs disputés</span></div>${hcRivalriesHtml(team)}</section>`;
+  } else if (histoireView === "managers") {
+    html += `<section class="lg-panel hc-panel" id="hcManagers"><div class="lg-panel-title"><h2>Managers du club</h2></div>${hcManagersHtml(team)}</section>`;
+  } else {
+    html += `<section class="lg-panel hc-panel" id="hcTimeline"><div class="lg-panel-title"><h2>Moments historiques</h2><span>Chaque moment vient d'un fait réel du jeu</span></div><div id="hcTimelineBody">${hcTimelineHtml(histoireEvents)}</div></section>`;
+    loadHistoireEvents(team.name);
+  }
   holder.innerHTML = html;
 }
+
+// ---------------------------------------------------------------------
+// Mémoire historique (assets/history.js, maquette validée le 2026-10-06).
+// ---------------------------------------------------------------------
+let histoireView = "chrono";
+let histoireEvents = null; // null = en chargement
+let histoireEventsClub = null;
+function historyApi() { return (typeof window !== "undefined" && window.HM_HISTORY) || null; }
+const HC_TYPE_STYLE = {
+  FIRST_TITLE: "g", TITLE: "g", FINAL_LOSS: "r", PLAYOFF_UPSET: "a", BUZZER_BEATER: "a", RECORD: "v", LEGEND_CREATED: "g",
+  LEGEND_RETIREMENT: "v", MAJOR_TRANSFER: "b", CONTROVERSIAL_TRANSFER: "r", RIVALRY_CREATED: "r", RIVALRY_MATCH: "r",
+  COACH_LEGACY: "b", YOUTH_GRADUATE: "b", COMEBACK: "b", HISTORICAL_GAME: "a",
+};
+async function loadHistoireEvents(clubName) {
+  if (histoireEventsClub === clubName && histoireEvents) return;
+  histoireEventsClub = clubName;
+  try {
+    const res = await fetchApi(`/api/history/club?club=${encodeURIComponent(clubName)}`);
+    const data = res.ok ? await res.json() : null;
+    histoireEvents = data && Array.isArray(data.events) ? data.events : [];
+  } catch (e) { histoireEvents = []; }
+  const body = document.getElementById("hcTimelineBody");
+  if (body) body.innerHTML = hcTimelineHtml(histoireEvents);
+}
+function hcTimelineHtml(events) {
+  if (events === null) return `<p class="training-empty">Chargement…</p>`;
+  const H = historyApi();
+  if (!events.length) return `<p class="training-empty">Aucun moment historique pour l'instant. L'histoire du club s'écrit match après match : titres, finales, buzzer-beaters, remontées, records, légendes, transferts marquants.</p>`;
+  let html = `<div class="hc-tl">`, lastSeason = null;
+  events.forEach(ev => {
+    if (ev.season && ev.season !== lastSeason) { html += `<div class="hc-tl-season">Saison ${ev.season}</div>`; lastSeason = ev.season; }
+    const label = (H && H.TYPES[ev.event_type]) || ev.event_type;
+    const d = ev.date ? new Date(ev.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+    html += `<div class="hc-ev i${ev.importance || 1}"><div class="hc-ev-t"><span class="hc-tag ${HC_TYPE_STYLE[ev.event_type] || "b"}">${escapeHtml(label)}</span><span class="hc-ev-d">${escapeHtml(d)}</span></div>` +
+      `<div class="hc-ev-txt">${escapeHtml(ev.description || "")}</div></div>`;
+  });
+  return html + `</div>`;
+}
+function hcLegendsHtml(team, idx) {
+  const H = historyApi();
+  if (!H) return "";
+  const key = String(team.name || "").trim().toLowerCase();
+  const byId = new Map((team.players || []).map(p => [p.id, p]));
+  const list = liveAllTimePlayers(league, idx).map(e => {
+    const p = byId.get(e.id);
+    const prev = (team.allTimePlayers || {})[e.id] || {};
+    return { ...e, titles: prev.titles || 0, awards: p ? (p.awards || []).filter(a => a && a.teamName === team.name).length : (prev.awards || 0), homegrown: p ? p.homegrownClub === key : !!prev.homegrown, active: !!p };
+  }).map(e => ({ ...e, tier: H.legendTier(e) })).filter(e => e.tier).sort((a, b) => b.tier.score - a.tier.score);
+  if (!list.length) return `<p class="training-empty">Pas encore de légende : un joueur le devient par sa carrière au club (matchs, points, saisons, titres, distinctions, formation au club).</p>`;
+  const tierCls = r => r >= 3 ? "t3" : r === 2 ? "t2" : "t1";
+  return `<div class="hc-legends">` + list.map(e => {
+    const seasons = Array.isArray(e.seasons) ? e.seasons : [];
+    const span = seasons.length ? (seasons.length > 1 ? `saisons ${Math.min(...seasons)} à ${Math.max(...seasons)}` : `saison ${seasons[0]}`) : "";
+    const ini = String(e.name || "?").split(" ").map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+    const name = e.active ? playerLinkHtml(idx, e.id, e.name) : escapeHtml(e.name || "");
+    const pl = byId.get(e.id);
+    return `<div class="hc-leg"><div class="hc-av">${pl ? playerAvatarHtml(pl, team, 46) : escapeHtml(ini)}</div><div><b>${name}</b> <span class="hc-small">${escapeHtml(POS_SHORT[e.position] || e.position || "")} · ${escapeHtml(span)}${e.homegrown ? " · formé au club" : ""}${e.active ? "" : " · a quitté le club"}</span>` +
+      `<div class="hc-small">${e.games} matchs · ${e.pts} pts${e.titles ? ` · ${e.titles} titre${e.titles > 1 ? "s" : ""}` : ""}${e.awards ? ` · ${e.awards} distinction${e.awards > 1 ? "s" : ""}` : ""}</div></div>` +
+      `<span class="hc-tier ${tierCls(e.tier.rank)}">${escapeHtml(e.tier.label)}</span></div>`;
+  }).join("") + `</div>`;
+}
+function hcRivalriesHtml(team) {
+  const H = historyApi();
+  if (!H) return "";
+  const now = Date.now();
+  const list = Object.values(team.rivalryScores || {}).map(r => H.rivalryOf(team, r.name, now)).filter(r => r && r.s >= 1).sort((a, b) => b.s - a.s).slice(0, 12);
+  if (!list.length) return `<p class="training-empty">Aucune rivalité pour l'instant : elles naissent des matchs disputés (finales, séries de play-offs, buzzer-beaters, remontées, transferts chez l'adversaire).</p>`;
+  const cls = s => s >= 85 ? "leg" : s >= 65 ? "int" : s >= 40 ? "forte" : s >= 20 ? "mod" : "faible";
+  return list.map(r => {
+    const idx = league.teams.findIndex(t => t && t.name === r.name);
+    const name = idx >= 0 ? teamLinkHtml(idx, r.name) : escapeHtml(r.name);
+    const moments = (r.moments || []).slice(0, 2).map(m => escapeHtml(m.text)).join(" · ");
+    return `<div class="hc-riv"><div class="hc-riv-top"><b>${name}</b><span class="hc-riv-badge ${cls(r.s)}">${escapeHtml(r.label)} · ${r.s}</span></div>` +
+      `<div class="hc-gauge"><b style="width:${Math.max(2, r.s)}%"></b></div>` +
+      `<div class="hc-small">${r.w} V – ${r.l} D toutes compétitions${moments ? " · " + moments : ""}</div></div>`;
+  }).join("") + `<p class="hc-small" style="margin-top:8px">Échelle : Faible &lt; 20 · Modérée 20-39 · Forte 40-64 · Intense 65-84 · Légendaire 85+. Une rivalité s'apaise sans nouvel épisode.</p>`;
+}
+function hcManagersHtml(team) {
+  const rows = (team.managerHistory || []).slice().reverse();
+  const fmt = t => t ? new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const cur = team.isHuman ? `<div class="hc-mgr is-cur"><b>${escapeHtml(team.managerPseudo || "Vous")}</b><span class="hc-small">En poste${team.managerSince ? " depuis le " + fmt(team.managerSince) : ""}</span></div>` : "";
+  const past = rows.filter(m => m.until).map(m => `<div class="hc-mgr"><b>${escapeHtml(m.pseudo || "Manager")}</b><span class="hc-small">${fmt(m.since)} → ${fmt(m.until)}${m.fromSeason && m.toSeason ? ` · saisons ${m.fromSeason} à ${m.toSeason}` : ""}</span></div>`).join("");
+  if (!cur && !past) return `<p class="training-empty">Aucun manager enregistré.</p>`;
+  return cur + past + `<p class="hc-small" style="margin-top:8px">Les managers successifs sont enregistrés depuis le 6 octobre 2026.</p>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-hc-view]");
+  if (!b) return;
+  histoireView = b.dataset.hcView;
+  renderHistoireSection();
+});
 
 // Parcours en championnat (retour utilisateur, 2026-09-26 : "garde
 // uniquement championnat et coupe (championnat tu mettras relégation,

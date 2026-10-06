@@ -311,6 +311,16 @@ function buildPrematchInput(league, myTeamIdx, round, kickoffAt) {
     const derby = typeof league.isDerbyMatch === "function" && round < league.totalRounds && league.isDerbyMatch(fx.home, fx.away);
     if (r || derby) rivalry = { homeWins: r ? r.w : 0, awayWins: r ? r.l : 0, games: r ? r.w + r.l : 0, derby };
   }
+  // Mémoire historique (assets/history.js) : phrases tirées de faits
+  // enregistrés seulement (rivalité, finales passées, retour d'un ancien).
+  let history = [];
+  if (fx) {
+    try {
+      const History = require("../assets/history.js");
+      const me = league.teams[myTeamIdx], opp = league.teams[fx.home === myTeamIdx ? fx.away : fx.home];
+      history = History.prematchLines(me, opp, kickoffAt || Date.now()).slice(0, 3);
+    } catch (e) { history = []; }
+  }
 
   return {
     day: round + 1, leagueId: "main", myTeamId: String(myTeamIdx),
@@ -318,7 +328,7 @@ function buildPrematchInput(league, myTeamIdx, round, kickoffAt) {
     players: playersMapFor(league, fx ? [fx.home, fx.away] : []),
     standings: standingsBefore(league),
     fixtures: fixtures.map(f => ({ id: matchId(round, f.home, f.away), homeId: String(f.home), awayId: String(f.away) })),
-    form, headToHead, lineups, absents, kickoffAt, rivalry,
+    form, headToHead, lineups, absents, kickoffAt, rivalry, history,
   };
 }
 

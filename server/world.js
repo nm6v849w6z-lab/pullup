@@ -481,6 +481,22 @@ function releaseClubToCpu(world, league, idx, now, reason) {
   if (!team || !team.isHuman) return null;
   const token = team.managerLinkToken;
   if (token && world.tokens) delete world.tokens[token];
+  // Mémoire historique : fin du mandat du manager (et d'une ère s'il est
+  // resté au moins une saison complète).
+  try {
+    const History = require("../assets/history.js");
+    const season = (Array.isArray(team.seasonHistory) ? team.seasonHistory.length : 0) + 1;
+    const list = Array.isArray(team.managerHistory) ? team.managerHistory : [];
+    let cur = list.length && !list[list.length - 1].until ? list[list.length - 1] : null;
+    if (!cur) { cur = { since: team.managerSince || null, fromSeason: null }; list.push(cur); }
+    Object.assign(cur, { until: now, pseudo: team.managerPseudo || cur.pseudo || null, toSeason: season, reason: reason || null });
+    team.managerHistory = list.slice(-20);
+    const seasons = cur.fromSeason ? season - cur.fromSeason : 0;
+    if (seasons >= 1) {
+      History.push({ type: "COACH_LEGACY", importance: seasons >= 3 ? 3 : 2, season, at: now, teams: [team.name], coaches: [cur.pseudo || "manager"],
+        description: `Fin de l'ère ${cur.pseudo || "de son manager"} à ${team.name} après ${seasons} saison${seasons > 1 ? "s" : ""}.`, tags: ["manager"] });
+    }
+  } catch (e) { /* confort */ }
   team.isHuman = false;
   team.isAdmin = false;
   team.managerLinkToken = null;

@@ -132,6 +132,10 @@ function playWholeSeason(league, now) {
   check(!!tab, "onglet « Histoire du club » présent");
   tab.click();
   check(!doc.getElementById("histoireSection").classList.contains("hidden"), "page Histoire affichée");
+  // Mémoire historique (2026-10-06) : sous-onglets, Chronologie par défaut.
+  const sub = [...doc.querySelectorAll("#histoireContent [data-hc-view]")].map(b => b.textContent.trim());
+  check(sub.join("|") === "Chronologie|Légendes|Palmarès et records|Rivalités|Managers", `sous-onglets de l'histoire (${sub.join("|")})`);
+  doc.querySelector('#histoireContent [data-hc-view="palmares"]').click();
   const txt = doc.getElementById("histoireContent").textContent;
   check(/Saison 1/.test(txt) && /Saison 2/.test(txt) && /En cours/.test(txt), "palmarès : saison 1 archivée + saison 2 en cours");
   check(doc.querySelectorAll(".hc-record").length >= 4, "records affichés");

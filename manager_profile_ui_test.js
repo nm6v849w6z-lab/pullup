@@ -112,7 +112,7 @@ async function waitFor(fn, label, tries = 200) {
     check(!doc.getElementById("teamDetailName").querySelector("[data-manager-profile]") && !doc.getElementById("managerProfileCard"), "club IA : aucun nom de manager");
 
     // --- Histoire du club : plus de succès, plus de colonne à part.
-    win.eval("TAB_HANDLERS.histoire()");
+    win.eval("histoireView = 'palmares'; TAB_HANDLERS.histoire()");
     const hc = doc.getElementById("histoireContent");
     check(!doc.getElementById("hcAchievements") && !/Succès du manager/.test(hc.textContent), "Histoire du club : succès du manager retirés");
     check(!hc.querySelector(".hc-col") && hc.querySelector(".hc-grid > .hc-wide#hcPalmares") && hc.querySelectorAll(".hc-grid > section").length === 3, "Histoire du club : Palmarès pleine largeur, Records et Hall of Fame côte à côte");

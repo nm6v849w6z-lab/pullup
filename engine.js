@@ -16,6 +16,9 @@
   // Analyste vidéo, brouillard de guerre (2026-10-06) : rapports figés en
   // intervalles, voir assets/scouting-fog.js (window.HM_FOG côté navigateur).
   const Fog = require("./assets/scouting-fog.js");
+  // Mémoire historique des franchises (2026-10-06) : journal d'événements
+  // rangé à part (server/store.js), rivalités, légendes, voir assets/history.js.
+  const History = require("./assets/history.js");
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
@@ -5762,11 +5765,62 @@ function recordTeamTransfer(team, e) {
   };
   team.transferHistory.unshift(entry);
   if (team.transferHistory.length > TEAM_TRANSFER_HISTORY_MAX) team.transferHistory.length = TEAM_TRANSFER_HISTORY_MAX;
+  if (!String(e.id).startsWith("seed:")) { try { historyAfterTransfer(team, entry, p); } catch (err) { /* confort */ } }
   // Succès « Premier recrutement » : signature décidée par le manager
   // (enchère gagnée ou agent libre), jamais la reprise des anciens transferts.
   if (entry.human && (entry.kind === "buy" || entry.kind === "free_in") && !String(e.id).startsWith("seed:")) achAdd(team, "signings", 1, entry.at);
   return entry;
 }
+// Mémoire historique (assets/history.js) : carrière d'un joueur AU club
+// (saisons archivées + saison en cours), pour son palier de légende.
+function histCareerAt(team, p) {
+  const prev = (team.allTimePlayers || {})[p.id];
+  const e = prev ? { ...prev, seasons: (prev.seasons || []).slice() } : { id: p.id, name: p.name, position: p.position, games: 0, pts: 0, reb: 0, ast: 0, seasons: [] };
+  const log = (p.matchLog || []).filter(m => m && m.competition !== "friendly" && m.competition !== "lp");
+  if (log.length) {
+    e.games += log.length; e.pts += log.reduce((a, m) => a + (m.pts || 0), 0);
+    const cur = histSeasonOf(team);
+    if (!e.seasons.includes(cur)) e.seasons.push(cur);
+  }
+  e.homegrown = !!p.homegrownClub && p.homegrownClub === String(team.name || "").trim().toLowerCase();
+  e.awards = (p.awards || []).filter(a => a && a.teamName === team.name).length;
+  return e;
+}
+function historyAfterTransfer(team, entry, p) {
+  const now = entry.at, season = histSeasonOf(team);
+  const fromName = entry.from && entry.from.name, toName = entry.to && entry.to.name;
+  if (entry.kind === "retire") {
+    const t = History.legendTier(histCareerAt(team, p));
+    if (!t || t.rank < 2) return;
+    const ev = History.push({ type: "LEGEND_RETIREMENT", importance: t.rank >= 3 ? 4 : 3, season, at: now, teams: [team.name], players: [p.id],
+      description: `${p.name}, ${t.label.toLowerCase()} du club, prend sa retraite.`, tags: ["retraite", t.label] });
+    histFeed(team, ev, "Une page se tourne", now);
+    return;
+  }
+  if (entry.kind === "sell" && toName) {
+    const t = History.legendTier(histCareerAt(team, p));
+    const rival = History.rivalryOf(team, toName, now);
+    const toRival = rival && rival.s >= History.CFG.rivalryCreatedAt;
+    if (t && t.rank >= 2 && toRival) {
+      const ev = History.push({ type: "CONTROVERSIAL_TRANSFER", importance: 3, season, at: now, teams: [team.name, toName], players: [p.id], competition: "transfer",
+        description: `${p.name}, ${t.label.toLowerCase()} de ${team.name}, rejoint le rival ${toName}` + (entry.fee ? ` (${entry.fee.toLocaleString("fr-FR")} $).` : "."), rivalryImpact: 8, tags: ["trahison"] });
+      histFeed(team, ev, "Départ chez le rival", now);
+    } else if ((t && t.rank >= 2) || entry.fee >= History.CFG.majorTransferFee) {
+      History.push({ type: "MAJOR_TRANSFER", importance: t && t.rank >= 2 ? 3 : 2, season, at: now, teams: [team.name, toName], players: [p.id], competition: "transfer",
+        description: `${p.name}${t && t.rank >= 2 ? `, ${t.label.toLowerCase()} de ${team.name},` : ""} part de ${team.name} pour ${toName}` + (entry.fee ? ` (${entry.fee.toLocaleString("fr-FR")} $).` : "."), statistics: { fee: entry.fee }, tags: ["transfert"] });
+    }
+    return;
+  }
+  if ((entry.kind === "buy" || entry.kind === "free_in") && team.allTimePlayers && team.allTimePlayers[p.id]) {
+    // Retour d'un ancien joueur marquant du club.
+    const t = History.legendTier({ ...team.allTimePlayers[p.id], homegrown: !!p.homegrownClub && p.homegrownClub === String(team.name || "").trim().toLowerCase() });
+    if (!t) return;
+    const ev = History.push({ type: "MAJOR_TRANSFER", importance: 3, season, at: now, teams: [team.name].concat(fromName ? [fromName] : []), players: [p.id], competition: "transfer",
+      description: `Retour au club de ${p.name} (${t.label.toLowerCase()} de ${team.name}).`, tags: ["retour"] });
+    histFeed(team, ev, "Le retour", now);
+  }
+}
+
 // Bilan d'une liste d'entrées : dépenses (arrivées payantes et primes de
 // signature), recettes (départs payants), solde = recettes − dépenses.
 function transferHistoryTotals(entries) {
@@ -8668,6 +8722,7 @@ class Team {
     // Club formateur (apparence personnalisable, voir canCustomizePlayerLook).
     player.homegrownClub = String(this.name || "").trim().toLowerCase();
     recordPlayerEvent(player, { type: "promotion", at: Date.now(), season: teamSeasonNo(this), to: this.name });
+    try { History.push({ type: "YOUTH_GRADUATE", importance: 1, season: histSeasonOf(this), at: Date.now(), teams: [this.name], players: [player.id], description: `${player.name} (${player.age} ans, ${player.position}) est promu de l'académie en équipe première.`, tags: ["formé au club"] }); } catch (e) { /* confort */ }
     // Jeune promu : garde ce qu'il a appris en amical, 40 ailleurs.
     player.tacticalKnowledge = copyTacticalKnowledge(player.tacticalKnowledge);
     this.players.push(player);
@@ -11331,7 +11386,27 @@ function archiveSeasonForTeam(league, teamIdx, now = Date.now()) {
   const summary = seasonSummaryForTeam(league, teamIdx, now);
   team.seasonHistory = [summary, ...(team.seasonHistory || [])].slice(0, CLUB_HISTORY_MAX_SEASONS);
   team.clubRecords = mergeClubRecords(team.clubRecords, seasonRecordCandidatesForTeam(league, teamIdx, summary.seasonNo));
+  const tiersBefore = {};
+  Object.values(team.allTimePlayers || {}).forEach(e => { const t = History.legendTier(e); tiersBefore[e.id] = t ? t.rank : 0; });
   team.allTimePlayers = mergeAllTimePlayers(team.allTimePlayers, seasonPlayerTotalsForTeam(team), summary.seasonNo);
+  // Mémoire historique : titres et distinctions comptés pour l'effectif de
+  // la saison, puis les joueurs qui changent de palier de légende.
+  try {
+    const won = (summary.champion ? 1 : 0) + (summary.cupWinner ? 1 : 0);
+    (team.players || []).forEach(p => {
+      const e = team.allTimePlayers[p.id];
+      if (!e) return;
+      if (won && e.seasons.includes(summary.seasonNo)) e.titles = (e.titles || 0) + won;
+      e.awards = (p.awards || []).filter(a => a && a.teamName === team.name).length;
+      e.homegrown = !!p.homegrownClub && p.homegrownClub === String(team.name || "").trim().toLowerCase();
+      const t = History.legendTier(e);
+      if (t && t.rank > (tiersBefore[p.id] || 0)) {
+        const ev = History.push({ type: "LEGEND_CREATED", importance: t.rank + 1, season: summary.seasonNo, at: now, teams: [team.name], players: [p.id],
+          description: `${p.name} devient ${t.label.toLowerCase() === "légende" ? "une légende" : t.label.toLowerCase()} du club (${e.games} matchs, ${e.pts} points, ${e.seasons.length} saison${e.seasons.length > 1 ? "s" : ""}).`, tags: [t.label] });
+        if (t.rank >= 2) histFeed(team, ev, t.rank >= 3 ? "Une nouvelle légende" : "Un joueur emblématique", now);
+      }
+    });
+  } catch (e) { /* confort */ }
   team.lastArchivedSeasonId = seasonId;
   return true;
 }
@@ -12902,7 +12977,92 @@ function recordHumanRivalry(home, away, competition, now, quarterScores) {
   away.managerRatedGames = (away.managerRatedGames || 0) + 1;
 }
 
+// ---------------------------------------------------------------------
+// MÉMOIRE HISTORIQUE (2026-10-06, assets/history.js). Rien n'est inventé :
+// chaque événement vient d'un fait du match ou de la saison. Numéro de
+// saison = celui de la page « Histoire du club » (saisons archivées + 1).
+// ---------------------------------------------------------------------
+function histSeasonOf(team) { return (team && Array.isArray(team.seasonHistory) ? team.seasonHistory.length : 0) + 1; }
+function histFeed(team, ev, title, now) {
+  if (!team || !team.isHuman || !team.feed || !ev) return;
+  try {
+    pushEntry(team.feed, { key: `hist_${ev.event_id}`, category: "club", week: team.week, createdAt: now, title, text: ev.description, action: { label: "Histoire du club", href: "/histoire" } });
+  } catch (e) { /* confort */ }
+}
+const HIST_RECORD_KEYS = [["pts", "points", 25, "playerPoints"], ["reb", "rebonds", 12, "playerRebounds"], ["ast", "passes décisives", 10, "playerAssists"]];
+// Meilleures performances individuelles du club (records de franchise) :
+// initialisées une fois, sans événement, depuis les records archivés et la
+// saison en cours ; ensuite chaque nouveau record devient un événement.
+function histFranchiseBests(team) {
+  if (team.franchiseBests && typeof team.franchiseBests === "object") return team.franchiseBests;
+  const rec = team.clubRecords || {};
+  const b = {};
+  HIST_RECORD_KEYS.forEach(([k, , , rk]) => { b[k] = { value: (rec[rk] && rec[rk].value) || 0, name: null }; });
+  (team.players || []).forEach(p => (p.matchLog || []).forEach(m => {
+    if (!m || m.competition === "friendly" || m.competition === "lp") return;
+    HIST_RECORD_KEYS.forEach(([k]) => { if ((m[k] || 0) > b[k].value) b[k] = { value: m[k], name: p.name }; });
+  }));
+  team.franchiseBests = b;
+  return b;
+}
+function histRecords(team, oppName, competition, now) {
+  // Un club sans saison archivée n'a pas encore d'histoire à battre.
+  if (!team || !team.isHuman || !(team.seasonHistory || []).length) return;
+  const fresh = !team.franchiseBests;
+  const b = histFranchiseBests(team);
+  if (fresh) return;
+  (team.players || []).forEach(p => {
+    if (!(p.secondsPlayed > 0) || !p.stats) return;
+    HIST_RECORD_KEYS.forEach(([k, label, min]) => {
+      const v = p.stats[k] || 0;
+      if (v < min || v <= b[k].value) return;
+      const old = b[k];
+      b[k] = { value: v, name: p.name, playerId: p.id, season: histSeasonOf(team), at: now };
+      const ev = History.push({
+        type: "RECORD", importance: 3, season: histSeasonOf(team), at: now, teams: [team.name], players: [p.id], competition,
+        description: `Nouveau record de franchise : ${p.name}, ${v} ${label} contre ${oppName}` + (old.value ? ` (ancien record : ${old.value}${old.name ? ", " + old.name : ""})` : "") + ".",
+        statistics: { key: k, value: v, previous: old.value || 0 }, records: [k], tags: ["record", p.name],
+      });
+      histFeed(team, ev, "NOUVEAU RECORD DE FRANCHISE", now);
+    });
+  });
+}
+function historyAfterMatch(home, away, competition, now, quarterScores, seed) {
+  if (!home || !away || competition === "friendly" || competition === "lp") return;
+  const drama = History.takeDrama(seed);
+  const sum = arr => Array.isArray(arr) ? arr.reduce((a, b) => a + (b || 0), 0) : null;
+  const qs = quarterScores || {};
+  const sh = sum(qs.home), sa = sum(qs.away);
+  if (sh == null || sa == null || sh === sa) return;
+  const winner = sh > sa ? home : away, loser = sh > sa ? away : home;
+  const season = histSeasonOf(home.isHuman ? home : away.isHuman ? away : home);
+  const score = `${home.name} ${sh}-${sa} ${away.name}`;
+  const base = { season, at: now, teams: [home.name, away.name], competition, statistics: { home: home.name, away: away.name, scoreHome: sh, scoreAway: sa } };
+  let pts = competition === "cup" ? 3 : 1;
+  if (drama) {
+    if (drama.buzzer) {
+      pts += 5;
+      const who = drama.buzzer.player || winner.name;
+      const ev = History.push({ ...base, type: "BUZZER_BEATER", importance: 3, players: [drama.buzzer.playerId], description: `Buzzer-beater : ${who} offre la victoire à ${winner.name} face à ${loser.name} (${score}).`, tags: ["buzzer"] });
+      histFeed(winner, ev, "Victoire au buzzer", now); histFeed(loser, ev, "Défaite au buzzer", now);
+    }
+    if (drama.maxDeficit >= History.CFG.comebackMin) {
+      pts += 3;
+      const ev = History.push({ ...base, type: "COMEBACK", importance: drama.maxDeficit >= 20 ? 3 : 2, description: `${winner.name} renverse un retard de ${drama.maxDeficit} points face à ${loser.name} (${score}).`, tags: ["remontée"] });
+      histFeed(winner, ev, "Remontée historique", now);
+    }
+    if (drama.overtimes >= 2) {
+      pts += 2;
+      History.push({ ...base, type: "HISTORICAL_GAME", importance: 2, description: `${drama.overtimes} prolongations entre ${home.name} et ${away.name} (${score}).`, tags: ["prolongations"] });
+    }
+  }
+  History.bumpRivalry(home, away, pts, now, season, null, sh > sa ? "a" : "b");
+  histRecords(home, away.name, competition, now);
+  histRecords(away, home.name, competition, now);
+}
+
 function recordMatchStatsAndAwardMvp(home, away, round, competition, now = Date.now(), quarterScores = null, tacticsUsed = null, seed = null) {
+  try { historyAfterMatch(home, away, competition, now, quarterScores, seed); } catch (e) { /* l'histoire ne bloque jamais un match */ }
   recordHumanRivalry(home, away, competition, now, quarterScores);
   recordOrdersHistory(home, away, true, round, competition, now, quarterScores);
   recordOrdersHistory(away, home, false, round, competition, now, quarterScores);
@@ -12972,6 +13132,9 @@ function simulateOrForfeit(teamHome, teamAway, now = Date.now()) {
     // AndAwardMvp -> matchLog -> boxscoreRowsFromMatchLog côté client)
     // n'ait plus jamais besoin de connaître A/B, seulement home/away.
     const quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
+    // Mémoire historique : buzzer-beater, remontée, prolongations, lus dans
+    // le fil du match (A = domicile) et retrouvés par la graine.
+    try { History.rememberDrama(result.seed, History.dramaFromEvents(result.events, result.finalScore.A, result.finalScore.B)); } catch (e) { /* confort */ }
     return { scoreHome: result.finalScore.A, scoreAway: result.finalScore.B, forfeit: null, quarterScores, tacticsUsed, seed: result.seed };
   }
   // Forfait : aucun quart-temps réellement joué, voir recordMatchStatsForTeam
@@ -13624,6 +13787,17 @@ class League {
     const winners = round.matches.map(m => m.winner);
     if (round.name === CUP_STAGE_NAMES[CUP_STAGE_NAMES.length - 1]) {
       this.cup.champion = winners[0];
+      // Mémoire historique : finale de Coupe (rivalité, finale perdue).
+      try {
+        const m = round.matches[0];
+        const w = this.teams[winners[0]], l = m && this.teams[m.home === winners[0] ? m.away : m.home];
+        if (w && l) {
+          const season = histSeasonOf(w.isHuman ? w : l.isHuman ? l : w);
+          History.bumpRivalry(w, l, 10, now, season, { type: "FINAL", text: `${w.name} a battu ${l.name} en finale de la Coupe, saison ${season}.` });
+          const ev = History.push({ type: "FINAL_LOSS", importance: 3, season, at: now, teams: [l.name, w.name], competition: "cup", description: `Finale de la Coupe perdue face à ${w.name}.`, tags: ["finale"] });
+          histFeed(l, ev, "Finale perdue", now);
+        }
+      } catch (e) { /* confort */ }
       this.recordTrophy(winners[0], "cup", now);
     } else {
       this.cup.rounds.push(buildNextCupRound(round, winners));
@@ -13649,7 +13823,16 @@ class League {
       ? `Vainqueur de la Coupe (${info.name})`
       : `Champion (${info.name})`;
     team.trophies = team.trophies || [];
+    const firstOfKind = !team.trophies.some(t => t.type === type);
     team.trophies.unshift({ at: now, type, divisionLevel: this.divisionLevel || null, label, seasonId: this.seasonId || null });
+    try {
+      const ev = History.push({
+        type: firstOfKind ? "FIRST_TITLE" : "TITLE", importance: firstOfKind || type === "championship" ? 4 : 3,
+        season: histSeasonOf(team), at: now, teams: [team.name], competition: type,
+        description: firstOfKind ? `Premier titre de l'histoire du club : ${label}.` : `${label}.`, tags: ["titre"],
+      });
+      histFeed(team, ev, firstOfKind ? "Premier titre de l'histoire du club" : "Nouveau titre", now);
+    } catch (e) { /* confort */ }
     // Succès « Coupe en poche » (le titre de champion est compté en fin de
     // saison, avec la série « Dynastie », voir achSeasonEnd).
     if (type === "cup") achAddOnce(team, "cups", `cup:${this.leagueId || "lg"}:${this.seasonId || now}`, now);
@@ -13745,6 +13928,31 @@ class League {
   // Voir server/liveMatch.js:finalizePlayoffRound (chemin normal, un match à
   // la fois, en direct) et League.runPlayoffsInstantly (tests/repli) pour
   // les deux seuls appelants.
+  // Mémoire historique (assets/history.js) : série de play-offs décidée —
+  // rivalité, exploit d'une tête de série plus faible, finale perdue.
+  _historySeries(series, seriesId, now) {
+    const po = this.playoffs;
+    const w = this.teams[series.winner], loserIdx = series.winner === series.idxA ? series.idxB : series.idxA, l = this.teams[loserIdx];
+    if (!w || !l) return;
+    const season = histSeasonOf(w.isHuman ? w : l.isHuman ? l : w);
+    const seedW = po.seeds.indexOf(series.winner) + 1, seedL = po.seeds.indexOf(loserIdx) + 1;
+    const final = seriesId === "final";
+    const res = `${series.winsA === 2 ? series.winsA : series.winsB}-${series.winsA === 2 ? series.winsB : series.winsA}`;
+    History.bumpRivalry(w, l, final ? 12 : 8, now, season, {
+      type: final ? "FINAL" : "SERIES",
+      text: final ? `${w.name} a battu ${l.name} en finale des play-offs (${res}), saison ${season}.` : `${w.name} a éliminé ${l.name} en demi-finale des play-offs (${res}), saison ${season}.`,
+    });
+    if (seedW > seedL && seedL > 0) {
+      History.push({ type: "PLAYOFF_UPSET", importance: final ? 3 : 2, season, at: now, teams: [w.name, l.name], competition: "playoffs",
+        description: `Exploit en play-offs : ${w.name} (${seedW}e) élimine ${l.name} (${seedL}e) ${res}${final ? " en finale" : ""}.`, statistics: { seedWinner: seedW, seedLoser: seedL }, tags: ["exploit"] });
+    }
+    if (final) {
+      const ev = History.push({ type: "FINAL_LOSS", importance: 3, season, at: now, teams: [l.name, w.name], competition: "playoffs",
+        description: `Finale des play-offs perdue face à ${w.name} (${res}).`, tags: ["finale"] });
+      histFeed(l, ev, "Finale perdue", now);
+    }
+  }
+
   recordPlayoffGameResult(seriesId, home, away, scoreHome, scoreAway, now = Date.now()) {
     const po = this.playoffs;
     if (!po) return;
@@ -13759,6 +13967,7 @@ class League {
     if (series.winsA < 2 && series.winsB < 2) return; // série pas encore décidée
     series.resolved = true;
     series.winner = series.winsA === 2 ? series.idxA : series.idxB;
+    try { this._historySeries(series, seriesId, now); } catch (e) { /* confort */ }
     if (seriesId === "final") {
       po.champion = series.winner;
       this.recordTrophy(series.winner, "championship", now);
@@ -17143,6 +17352,10 @@ function serializeTeam(team) {
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
+    // Mémoire historique (assets/history.js).
+    rivalryScores: team.rivalryScores && typeof team.rivalryScores === "object" ? team.rivalryScores : {},
+    franchiseBests: team.franchiseBests || null,
+    managerHistory: Array.isArray(team.managerHistory) ? team.managerHistory : [],
     // Succès du manager (voir achEvaluate, assets/achievements.js) :
     // compteurs, paliers obtenus, journal des déblocages, dernier vu.
     achStats: team.achStats && typeof team.achStats === "object" ? team.achStats : {},
@@ -17800,6 +18013,9 @@ function teamFromSave(data) {
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
+  team.rivalryScores = data.rivalryScores && typeof data.rivalryScores === "object" ? data.rivalryScores : {};
+  team.franchiseBests = data.franchiseBests && typeof data.franchiseBests === "object" ? data.franchiseBests : null;
+  team.managerHistory = Array.isArray(data.managerHistory) ? data.managerHistory : [];
   // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
   // Succès (2026-10-05) : l'ancien `achievements` n'est plus lu (achMigrateTeam
   // reconstruit les compteurs depuis l'histoire du club, voir leagueFromSave).
@@ -20231,7 +20447,7 @@ return {
   trainingEfficiencyFor, slotTrainingWeightsFor, TRAINING_STALL_WEEKS, trainingAdviceFor, PHYSICAL_DAY_FACTOR, applyPhysicalDayTo,
   TACTIC_DAILY_GAIN_CURVE, tacticDailyGainForLevel, TACTIC_TIERS, tacticTierFor, COLLECTIVE_DAY_OPTIONS, TRAINING_PLAN_WEEKS_AHEAD, PARIS_DAY_MS, parisWeekStartDayIndex,
   LEGACY_TRAINING_ROOM_DIVISOR, migrateTrainingSlots, serializeTrainingV2State, restoreTrainingV2State, CPU_IMPLICIT_COACH_LEVEL, CPU_BACKGROUND_TRAINING_WEIGHT, cpuTrainingSlots,
-  ANALYST_REVEAL_COUNT_BY_LEVEL, Fog,
+  ANALYST_REVEAL_COUNT_BY_LEVEL, Fog, History, histSeasonOf,
   // Académie de jeunes (voir le grand commentaire au-dessus de MAX_YOUTH_ROSTER_SIZE) :
   MAX_YOUTH_ROSTER_SIZE, YOUTH_TRAINEE_WEEKLY_SALARY, YOUTH_CANDIDATE_QUEUE_MAX, YOUTH_CANDIDATE_EXPIRY_MS,
   YOUTH_CANDIDATE_DAILY_CHANCE_BY_LEVEL, YOUTH_QUALITY_TIER_BY_LEVEL, YOUTH_STANDOUT_CHANCE_BY_LEVEL,

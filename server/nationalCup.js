@@ -150,8 +150,15 @@ const MAX_TROPHIES = 40;
 function addTrophy(team, league, type, label, now) {
   team.trophies = team.trophies || [];
   if (team.trophies.some(t => t.type === type && league && t.seasonId === (league.seasonId || null) && t.label === label)) return;
+  const firstOfKind = !team.trophies.some(t => t.type === type);
   team.trophies.unshift({ at: now, type, divisionLevel: league ? league.divisionLevel || null : null, label, seasonId: league ? league.seasonId || null : null });
   if (team.trophies.length > MAX_TROPHIES) team.trophies.length = MAX_TROPHIES;
+  // Mémoire historique (assets/history.js).
+  try {
+    const History = require("../assets/history.js");
+    History.push({ type: firstOfKind ? "FIRST_TITLE" : "TITLE", importance: firstOfKind ? 4 : 3, season: (Array.isArray(team.seasonHistory) ? team.seasonHistory.length : 0) + 1, at: now,
+      teams: [team.name], competition: type, description: firstOfKind ? `Premier titre de ce genre pour le club : ${label}.` : `${label}.`, tags: ["titre"] });
+  } catch (e) { /* confort */ }
 }
 
 function liveKey(cup, round, m) { return `ncup:${cup.season}:${round.index}:${m.id}`; }

@@ -616,7 +616,9 @@
         bubble: (pos.get(home) && pos.get(away)
           ? fill('{h}, {rh}, reçoit {a}, {ra}.', { h: H.tshort(home), a: H.tshort(away), rh: ordinal(pos.get(home)), ra: ordinal(pos.get(away)) })
           : fill('{h} reçoit {a}.', { h: H.tshort(home), a: H.tshort(away) })) + lastBubble +
-          (riv && riv.games ? fill(' Bilan entre les deux managers : {hw} victoire(s) pour {h}, {aw} pour {a}.', { hw: riv.homeWins, aw: riv.awayWins, h: H.tshort(home), a: H.tshort(away) }) : ''),
+          (riv && riv.games ? fill(' Bilan entre les deux managers : {hw} victoire(s) pour {h}, {aw} pour {a}.', { hw: riv.homeWins, aw: riv.awayWins, h: H.tshort(home), a: H.tshort(away) }) : '') +
+          // Mémoire historique : seulement des faits enregistrés (voir assets/history.js).
+          ((input.history || []).length ? ' ' + input.history.join(' ') : ''),
       });
 
       const lu = input.lineups || {};

@@ -428,6 +428,9 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
 // server/world.js:catchUpWorld, qui compare avant/après pour n'écrire que
 // les championnats modifiés).
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body = null) {
+  // Mémoire historique (assets/history.js) : événements en file, rangés à
+  // part, un journal par club (jamais dans la ligue).
+  await flushHistoryQueue(savePath);
   // Directs terminés à garder pour « Revoir le direct » (voir
   // LiveMatch.archiveReplay) : rangés à part, jamais dans la ligue.
   if (league && Array.isArray(league.pendingReplays) && league.pendingReplays.length) {
@@ -616,6 +619,55 @@ async function saveWorldAuxRaw(name, data, savePath = defaultMultiLeaguePath(), 
   const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmp, body, "utf-8");
   fs.renameSync(tmp, where.file);
+}
+
+// Mémoire historique des franchises (assets/history.js, 2026-10-06) : un
+// journal par club, clé « pullup:history:<club> » / fichier
+// « <multi-league>.history.<club>.json », History.CFG.clubMax événements au
+// plus. Le club est identifié par son nom (en minuscules), comme le reste
+// de son histoire (palmarès, rivalités), stable malgré montées/descentes.
+function historyStorage(clubName, savePath) {
+  const k = String(clubName || "").trim().toLowerCase();
+  if (!k) throw new Error("Club invalide pour l'histoire.");
+  let h = 2166136261;
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const slug = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) + "-" + (h >>> 0).toString(36);
+  return { redis: `${redisPrefix()}pullup:history:${slug}`, file: savePath.replace(/\.json$/, "") + `.history.${slug}.json` };
+}
+async function loadClubHistory(clubName, savePath = defaultMultiLeaguePath()) {
+  const where = historyStorage(clubName, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? [] : (JSON.parse(raw).events || []);
+    }
+    if (!fs.existsSync(where.file)) return [];
+    return JSON.parse(fs.readFileSync(where.file, "utf-8")).events || [];
+  } catch (e) {
+    console.warn(`Histoire du club « ${clubName} » illisible :`, e.message);
+    return null; // lecture en échec : ne jamais réécrire par-dessus
+  }
+}
+async function appendClubHistory(clubName, events, savePath = defaultMultiLeaguePath()) {
+  const History = require("../assets/history.js");
+  const prev = await loadClubHistory(clubName, savePath);
+  if (prev === null) return;
+  const where = historyStorage(clubName, savePath);
+  const body = JSON.stringify({ version: 1, events: History.mergeClubLog(prev, events) });
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+async function flushHistoryQueue(savePath = defaultMultiLeaguePath()) {
+  const History = require("../assets/history.js");
+  const events = History.drain();
+  if (!events.length) return;
+  const byClub = History.byClub(events);
+  for (const club of Object.keys(byClub)) {
+    try { await appendClubHistory(club, byClub[club], savePath); } catch (e) { console.warn(`Histoire du club « ${club} » non enregistrée :`, e.message); }
+  }
 }
 
 // Archives de saison (feuilles de match figées, voir
@@ -838,6 +890,7 @@ module.exports = {
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw, saveSeasonArchive, loadSeasonArchive,
+  loadClubHistory, appendClubHistory, flushHistoryQueue,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :
