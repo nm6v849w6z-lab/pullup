@@ -40892,7 +40892,7 @@ function buildTeamPanel(team, side, opts = {}) {
   // Carte « Temps de jeu » : colonne de droite, sous le terrain.
   const minutesHost = document.createElement("div");
   minutesHost.className = "lineup-minutes-host";
-  refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost });
+  refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost, roster: opts.roster });
   refreshLineupEditor();
   if (editable) colLeft.appendChild(minutesHost);
   colRight.appendChild(adversaires);
@@ -41062,6 +41062,8 @@ function compositionModel(team) {
 // édition ou les ordres d'un amical. `opts.readonly` : compositions
 // verrouillées (même vue, rien de cliquable). `opts.minutesContainer` : où
 // poser la carte Temps de jeu (colonne de droite, voir buildTeamPanel).
+// `opts.roster` : effectif qui n'est pas celui du club (Mode Sélectionneur,
+// assets/national-coach.js), voir compoRosterRowsData.
 // Remplace les anciennes cartes "Cinq de départ" (terrain à menus) +
 // "Rotation" (tableau des remplaçants) + "Convocation" (2026-09-25/26) :
 // mêmes actions, mêmes méthodes du moteur (setStarter, toggleBackupPosition,
@@ -41265,7 +41267,7 @@ function renderLineupEditor(team, container, opts = {}) {
   // the players") — voir compoRosterRowsData / compoRosterDetailsHtml.
   const convIds = team.convokedIds();
   const details = compoRosterView === "details";
-  const rowsData = compoRosterRowsData(team, model);
+  const rowsData = compoRosterRowsData(team, model, opts.roster);
   const roster = el("section", "compo-roster" + (details ? " is-details" : ""));
   roster.id = "ordresCardConvocation";
   const rHead = el("div", "ordres-card-head compo-roster-head");
@@ -41329,7 +41331,7 @@ function renderLineupEditor(team, container, opts = {}) {
     layout.appendChild(side);
     layout.classList.add("is-details");
     card.appendChild(roster);
-    roster.appendChild(compoRosterDetailsTable(team, sorted, convBox, el, () => renderLineupEditor(team, container, opts)));
+    roster.appendChild(compoRosterDetailsTable(team, sorted, convBox, el, () => renderLineupEditor(team, container, opts), opts.roster));
     container.appendChild(card);
   }
 
@@ -41352,17 +41354,22 @@ function compoRoleRank(d) {
   if (!d.roles.length) return 3;
   return d.roles[0].rank >= 2 ? 2 : d.roles[0].rank;
 }
-function compoRosterRowsData(team, model) {
+// `ro` (facultatif) : effectif qui n'est pas celui du club (sélection
+// nationale) — { recoveryPerDay, seasonLine(p) (même forme que
+// teamDetailSeasonLine), evalAvg(p), evalHtml(p), linkHtml(p) } ; ni jeunes
+// de l'académie ni comparateur (joueurs d'autres clubs).
+function compoRosterRowsData(team, model, ro = null) {
   const now = Date.now();
-  const recovery = p => (typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
-  const youth = new Set((teamA.youthPlayers || []).map(y => y.id));
+  const recovery = p => (ro ? (ro.recoveryPerDay ?? CONDITION_RECOVERY_PER_DAY) : typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
+  const youth = new Set(ro ? [] : (teamA.youthPlayers || []).map(y => y.id));
+  const seasonLine = (ro && ro.seasonLine) || teamDetailSeasonLine;
   return team.players.map(p => {
     const on = model.convoked.has(p.id);
     const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
     const best = bestPosition(p);
     const ratedPos = roles.length ? roles[0].pos : best;
     const cond = currentCondition(p, now, recovery(p));
-    const { gp, sum } = teamDetailSeasonLine(p);
+    const { gp, sum } = seasonLine(p);
     const recent = (p.matchLog || []).slice(-5);
     return {
       p, on, roles, best, ratedPos, rating: compoRatingAt(p, ratedPos), cond,
@@ -41370,8 +41377,8 @@ function compoRosterRowsData(team, model) {
       condTier: cond >= 90 ? "cond-great" : cond >= 75 ? "cond-good" : cond >= 60 ? "cond-mid" : cond >= 40 ? "cond-low" : "cond-critical",
       crossHtml: injuryCrossHtml(p, now), injured: isCurrentlyInjured(p, now), youth: youth.has(p.id),
       gp, per: k => (gp ? sum[k] / gp : null),
-      evalAvg: recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : -Infinity,
-      linkable: team.players === teamA.players || teamA.players.some(x => x.id === p.id),
+      evalAvg: ro && ro.evalAvg ? ro.evalAvg(p) : recent.length ? recent.reduce((s, e) => s + statEvaluation(e), 0) / recent.length : -Infinity,
+      linkable: ro ? !!ro.linkHtml : team.players === teamA.players || teamA.players.some(x => x.id === p.id),
     };
   });
 }
@@ -41432,17 +41439,20 @@ function compoRoleEl(d, el) {
 function compoRatingCellValue(d) {
   return ratingDisplayMode() === "tc" ? playerTotalCaracs(d.p, ATTRS) : d.rating;
 }
-function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
+function compoRosterDetailsTable(team, rows, convBox, el, rerenderView, ro = null) {
   const wrap = el("div", "compo-details");
   const fmt = v => (v == null ? "–" : v.toFixed(1).replace(".", ","));
   const tc = ratingDisplayMode() === "tc";
+  // Comparateur : joueurs du club seulement (voir compoRosterRowsData).
+  const canCompare = !ro;
+  const recovery = ro ? (ro.recoveryPerDay ?? CONDITION_RECOVERY_PER_DAY) : typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
   const cols = [
     ["conv", "", "Convoqué"], ["name", "Nom"], ["pos", "Poste", "Meilleur poste"],
     ["rating", tc ? "TC" : "GEN", tc ? "Total des caractéristiques" : "Note au poste tenu (sinon au meilleur poste)"],
     ["role", "Rôle"], ["condition", "Forme"], ["evaluation", "Éval.", "Évaluation des 5 derniers matchs"],
     ["gp", "MJ", "Matchs joués"], ["min", "Min", "Minutes par match"], ["pts", "Pts", "Points par match"],
     ["reb", "Reb", "Rebonds par match"], ["ast", "Pas", "Passes décisives par match"], ["cmp", "", "Comparer"],
-  ];
+  ].filter(c => canCompare || c[0] !== "cmp");
   const scroller = el("div", "compo-details-scroll");
   const table = el("table", "compo-table");
   const thead = el("thead");
@@ -41476,7 +41486,7 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
   thead.appendChild(trh);
   table.appendChild(thead);
   const tbody = el("tbody");
-  compoCompareIds = compoCompareIds.filter(id => rows.some(d => d.p.id === id && d.linkable));
+  if (canCompare) compoCompareIds = compoCompareIds.filter(id => rows.some(d => d.p.id === id && d.linkable));
   rows.forEach(d => {
     const tr = el("tr", "conv-row" + (d.on ? " on" : "") + (d.injured ? " injured" : ""));
     tr.dataset.playerId = d.p.id;
@@ -41484,7 +41494,7 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
     td("ct-conv", convBox(d));
     const nameCell = td("ct-name");
     const name = el("span", "conv-name" + (d.youth ? " is-youth" : ""));
-    if (d.linkable) name.insertAdjacentHTML("beforeend", playerLinkHtml(myTeamIndex, d.p.id, d.p.name));
+    if (d.linkable) name.insertAdjacentHTML("beforeend", ro ? ro.linkHtml(d.p) : playerLinkHtml(myTeamIndex, d.p.id, d.p.name));
     else name.appendChild(document.createTextNode(d.p.name));
     if (d.youth) name.appendChild(el("span", "lp-tag fr-tag-youth", "U18"));
     if (d.crossHtml) name.insertAdjacentHTML("beforeend", d.crossHtml);
@@ -41495,15 +41505,15 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
     const r = td("ct-rating conv-ovr", String(compoRatingCellValue(d)));
     r.title = tc ? "Total des caractéristiques" : `Note au poste ${POS_SHORT[d.ratedPos]}`;
     td("ct-role", compoRoleEl(d, el));
-    td("ct-condition", effConditionHtml(d.p, Date.now(), typeof teamA.conditionRecoveryPerDay === "function" ? teamA.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY));
-    td("ct-evaluation", evaluationSquaresHtml(d.p));
+    td("ct-condition", effConditionHtml(d.p, Date.now(), recovery));
+    td("ct-evaluation", ro && ro.evalHtml ? ro.evalHtml(d.p) : evaluationSquaresHtml(d.p));
     td("ct-num", String(d.gp));
     td("ct-num", fmt(d.per("min")));
     td("ct-num ct-main", fmt(d.per("pts")));
     td("ct-num", fmt(d.per("reb")));
     td("ct-num", fmt(d.per("ast")));
-    const cmpCell = td("ct-cmp");
-    if (d.linkable) {
+    const cmpCell = canCompare ? td("ct-cmp") : null;
+    if (canCompare && d.linkable) {
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.className = "compo-compare-cb";
@@ -41522,6 +41532,7 @@ function compoRosterDetailsTable(team, rows, convBox, el, rerenderView) {
   // Ombre de la colonne figée dès que le tableau défile (téléphone).
   scroller.addEventListener("scroll", () => scroller.classList.toggle("is-scrolled", scroller.scrollLeft > 2), { passive: true });
   wrap.appendChild(scroller);
+  if (!canCompare) return wrap;
 
   const bar = el("div", "compo-compare-bar");
   const n = compoCompareIds.length;
@@ -54432,11 +54443,13 @@ function tqOrdersFromMatchLog(m) {
   return base;
 }
 
-function tqProxyFrom(orders, players = teamA.players) {
+// `name` : autre équipe que le club (sélection nationale, voir
+// assets/national-coach.js).
+function tqProxyFrom(orders, players = teamA.players, name = teamA.name) {
   // Joueurs partis retirés, même règle que Team.tacticPresetPatch.
   const o = Team.prototype.tacticPresetPatch.call({ tacticPresets: [{ orders }], players }, 0);
   const proxy = {
-    name: teamA.name, players,
+    name, players,
     offensivePriorities: o.offensivePriorities || [...teamA.offensivePriorities], defense: o.defense || teamA.defense, rhythm: o.rhythm || teamA.rhythm,
     tacticalTier: o.tacticalTier ?? "débutant", screenDefense: o.screenDefense ?? "Aucune consigne", helpDefense: o.helpDefense ?? "Moyenne",
     watchAssignments: [], postDefense: o.postDefense ?? "Classique", closeoutStyle: o.closeoutStyle ?? "Contrôlé",
