@@ -8,14 +8,14 @@
 // « friendlies », voir nationalCoach.PERMS) : jamais aux adjoints ni aux
 // recruteurs.
 //
-// Calendrier (les matchs de club ne bougent JAMAIS) : un amical se joue un
-// DIMANCHE à 20h (jour sans match de club : championnat mardi et samedi,
-// coupe jeudi), comme les fenêtres internationales, en dehors :
-//   - des dimanches des fenêtres (sauf si les DEUX sélections en sont
-//     exemptées), de la semaine de l'All-Star et de la semaine qui précède
-//     la phase finale (ni pendant la phase finale) ;
-//   - de tout autre match international de l'une des deux sélections à
-//     moins de 3 jours (fatigue : récupération normale du moteur) ;
+// Calendrier (les matchs de club ne bougent JAMAIS) : un amical se joue
+// UNIQUEMENT pendant une fenêtre internationale (retour utilisateur
+// 2026-10-06 : « les jours ne sont pas libres, c'est uniquement sur les
+// fenêtres internationales »), le dimanche à 20h comme les matchs de
+// qualification, et seulement par deux sélections qui n'ont pas de match
+// ce jour-là (exemptées, ou sans qualifications cette saison) :
+//   - jamais à moins de 3 jours d'un autre match international de l'une
+//     des deux sélections (fatigue : récupération normale du moteur) ;
 //   - d'une date trop proche : il faut pouvoir répondre avant le gel des
 //     convocations (3 jours avant le match).
 // Une fois acceptée, la rencontre a son rassemblement (convocations
@@ -36,7 +36,7 @@
 // « played », « refused », « cancelled ».
 // =====================================================================
 const DAY = 24 * 3600 * 1000;
-const LIMITS = { perSeason: 4, minGapDays: 3, pendingPerPair: 1, closedKeepDays: 14 };
+const LIMITS = { perSeason: 3, minGapDays: 3, pendingPerPair: 1, closedKeepDays: 14 };
 const LABEL = "Match amical international";
 
 function NT() { return require("./nationalTeams.js"); }
@@ -64,27 +64,13 @@ function matchTimesOf(store, teamId, season, exceptId) {
   listOf(store).forEach(f => { if (f.id !== exceptId && f.season === season && involves(f, teamId) && (isLive(f) || f.status === "played")) out.push(f.at); });
   return out;
 }
-// Dimanches possibles d'une saison (avant les exclusions propres à chaque
-// sélection) : { at, week, window }.
+// Dates possibles d'une saison : le dimanche (20h) de chaque fenêtre
+// internationale, avant les exclusions propres à chaque sélection :
+// { at, week, window }.
 function candidateDays(store, season, calendarStartAt) {
   if (typeof calendarStartAt !== "number") return [];
   const cfg = NT().configOf(store);
-  const out = [];
-  for (let week = 1; 7 * (week - 1) + 5 <= cfg.finalFirstDay - 7; week++) {
-    if (week === cfg.allStarWeek) continue;
-    const day = 7 * (week - 1) + 5;
-    const wIdx = (cfg.windowWeeks || []).indexOf(week);
-    out.push({ at: NT().seasonDayAt(cfg, calendarStartAt, day), week, window: wIdx >= 0 ? wIdx + 1 : null });
-  }
-  return out;
-}
-// Exemptée (groupe de 3) de la fenêtre `n` : seule façon de jouer un
-// amical un dimanche de fenêtre.
-function byeInWindow(store, teamId, season, calendarStartAt, n) {
-  const team = store.teams[teamId];
-  if (!team) return false;
-  const g = NC().gatheringsOf(store, team, season, calendarStartAt).find(x => x.kind === "window" && x.n === n);
-  return !!(g && g.bye);
+  return (cfg.windowWeeks || []).map((week, i) => ({ at: NT().seasonDayAt(cfg, calendarStartAt, 7 * (week - 1) + 5), week, window: i + 1 }));
 }
 // Raison pour laquelle `teamId` ne peut pas jouer à `at` (ou null).
 function busyReason(store, teamId, season, at, exceptId) {
@@ -100,9 +86,8 @@ function datesFor(store, team, season, calendarStartAt, now, exceptId) {
   for (const d of candidateDays(store, season, calendarStartAt)) {
     // Assez tôt pour répondre avant le gel des convocations.
     if (now >= d.at - freezeMs() - DAY) continue;
-    if (d.window && !byeInWindow(store, team.id, season, calendarStartAt, d.window)) continue;
     if (busyReason(store, team.id, season, d.at, exceptId)) continue;
-    const busy = others.filter(t => (d.window && !byeInWindow(store, t.id, season, calendarStartAt, d.window)) || busyReason(store, t.id, season, d.at, exceptId)).map(t => t.id);
+    const busy = others.filter(t => busyReason(store, t.id, season, d.at, exceptId)).map(t => t.id);
     out.push({ at: d.at, week: d.week, window: d.window, busy });
   }
   return out;
@@ -110,9 +95,8 @@ function datesFor(store, team, season, calendarStartAt, now, exceptId) {
 // Vérifie qu'un amical a/b à `at` respecte le calendrier (null si oui).
 function slotError(store, a, b, season, at, calendarStartAt, now, exceptId) {
   const d = candidateDays(store, season, calendarStartAt).find(x => x.at === at);
-  if (!d) return "Date impossible : les amicaux internationaux se jouent le dimanche à 20h, hors fenêtres, semaine de l'All-Star et phase finale.";
+  if (!d) return "Date impossible : les amicaux internationaux se jouent uniquement pendant les fenêtres internationales (dimanche à 20h).";
   if (now >= at - freezeMs() - DAY) return "Date trop proche : la demande doit pouvoir être acceptée avant le gel des convocations (3 jours avant le match).";
-  if (d.window && !(byeInWindow(store, a, season, calendarStartAt, d.window) && byeInWindow(store, b, season, calendarStartAt, d.window))) return "Ce dimanche est réservé aux matchs de qualification.";
   if (busyReason(store, a, season, at, exceptId)) return `${NT().teamLabel(a)} joue déjà un match international à cette période.`;
   if (busyReason(store, b, season, at, exceptId)) return `${NT().teamLabel(b)} joue déjà un match international à cette période.`;
   return null;

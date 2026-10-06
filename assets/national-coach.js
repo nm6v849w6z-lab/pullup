@@ -430,13 +430,13 @@
       h += '<div class="nc-set"><label>Adversaire<select class="nc-in" data-nc-fr="opp"><option value="">Choisir une sélection</option>' + opps.map(function (o) {
         return '<option value="' + esc(o.id) + '"' + (ui.frOpp === o.id ? " selected" : "") + ">" + esc(o.label + (o.interim ? " · intérim (accepte d'office)" : " · " + o.coach) + (o.used >= fr.limits.perSeason ? " · complet" : "")) + "</option>";
       }).join("") + "</select></label>" +
-        '<label>Date<select class="nc-in" data-nc-fr="at"><option value="">' + (dates.length ? "Choisir une date" : "Aucune date libre") + "</option>" + dates.map(function (d) {
-          return '<option value="' + d.at + '"' + (String(ui.frAt) === String(d.at) ? " selected" : "") + ">" + esc(when(d.at, true) + (d.window ? " · fenêtre " + d.window : "")) + "</option>";
+        '<label>Fenêtre internationale<select class="nc-in" data-nc-fr="at"><option value="">' + (dates.length ? "Choisir une fenêtre" : "Aucune fenêtre libre") + "</option>" + dates.map(function (d) {
+          return '<option value="' + d.at + '"' + (String(ui.frAt) === String(d.at) ? " selected" : "") + ">" + esc("Fenêtre internationale " + d.window + " · " + when(d.at, true)) + "</option>";
         }).join("") + "</select></label>" +
         '<label>Lieu<select class="nc-in" data-nc-fr="venue"><option value="home"' + (ui.frVenue === "home" ? " selected" : "") + '>À domicile</option><option value="away"' + (ui.frVenue === "away" ? " selected" : "") + ">À l'extérieur</option></select></label></div>" +
         '<div class="nc-row" style="margin-top:12px"><button type="button" class="nc-btn" data-nc-fr-send="1"' + (!ui.frOpp || !ui.frAt || ui.busy ? " disabled" : "") + ">Envoyer la demande</button></div>";
     }
-    h += '<p class="nc-small">Dates libres seulement : jamais un jour de match de club, ni pendant une fenêtre où la sélection joue, avec ' + fr.limits.minGapDays + " jours d'écart entre deux matchs amicaux. Réponse attendue avant le gel des convocations (3 jours avant le match).</p></div>";
+    h += '<p class="nc-small">' + (fr.dates.length ? "" : "Votre sélection joue ses qualifications à chaque fenêtre restante. ") + "Les amicaux se jouent uniquement pendant les fenêtres internationales (dimanche à 20h), entre deux sélections sans match de qualification ce jour-là. Réponse attendue avant le gel des convocations (3 jours avant le match).</p></div>";
     var sec = function (title, list, actsFn, empty) {
       return '<div class="nc-card"><div class="nc-sec"><span>' + esc(title) + "</span><span>" + list.length + "</span></div>" + (list.length ? list.map(function (f) { return frLine(f, actsFn ? actsFn(f) : ""); }).join("") : '<p class="nc-club">' + esc(empty) + "</p>") + "</div>";
     };
