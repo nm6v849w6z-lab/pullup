@@ -192,9 +192,16 @@
       { key: "height", label: "Taille", sort: function (x) { return x.height || 0; } },
       { key: "gen", label: "GEN", title: "Note du meilleur poste", sort: genOf },
     ];
-    attrGroups().forEach(function (gr, gi) {
-      gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
-    });
+    // Comme l'Effectif d'un club (retour utilisateur 2026-10-06) : les
+    // caractéristiques d'un côté, les stats de la saison en club dans un
+    // onglet « Statistiques » à part.
+    if (ui.pview !== "stats") {
+      attrGroups().forEach(function (gr, gi) {
+        gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
+      });
+      cols.push({ key: "condition", label: "État", title: "État physique", gstart: true, sort: function (x) { return x.injuryUntil ? -1 : (x.condition || 0); } });
+      return cols;
+    }
     cols.push(
       { key: "gp", label: "MJ", title: "Matchs joués en club cette saison", gstart: true, sort: function (x) { return x.season.gp; } },
       { key: "min", label: "Min", title: "Minutes par match", sort: function (x) { return x.season.min; } },
@@ -202,13 +209,13 @@
       { key: "reb", label: "Reb", title: "Rebonds par match", sort: function (x) { return x.season.reb; } },
       { key: "ast", label: "Pd", title: "Passes décisives par match", sort: function (x) { return x.season.ast; } },
       { key: "eff", label: "Éval.", title: "Évaluation moyenne par match", sort: function (x) { return x.season.eff; } },
-      { key: "form", label: "Forme récente", title: "Évaluation des 5 derniers matchs en club", sort: recentForm },
-      { key: "condition", label: "État", title: "État physique", sort: function (x) { return x.injuryUntil ? -1 : (x.condition || 0); } }
+      { key: "form", label: "Forme récente", title: "Évaluation des 5 derniers matchs en club", sort: recentForm }
     );
     return cols;
   }
   function sortList(list) {
     var c = columns().filter(function (x) { return x.key === ui.sort.key; })[0] || columns()[4];
+    if (c.key !== ui.sort.key) ui.sort = { key: "gen", dir: -1 };
     var dir = ui.sort.dir;
     return list.slice().sort(function (a, b) {
       var va = c.sort(a), vb = c.sort(b);
@@ -245,16 +252,19 @@
       '<div class="nc-club">' + esc(x.club.name) + (x.club.division ? " · " + esc(x.club.division) : "") + "</div></td>" +
       "<td>" + esc(x.age) + "</td><td>" + posBadge(x.position) + "</td><td>" + (x.height ? esc(x.height) + " cm" : "–") + "</td>" +
       '<td><span class="nc-gen">' + esc(genOf(x)) + "</span></td>";
-    attrGroups().forEach(function (gr) {
-      gr.keys.forEach(function (k, ki) {
-        var val = attrVal(x, k);
-        h += '<td class="' + (ki === 0 ? "eff-gstart" : "") + '">' + (val == null ? "–" : '<span class="attr-cell eff-attr ' + tier(val) + '"><span class="attr-val">' + esc(Math.round(val)) + "</span></span>") + "</td>";
+    if (ui.pview !== "stats") {
+      attrGroups().forEach(function (gr) {
+        gr.keys.forEach(function (k, ki) {
+          var val = attrVal(x, k);
+          h += '<td class="' + (ki === 0 ? "eff-gstart" : "") + '">' + (val == null ? "–" : '<span class="attr-cell eff-attr ' + tier(val) + '"><span class="attr-val">' + esc(Math.round(val)) + "</span></span>") + "</td>";
+        });
       });
-    });
-    h += '<td class="eff-gstart">' + esc(x.season.gp) + "</td><td>" + esc(x.season.min) + "</td><td>" + esc(x.season.pts) + "</td><td>" + esc(x.season.reb) + "</td><td>" + esc(x.season.ast) + "</td><td>" + esc(x.season.eff) + "</td>" +
-      '<td class="nc-form">' + formBars(x) + "</td>" +
-      '<td title="État physique ' + esc(x.condition) + '/100">' + (x.injuryUntil ? '<span class="nc-tag bad">Blessé</span>' : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') + "</td>" +
-      (acts ? '<td class="nc-act" style="white-space:nowrap">' + acts + "</td>" : "") + "</tr>";
+      h += '<td class="eff-gstart" title="État physique ' + esc(x.condition) + '/100">' + (x.injuryUntil ? '<span class="nc-tag bad">Blessé</span>' : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') + "</td>";
+    } else {
+      h += '<td class="eff-gstart">' + esc(x.season.gp) + "</td><td>" + esc(x.season.min) + "</td><td>" + esc(x.season.pts) + "</td><td>" + esc(x.season.reb) + "</td><td>" + esc(x.season.ast) + "</td><td>" + esc(x.season.eff) + "</td>" +
+        '<td class="nc-form">' + formBars(x) + "</td>";
+    }
+    h += (acts ? '<td class="nc-act" style="white-space:nowrap">' + acts + "</td>" : "") + "</tr>";
     return h;
   }
   function playersTableHtml(list, v, opts) {
@@ -265,9 +275,13 @@
     list = sortList(list);
     if (opts.limit) list = list.slice(0, ui.shown);
     var groups = attrGroups();
-    var fam = '<tr class="eff-family-row"><td colspan="5"></td>' + groups.map(function (gr) { return '<td colspan="' + gr.keys.length + '" class="eff-family"><span>' + esc(gr.label) + "</span></td>"; }).join("") +
-      '<td colspan="8" class="eff-family"><span>Saison en club</span></td>' + (withActs ? "<td></td>" : "") + "</tr>";
-    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players"><thead>' + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
+    var fam = '<tr class="eff-family-row"><td colspan="5"></td>' + (ui.pview !== "stats"
+      ? groups.map(function (gr) { return '<td colspan="' + gr.keys.length + '" class="eff-family"><span>' + esc(gr.label) + "</span></td>"; }).join("") + "<td></td>"
+      : '<td colspan="7" class="eff-family"><span>Saison en club</span></td>') + (withActs ? "<td></td>" : "") + "</tr>";
+    // Même menu que l'Effectif d'un club : Caractéristiques / Statistiques.
+    var tabs = '<div class="eff-toolbar"><div class="cal-toolbar eff-tabs" role="tablist">' +
+      [["caracs", "Caractéristiques"], ["stats", "Statistiques"]].map(function (t) { var on = (ui.pview || "caracs") === t[0]; return '<button type="button" role="tab" aria-selected="' + on + '" class="cal-filter' + (on ? " active" : "") + '" data-nc-pview="' + t[0] + '">' + esc(t[1]) + "</button>"; }).join("") + "</div></div>";
+    var h = tabs + '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players"><thead>' + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
       (list.length ? list.map(function (x) { return playerRow(x, v); }).join("") : '<tr><td colspan="40" class="l nc-club">' + esc(opts.empty || "Aucun joueur.") + "</td></tr>") + "</tbody></table></div>";
     if (opts.limit && total > list.length) h += '<div style="text-align:center;margin-top:10px"><button type="button" class="nc-btn2" data-nc-more="1">Afficher plus (' + (total - list.length) + " joueurs)</button></div>";
     return h;
@@ -1016,7 +1030,7 @@
     if (can("convocView")) h += kpi("Convoqués", (cur ? cur.players.length : 0) + " / " + v.limits.convocation, cur ? esc(gTitleText(cur)) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
     h += kpi("Joueurs suivis", v.watchlist.length, can("preselectView") ? v.preselection.length + " en présélection" : "Joueurs sélectionnables", can("watch") ? "preselection" : "joueurs");
     if (can("mandate")) h += kpi("Mandat", "Saison " + seasonNo + " / 2", "Saisons " + esc(v.mandate.fromSeason) + " à " + esc(v.mandate.toSeason) + (r.played ? " · " + r.wins + " V – " + r.losses + " D" : ""), "mandat");
-    if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : v.friendlies.limits.used + " / " + v.friendlies.limits.perSeason + " cette saison", "amicaux");
+    if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : "", "amicaux");
     h += kpi("Dernier résultat", last ? esc(teamLab(last.home)) + " " + esc(last.scoreHome) + " – " + esc(last.scoreAway) + " " + esc(teamLab(last.away)) : "–", last ? esc(when(last.at)) : "Aucun match joué", "calendrier");
     h += "</div>";
     // Prochain match en direct ou imminent : bouton du direct (écran des clubs).
@@ -1121,6 +1135,7 @@
       paint(); return;
     }
     if (d.ncPos !== undefined) { ui.pos = d.ncPos; ui.shown = 50; paint(); return; }
+    if (d.ncPview) { ui.pview = d.ncPview; paint(); return; }
     if (d.ncMore) { ui.shown += 50; paint(); return; }
     if (d.ncFilter) { ui.filter = ui.filter === d.ncFilter ? "" : d.ncFilter; paint(); return; }
     if (d.ncGid) { ui.gid = d.ncGid; ui.replaceOut = null; paint(); return; }

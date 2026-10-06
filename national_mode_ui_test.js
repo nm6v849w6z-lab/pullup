@@ -54,7 +54,11 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   if (st.view.pool && st.view.pool.players.length) {
     assert(!content().querySelector(".nc-next") && !/CONVOQUÉS|Convoqués\s*0/i.test(content().textContent), "Sélectionnables : ni carte de rassemblement ni bloc des convoqués");
     const heads = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
-    assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "MJ", "Pts", "Forme récente"].every(h => heads.includes(h)), "colonnes : identité, caractéristiques, moyennes, stats, forme récente");
+    assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "État"].every(h => heads.includes(h)) && !heads.includes("MJ") && !heads.includes("Forme récente"), "Caractéristiques : identité, caractéristiques, état (stats de saison à part, comme l'Effectif)");
+    content().querySelector('[data-nc-pview="stats"]').click();
+    const heads2 = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
+    assert(["Nom", "MJ", "Pts", "Forme récente"].every(h => heads2.includes(h)) && !heads2.includes("Physique"), "onglet Statistiques : stats de la saison en club et forme récente");
+    content().querySelector('[data-nc-pview="caracs"]').click();
     assert(!/\b(MEN|ARR|AIS|AIF|PIV)\b/.test(content().textContent) && content().querySelector(".eff-pos"), "postes aux abréviations du jeu (badges de l'Effectif)");
     const ageOf = () => [...content().querySelectorAll("tbody tr.eff-row")].map(tr => Number(tr.children[1].textContent));
     content().querySelector('th[data-nc-sort="age"]').click();

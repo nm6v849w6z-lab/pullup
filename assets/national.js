@@ -386,11 +386,17 @@
   }
   // Échéance affichée par son vrai match (qualifications) plutôt que par la
   // fenêtre internationale qui le contient (retour utilisateur 2026-10-06).
-  function calItemLabel(tv, c) { return c.kind === "final" ? compName(tv, c.comp) : tv.qualif ? "Qualifications" + (tv.qualif.group ? " · " + tv.qualif.group.label : "") : "Fenêtre " + c.n; }
+  function calItemLabel(tv, c) { if (c.kind === "friendly") return "Match amical international"; return c.kind === "final" ? compName(tv, c.comp) : tv.qualif ? "Qualifications" + (tv.qualif.group ? " · " + tv.qualif.group.label : "") : "Fenêtre " + c.n; }
   function itemStart(c) { return c.kind === "final" ? c.from : c.at; }
+  // Prochaine échéance = prochain VRAI match (qualifications, phase finale
+  // ou amical) : une fenêtre sans match n'en est pas une (2026-10-06).
   function nextItem(tv, now) {
-    var cal = tv.calendar || [];
-    for (var i = 0; i < cal.length; i++) { var end = cal[i].kind === "final" ? cal[i].to : cal[i].at; if (end + 3 * 3600e3 > now) return cal[i]; }
+    var items = (tv.calendar || []).filter(function (c) { return c.kind === "final" || windowMatch(tv, c.n); });
+    (tv.friendlies || []).forEach(function (f) {
+      if (f.season === tv.season && (f.status === "accepted" || f.status === "scheduled" || f.state === "live")) items.push({ kind: "friendly", at: f.at, match: { id: f.id, at: f.at, home: f.home, away: f.away, status: f.status } });
+    });
+    items.sort(function (a, b) { return itemStart(a) - itemStart(b); });
+    for (var i = 0; i < items.length; i++) { var end = items[i].kind === "final" ? items[i].to : items[i].at; if (end + 3 * 3600e3 > now) return items[i]; }
     return null;
   }
   function coachPill(tv) {
@@ -418,7 +424,7 @@
     h += "</div>";
     h += '<div class="nt-two"><div class="nt-card"><div class="nt-k">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
     if (nx) {
-      var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : null;
+      var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : nx.kind === "friendly" ? nx.match : null;
       h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "face à" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
       // Match en direct ou imminent (fenêtre, phase finale, amical) : bouton du direct.
       var lm = liveMatchOf(tv);
@@ -560,6 +566,10 @@
         h += '<tr><td class="nt-small">' + esc(dayDate(c.from)) + " → " + esc(dayDate(c.to)) + '</td><td><span class="nt-tag2 is-final">' + esc(compName(tv, c.comp)) + "</span></td><td>" + (c.comp === "world" ? "Phase finale (consolante pour les non-qualifiés)" : "Phase finale") + " : poules du lundi au jeudi, quarts vendredi, demi-finales samedi, finale dimanche (20:00)</td></tr>";
       } else {
         var wm = windowMatch(tv, c.n);
+        // Seuls les vrais matchs (retour utilisateur 2026-10-06) : une
+        // fenêtre sans match de qualification n'est pas un match (un amical
+        // programmé ce jour-là a sa propre ligne).
+        if (!wm) return;
         h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">' + (wm || tv.qualif ? "Qualifications" : "Fenêtre " + esc(c.n)) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
       }
     });
