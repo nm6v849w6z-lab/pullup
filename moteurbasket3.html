@@ -7106,6 +7106,7 @@
   .eff-meter-fill{display:block; height:100%; border-radius:3px; background:var(--amber);}
 
   .eff-toolbar{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;}
+  .eff-toolbar .cal-toolbar.eff-tabs{margin-bottom:0;}
   .eff-seg{display:inline-flex; gap:4px; padding:4px; background:var(--panel); border:1px solid var(--line); border-radius:10px;}
   .eff-seg-btn{padding:8px 18px; min-height:36px; border:0; border-radius:7px; background:transparent; color:var(--ink-dim); font:inherit; font-size:14px; font-weight:500; cursor:pointer;}
   .eff-seg-btn:hover{color:var(--ink);}
@@ -35199,14 +35200,15 @@ function teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) {
 }
 
 function teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet) {
-  const caracCount = isOwnTeam ? "" : ` <span class="tde-seg-count">${revealedSet.size}</span>`;
+  const caracCount = isOwnTeam ? "" : ` <span class="cal-filter-count">${revealedSet.size}</span>`;
   const tabs = [
     { key: "general", label: "Général" },
     { key: "caracs", label: "Caractéristiques", extra: caracCount },
     { key: "stats", label: "Statistiques" },
   ];
-  return `<div class="eff-toolbar"><div class="eff-seg" role="tablist" aria-label="Vues de l'effectif">` +
-    tabs.map(t => `<button type="button" role="tab" aria-selected="${teamDetailEffectifView === t.key}" class="eff-seg-btn${teamDetailEffectifView === t.key ? " active" : ""}" data-team-effectif-view="${t.key}">${escapeHtml(t.label)}${t.extra || ""}</button>`).join("") +
+  // Même forme de menu que le Calendrier et la Coupe (.cal-filter).
+  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs" role="tablist" aria-label="Vues de l'effectif">` +
+    tabs.map(t => `<button type="button" role="tab" aria-selected="${teamDetailEffectifView === t.key}" class="cal-filter${teamDetailEffectifView === t.key ? " active" : ""}" data-team-effectif-view="${t.key}">${escapeHtml(t.label)}${t.extra || ""}</button>`).join("") +
     `</div></div>`;
 }
 
@@ -47681,8 +47683,9 @@ function effectifSubNavHtml(rightHtml = "") {
   // Contrôle segmenté (maquette "Effectif retravaillé") : même
   // [data-effectif-subview] qu'avant, classe dédiée .eff-seg (pas .bs-tab,
   // déjà écoutée ailleurs pour le box-score).
-  return `<div class="eff-toolbar"><div class="eff-seg effectif-subnav" role="tablist" aria-label="Vues de l'effectif">` +
-    tabs.map(t => `<button type="button" role="tab" aria-selected="${effectifSubView === t.key}" class="eff-seg-btn${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
+  // Même forme de menu que le Calendrier et la Coupe (.cal-filter).
+  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs effectif-subnav" role="tablist" aria-label="Vues de l'effectif">` +
+    tabs.map(t => `<button type="button" role="tab" aria-selected="${effectifSubView === t.key}" class="cal-filter${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
     `</div>${rightHtml}</div>`;
 }
 

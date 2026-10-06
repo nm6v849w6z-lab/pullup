@@ -50,9 +50,6 @@
     s.id = "vsCss";
     s.textContent = [
       "#vestiaireSection{--vs-good:#3fbf7f;--vs-ok:#8ccf5b;--vs-mid:#d6b84a;--vs-warn:#e8913a;--vs-bad:#e2694f;--vs-card:var(--panel,#151d2c);--vs-line:var(--line,#24304a);}",
-      ".vs-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 16px;}",
-      ".vs-tab{border:1px solid var(--vs-line);background:transparent;color:var(--ink-dim);border-radius:999px;padding:7px 14px;font-size:14px;cursor:pointer;}",
-      ".vs-tab.is-on{background:var(--amber,#f0a330);border-color:var(--amber,#f0a330);color:#141414;font-weight:700;}",
       ".vs-card{background:var(--vs-card);border:1px solid var(--vs-line);border-radius:14px;padding:16px;margin-bottom:14px;}",
       ".vs-card h3{margin:0 0 10px;font-size:15px;color:var(--ink-dim);font-weight:600;}",
       ".vs-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}",
@@ -266,9 +263,11 @@
     if (!V || !t) { holder.innerHTML = '<p class="vs-empty">Chargement du vestiaire…</p>'; return null; }
     var view;
     try { view = V.buildView(t, { now: Date.now(), recent: recent(), nationName: g("nationName") }); } catch (e) { holder.innerHTML = '<p class="vs-empty">Vestiaire indisponible pour le moment.</p>'; return null; }
-    var tabs = '<div class="vs-tabs" role="tablist">' + TABS.map(function (x) {
-      var badge = x[0] === "overview" && view.problems.length ? " (" + view.problems.length + ")" : "";
-      return '<button type="button" role="tab" class="vs-tab' + (state.tab === x[0] ? " is-on" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + (state.tab === x[0]) + '">' + esc(x[1]) + badge + '</button>';
+    // Même forme de menu que le Calendrier et la Coupe (.cal-toolbar / .cal-filter).
+    var tabs = '<div class="cal-toolbar vs-tabs" role="tablist" aria-label="Vues du vestiaire">' + TABS.map(function (x) {
+      var on = state.tab === x[0];
+      var badge = x[0] === "overview" && view.problems.length ? ' <span class="cal-filter-count">' + view.problems.length + '</span>' : "";
+      return '<button type="button" role="tab" class="cal-filter' + (on ? " active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + badge + '</button>';
     }).join("") + '</div>';
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
     holder.innerHTML = tabs + body;
