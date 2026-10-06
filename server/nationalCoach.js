@@ -926,11 +926,98 @@ function adminAppoint(store, teamId, me, season, now, leagues) {
   return { ok: true, mandate: NT().publicMandate(mandate) };
 }
 
+// --- Analyse Premium d'une sélection (retour utilisateur 2026-10-06) -------
+// Même rapport que le Scouting Pro des clubs, pour un adversaire ou pour sa
+// propre sélection. Données : matchs internationaux joués de la saison en
+// cours et de la précédente (box score complet, tactiques jouées, scores
+// par quart-temps), transformés en « équipe virtuelle » (joueurs dont le
+// matchLog porte des entrées competition "national", une par match, `round`
+// = rang chronologique). Les agrégats serveur du rapport club
+// (server/scouting.js : zones de tir, stratégies, joueurs clés, forme,
+// domicile/extérieur, série, confrontations) sont repris tels quels, sur
+// cette équipe et sur une « ligue » de résultats équivalente (index 0 =
+// sélection analysée). Réservé au staff ayant le droit "analysis".
+function analysisData(store, me, teamId, oppId, now, ctx) {
+  const team = store.teams[teamId];
+  if (!team) return fail("Sélection inconnue.", 404);
+  if (!can(accessOf(store, me, teamId), "analysis")) return fail("Réservé au staff de la sélection.", 403);
+  const target = oppId || teamId;
+  const tt = store.teams[target];
+  if (!tt || tt.cat !== team.cat) return fail("Sélection inconnue.", 404);
+  const NM = require("./nationalMatches.js");
+  const Scouting = require("./scouting.js");
+  const played = NM.playedMatchesOf(store, target, ctx.season - 1, now);
+  // Fiches publiques (groupe de référence, et vivier pour sa sélection) :
+  // poste naturel, âge, apparence, forme, blessure.
+  const known = new Map();
+  ((((store.squads || {})[target]) || {}).players || []).forEach(x => known.set(`${x.id}|${x.name}`, { position: x.position, age: x.age, look: (x.pub && x.pub.look) || null, condition: x.pub ? x.pub.condition : null, conditionUpdatedAt: x.pub ? x.pub.conditionUpdatedAt : null, injuryUntil: x.pub ? x.pub.injuryUntil : null, club: x.club || null }));
+  if (target === teamId && ctx.pool) (ctx.pool.players || []).forEach(x => known.set(refKey(x), { position: x.position, age: x.age, look: x.look || null, condition: x.condition, conditionUpdatedAt: null, injuryUntil: x.injuryUntil, club: x.club || null }));
+  const players = new Map();
+  const ids = new Set();
+  const teams = [{ id: target, name: NT().teamLabel(target) }];
+  const idxOf = id => { let i = teams.findIndex(x => x.id === id); if (i < 0) { teams.push({ id, name: NT().teamLabel(id) }); i = teams.length - 1; } return i; };
+  if (target !== teamId) idxOf(teamId);
+  const results = [], matches = [];
+  let starters = null;
+  played.forEach(({ m, season, comp, label }, round) => {
+    const isHome = m.home === target;
+    const box = isHome ? m.boxHome : m.boxAway;
+    const opp = isHome ? m.away : m.home;
+    const side = isHome ? "home" : "away";
+    results.push({ round, home: isHome ? 0 : idxOf(opp), away: isHome ? idxOf(opp) : 0, scoreHome: m.scoreHome, scoreAway: m.scoreAway });
+    matches.push({ round, id: m.id, at: m.at, season, comp, label, home: m.home, away: m.away, isHome, opponent: opp, opponentLabel: NT().teamLabel(opp), scoreFor: isHome ? m.scoreHome : m.scoreAway, scoreAgainst: isHome ? m.scoreAway : m.scoreHome });
+    const st = {};
+    box.forEach(r => {
+      if (!r.ref) return;
+      const k = refKey(r.ref);
+      let p = players.get(k);
+      if (!p) {
+        const kn = known.get(k) || {};
+        // Id réel (avatar identique à la fiche du joueur), unique ici.
+        let id = r.ref.p;
+        while (ids.has(id)) id = -Math.abs(id) - 1;
+        ids.add(id);
+        p = { id, ref: r.ref, name: r.ref.n, position: kn.position || r.position, age: kn.age, look: kn.look || null, condition: kn.condition, conditionUpdatedAt: kn.conditionUpdatedAt, injuryUntil: kn.injuryUntil || null, club: kn.club || r.club || null, matchLog: [] };
+        players.set(k, p);
+      }
+      if (r.club) p.club = p.club || r.club;
+      const { id: _tmp, ref: _ref, club: _club, name: _n, position: _pos, startPos, starter, ...stats } = r;
+      p.matchLog.push({ ...stats, round, competition: "national", at: m.at, season, isHome, opponent: NT().teamLabel(opp), quarterScores: m.quarterScores || null, tacticsUsed: (m.tacticsUsed && m.tacticsUsed[side]) || null, starter: !!starter, matchId: m.id });
+      if (starter && startPos) st[startPos] = p.id;
+    });
+    if (Object.keys(st).length) starters = st;
+  });
+  const vTeam = { players: [...players.values()] };
+  const league = { teams, results };
+  const q = NM.qualifView(store, target, ctx.season);
+  const row = q && q.group ? q.group.standings.find(x => x.teamId === target) : null;
+  const atOf = r => (matches[r] || {}).at || null;
+  const withAt = list => list.map(g => ({ ...g, at: atOf(g.round), matchId: (matches[g.round] || {}).id || null }));
+  const own = target === teamId;
+  return {
+    ok: true, teamId: target, own, label: NT().teamLabel(target), country: tt.country, season: ctx.season, seasons: [ctx.season - 1, ctx.season],
+    team: { id: target, name: NT().teamLabel(target), players: vTeam.players, lineup: starters ? { starters } : null },
+    matches,
+    report: {
+      opponentName: NT().teamLabel(target), generatedAt: now,
+      gamesPlayed: Scouting.gamesPlayedFor(vTeam),
+      standing: row ? { rank: row.rank, points: row.points, pf: row.pf, pa: row.pa, label: q.group.label } : null,
+      recentForm: withAt(Scouting.recentFormFor(league, 0)),
+      homeAwayRecord: Scouting.homeAwayRecordFor(league, 0),
+      streak: Scouting.streakFor(league, 0),
+      // Confrontations vues de MA sélection (comme « Face à toi » des clubs).
+      headToHead: own ? [] : withAt(Scouting.headToHeadFor(league, 1, 0)),
+      shotZones: Scouting.aggregateShotZones(vTeam),
+      strategyUsage: Scouting.aggregateStrategyUsage(vTeam),
+      keyPlayers: Scouting.keyPlayersFor(vTeam, now),
+    },
+  };
+}
 module.exports = {
   LIMITS, refOf, refKey, sameRef, cleanRef, poolStoreName, loadPool, savePool, coachPlayer, buildPool, matchEff,
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
   coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
   PERMS, accessOf, can, coachMandate, staffOf, staffInvite, staffRespond, staffRemove, publicStaff, queueNotice, STAFF_MAX,
-  analysisOf, upcomingMatchesOf, ordersLocked,
+  analysisOf, upcomingMatchesOf, ordersLocked, analysisData,
 };

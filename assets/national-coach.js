@@ -76,6 +76,8 @@
     ".nc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:700px){.nc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}",
     ".nc-kpis>div{background:var(--panel-2);border-radius:10px;padding:10px 12px}.nc-kpis b{display:block;font-size:18px}.nc-kpis span{font-size:12px;color:var(--ink-dim)}",
     "#selectionsSection .nc-players th.eff-th{cursor:pointer}",
+    // Rapport d'analyse : drapeau dans l'écusson rond du bandeau (sp2-crest).
+    ".nc-ana-crest{display:block;width:100%;height:100%}.nc-ana-crest .nat-flag{width:100%;height:100%;object-fit:cover}",
   ].join("\n");
 
   function g(name) { return typeof window[name] === "function" ? window[name] : null; }
@@ -686,20 +688,110 @@
   }
 
   // --- Analyse des adversaires ------------------------------------------------
+  // Retour utilisateur 2026-10-06 : MÊME rapport que l'analyse Premium
+  // (Scouting Pro) du Mode Club, pour l'adversaire choisi ou pour sa propre
+  // sélection (« Analyse de ma sélection », comme « Analyse de mon équipe »).
+  // Données : /api/national/coach/analysis-data (matchs internationaux de la
+  // saison en cours et de la précédente, en « équipe virtuelle »), rendues
+  // par les fonctions du club (scoutingProReportHtml et ses blocs sp2*),
+  // paramétrées par `report.virtual` (voir moteurbasket3.html).
+  function anaTarget(v) {
+    if (ui.anaSelf) return v.team.id;
+    var o = v.analysis && v.analysis.opponent;
+    return o ? o.id : null;
+  }
+  function loadAnalysis(target) {
+    if (!target || (ui.ana && ui.ana.key === target)) return null;
+    ui.ana = { key: target, data: null, error: "" };
+    var p = api("/api/national/coach/analysis-data?teamId=" + encodeURIComponent(ui.teamId) + (target !== ui.teamId ? "&opp=" + encodeURIComponent(target) : ""))
+      .then(function (d) { if (ui.ana && ui.ana.key === target) ui.ana.data = d; })
+      .catch(function (e) { if (ui.ana && ui.ana.key === target) ui.ana.error = e.message; })
+      .then(paint);
+    window.__lastNationalCoach = p;
+    return p;
+  }
+  function shortDate(ts) { try { return new Date(ts).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }); } catch (e) { return ""; } }
+  // Lien vers la fiche du joueur dans son club (même chemin que les listes).
+  function profileLink(p, cls) {
+    var c = p && p.club;
+    if (!p || !c || c.leagueId == null || c.idx == null || !p.ref) return '<span class="' + (cls || "") + '">' + esc(p ? p.name : "") + "</span>";
+    return '<button type="button" class="player-link' + (cls ? " " + cls : "") + '" data-nc-profile="' + esc(c.leagueId + "|" + c.idx + "|" + p.ref.p) + '">' + esc(p.name) + "</button>";
+  }
+  // Effectif du sélectionneur pour le « 5 de départ suggéré » : convoqués
+  // du rassemblement en cours, sinon la présélection (fiches du vivier).
+  function anaMine(v) {
+    var cur = curGathering(), pm = poolByKey();
+    var refs = cur && cur.players.length ? convRefs(cur) : (v.preselection || []);
+    var list = refs.map(function (r) { return pm[key(r)]; }).filter(Boolean).map(function (x) {
+      var g0 = genOf(x) || 0;
+      return { id: x.p, ref: { p: x.p, n: x.n }, name: x.n, position: x.position, age: x.age, look: x.look || null, condition: x.condition, injuryUntil: x.injuryUntil, club: x.club, season: x.season || {}, matchLog: [], overall: function () { return g0; } };
+    });
+    if (!list.length) return null;
+    return {
+      team: { name: v.team.label, players: list },
+      intro: cur && cur.players.length ? "Votre meilleur convoqué disponible à chaque poste (stats de la saison en club)." : "Votre meilleur joueur présélectionné disponible à chaque poste (stats de la saison en club).",
+      link: function (p) { return profileLink(p); },
+      sub: function (p) { return p.club ? p.club.name : ""; },
+      avg: function (p, k) { var s = p.season || {}; return Number(s[k] || 0).toFixed(1); },
+    };
+  }
+  function anaReportHtml(v, d) {
+    var players = d.team.players;
+    var byId = {};
+    players.forEach(function (p) { byId[p.id] = p; });
+    var vt = { name: d.label, players: players, lineup: d.team.lineup };
+    var byRound = {};
+    d.matches.forEach(function (m) { byRound[m.round] = m; });
+    var label = function (g) { return Object.assign({}, g, { label: shortDate(g.at) }); };
+    var o = v.analysis && v.analysis.opponent;
+    var report = Object.assign({}, d.report, {
+      opponentIdx: -1,
+      recentForm: (d.report.recentForm || []).map(label),
+      headToHead: (d.report.headToHead || []).map(label),
+      virtual: {
+        team: vt, own: d.own,
+        crestHtml: '<span class="nc-ana-crest">' + flag(d.country) + "</span>",
+        heroSub: d.own ? "Saisons " + d.seasons[0] + " et " + d.seasons[1] : (o && o.id === d.teamId ? (o.coach ? "Sélectionneur : " + o.coach : "Sélection en intérim") : ""),
+        h2hLabel: "Face à vous (2 saisons)",
+        matchSource: {
+          competition: "national",
+          contextFor: function (e) { var m = byRound[e.round]; return m ? { isHome: m.isHome, myScore: m.scoreFor, oppScore: m.scoreAgainst, win: m.scoreFor > m.scoreAgainst } : null; },
+          recentRounds: d.matches.slice(-3).map(function (m) { return m.round; }),
+        },
+        apply: !d.own && can("tactics") ? { attrs: 'data-nc-apply-plan="1"', label: "Appliquer à ma tactique", sub: "Préremplit la tactique de la sélection avec ces consignes" } : null,
+        mine: d.own ? null : anaMine(v),
+        playerLink: function (p, cls) { return profileLink(byId[p.id] || p, cls); },
+      },
+    });
+    ui.anaTeam = vt;
+    return window.scoutingProReportHtml(report);
+  }
+  function anaBlockHtml(v, target) {
+    var ana = ui.ana && ui.ana.key === target ? ui.ana : null;
+    var name = esc(teamLab(target));
+    var body;
+    if (!ana || (!ana.data && !ana.error)) body = '<p class="nc-club">Chargement de l\'analyse…</p>';
+    else if (ana.error) body = '<p class="nc-err">' + esc(ana.error) + "</p>";
+    else if (!ana.data.report.gamesPlayed) body = "<h3>Scouting Pro · " + name + '</h3><p class="sub">' + (ana.data.own ? "Votre sélection n'a encore joué aucun match international cette saison ni la précédente : pas encore de données pour ce rapport." : name + " n'a joué aucun match international cette saison ni la précédente : pas encore de données pour ce rapport.") + "</p>";
+    else if (typeof window.scoutingProReportHtml !== "function") body = '<p class="nc-club">Analyse indisponible.</p>';
+    else body = anaReportHtml(v, ana.data);
+    return '<div id="ncScoutingPanel" class="sp2-host" style="margin-top:14px">' + body + "</div>";
+  }
   function analyseHtml(v) {
     var a = v.analysis;
     if (!a) return '<div class="nc-card"><p class="nc-club">Analyse indisponible.</p></div>';
     var o = a.opponent;
     var h = '<div class="nc-card"><div class="nc-row"><label class="nc-club" style="display:flex;flex-direction:column;gap:4px;font-weight:700">Sélection analysée<select class="nc-in" data-nc-opp="1">' +
       (a.next ? '<option value="">Prochain adversaire</option>' : '<option value="">Choisir une sélection</option>') +
-      a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (ui.opp === c.id ? " selected" : "") + ">" + esc(teamLab(c.id)) + "</option>"; }).join("") + "</select></label>" +
+      '<option value="__self"' + (ui.anaSelf ? " selected" : "") + ">Ma sélection · " + esc(teamLab(v.team.id)) + "</option>" +
+      a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (!ui.anaSelf && ui.opp === c.id ? " selected" : "") + ">" + esc(teamLab(c.id)) + "</option>"; }).join("") + "</select></label>" +
+      (ui.anaSelf ? "" : '<button type="button" class="nc-btn2" data-nc-own-analysis="1" title="Comment vos adversaires vous voient">Analyse de ma sélection</button>') +
       (a.next ? '<div class="nc-next" style="margin:0;flex:1;min-width:220px"><b>Prochain match</b><br><span>' + esc(a.next.label) + '</span><br><span class="nc-club">' + esc(when(a.next.at, true)) + '</span> <span class="nc-club">' + (a.next.venue === "home" ? "· à domicile contre " : "· à l'extérieur contre ") + esc(teamLab(a.next.opponent)) + "</span></div>" : "") + "</div></div>";
+    var target = anaTarget(v);
+    if (target) loadAnalysis(target);
+    if (ui.anaSelf) return h + anaBlockHtml(v, target);
     if (!o) return h + '<div class="nc-card" style="margin-top:14px"><p class="nc-club">' + (a.next ? "Adversaire à déterminer." : "Aucun match à venir : choisissez une sélection à analyser.") + "</p></div>";
-    var rec = o.record || {};
-    h += '<div class="nc-card" style="margin-top:14px"><div class="nc-opp-head">' + flag(o.country) + "<div><h3>" + esc(teamLab(o.id)) + '</h3><span class="nc-club">' + (o.coach ? "Sélectionneur : " + esc(o.coach) : "Sélection en intérim") + "</span></div></div>" +
-      '<div class="nc-kpis" style="margin-top:12px"><div><b>' + esc(rec.played || 0) + "</b><span>matchs internationaux récents</span></div><div><b>" + esc((rec.wins || 0) + " – " + (rec.losses || 0)) + "</b><span>victoires – défaites</span></div>" +
-      "<div><b>" + (rec.played ? esc(Math.round(rec.pf / rec.played)) + " – " + esc(Math.round(rec.pa / rec.played)) : "–") + "</b><span>points marqués – encaissés par match</span></div>" +
-      "<div><b>" + (o.group && o.group.rank ? esc(o.group.rank) + (o.group.rank === 1 ? "er" : "e") : "–") + "</b><span>" + (o.group ? esc(o.group.label) + " · " + esc(o.group.continent) : "pas de groupe de qualification") + "</span></div></div></div>";
+    h += anaBlockHtml(v, target);
     // Effectif de référence (fiches publiques).
     var squad = (o.squad || []).slice().sort(function (x, y) { return POS.indexOf(x.position) - POS.indexOf(y.position) || y.pts - x.pts; });
     h += '<div class="nc-two" style="margin-top:14px"><div class="nc-card"><div class="nc-sec"><span>Joueurs de référence</span><span>' + squad.length + "</span></div>" +
@@ -837,6 +929,7 @@
   function enterMode(teamId) {
     ensureCss(); ensureModeCss();
     ui.mode = teamId; ui.teamId = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null; ui.view = null; ui.gid = null; ui.tq = null; ui.tqMatch = null; ui.replaceOut = null; ui.opp = null; ui.error = "";
+    ui.ana = null; ui.anaSelf = false; ui.anaTeam = null;
     lsSet(teamId);
     document.body.classList.add("nc-mode");
     showModePage();
@@ -980,6 +1073,9 @@
     holder.innerHTML = modeHtml();
     if (ui.nav === "tactique") tqMount();
     syncModeChrome();
+    // Rapport Scouting Pro : placement adaptatif des blocs (comme le club).
+    var sp = document.getElementById("ncScoutingPanel");
+    if (sp && g("sp2WatchMasonry")) { try { window.sp2WatchMasonry(sp); } catch (e) { /* mise en page par défaut */ } }
   }
   function openModeMatch(id) {
     ui.backNav = ui.nav === "match" ? ui.backNav : ui.nav; ui.nav = "match"; ui.match = null; showModePage(); paint();
@@ -1046,6 +1142,30 @@
     }
     if (d.ncTqSave) { tqSave(); return; }
     if (d.ncTqRevert) { ui.tq = null; paint(); return; }
+    if (d.ncOwnAnalysis) { ui.anaSelf = true; paint(); return; }
+    // « Appliquer à ma tactique » (équivalent de « Appliquer à mes ordres »
+    // du club) : le Plan de match (scoutingGamePlanPatch, recalculé au clic)
+    // prérempli dans les ordres du PROCHAIN match non verrouillé (sinon la
+    // tactique par défaut), puis la Tactique ouverte sur ce match : rien
+    // n'est enregistré avant « Enregistrer ».
+    if (d.ncApplyPlan) {
+      var fb = document.getElementById("scoutingApplyOrdresFeedback");
+      var nx = tqUpcoming(ui.view).filter(function (x) { return !tqLocked(x); })[0] || null;
+      var tk = nx ? String(nx.id) : TQ_DEFAULT;
+      var base = (nx && ui.view.plans && ui.view.plans[nx.id]) || ui.view.tactics;
+      var plan = ui.anaTeam && base && g("scoutingGamePlanPatch") ? window.scoutingGamePlanPatch(ui.anaTeam, base) : null;
+      if (!plan) { if (fb) fb.textContent = t("Pas encore assez de données sur cet adversaire pour préremplir votre tactique."); return; }
+      if (ui.tq && ui.tq.dirty && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) return;
+      ui.tqMatch = tk;
+      var tq = tqBuild(ui.view, tk);
+      Object.keys(plan.patch).forEach(function (k) { tq.proxy[k] = Array.isArray(plan.patch[k]) ? JSON.parse(JSON.stringify(plan.patch[k])) : plan.patch[k]; });
+      tq.dirty = JSON.stringify(tqSnap(tq.proxy)) !== tq.saved;
+      tq.feedback = "Plan de match prérempli : vérifiez puis enregistrez.";
+      ui.nav = "tactique"; ui.error = "";
+      showModePage(); paint();
+      try { var sc2 = document.querySelector(".content-scroll"); if (sc2) sc2.scrollTop = 0; } catch (err) { /* rien */ }
+      return;
+    }
     // Amicaux.
     if (d.ncFrSend) {
       post("/api/national/coach/friendly/request", { opponent: ui.frOpp, at: Number(ui.frAt), venue: ui.frVenue }, "Demande de match amical envoyée.").then(function () { if (!ui.error) { ui.frOpp = ""; ui.frAt = ""; } paint(); });
@@ -1075,6 +1195,9 @@
       paint(); return;
     }
     if (ds.ncOpp !== undefined) {
+      // « Ma sélection » : même rapport, appliqué à sa propre sélection.
+      if (el.value === "__self") { ui.anaSelf = true; paint(); return; }
+      ui.anaSelf = false;
       ui.opp = el.value || null;
       var p = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId) + (ui.opp ? "&opp=" + encodeURIComponent(ui.opp) : "")).then(function (d) { ui.view = d; }).catch(function (err) { ui.error = err.message; }).then(paint);
       window.__lastNationalCoach = p;
