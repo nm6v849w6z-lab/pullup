@@ -38941,7 +38941,10 @@ function sp2ScoringOriginsHtml(team) {
   if (!o.total) {
     return html + `<p class="sp2-note">L'origine des paniers est enregistrée depuis le 28 septembre : rien à analyser tant que ${escapeHtml(team.name)} n'a pas rejoué.</p>`;
   }
-  const fmt = v => String(v).replace(".", ",");
+  // Virgule décimale en français seulement : les autres langues gardent le
+  // point, comme le reste du rapport (« 48.3 % »).
+  const frDecimal = !(window.hmI18n && window.hmI18n.lang && window.hmI18n.lang !== "fr");
+  const fmt = v => frDecimal ? String(v).replace(".", ",") : String(v);
   const row = (r, width, color) => `<div class="sp2-origin"><div class="sp2-origin-top"><span class="sp2-origin-label">` +
     (color ? `<span class="sp2-origin-key" style="background:${color}"></span>` : "") + `${escapeHtml(r.label)}</span>` +
     `<span class="sp2-origin-pct">${fmt(r.pct)}%<small> · ${fmt(r.perGame)} pts/match</small></span></div>` +
@@ -44032,7 +44035,10 @@ const COLLECTIVE_OPTION_UI = {
 const TACTIC_CATEGORY_LABELS = { offense: "attaque", defense: "défense", rhythm: "rythme" };
 
 function trainingFmtMult(x) {
-  return "×" + (Math.round(x * 100) / 100).toFixed(2).replace(".", ",");
+  // Virgule décimale sauf en anglais et en chinois (point).
+  const dot = window.hmI18n && (window.hmI18n.lang === "en" || window.hmI18n.lang === "zh");
+  const v = (Math.round(x * 100) / 100).toFixed(2);
+  return "×" + (dot ? v : v.replace(".", ","));
 }
 function trainingPlayerById(id) {
   return teamA && teamA.players.find(p => String(p.id) === String(id));
@@ -44320,8 +44326,9 @@ function trainingWeekLabel(offset) {
   const monday = trainingWeekMonday(Date.now(), offset);
   const sunday = parisCalendarDayIndex(monday + 6 * PARIS_DAY_MS + 12 * 3600000);
   const fmt = (t, o) => new Date(t + 12 * 3600000).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", ...o });
-  // Chinois : le mois ne se sous-entend pas (« 5日至10月11日 » se lit mal).
-  const sameMonth = fmt(monday, { month: "long" }) === fmt(sunday, { month: "long" }) && !(window.hmI18n && window.hmI18n.lang === "zh");
+  // Chinois et lituanien : le mois ne se sous-entend pas (« 5日至10月11日 »,
+  // « nuo 05 iki spalio 11 d. » se lisent mal).
+  const sameMonth = fmt(monday, { month: "long" }) === fmt(sunday, { month: "long" }) && !(window.hmI18n && (window.hmI18n.lang === "zh" || window.hmI18n.lang === "lt"));
   const from = sameMonth ? fmt(monday, { day: "numeric" }) : fmt(monday, { day: "numeric", month: "long" });
   return `Semaine du ${from} au ${fmt(sunday, { day: "numeric", month: "long" })}`;
 }
@@ -44658,7 +44665,10 @@ function trainingReportRowsHtml(report) {
     .sort((x, y) => y.total - x.total);
   if (others.length) {
     html += `<div class="tr-sec"><div class="tm-label">${slots.length ? "Physique et mental des autres joueurs" : "Progrès de l'effectif"}</div><div class="tr-tiles">` + others.map(({ id, e, fam, total }) => {
-      const detail = e.gains.filter(g => g.after !== g.before).map(g => `${TRAINING_LABELS[g.attr] || g.attr} ${g.before} → ${g.after}`).join(" · ");
+      // Infobulle : noms traduits un par un (la liste entière, avec ses
+      // chiffres, ne correspond à aucune entrée du dictionnaire).
+      const trLabel = l => (window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(l) : l);
+      const detail = e.gains.filter(g => g.after !== g.before).map(g => `${trLabel(TRAINING_LABELS[g.attr] || g.attr)} ${g.before} → ${g.after}`).join(" · ");
       const pills = ["fon", "phy", "men"].filter(k => fam[k]).map(k => `<span class="tr-pill ${k}${fam[k] < 0 ? " neg" : ""}">${TRAINING_FAMILY_LABELS[k]} ${fam[k] > 0 ? "+" : ""}${fam[k]}</span>`).join("");
       return `<div class="tr-tile" title="${escapeHtml(detail)}">${trainingAvatarHtml(trainingPlayerById(id), e.name)}<div class="tr-who"><b>${trainingNameHtml(trainingPlayerById(id), e.name)}</b><div class="tr-pills">${pills}</div></div>` +
         `<span class="tr-big sm ${total > 0 ? "up" : total < 0 ? "down" : "flat"}">${total > 0 ? "+" : ""}${total || "="}</span></div>`;

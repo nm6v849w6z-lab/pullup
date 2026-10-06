@@ -250,6 +250,9 @@
     var cache = new Map();
     var produced = new Set(); // textes anglais déjà écrits : ne pas les repasser
     var FRENCH = /[A-Za-zÀ-ÿ]{2,}/;
+    // Bilans sans mot (« 2V-1D », « 12V ») : traités par les règles de
+    // translateCore même s'ils ne contiennent pas deux lettres de suite.
+    var WL_ONLY = /^\s*(\d+[VD](\s*[–-]\s*\d+D)?|J\d+)\s*$/;
 
     function enNumber(g) {
       // Italien : 1 234 → 1.234 ; 12,5 reste 12,5.
@@ -355,7 +358,7 @@
     function tr(s) {
       if (s == null) return s;
       s = String(s);
-      if (!FRENCH.test(s)) return s;
+      if (!FRENCH.test(s) && !WL_ONLY.test(s)) return s;
       var core = norm(s);
       if (produced.has(core)) return s;
       var out = translateCore(core, 0);
@@ -369,6 +372,9 @@
       // Typographie anglaise / italienne : pas d'espace avant « : ; ! ? » ; un fragment
       // français élidé (« régler l' » + <b>Entraînement</b>) garde son espace.
       out = out.replace(/(\S)[ \u00a0\u202f]+([:;!?])(?=\s|$)/g, "$1$2");
+      // Allemand : jour seul avant « bis » (« Woche vom 5 bis 11. Oktober »)
+      // → ordinal « 5. », comme le second jour déjà converti.
+      if (lang === "de") out = out.replace(/\bvom (\d{1,2}) bis\b/g, "vom $1. bis");
       if (/'$/.test(core) && /[A-Za-z]$/.test(out)) out += " ";
       produced.add(norm(out));
       // garder les espaces de bord (mise en page du HTML)
@@ -411,7 +417,7 @@
       }
       if (LETTERS.hasOwnProperty(c)) {
         var pc = (p.getAttribute("class") || "");
-        return p.nodeName === "TH" || /(^|\s)(lg-f|form|wl|res)/.test(pc) ? LETTERS[c] : null;
+        return p.nodeName === "TH" || /(^|\s)(lg-f|form|wl|res|scouting-form-sq)/.test(pc) ? LETTERS[c] : null;
       }
       if (!POS_EN.hasOwnProperty(c)) return null;
       if (c.length === 2) return POS_EN[c];
@@ -444,7 +450,7 @@
       // (écrire la même valeur relancerait l'observateur à l'infini : en
       // italien, V(ictoire) reste « V »)
       if (v.length <= 3) { var pc = posCell(v, p); if (pc) { var nv = v.replace(v.trim(), pc); if (nv !== v) node.nodeValue = nv; return; } }
-      if (!FRENCH.test(v)) return;
+      if (!FRENCH.test(v) && !WL_ONLY.test(v)) return;
       if (skipEl(p)) return;
       var t = tr(v);
       if (t !== v) node.nodeValue = t;

@@ -129,8 +129,9 @@
     if (item.action === "lineup") return '<button type="button" class="vs-btn" data-tab="tactiques">Revoir les rôles</button>';
     return "";
   }
-  function moodDot(key) { return '<span class="vs-mood" style="background:' + (MOOD_COLOR[key] || "var(--vs-mid)") + '" title="' + esc(key) + '"></span>'; }
-  function chip(p) { return '<span class="vs-chip">' + moodDot(p.mood) + link(p) + '</span>'; }
+  // Infobulle : libellé du moral (« Mitigé »…), traduit par la page — jamais la clé interne.
+  function moodDot(key, label) { return '<span class="vs-mood" style="background:' + (MOOD_COLOR[key] || "var(--vs-mid)") + '"' + (label ? ' title="' + esc(label) + '"' : "") + '></span>'; }
+  function chip(p) { return '<span class="vs-chip">' + moodDot(p.mood, p.label) + link(p) + '</span>'; }
 
   function overviewHtml(v) {
     var why = v.problems.length ? v.problems[0].text : v.positives.length ? v.positives[0].text : "Rien à signaler pour l'instant.";
@@ -176,7 +177,7 @@
       var reasons = (p.reasons || []).map(function (r) { return esc(r.text); }).join(" · ");
       return '<tr><td>' + flag(p.nationality) + ' ' + link(p) + '</td><td class="vs-hide-m">' + pos(p.position) + '</td><td>' + esc(p.levelLabel) + '</td>' +
         '<td><div class="vs-bar" style="width:70px" title="' + p.influence + '/100"><span style="width:' + p.influence + '%;background:var(--amber,#f0a330)"></span></div></td>' +
-        '<td>' + moodDot(p.mood) + ' ' + esc(p.label) + '</td><td class="vs-reasons vs-hide-m">' + reasons + '</td></tr>';
+        '<td>' + moodDot(p.mood, p.label) + ' ' + esc(p.label) + '</td><td class="vs-reasons vs-hide-m">' + reasons + '</td></tr>';
     }).join("");
     return '<div class="vs-card"><h3>Hiérarchie du vestiaire</h3>' + (tiers || '<p class="vs-empty">Effectif vide.</p>') + '</div>' +
       '<div class="vs-card"><h3>Qui est satisfait, qui est frustré</h3><div class="vs-wrap"><table class="vs-table"><thead><tr><th>Joueur</th><th class="vs-hide-m">Poste</th><th>Statut</th><th>Influence</th><th>Moral</th><th class="vs-hide-m">Pourquoi</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
