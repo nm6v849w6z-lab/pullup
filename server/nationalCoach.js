@@ -79,6 +79,8 @@ function matchEff(e) {
   return (e.pts || 0) + (e.reb || 0) + (e.ast || 0) + (e.stl || 0) + (e.blk || 0) - (e.tov || 0) - (fga - fgm) - ((e.fta || 0) - (e.ftm || 0));
 }
 const r1 = v => Math.round(v * 10) / 10;
+function genOf(p) { try { return Math.round(Math.max(...Object.values(Engine.positionRatings(p)))); } catch (e) { return null; } }
+function avgOf(p, keys) { return p.attrs && Array.isArray(keys) && keys.length ? Math.round(keys.reduce((s, k) => s + (p.attrs[k] || 0), 0) / keys.length) : null; }
 function coachPlayer(x, now) {
   const p = x.src;
   const log = Array.isArray(p.matchLog) ? p.matchLog : [];
@@ -88,7 +90,10 @@ function coachPlayer(x, now) {
   try { if (Engine.currentCondition) condition = Math.round(Engine.currentCondition(p, now, x.club.recovery || undefined)); } catch (e) { /* valeur brute */ }
   return {
     p: p.id, n: p.name, name: p.name, age: p.age, position: p.position, height: p.height, look: p.look || null,
-    ovr: Math.round(x.ovr), attrs: p.attrs ? { ...p.attrs } : null, condition,
+    ovr: Math.round(x.ovr), attrs: p.attrs ? { ...p.attrs } : null, condition, nationality: p.nationality || null,
+    // GEN (note du meilleur poste, comme partout dans le jeu) et moyennes
+    // physique / mentale (mêmes formules que l'Effectif).
+    gen: genOf(p), physAvg: avgOf(p, Engine.PHYSICAL_ATTRS), mentAvg: avgOf(p, Engine.MENTAL_ATTRS),
     injuryUntil: typeof p.injuryUntil === "number" && p.injuryUntil > now ? p.injuryUntil : null, injuryType: p.injuryType || null,
     club: { name: x.club.name, division: x.club.division, country: x.club.country, leagueId: x.club.leagueId, idx: x.club.idx },
     season: { gp, min: gp ? r1(sum("min") / gp) : 0, pts: gp ? r1(sum("pts") / gp) : 0, reb: gp ? r1(sum("reb") / gp) : 0, ast: gp ? r1(sum("ast") / gp) : 0, eff: gp ? r1(log.reduce((s, e) => s + matchEff(e), 0) / gp) : 0 },
@@ -121,10 +126,17 @@ function gatheringsOf(store, team, season, calendarStartAt) {
     }
     return { gid: `s${season}f`, kind: "final", label: c.comp === "continental" ? "Phase finale continentale" : "Coupe du monde / tournoi de consolation", comp: c.comp, season, startAt: c.from, endAt: c.to, freezeAt: c.from - LIMITS.freezeDays * DAY };
   });
+  // Matchs amicaux internationaux acceptés (voir server/nationalFriendlies.js) :
+  // un rassemblement chacun, mêmes règles (liste figée 3 jours avant).
+  ((store.intlFriendlies || []).filter(f => f.season === season && (f.home === team.id || f.away === team.id) && (f.status === "accepted" || f.status === "played"))).forEach(f => {
+    gs.push({ gid: `s${season}x${f.id}`, kind: "friendly", label: "Match amical international", comp: null, season, startAt: f.at, endAt: f.at, freezeAt: f.at - LIMITS.freezeDays * DAY, friendlyId: f.id });
+  });
+  gs.sort((a, b) => a.startAt - b.startAt);
   // Exemptée (groupe de 3, pas de match ce dimanche-là) ou absente des
   // phases finales : pas de rassemblement, jamais de convocation.
   const NM = require("./nationalMatches.js");
   gs.forEach(g => {
+    if (g.kind === "friendly") { g.bye = false; return; }
     if (g.kind === "window") {
       const comp = NM.compOf(store, season, team.cat);
       g.bye = !!(comp && !comp.matches.some(m => m.gid === g.gid && (m.home === team.id || m.away === team.id)));
@@ -409,7 +421,7 @@ function stageOfRank(t, teamId) {
   return "Phase de poules";
 }
 function markSeen(store, me, body, now) {
-  const m = coachMandate(store, me, body && body.teamId);
+  const m = coachMandate(store, me, body && body.teamId, "feed");
   if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
   m.feedSeenId = m.feedSeq || 0;
   return { ok: true };
@@ -417,18 +429,36 @@ function markSeen(store, me, body, now) {
 
 // --- Actions du sélectionneur (routes) -----------------------------------
 function fail(error, status = 400) { return { ok: false, status, error }; }
-function coachMandate(store, me, teamId) {
+// --- Droits (retour utilisateur 2026-10-06) ---------------------------------
+// Sélectionneur : tout. Adjoint (2 au plus, vrais managers) : joueurs,
+// présélection en lecture, joueurs suivis, tactique, informations de
+// préparation des matchs. Recruteur (2 au plus) : joueurs, joueurs suivis
+// (scouting). Ni l'un ni l'autre : convocations, amicaux, staff.
+const PERMS = {
+  coach: ["view", "watch", "preselect", "preselectView", "convoke", "convocView", "tactics", "friendlies", "staff", "feed", "analysis", "mandate"],
+  assistant: ["view", "watch", "preselectView", "convocView", "tactics", "feed", "analysis"],
+  scout: ["view", "watch", "analysis"],
+};
+function accessOf(store, me, teamId) {
   const m = NT().activeMandate(store, teamId);
-  if (!m || !me || m.key !== me.key) return null;
-  return m;
+  if (!m || !me) return null;
+  if (m.key === me.key) return { m, role: "coach" };
+  const s = (m.staff || []).find(x => x.key === me.key && x.status === "active");
+  return s ? { m, role: s.role } : null;
+}
+function can(a, perm) { return !!(a && PERMS[a.role] && PERMS[a.role].includes(perm)); }
+// Mandat si `me` a le droit `perm` sur cette sélection (sélectionneur par défaut).
+function coachMandate(store, me, teamId, perm = "staff") {
+  const a = accessOf(store, me, teamId);
+  return can(a, perm) ? a.m : null;
 }
 function poolMap(pool) { return new Map(((pool && pool.players) || []).map(x => [refKey(x), x])); }
 // Liste du sélectionneur : présélection ou joueurs suivis.
 function setListMember(store, me, body, now, ctx) {
-  const m = coachMandate(store, me, body && body.teamId);
-  if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
-  const list = body.list === "watchlist" ? "watchlist" : body.list === "preselection" ? "preselection" : null;
+  const list = body && body.list === "watchlist" ? "watchlist" : body && body.list === "preselection" ? "preselection" : null;
   if (!list) return fail("Liste inconnue.");
+  const m = coachMandate(store, me, body && body.teamId, list === "watchlist" ? "watch" : "preselect");
+  if (!m) return fail(list === "watchlist" ? "Réservé au staff de cette sélection." : "Réservé au sélectionneur de cette sélection.", 403);
   const r = cleanRef(body.player);
   if (!r) return fail("Joueur invalide.");
   m[list] = Array.isArray(m[list]) ? m[list] : [];
@@ -445,7 +475,7 @@ function setListMember(store, me, body, now, ctx) {
 }
 // Liste des convoqués d'un rassemblement, avant le gel.
 function setConvocation(store, me, body, now, ctx) {
-  const m = coachMandate(store, me, body && body.teamId);
+  const m = coachMandate(store, me, body && body.teamId, "convoke");
   if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
   const team = store.teams[body.teamId];
   const g = gatheringsOf(store, team, ctx.season, ctx.calendarStartAt).find(x => x.gid === body.gatheringId);
@@ -471,7 +501,7 @@ function setConvocation(store, me, body, now, ctx) {
 }
 // Remplacement d'un convoqué devenu indisponible, après le gel.
 function replaceConvoked(store, me, body, now, ctx) {
-  const m = coachMandate(store, me, body && body.teamId);
+  const m = coachMandate(store, me, body && body.teamId, "convoke");
   if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
   const team = store.teams[body.teamId];
   const g = gatheringsOf(store, team, ctx.season, ctx.calendarStartAt).find(x => x.gid === body.gatheringId);
@@ -524,7 +554,7 @@ function scrubTactics(m, tactics, refs) {
   return t;
 }
 function setTactics(store, me, body, now, ctx) {
-  const m = coachMandate(store, me, body && body.teamId);
+  const m = coachMandate(store, me, body && body.teamId, "tactics");
   if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
   const team = store.teams[body.teamId];
   const { refs } = tacticsRoster(store, m, team, ctx);
@@ -574,8 +604,9 @@ function defaultOrders() {
 function coachView(store, me, teamId, now, ctx) {
   const team = store.teams[teamId];
   if (!team) return fail("Sélection inconnue.", 404);
-  const m = coachMandate(store, me, teamId);
-  if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
+  const access = accessOf(store, me, teamId);
+  if (!can(access, "view")) return fail("Réservé au sélectionneur et à son staff.", 403);
+  const m = access.m, role = access.role;
   const pool = ctx.pool;
   const pm = poolMap(pool);
   const gs = gatheringsOf(store, team, ctx.season, ctx.calendarStartAt);
@@ -587,20 +618,26 @@ function coachView(store, me, teamId, now, ctx) {
   });
   const { refs } = tacticsRoster(store, m, team, ctx);
   const nidPlayers = refs.map(r => ({ nid: nidOf(m, r), ref: r }));
+  const NF = require("./nationalFriendlies.js");
+  const perms = PERMS[role];
   return {
-    ok: true, now, season: ctx.season,
+    ok: true, now, season: ctx.season, role, perms,
     team: { id: team.id, country: team.country, cat: team.cat, label: NT().teamLabel(team.id) },
     mandate: NT().publicMandate(m),
     limits: LIMITS,
     pool: pool ? { at: pool.at, eligible: pool.eligible, players: pool.players } : null,
-    preselection: m.preselection || [], watchlist: m.watchlist || [],
-    gatherings, currentGid: cur ? cur.gid : null,
-    tactics: m.tactics || defaultOrders(), tacticsPlayers: nidPlayers,
+    preselection: can(access, "preselectView") ? (m.preselection || []) : [], watchlist: m.watchlist || [],
+    gatherings: can(access, "convocView") ? gatherings : [], currentGid: can(access, "convocView") && cur ? cur.gid : null,
+    tactics: can(access, "tactics") ? (m.tactics || defaultOrders()) : null, tacticsPlayers: can(access, "tactics") ? nidPlayers : [],
     // Mode Sélectionneur (phase E) : notifications, statistiques, bilan.
-    feed: (m.feed || []).slice(0, 40), unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)),
+    feed: can(access, "feed") ? (m.feed || []).slice(0, 40) : [], unread: role === "coach" ? Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) : 0,
     stats: playerStatsOf(store, team.id, m.startedAt),
-    report: mandateReport(store, m),
-    pastMandates: store.mandates.filter(x => x.key === m.key && x.endedAt && x.report).slice(-5).map(x => x.report),
+    report: can(access, "mandate") ? mandateReport(store, m) : null,
+    pastMandates: can(access, "mandate") ? store.mandates.filter(x => x.key === m.key && x.endedAt && x.report).slice(-5).map(x => x.report) : [],
+    // Staff (adjoints, recruteurs) et matchs amicaux internationaux.
+    staff: publicStaff(m),
+    managers: can(access, "staff") ? (store.managerIndex || []).filter(x => x.key !== m.key).map(x => ({ mid: x.mid, pseudo: x.pseudo, clubName: x.clubName, country: x.country, division: x.division })) : [],
+    friendlies: can(access, "friendlies") || can(access, "convocView") ? NF.viewFor(store, team, ctx.season, ctx.calendarStartAt, now) : null,
     options: {
       offense: Object.keys(Engine.OFFENSE_PROFILES), defense: Object.keys(Engine.DEFENSES), rhythm: Object.keys(Engine.RHYTHMS),
       screenDefense: Object.keys(Engine.SCREEN_DEFENSES), helpDefense: Object.keys(Engine.HELP_DEFENSE_LEVELS), postDefense: Object.keys(Engine.POST_DEFENSES),
@@ -608,6 +645,75 @@ function coachView(store, me, teamId, now, ctx) {
       watchFocus: Object.keys(Engine.WATCH_FOCUS_EFFECTS), maxWatch: Engine.MAX_WATCH_ASSIGNMENTS, maxOffense: 3,
     },
   };
+}
+
+// --- Staff de la sélection (retour utilisateur 2026-10-06) -----------------
+// m.staff = [{ key, mid, ref, pseudo, clubName, role: "assistant" | "scout",
+// status: "invited" | "active", at, since }] : de vrais managers, 2
+// adjoints et 2 recruteurs au plus ; invités par le sélectionneur, ils
+// acceptent (ou refusent) depuis la page Sélections. Fin du mandat = fin
+// du staff (accessOf ne regarde que le mandat en cours).
+const STAFF_MAX = { assistant: 2, scout: 2 };
+const STAFF_LABEL = { assistant: "adjoint", scout: "recruteur" };
+function publicStaff(m) {
+  return (m.staff || []).map(s => ({ mid: s.mid, pseudo: s.pseudo, clubName: s.clubName, ref: s.ref, role: s.role, status: s.status, at: s.at, since: s.since || null }));
+}
+// Rôle de staff actif ou invitation en attente d'un manager, toutes sélections.
+function staffOf(store, key) {
+  const roles = [], invites = [];
+  (store.mandates || []).filter(m => !m.endedAt).forEach(m => (m.staff || []).forEach(s => {
+    if (s.key !== key) return;
+    const row = { teamId: m.teamId, label: NT().teamLabel(m.teamId), country: store.teams[m.teamId] ? store.teams[m.teamId].country : null, role: s.role, coach: m.pseudo || (m.clubName ? `Manager de ${m.clubName}` : "Sélectionneur") };
+    (s.status === "active" ? roles : invites).push(row);
+  }));
+  return { staffRoles: roles, staffInvites: invites };
+}
+function staffInvite(store, me, body, now) {
+  const m = coachMandate(store, me, body && body.teamId, "staff");
+  if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
+  const role = body.role === "assistant" || body.role === "scout" ? body.role : null;
+  if (!role) return fail("Rôle inconnu (adjoint ou recruteur).");
+  const target = (store.managerIndex || []).find(x => x.mid === body.mid);
+  if (!target) return fail("Manager introuvable.");
+  if (target.key === m.key) return fail("Vous êtes déjà le sélectionneur.");
+  m.staff = Array.isArray(m.staff) ? m.staff : [];
+  if (m.staff.some(s => s.key === target.key)) return fail(`${target.pseudo || target.clubName} fait déjà partie de votre staff (ou est invité).`);
+  if (m.staff.filter(s => s.role === role).length >= STAFF_MAX[role]) return fail(`${STAFF_MAX[role]} ${STAFF_LABEL[role]}s au maximum.`);
+  if (NT().mandatesOfKey(store, target.key).length) return fail("Ce manager est déjà sélectionneur.");
+  if (staffOf(store, target.key).staffRoles.length) return fail("Ce manager fait déjà partie du staff d'une autre sélection.");
+  m.staff.push({ key: target.key, mid: target.mid, ref: target.ref, pseudo: target.pseudo, clubName: target.clubName, role, status: "invited", at: now });
+  queueNotice(store, target.ref, {
+    key: `nat_staff_inv_${m.id}_${target.mid}`, title: `${NT().teamLabel(m.teamId)} : invitation dans le staff`,
+    text: `Le sélectionneur vous propose de devenir ${STAFF_LABEL[role]} de ${NT().teamLabel(m.teamId)}. Répondez depuis la page Sélections.`,
+  });
+  return { ok: true, staff: publicStaff(m) };
+}
+function staffRespond(store, me, body, now) {
+  const m = NT().activeMandate(store, body && body.teamId);
+  const s = m && me && (m.staff || []).find(x => x.key === me.key && x.status === "invited");
+  if (!s) return fail("Aucune invitation en attente pour cette sélection.", 404);
+  if (body.accept) {
+    if (NT().mandatesOfKey(store, me.key).length) return fail("Vous êtes sélectionneur : impossible de rejoindre un staff.");
+    if (staffOf(store, me.key).staffRoles.length) return fail("Vous faites déjà partie du staff d'une autre sélection.");
+    s.status = "active"; s.since = now;
+    coachFeed(m, { key: `staff_ok_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} rejoint votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
+  } else {
+    m.staff = m.staff.filter(x => x !== s);
+    coachFeed(m, { key: `staff_no_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} décline votre invitation`, text: `Rôle proposé : ${STAFF_LABEL[s.role]}.` });
+  }
+  return { ok: true, ...staffOf(store, me.key) };
+}
+function staffRemove(store, me, body, now) {
+  const m = NT().activeMandate(store, body && body.teamId);
+  if (!m || !me) return fail("Sélection sans sélectionneur.", 404);
+  const self = (m.staff || []).find(x => x.key === me.key);
+  const isCoach = m.key === me.key;
+  const s = isCoach ? (m.staff || []).find(x => x.mid === body.mid) : self;
+  if (!s) return fail(isCoach ? "Membre du staff introuvable." : "Vous ne faites pas partie de ce staff.", isCoach ? 404 : 403);
+  m.staff = m.staff.filter(x => x !== s);
+  if (isCoach) queueNotice(store, s.ref, { key: `nat_staff_out_${m.id}_${s.mid}_${now}`, title: `${NT().teamLabel(m.teamId)} : fin de votre rôle`, text: `Le sélectionneur a mis fin à votre rôle de ${STAFF_LABEL[s.role]}.` });
+  else coachFeed(m, { key: `staff_left_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} quitte votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
+  return { ok: true, staff: publicStaff(m), ...staffOf(store, me.key) };
 }
 
 // --- Administration : nommer un sélectionneur (essais, intérim) -----------
@@ -639,4 +745,5 @@ module.exports = {
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
   coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
+  PERMS, accessOf, can, staffOf, staffInvite, staffRespond, staffRemove, publicStaff, queueNotice,
 };
