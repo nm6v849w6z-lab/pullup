@@ -266,8 +266,7 @@
     // Même forme de menu que le Calendrier et la Coupe (.cal-toolbar / .cal-filter).
     var tabs = '<div class="cal-toolbar vs-tabs" role="tablist" aria-label="Vues du vestiaire">' + TABS.map(function (x) {
       var on = state.tab === x[0];
-      var badge = x[0] === "overview" && view.problems.length ? ' <span class="cal-filter-count">' + view.problems.length + '</span>' : "";
-      return '<button type="button" role="tab" class="cal-filter' + (on ? " active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + badge + '</button>';
+      return '<button type="button" role="tab" class="cal-filter' + (on ? " active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + '</button>';
     }).join("") + '</div>';
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
     holder.innerHTML = tabs + body;
