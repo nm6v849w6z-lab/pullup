@@ -2934,7 +2934,7 @@
 
   .pdp2-row{display:grid; gap:18px;}
   /* Rôles de jeu (assets/roles.js, maquette validée le 2026-10-06). */
-  .pdp2-row--role{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); align-items:stretch;}
+  .pdp2-row--role{grid-template-columns:minmax(0,2fr) minmax(0,1fr); align-items:stretch;}
   @media (max-width:900px){ .pdp2-row--role{grid-template-columns:minmax(0,1fr);} }
   /* Brique Rôle : identité à gauche, maîtrise des rôles à droite ; évolution
      et programmes en pied, sur toute la largeur. */
@@ -2961,9 +2961,13 @@
   .pdp-sw-list{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:6px;}
   .pdp-sw-list .pdp-role-li{padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid var(--line); font-weight:600; line-height:1.25;}
   .pdp-sw-list .pdp-role-note{margin:0;}
-  .pdp-sw-foot{margin-top:auto; padding-top:14px; border-top:1px solid var(--line);}
+  .pdp-role-compat{margin-top:8px; padding-top:12px; border-top:1px solid var(--line);}
+  .pdp-role-compat .cohesion-note, .pdp-role-compat .coh-note{margin-top:10px;}
   .pdp-sw-card .pdp-role-sw{margin-bottom:14px;}
-  .pdp-sw-foot .pdp-compat{margin-top:0;}
+  .pdp-role-compat .pdp-compat{margin-top:0; gap:12px;}
+  .pdp-role-compat .pdp-compat-ring{width:60px; height:60px;}
+  .pdp-role-compat .pdp-compat-ring > div{width:48px; height:48px; font-size:15px;}
+  .pdp-role-compat .pdp-compat > div:last-child > div:first-child{font-size:13.5px; line-height:1.3;}
   @media (max-width:480px){
     .pdp-sw-card .pdp-role-sw{grid-template-columns:minmax(0,1fr); row-gap:12px;}
     .pdp-sw-col, .pdp-sw-col + .pdp-sw-col{padding:0; border-left:0;}
@@ -20277,6 +20281,25 @@ function pdpRoleRowHtml(player, fullyVisible) {
   h += `<div class="pdp-role-body"><div class="pdp-role-id">`;
   h += `<div class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span> <small style="font-size:14px;color:var(--ink-dim);font-weight:700">· ${escapeHtml(POS_SHORT[prof.primary.position] || prof.primary.position)}</small></div>`;
   h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
+  // Compatibilité avec le cinq majeur du manager (phase 2) : dans la
+  // brique Rôle, sous l'identité du rôle (demande utilisateur du 2026-10-06).
+  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
+  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
+  let compatHtml = "";
+  if (comp) {
+    compatHtml += `<div class="pdp-role-compat">`;
+    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
+    compatHtml += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
+      `<div style="font-weight:800">Compatibilité avec votre cinq majeur</div>` +
+      (comp.starter ? `<div class="pdp-role-note" style="margin-top:2px">Titulaire : cohérence actuelle du cinq.</div>`
+        : `<div class="pdp-role-note" style="margin-top:2px"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
+      `</div></div>`;
+    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
+    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
+    if (bad) compatHtml += cohesionNoteHtml(bad); else if (good) compatHtml += cohesionNoteHtml(good);
+    compatHtml += `</div>`;
+  }
+  h += compatHtml;
   h += `</div>`; // identité
   h += `<div class="pdp-role-mastery"><div class="pdp-role-sub">Maîtrise des rôles</div>`;
   // Mention « Préféré » retirée de la liste (demande utilisateur du
@@ -20297,29 +20320,12 @@ function pdpRoleRowHtml(player, fullyVisible) {
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
   if (progs.length) h += `<div><div class="pdp-role-sub">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div></div>`;
   h += `</div></section>`;
-  // Forces / Faiblesses : deux colonnes séparées, éléments compacts ;
-  // compatibilité avec le cinq en pied de brique.
+  // Forces / Faiblesses : deux colonnes séparées, éléments compacts.
   h += `<section class="pdp2-card pdp-sw-card"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div><div class="pdp-role-sw">` +
     `<div class="pdp-sw-col pdp-sw-col--ok"><div class="pdp-role-sub">Forces <b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
     (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
     `</div></div><div class="pdp-sw-col pdp-sw-col--bad"><div class="pdp-role-sub">Faiblesses <b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
     (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div></div>`;
-  // Compatibilité avec le cinq majeur du manager (phase 2).
-  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
-  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
-  if (comp) {
-    h += `<div class="pdp-sw-foot">`;
-    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
-    h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
-      `<div style="font-weight:800">Compatibilité avec votre cinq majeur</div>` +
-      (comp.starter ? `<div class="pdp-role-note" style="margin-top:2px">Titulaire : cohérence actuelle du cinq.</div>`
-        : `<div class="pdp-role-note" style="margin-top:2px"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
-      `</div></div>`;
-    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
-    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
-    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
-    h += `</div>`;
-  }
   h += `</section></div>`;
   return h;
 }
