@@ -3007,14 +3007,12 @@
   .coh-col--notes .coh-note:first-child{margin-top:0;}
   .coh-col--notes:empty{display:none;}
   @container (min-width:720px){
-    .ordres-coh-card .coh-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.2fr); gap:22px; align-items:start;}
+    .ordres-coh-card .coh-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:22px; align-items:start;}
     .ordres-coh-card .coh-col + .coh-col{padding-left:22px; border-left:1px solid var(--line-soft, var(--line));}
     .ordres-coh-card .coh-kpis{margin-bottom:12px;}
   }
-  @container (min-width:480px) and (max-width:719px){
-    .ordres-coh-card .coh-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px 22px; align-items:start;}
-    .ordres-coh-card .coh-col--notes{grid-column:1 / -1;}
-  }
+  .coh-col--notes{margin-top:10px;}
+  @container (min-width:720px){ .ordres-coh-card .coh-col--notes{margin-top:0;} }
   .coh-kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;}
   .coh-kpi{background:var(--panel-2, rgba(255,255,255,.03)); border-radius:10px; padding:8px 10px;}
   .coh-kpi b{display:block; font-size:22px; font-weight:900;} .coh-kpi span{font-size:11.5px; color:var(--ink-dim);}
@@ -20267,15 +20265,13 @@ function compoCohesionHtml(team) {
   // rôles du cinq ; « Team Fit » = cohérence globale ajustée par la tactique.
   const tac = R.tacticalFit(slots, team.offensivePriorities || [], team.rhythm);
   const teamFit = tac ? Math.max(1, Math.min(99, Math.round(c.overall + (tac.score - 50) * 0.3))) : c.overall;
-  // Trois colonnes quand la brique est large (bilan | cinq | remarques),
+  // Deux colonnes quand la brique est large (scores puis cinq | remarques),
   // empilées sinon.
   h += `<div class="coh-cols"><div class="coh-col coh-col--sum">`;
   h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [teamFit, "Team Fit"]]
     .map(([v, l]) => `<div class="coh-kpi"><b class="${cohTone(v)}">${v}%</b><span>${l}</span></div>`).join("") + `</div>`;
-  if (tac && tac.parts.length) {
-    h += `<div class="coh-tac">` + tac.parts.map(x => `<span class="coh-tac-chip ${x.score >= 65 ? "coh-good" : x.score <= 35 ? "coh-bad" : ""}" title="Adéquation de la tactique aux rôles du cinq"><span>${escapeHtml(x.key)}</span> · ${x.score}</span>`).join("") + `</div>`;
-  }
-  h += `</div><div class="coh-col coh-col--slots">`;
+  // Pastilles des tactiques retirées, cinq sous les scores (demande
+  // utilisateur du 2026-10-06).
   c.slots.forEach(sl => {
     h += `<div class="coh-slot">${sl.warn ? COH_WARN_SVG : COH_OK_SVG}<span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><span>${escapeHtml(sl.roleName)}</span> · ${sl.mastery}%</span></div>`;
   });

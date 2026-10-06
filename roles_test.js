@@ -200,7 +200,7 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   await new Promise(r => setTimeout(r, 200));
   const coh = doc.getElementById("compoCohesion");
   check(!!coh && coh.querySelectorAll(".coh-slot").length === 5 && /Offensive/.test(coh.textContent) && /Team Fit/.test(coh.textContent), "composition : cohérence du cinq (5 titulaires, offensive / défensive / Team Fit)");
-  check(coh.querySelectorAll(".coh-tac-chip").length >= 1, "composition : adéquation de chaque priorité tactique aux rôles");
+  check(!coh.querySelector(".coh-tac-chip") && coh.querySelector(".coh-col--sum .coh-kpis + .coh-slot"), "composition : pas de pastilles de tactique, cinq sous les scores");
   dom.window.close(); server.close();
   console.log("\n🏁 roles_test.js : tout est vert");
   process.exit(0);
