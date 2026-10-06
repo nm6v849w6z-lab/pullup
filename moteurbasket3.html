@@ -51035,11 +51035,12 @@ function renderCalendrierSection() {
     // cible « fr:<id> » → éditeur d'ordres de l'amical), « Ordres » ou
     // « Modifier vos ordres » selon les ordres déjà enregistrés. Le serveur
     // accepte les ordres d'un amical jusqu'au coup d'envoi (invitation en
-    // attente comprise, voir server/friendlies.js:setFriendlyLineup). La
-    // page de l'amical reste accessible par « Voir le match ».
+    // attente comprise, voir server/friendlies.js:setFriendlyLineup).
     const frOrdered = !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex]));
     const frOrderBtn = `<button class="calendar-order-btn${frOrdered ? " calendar-order-btn-validated" : ""}"${orderTargetAttr(orderTargetFor("fr", f.id))}>${CALENDAR_ORDERS_ICON}${frOrdered ? "Modifier vos ordres" : "Ordres"}</button>`;
-    const frPageBtn = `<button type="button" class="calendar-fr-link" data-tab="amicaux">${f.status === "pending" ? "Invitation en attente" : "Voir le match"}</button>`;
+    // « Voir le match » retiré (demande utilisateur du 2026-10-06) ; seule
+    // une invitation en attente garde son lien vers la page des amicaux.
+    const frPageBtn = f.status === "pending" ? `<button type="button" class="calendar-fr-link" data-tab="amicaux">Invitation en attente</button>` : "";
     rows.push({
       competition: "fr", label: "Match amical", shortLabel: "Amical",
       opponent: league.teams[oppIdxFr].name, opponentIdx: oppIdxFr,

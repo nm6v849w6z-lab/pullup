@@ -150,7 +150,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
   check(!!docA3.querySelector("#calendrierSection .fr-cal-score"), "le score de l'amical joué ouvre sa feuille de match depuis le Calendrier");
   // Bouton d'ordres de l'amical à venir (retour utilisateur 2026-10-06) :
   // même bouton que les autres matchs (data-order-target), pas un lien vers
-  // la page des amicaux ; « Voir le match » garde l'accès à cette page.
+  // la page des amicaux ; plus de « Voir le match » (2026-10-06).
   {
     const up = winA3.eval("(() => { const f = league.friendlies.find(x => x.status === 'accepted' && x.at > Date.now()); return f ? { id: f.id, ordered: !!((f.orders && f.orders[myTeamIndex]) || (f.lineups && f.lineups[myTeamIndex])) } : null; })()");
     check(!!up, "un amical accepté à venir dans le Calendrier");
@@ -158,7 +158,7 @@ function change(el, value) { el.value = value; el.dispatchEvent(new el.ownerDocu
     check(!!btnOf() && btnOf().classList.contains("calendar-order-btn"), "amical : bouton d'ordres commun (cible fr:<id>)");
     check(up.ordered ? /Modifier vos ordres/.test(btnOf().textContent) : (/Ordres/.test(btnOf().textContent) && !/Modifier/.test(btnOf().textContent)), `amical sans ordres → « Ordres » (${btnOf().textContent.trim()})`);
     const row = btnOf().closest("tr");
-    check(!!row.querySelector(".calendar-fr-link[data-tab='amicaux']") && /Voir le match/.test(row.textContent), "la page de l'amical reste accessible (« Voir le match »)");
+    check(!/Voir le match/.test(row.textContent), "plus de lien « Voir le match » sur la ligne de l'amical");
     btnOf().click();
     await waitFor(() => !docA3.getElementById("prepSection").classList.contains("hidden") && winA3.eval("tqEdit && tqEdit.kind === 'friendly' && tqEdit.friendlyId") === up.id, "clic → éditeur d'ordres de CET amical");
     // Ordres enregistrés → « Modifier vos ordres ».
