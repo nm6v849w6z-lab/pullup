@@ -147,7 +147,7 @@ function comparableSalesValuation(league, player, now = Date.now()) {
   const comparables = (league.transferListings || [])
     .filter(l => l.result === "sold" && l.finalPrice && l.playerId !== player.id && (now - l.closesAt) <= MARKET_COMPARABLE_WINDOW_MS)
     .map(l => {
-      const p = typeof league.playerById === "function" ? league.playerById(l.playerId) : null;
+      const p = typeof league.listingPlayer === "function" ? league.listingPlayer(l) : null;
       if (!p || p.position !== player.position) return null;
       return { price: l.finalPrice, gap: Math.abs(p.overall() - targetOverall) };
     })

@@ -364,6 +364,10 @@ function deserializeMultiLeague(data) {
   Engine.reseedUidFromSave(data);
   const league = leagueFromSave(data.league);
   if (!league.leagueId) stampHistoricLeague(league);
+  // Ids de joueurs en double dans la ligue (bug du 2026-10-06 : joueur
+  // affiché « aux enchères » sans raison) : réparés à la lecture.
+  const fixed = Engine.repairDuplicatePlayerIds(league);
+  if (fixed.length) console.warn(`[ids] ${league.leagueId || "ligue"} : ${fixed.length} id(s) de joueur en double réattribué(s) (${fixed.slice(0, 5).map(c => `${c.name} ${c.from}→${c.to}`).join(", ")}).`);
   return { league };
 }
 

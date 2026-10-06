@@ -910,7 +910,7 @@ function buildStateSnapshot(league, teamIndex, now) {
       listings: openListings.map(l => ({
         id: l.id,
         playerId: l.playerId,
-        playerName: (league.playerById ? league.playerById(l.playerId) : null)?.name || null,
+        playerName: (league.listingPlayer ? league.listingPlayer(l) : null)?.name || null,
         sellerIdx: l.sellerIdx,
         sellerName: l.freeAgent ? null : ((league.teams[l.sellerIdx] || {}).name || null),
         freeAgent: !!l.freeAgent,

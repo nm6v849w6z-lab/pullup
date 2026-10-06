@@ -21827,7 +21827,7 @@ class League {
       if (!leaving.length) return;
       leaving.forEach(p => {
         (this.transferListings || []).forEach(l => {
-          if (l.status === "open" && l.playerId === p.id) { l.status = "cancelled"; l.result = "retired"; }
+          if (l.status === "open" && l.playerId === p.id && l.sellerIdx === idx) { l.status = "cancelled"; l.result = "retired"; }
         });
         const i = team.players.findIndex(x => x.id === p.id);
         if (i !== -1) team.players.splice(i, 1);
@@ -22333,6 +22333,18 @@ class League {
   // Cherche un joueur par id, TOUTES équipes confondues (utile pour une
   // enchère : le joueur listé peut appartenir à n'importe laquelle des 10
   // équipes de la ligue, pas seulement celle du joueur).
+  // Joueur d'une annonce du marché, cherché CHEZ SON VENDEUR (bug du
+  // 2026-10-06 : un joueur de BC DIA affiché « aux enchères » sans raison —
+  // deux joueurs d'une même ligue pouvaient porter le même id après un
+  // transfert entre championnats ; playerById renvoyait le premier trouvé).
+  listingPlayer(listing) {
+    if (!listing) return null;
+    if (listing.freeAgent) return this.freeAgentById(listing.playerId) || null;
+    const seller = this.teams[listing.sellerIdx];
+    const own = seller && seller.players.find(pl => pl.id === listing.playerId);
+    return own || (seller ? null : this.listingPlayer(listing));
+  }
+
   playerById(playerId) {
     for (const team of this.teams) {
       const p = team.players.find(pl => pl.id === playerId);
@@ -22390,7 +22402,7 @@ class League {
     if (!seller) return null;
     const player = seller.players.find(p => p.id === playerId);
     if (!player) return null;
-    if (this.transferListings.some(l => l.status === "open" && l.playerId === playerId)) return null;
+    if (this.transferListings.some(l => l.status === "open" && l.playerId === playerId && l.sellerIdx === sellerIdx)) return null;
     // Contrats (voir engine.js) : dernière saison, seconde moitié → interdit.
     if (this.contractSaleBlocked(player)) return null;
     const listing = {
@@ -22718,7 +22730,7 @@ class League {
       if (listing.status !== "open") return;
       if (now - (listing.lastCpuCheckAt || listing.createdAt) < TRANSFER_CPU_CHECK_INTERVAL_MS) return;
       listing.lastCpuCheckAt = now;
-      const player = this.playerById(listing.playerId);
+      const player = this.listingPlayer(listing);
       if (!player) return;
       this.teams.forEach((team, idx) => {
         if (team.isHuman) return; // une équipe humaine enchérit elle-même (voir placeBid), pas simulé ici
@@ -32291,7 +32303,7 @@ function fogReportLine(fog) {
 
 function computePlayerVisibility(teamIdx, player) {
   const isOwnTeam = teamIdx === myTeamIndex;
-  const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id);
+  const openListing = (league.transferListings || []).find(l => l.status === "open" && l.playerId === player.id && league.listingPlayer(l) === player);
   const onMarket = Boolean(openListing);
   // Brouillard de guerre (2026-10-06) : un adversaire n'a que des
   // intervalles (player.fog), jamais de note exacte, quel que soit le scouting.
@@ -33450,7 +33462,7 @@ function comparableSalesValuation(player, now = Date.now()) {
   const comparables = (league.transferListings || [])
     .filter(l => l.result === "sold" && l.finalPrice && l.playerId !== player.id && (now - l.closesAt) <= MARKET_COMPARABLE_WINDOW_MS)
     .map(l => {
-      const p = league.playerById(l.playerId);
+      const p = league.listingPlayer(l);
       if (!p || p.position !== player.position) return null;
       return { price: l.finalPrice, gap: Math.abs(p.overall() - targetOverall) };
     })
@@ -48871,7 +48883,7 @@ function renderMarketMine() {
         btnFor(st, `data-staff-goto="${role.key}:${l.id}"`) +
       `</div>`;
     }
-    const player = league.playerById(l.playerId);
+    const player = league.listingPlayer(l);
     if (!player) return "";
     const seller = league.teams[l.sellerIdx];
     return `<div class="mk-task" data-mk-task="${l.id}">` +
@@ -49188,7 +49200,7 @@ function mkRangeBounds() {
   const open = mkOpenListings();
   const ages = [], prices = [];
   open.forEach(l => {
-    const p = league.playerById(l.playerId);
+    const p = league.listingPlayer(l);
     if (p) ages.push(p.age);
     prices.push(minNextBidFor(l));
   });
@@ -49557,7 +49569,7 @@ function renderMarketFilterControls() {
   if (posEl) {
     const opts = [["all", "Tous"], ...POSITIONS.map(p => [p, POS_SHORT[p]])];
     posEl.innerHTML = opts.map(([k, t]) => {
-      const n = k === "all" ? open.length : open.filter(l => { const p = league.playerById(l.playerId); return p && p.position === k; }).length;
+      const n = k === "all" ? open.length : open.filter(l => { const p = league.listingPlayer(l); return p && p.position === k; }).length;
       return `<button type="button" class="mk-poscell ${marketUi.pos === k ? "on" : ""}" aria-pressed="${marketUi.pos === k}" data-mk-pos="${escapeHtml(k)}" title="${k === "all" ? "Tous les postes" : escapeHtml(k)}">${escapeHtml(t)}<span class="n">${n}</span></button>`;
     }).join("");
   }
@@ -49619,7 +49631,7 @@ function mkFilteredListings() {
   const crit = mkCritActive();
   const q = normalizeSearchTextSafe(u.q);
   const origin = mkOriginValue();
-  const rows = mkOpenListings().map(l => ({ l, player: league.playerById(l.playerId) })).filter(({ l, player }) => {
+  const rows = mkOpenListings().map(l => ({ l, player: league.listingPlayer(l) })).filter(({ l, player }) => {
     if (!player) return false;
     // Marché mondial : annonces d'un autre championnat (l.foreign) ; pays au
     // choix (retour utilisateur 2026-10-01).
@@ -51781,7 +51793,7 @@ function ecoRenderHistory() {
   if (pendingBids.length) {
     html += `<div class="training-report-list eco-pending">`;
     pendingBids.forEach(l => {
-      const player = league.playerById(l.playerId);
+      const player = league.listingPlayer(l);
       const name = player ? player.name : "un joueur";
       html += `<div class="gain-line gain-pending">Enchère en cours sur ${escapeHtml(name)} : ${formatMoney(l.currentBid)} (pas encore réglée)</div>`;
     });

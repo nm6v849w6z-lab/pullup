@@ -484,6 +484,68 @@ function reseedUidFromSave(data) {
   const maxId = scanMaxId(data);
   if (maxId > 0) bumpUidFloor(maxId + 1);
 }
+// Réparation au chargement (bug du 2026-10-06, voir clockUidFloor) : deux
+// joueurs d'une même ligue avec le même id. Le joueur d'un club de manager
+// garde son id ; l'autre (club IA, centre de formation, agent libre) en
+// reçoit un nouveau, reporté dans les références de SON club (composition,
+// créneaux d'entraînement) et dans ses annonces du marché. Renvoie la liste
+// des changements { from, to, name }.
+function repairDuplicatePlayerIds(league) {
+  if (!league || !Array.isArray(league.teams)) return [];
+  const seen = new Map();
+  const entries = [];
+  league.teams.forEach((team, idx) => {
+    if (!team) return;
+    (team.players || []).forEach(p => entries.push({ p, team, idx, kind: "pro" }));
+    (team.youthPlayers || []).forEach(p => entries.push({ p, team, idx, kind: "youth" }));
+  });
+  (league.freeAgents || []).forEach(p => entries.push({ p, team: null, idx: null, kind: "free" }));
+  entries.forEach(e => {
+    if (!e.p || e.p.id == null) return;
+    const list = seen.get(e.p.id) || [];
+    list.push(e); seen.set(e.p.id, list);
+  });
+  const changes = [];
+  const remap = (node, from, to, depth = 0) => {
+    if (!node || typeof node !== "object" || depth > 4) return;
+    Object.keys(node).forEach(k => {
+      if (node[k] === from) node[k] = to;
+      else if (node[k] && typeof node[k] === "object") remap(node[k], from, to, depth + 1);
+    });
+  };
+  seen.forEach(list => {
+    if (list.length < 2) return;
+    const keep = list.find(e => e.team && e.team.isHuman && e.kind === "pro") || list.find(e => e.team && e.team.isHuman) || list[0];
+    list.filter(e => e !== keep).forEach(e => {
+      const from = e.p.id, to = uid();
+      e.p.id = to;
+      if (e.team) {
+        if (e.team.lineup) remap(e.team.lineup, from, to);
+        (e.team.trainingSlots || []).forEach(sl => { if (sl && sl.playerId === from) sl.playerId = to; });
+      }
+      (league.transferListings || []).forEach(l => {
+        if (l.playerId !== from) return;
+        if ((e.kind === "free" && l.freeAgent) || (e.team && !l.freeAgent && l.sellerIdx === e.idx)) l.playerId = to;
+      });
+      changes.push({ from, to, name: e.p.name, team: e.team ? e.team.name : null });
+    });
+  });
+  return changes;
+}
+
+// Plancher d'horloge (bug du 2026-10-06, « joueur mis aux enchères sans
+// raison ») : reseedUidFromSave ne voit que les championnats CHARGÉS depuis
+// le redémarrage. Un nouvel id pouvait donc reprendre celui d'un joueur d'un
+// championnat pas encore chargé ; un transfert entre championnats amenait
+// ensuite deux joueurs de même id dans une ligue. Au démarrage, les ids
+// repartent au-dessus de (ms écoulées depuis le 2026-01-01) × 10 : toujours
+// au-delà de tout id déjà émis (jamais 10 ids par ms en moyenne sur la vie
+// d'un process), et loin sous Number.MAX_SAFE_INTEGER.
+const UID_CLOCK_EPOCH = Date.UTC(2026, 0, 1);
+function clockUidFloor(now = Date.now()) {
+  return Math.max(1, Math.floor((now - UID_CLOCK_EPOCH) * 10));
+}
+if (typeof module === "object" && module.exports && typeof window === "undefined") bumpUidFloor(clockUidFloor());
 
 // Jeton privé non-devinable pour un lien de manager (retour utilisateur,
 // 2026-09 : jusqu'à 10 vrais managers humains dans UNE ligue partagée — voir
@@ -13701,7 +13763,7 @@ class League {
       if (!leaving.length) return;
       leaving.forEach(p => {
         (this.transferListings || []).forEach(l => {
-          if (l.status === "open" && l.playerId === p.id) { l.status = "cancelled"; l.result = "retired"; }
+          if (l.status === "open" && l.playerId === p.id && l.sellerIdx === idx) { l.status = "cancelled"; l.result = "retired"; }
         });
         const i = team.players.findIndex(x => x.id === p.id);
         if (i !== -1) {
@@ -14519,7 +14581,7 @@ class League {
       indemnity: released ? (opts.fee || 0) : 0,
     });
     (this.transferListings || []).forEach(l => {
-      if (l.status === "open" && !l.freeAgent && l.playerId === p.id) { l.status = "cancelled"; l.result = "contract-ended"; }
+      if (l.status === "open" && !l.freeAgent && l.playerId === p.id && l.sellerIdx === teamIdx) { l.status = "cancelled"; l.result = "contract-ended"; }
     });
     if (team.isHuman) team.handleStarterDeparture(p.id);
     p.contractUntilSeason = null;
@@ -14747,6 +14809,18 @@ class League {
   // Cherche un joueur par id, TOUTES équipes confondues (utile pour une
   // enchère : le joueur listé peut appartenir à n'importe laquelle des 10
   // équipes de la ligue, pas seulement celle du joueur).
+  // Joueur d'une annonce du marché, cherché CHEZ SON VENDEUR (bug du
+  // 2026-10-06 : un joueur de BC DIA affiché « aux enchères » sans raison —
+  // deux joueurs d'une même ligue pouvaient porter le même id après un
+  // transfert entre championnats ; playerById renvoyait le premier trouvé).
+  listingPlayer(listing) {
+    if (!listing) return null;
+    if (listing.freeAgent) return this.freeAgentById(listing.playerId) || null;
+    const seller = this.teams[listing.sellerIdx];
+    const own = seller && seller.players.find(pl => pl.id === listing.playerId);
+    return own || (seller ? null : this.listingPlayer(listing));
+  }
+
   playerById(playerId) {
     for (const team of this.teams) {
       const p = team.players.find(pl => pl.id === playerId);
@@ -14770,7 +14844,7 @@ class League {
     if (!seller) return null;
     const player = seller.players.find(p => p.id === playerId);
     if (!player) return null;
-    if (this.transferListings.some(l => l.status === "open" && l.playerId === playerId)) return null;
+    if (this.transferListings.some(l => l.status === "open" && l.playerId === playerId && l.sellerIdx === sellerIdx)) return null;
     // Contrats (demande du 2026-10-01) : pas de vente d'un joueur en
     // dernière saison de contrat pendant la seconde moitié de saison.
     if (this.contractSaleBlocked(player)) return null;
@@ -15161,7 +15235,7 @@ class League {
       if (listing.status !== "open") return;
       if (now - (listing.lastCpuCheckAt || listing.createdAt) < TRANSFER_CPU_CHECK_INTERVAL_MS) return;
       listing.lastCpuCheckAt = now;
-      const player = this.playerById(listing.playerId);
+      const player = this.listingPlayer(listing);
       if (!player) return;
       this.teams.forEach((team, idx) => {
         if (team.isHuman) return; // une équipe humaine enchérit elle-même (voir placeBid), pas simulé ici
@@ -20580,7 +20654,7 @@ return {
   // uid()/reseedUidFromSave : voir le grand commentaire au-dessus de leur
   // définition (correctif "Cette enchère est déjà terminée" après un
   // redémarrage du process serveur, 2026-09).
-  uid, reseedUidFromSave, bumpUidFloor, scanMaxId,
+  uid, reseedUidFromSave, bumpUidFloor, scanMaxId, clockUidFloor, repairDuplicatePlayerIds,
   stealGambleRate, determinationTrainingMult, ATTR_FAMILIES, correlatedUnitDraws,
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,
   // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire

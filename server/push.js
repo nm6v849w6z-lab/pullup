@@ -325,7 +325,7 @@ function auctionNotes(league, teamIdx, now, opts = {}) {
     }
   });
   const isLocalMe = b => b && b.bidderIdx === teamIdx;
-  const localPlayer = l => (typeof league.playerById === "function" ? league.playerById(l.playerId) : null);
+  const localPlayer = l => (typeof league.listingPlayer === "function" ? league.listingPlayer(l) : null);
   AUCTION_MARKETS.forEach(([field, staffLabel]) => scan(field, staffLabel, league[field], isLocalMe, localPlayer));
   if (opts.leagueId && opts.leagues) {
     const FOREIGN = Engine().FOREIGN_BIDDER_IDX;
