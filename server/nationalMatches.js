@@ -373,7 +373,7 @@ function playMatch(store, comp, m, leagues, world, now) {
   if (!isLive(m, now)) announce(store, leagues, m, now);
   return m;
 }
-function matchLabel(m) { return m.label || `Fenêtre internationale ${m.w} · qualifications`; }
+function matchLabel(m) { return m.label || "Qualifications"; }
 function announce(store, leagues, m, now) {
   (m.pendingNotices || []).forEach(n => NT().notify(leagues, { leagueId: n.leagueId, idx: n.idx }, { key: n.key, title: n.title, text: n.text }, now));
   delete m.pendingNotices;
@@ -383,7 +383,7 @@ function announce(store, leagues, m, now) {
     const md = NT().activeMandate(store, tid);
     if (!md) return;
     // Notification du mode Sélectionneur (phase E), jamais dans le fil du club.
-    NC().coachFeed(md, { key: `res_${m.id}`, kind: "result", at: now, title: `${NT().teamLabel(tid)} : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${NT().teamLabel(opp)}`, text: m.label || `Fenêtre internationale ${m.w}, qualifications.`, matchId: m.id });
+    NC().coachFeed(md, { key: `res_${m.id}`, kind: "result", at: now, title: `${NT().teamLabel(tid)} : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${NT().teamLabel(opp)}`, text: m.label || "Qualifications.", matchId: m.id });
   });
 }
 // Tous les matchs internationaux gardés (qualifications, phases finales, amicaux).
@@ -758,7 +758,7 @@ function playedMatchesOf(store, teamId, minSeason, now) {
     if (!Array.isArray(m.boxHome) || !Array.isArray(m.boxAway)) return;
     out.push({ m, season, comp, label });
   };
-  Object.values(store.intl || {}).forEach(c => c.matches.forEach(m => add(m, c.season, c.comp, m.label || (m.w ? `Fenêtre internationale ${m.w}` : "Qualifications"))));
+  Object.values(store.intl || {}).forEach(c => c.matches.forEach(m => add(m, c.season, c.comp, m.label || "Qualifications")));
   Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => t.matches.forEach(m => add(m, f.season, t.kind, m.label || t.label))));
   (store.intlFriendlies || []).forEach(f => add(f, f.season, "friendly", f.label || "Match amical international"));
   return out.sort((a, b) => a.m.at - b.m.at);

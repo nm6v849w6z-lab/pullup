@@ -95,7 +95,7 @@ const DAY = 24 * 3600 * 1000;
   assert(box().querySelector("table.tde-stats") || /Aucun match joué/.test(box().textContent), "vue Statistiques (stats de la saison en club)");
   box().querySelector('[data-nt-group-view="general"]').click();
   box().querySelector('[data-nt-tab="calendrier"]').click();
-  assert(box().querySelectorAll(".nt-table tbody tr").length >= 3 && /Fenêtre 1/.test(box().textContent), "calendrier : fenêtres du dimanche (et phase finale)");
+  assert(box().querySelectorAll(".nt-table tbody tr").length >= 3 && /Qualifications|Fenêtre 1/.test(box().textContent), "calendrier : matchs du dimanche (qualifications) et phase finale");
   box().querySelector('[data-nt-tab="selectionneurs"]').click();
   assert(/Démission/.test(box().textContent), "sélectionneurs : historique des mandats");
   // Joueur cliquable : ouvre sa fiche.

@@ -321,7 +321,8 @@
   }
   function convocationsHtml(v) {
     if (!v.gatherings.length) return '<div class="nc-card"><p class="nc-club">Aucun rassemblement cette saison.</p></div>';
-    var h = '<div class="nc-gath">' + v.gatherings.map(function (x) {
+    // Fenêtres sans match (exemptée) : rien à afficher, seul le vrai match compte.
+    var h = '<div class="nc-gath">' + v.gatherings.filter(function (x) { return !x.bye; }).map(function (x) {
       var on = (ui.gid || v.currentGid) === x.gid;
       var gm = gMatch(x);
       // Phase finale : plusieurs matchs pour un même rassemblement, listés.
@@ -1010,7 +1011,7 @@
     var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="nc-k">' + k + '</div><div class="nc-v">' + val + '</div><div class="nc-s">' + sub + "</div></button>"; };
     var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(ROLE_LABEL[v.role] || "") + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(teamLab(v.team.id)) + "</h1></div></div>";
     h += '<div class="nc-dash">';
-    h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Fenêtre " + nx.w + " · qualifications" : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
+    h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Qualifications" + (tv && tv.qualif && tv.qualif.group ? " · " + tv.qualif.group.label : "") : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
     if (can("calendar")) h += kpi("Qualifications", rank ? rank + (rank === 1 ? "er" : "e") + " du groupe" : "–", tv && tv.qualif && tv.qualif.group ? esc(tv.qualif.group.label) + " · " + esc(tv.qualif.group.continent) : "Groupes à venir", "qualifications");
     if (can("convocView")) h += kpi("Convoqués", (cur ? cur.players.length : 0) + " / " + v.limits.convocation, cur ? esc(gTitleText(cur)) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
     h += kpi("Joueurs suivis", v.watchlist.length, can("preselectView") ? v.preselection.length + " en présélection" : "Joueurs sélectionnables", can("watch") ? "preselection" : "joueurs");

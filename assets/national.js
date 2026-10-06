@@ -384,7 +384,9 @@
     if (!tv.phase) return "";
     return tv.phase.kind === "world" ? "Coupe du monde ou consolante (fin de saison)" : continentalComp(tv.team.country) + " (fin de saison)";
   }
-  function calItemLabel(tv, c) { return c.kind === "final" ? compName(tv, c.comp) : "Fenêtre " + c.n; }
+  // Échéance affichée par son vrai match (qualifications) plutôt que par la
+  // fenêtre internationale qui le contient (retour utilisateur 2026-10-06).
+  function calItemLabel(tv, c) { return c.kind === "final" ? compName(tv, c.comp) : tv.qualif ? "Qualifications" + (tv.qualif.group ? " · " + tv.qualif.group.label : "") : "Fenêtre " + c.n; }
   function itemStart(c) { return c.kind === "final" ? c.from : c.at; }
   function nextItem(tv, now) {
     var cal = tv.calendar || [];
@@ -558,7 +560,7 @@
         h += '<tr><td class="nt-small">' + esc(dayDate(c.from)) + " → " + esc(dayDate(c.to)) + '</td><td><span class="nt-tag2 is-final">' + esc(compName(tv, c.comp)) + "</span></td><td>" + (c.comp === "world" ? "Phase finale (consolante pour les non-qualifiés)" : "Phase finale") + " : poules du lundi au jeudi, quarts vendredi, demi-finales samedi, finale dimanche (20:00)</td></tr>";
       } else {
         var wm = windowMatch(tv, c.n);
-        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">Fenêtre ' + esc(c.n) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
+        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">' + (wm || tv.qualif ? "Qualifications" : "Fenêtre " + esc(c.n)) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
       }
     });
     // Matchs amicaux internationaux programmés et joués (dimanche 20:00).

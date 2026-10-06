@@ -179,10 +179,13 @@ function fmtHour(at) {
 }
 function convocationNotice(teamId, g, name) {
   const label = NT().teamLabel(teamId);
-  if (g.kind === "window") {
+  // Le vrai match, jamais la « fenêtre internationale » (retour utilisateur
+  // 2026-10-06) ; un amical a sa date propre, comme une fenêtre.
+  if (g.kind === "window" || g.kind === "friendly") {
+    const what = g.kind === "friendly" ? "rencontre amicale internationale" : "rencontre de qualifications";
     return {
       title: `Convocation en sélection : ${name}`,
-      text: `Votre joueur ${name} est convoqué par le sélectionneur de ${label} pour la ${g.label.toLowerCase()} (${compLabel(g.comp)}), match le ${fmtDay(g.startAt)} à ${fmtHour(g.startAt)}. Indisponible pour votre club ce jour-là.`,
+      text: `Votre joueur ${name} est convoqué par le sélectionneur de ${label} pour la ${what} (${compLabel(g.comp)}), match le ${fmtDay(g.startAt)} à ${fmtHour(g.startAt)}. Indisponible pour votre club ce jour-là.`,
     };
   }
   return {
@@ -428,7 +431,7 @@ function mandateReport(store, m, now) {
     playersUsed: used, newInternationals: fresh.length, newNames: fresh.slice(0, 20),
     topScorers: stats.slice().sort((a, b) => b.pts - a.pts).slice(0, 3).map(s => ({ name: s.name, pts: s.pts, gp: s.gp })),
     seasonsDetail: seasons, bestFinish: best ? `${best.tournament.stage} · ${best.tournament.label}` : null,
-    results: res.slice(0, 12).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) })),
+    results: res.slice(0, 12).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? "Qualifications" : null) })),
   };
 }
 function stageOfRank(t, teamId) {
@@ -766,7 +769,7 @@ function upcomingMatchesOf(store, team, season) {
   const NM = require("./nationalMatches.js");
   const out = [];
   const comp = NM.compOf(store, season, team.cat);
-  if (comp) comp.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: m.gid, label: `Fenêtre internationale ${m.w} · qualifications` }); });
+  if (comp) comp.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) { const g = (comp.groups || []).find(x => x.id === m.groupId); out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: m.gid, label: "Qualifications" + (g && g.label ? " · " + g.label : "") }); } });
   const fin = NM.finalsOf(store, season, team.cat);
   if (fin) fin.tournaments.forEach(t => t.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: `s${season}f`, label: m.label || `${t.label} · poule` }); }));
   (store.intlFriendlies || []).forEach(f => { if (f.status === "accepted" && (f.home === team.id || f.away === team.id)) out.push({ id: f.id, at: f.at, home: f.home, away: f.away, gid: `s${f.season}x${f.id}`, label: "Match amical international" }); });
@@ -811,7 +814,7 @@ function analysisOf(store, team, season, calendarStartAt, now, oppId) {
   });
   // Convoqués de l'adversaire pour le prochain match (une fois la liste figée).
   const conv = next && (next.home === opp || next.away === opp) ? convocationOf(store, opp, next.gid) : null;
-  const results = NM.resultsOf(store, opp, now).slice(0, 10).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) }));
+  const results = NM.resultsOf(store, opp, now).slice(0, 10).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? "Qualifications" : null) }));
   let wins = 0, losses = 0, pf = 0, pa = 0;
   results.forEach(r => { const h = r.home === opp; const f = h ? r.scoreHome : r.scoreAway, a = h ? r.scoreAway : r.scoreHome; pf += f; pa += a; if (f > a) wins++; else losses++; });
   const q = NM.qualifView(store, opp, season, now);
