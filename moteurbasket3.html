@@ -2955,6 +2955,10 @@
   .pdp-role-foot{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px 28px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);}
   .pdp-role-foot:empty{display:none;}
   .pdp-role-foot .pdp-role-sub{margin-top:0;}
+  .pdp-role-progress{font-size:13.5px; line-height:1.5;}
+  .pdp-role-progress .pdp-role-sub{display:inline; margin:0;}
+  .pdp-role-progress .pdp-role-sep{color:var(--ink-dim); font-weight:800;}
+  .pdp-role-progress b{font-weight:700;}
   /* Brique Forces / Faiblesses : deux colonnes séparées par un filet,
      compatibilité en pied. */
   .pdp-sw-card{display:flex; flex-direction:column;}
@@ -20321,7 +20325,12 @@ function pdpRoleRowHtml(player, fullyVisible) {
       steps.map(x => `<b><span>${escapeHtml(x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div></div>`;
   }
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
-  if (progs.length) h += `<div><div class="pdp-role-sub">Pour progresser dans ce rôle</div><div class="pdp-role-evo">` + progs.map(x => `<span>${escapeHtml(x)}</span>`).join(" · ") + `</div></div>`;
+  // Sur une seule ligne : « POUR PROGRESSER DANS CE RÔLE : A et B ».
+  if (progs.length) {
+    const items = progs.map(x => `<b>${escapeHtml(x)}</b>`);
+    const list = items.length > 1 ? items.slice(0, -1).join(", ") + ` <span>et</span> ` + items[items.length - 1] : items[0];
+    h += `<div class="pdp-role-progress"><span class="pdp-role-sub">Pour progresser dans ce rôle</span><span class="pdp-role-sep"> : </span>${list}</div>`;
+  }
   h += `</div></section>`;
   // Forces / Faiblesses : deux colonnes séparées, éléments compacts.
   h += `<section class="pdp2-card pdp-sw-card"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div><div class="pdp-role-sw">` +
