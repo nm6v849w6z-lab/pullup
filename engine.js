@@ -550,9 +550,23 @@ function isPlayerIdFormat(id) {
 function registerPlayerIds(ids) {
   for (const id of ids || []) if (isPlayerIdFormat(id)) usedPlayerIds.add(id);
 }
+// Tirage indépendant de Math.random (que des tests et le moteur peuvent
+// figer) : générateur cryptographique du serveur ou du navigateur.
+let nodeCrypto = null;
+try { if (typeof require === "function" && typeof window === "undefined") nodeCrypto = require("crypto"); } catch (e) { nodeCrypto = null; }
+function randomPlayerIdOffset() {
+  if (nodeCrypto && typeof nodeCrypto.randomInt === "function") return nodeCrypto.randomInt(0, PLAYER_ID_SPAN);
+  const c = typeof globalThis !== "undefined" && globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function" ? globalThis.crypto : null;
+  if (c) { const a = new Uint32Array(2); c.getRandomValues(a); return (a[0] * 4294967296 + a[1]) % PLAYER_ID_SPAN; }
+  return Math.floor(Math.random() * PLAYER_ID_SPAN);
+}
 function newPlayerId() {
-  let id;
-  do { id = PLAYER_ID_MIN + Math.floor(Math.random() * PLAYER_ID_SPAN); } while (usedPlayerIds.has(id));
+  let id = PLAYER_ID_MIN + randomPlayerIdOffset();
+  // Filet de sécurité : jamais de boucle sans fin, même avec un tirage figé
+  // (place libre suivante).
+  for (let tries = 0; usedPlayerIds.has(id); tries++) {
+    id = tries < 20 ? PLAYER_ID_MIN + randomPlayerIdOffset() : PLAYER_ID_MIN + ((id - PLAYER_ID_MIN + 1) % PLAYER_ID_SPAN);
+  }
   usedPlayerIds.add(id);
   pendingPlayerIds.push(id);
   return id;
