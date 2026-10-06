@@ -193,6 +193,23 @@
       });
       h += "</div>";
     }
+    // Staff des sélections (retour utilisateur 2026-10-06) : invitations à
+    // accepter ou refuser, rôle d'adjoint / recruteur en cours.
+    var meInfo = ov.me || {}, roleLab = { assistant: "Adjoint", scout: "Recruteur" };
+    if ((meInfo.staffInvites || []).length || (meInfo.staffRoles || []).length) {
+      h += '<div class="nt-h">Staff des sélections</div><div class="nt-grid">';
+      (meInfo.staffInvites || []).forEach(function (s) {
+        h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>Invitation · " + esc(roleLab[s.role] || s.role) + " de " + esc(s.label) + "</b></div>" +
+          '<p class="nt-small">Proposée par ' + esc(s.coach) + ". " + (s.role === "assistant" ? "Adjoint : joueurs, présélection en consultation, tactique et préparation des matchs." : "Recruteur : joueurs, joueurs suivis et analyse des adversaires.") + "</p>" +
+          '<div class="nt-row"><button type="button" class="nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '">Accepter</button><button type="button" class="nt-btn2" data-nt-staff-decline="' + esc(s.teamId) + '">Refuser</button></div></div>';
+      });
+      (meInfo.staffRoles || []).forEach(function (s) {
+        h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>" + esc(roleLab[s.role] || s.role) + " · " + esc(s.label) + "</b></div>" +
+          '<p class="nt-small">Sélectionneur : ' + esc(s.coach) + "</p>" +
+          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélectionneur</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '">Quitter le staff</button></div></div>';
+      });
+      h += "</div>";
+    }
     // Élections en cours + résultats récents (son pays d'abord).
     var mc = myCountry();
     var els = (ov.teams || []).map(function (t) { return t.election; }).filter(Boolean);
@@ -515,6 +532,10 @@
         h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">Fenêtre ' + esc(c.n) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
       }
     });
+    // Matchs amicaux internationaux programmés et joués (dimanche 20:00).
+    (tv.friendlies || []).filter(function (f) { return f.season === tv.season; }).forEach(function (f) {
+      h += '<tr><td class="nt-small">' + esc(shortDate(f.at)) + '</td><td><span class="nt-tag2">Amical</span></td><td>' + matchLine(tv, { id: f.id, home: f.home, away: f.away, status: f.status, scoreHome: f.scoreHome, scoreAway: f.scoreAway }) + "</td></tr>";
+    });
     return h + "</tbody></table></div>";
   }
   // Phase C : groupe de qualification (classement) et matchs du groupe.
@@ -633,7 +654,8 @@
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : ' + esc(honoursSummary(tv)) + "</span>" +
       (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +
       // Phase B : espace du sélectionneur (assets/national-coach.js).
-      (tv.isCoach ? ' <button type="button" class="nt-btn" data-nc-open="' + esc(tv.team.id) + '">Gérer la sélection</button>' : "") + "</div></div>";
+      // Mode Sélectionneur : sélectionneur et membres de son staff.
+      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélectionneur</button>' : "") + "</div></div>";
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
     if (ui.teamTab === "groupe") h += '<div style="margin-top:14px">' + teamGroupeHtml(tv) + "</div>";
     else if (ui.teamTab === "calendrier") h += '<div style="margin-top:14px">' + teamCalendrierHtml(tv) + "</div>";
@@ -782,6 +804,17 @@
     if (d.ntWithdraw) {
       if (!window.confirm(t("Retirer votre candidature ?"))) return;
       act("/api/national/withdraw", { electionId: ui.electionId }, "Candidature retirée.");
+      return;
+    }
+    if (d.ntStaffAccept || d.ntStaffDecline || d.ntStaffLeave) {
+      var tid = d.ntStaffAccept || d.ntStaffDecline || d.ntStaffLeave;
+      if (d.ntStaffLeave && !window.confirm(t("Quitter le staff de cette sélection ?"))) return;
+      var path = d.ntStaffLeave ? "/api/national/coach/staff/remove" : "/api/national/coach/staff/respond";
+      act(path, { teamId: tid, accept: !!d.ntStaffAccept }, d.ntStaffAccept ? "Vous rejoignez le staff de la sélection." : d.ntStaffLeave ? "Vous avez quitté le staff." : "Invitation refusée.").then(function () {
+        // Bouton du mode Sélectionneur (tableau de bord) mis à jour.
+        if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.boot) window.HM_NATIONAL_COACH.boot();
+        return loadOverview().then(paint);
+      });
       return;
     }
     if (d.ntResign) {

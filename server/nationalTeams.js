@@ -424,6 +424,11 @@ function step(store, leagues, world, now) {
   const intl = require("./nationalMatches.js").step(store, leagues, world, now, season, seasonStart);
   if (intl.changed) changed = true;
   intl.due.forEach(due);
+  // Matchs amicaux internationaux (server/nationalFriendlies.js) : demandes
+  // expirées, matchs acceptés joués à leur date.
+  const fr = require("./nationalFriendlies.js").step(store, leagues, world, now, season, seasonStart);
+  if (fr.changed) changed = true;
+  fr.due.forEach(due);
   // Historique borné : élections closes de plus de 2 cycles.
   if (store.elections.length > 400) { store.elections.splice(0, store.elections.length - 400); changed = true; }
   return { changed, nextDeadlineAt, pools: coach.pools };
@@ -547,6 +552,8 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     coach: publicMandate(activeMandate(store, team.id)),
     // Phase B : bouton « Gérer la sélection » pour le sélectionneur en poste.
     isCoach: !!(me && activeMandate(store, team.id) && activeMandate(store, team.id).key === me.key),
+    // Rôle du manager dans cette sélection (sélectionneur, adjoint, recruteur).
+    myRole: me ? ((require("./nationalCoach.js").accessOf(store, me, team.id) || {}).role || null) : null,
     election: el ? publicElection(store, el, me, false) : null,
     phase: pos >= 0 ? cfg.cycle[pos] : null,
     squad: sq ? { at: sq.at, source: sq.source, players: sq.players, eligible: sq.eligible, leagues: sq.leagues } : null,
@@ -558,6 +565,8 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     // Phase D : phases finales et palmarès.
     finals: require("./nationalMatches.js").finalsView(store, team.id, season),
     honours: require("./nationalMatches.js").honoursOf(store, team.id),
+    // Matchs amicaux internationaux programmés et joués.
+    friendlies: require("./nationalFriendlies.js").publicListOf(store, team.id),
   };
 }
 

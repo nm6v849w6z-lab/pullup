@@ -434,9 +434,13 @@ function fail(error, status = 400) { return { ok: false, status, error }; }
 // présélection en lecture, joueurs suivis, tactique, informations de
 // préparation des matchs. Recruteur (2 au plus) : joueurs, joueurs suivis
 // (scouting). Ni l'un ni l'autre : convocations, amicaux, staff.
+// Retour utilisateur 2026-10-06 (suite) : statistiques et mandat réservés
+// au sélectionneur ; calendrier, qualifications et compétitions (préparation
+// des matchs) pour le sélectionneur et ses adjoints ; le recruteur ne voit
+// que les joueurs, ses joueurs suivis et l'analyse des adversaires.
 const PERMS = {
-  coach: ["view", "watch", "preselect", "preselectView", "convoke", "convocView", "tactics", "friendlies", "staff", "feed", "analysis", "mandate"],
-  assistant: ["view", "watch", "preselectView", "convocView", "tactics", "feed", "analysis"],
+  coach: ["view", "watch", "preselect", "preselectView", "convoke", "convocView", "tactics", "friendlies", "staff", "feed", "analysis", "mandate", "stats", "calendar"],
+  assistant: ["view", "watch", "preselectView", "convocView", "tactics", "feed", "analysis", "calendar"],
   scout: ["view", "watch", "analysis"],
 };
 function accessOf(store, me, teamId) {
@@ -631,13 +635,18 @@ function coachView(store, me, teamId, now, ctx) {
     tactics: can(access, "tactics") ? (m.tactics || defaultOrders()) : null, tacticsPlayers: can(access, "tactics") ? nidPlayers : [],
     // Mode Sélectionneur (phase E) : notifications, statistiques, bilan.
     feed: can(access, "feed") ? (m.feed || []).slice(0, 40) : [], unread: role === "coach" ? Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) : 0,
-    stats: playerStatsOf(store, team.id, m.startedAt),
+    stats: can(access, "stats") ? playerStatsOf(store, team.id, m.startedAt) : [],
     report: can(access, "mandate") ? mandateReport(store, m) : null,
     pastMandates: can(access, "mandate") ? store.mandates.filter(x => x.key === m.key && x.endedAt && x.report).slice(-5).map(x => x.report) : [],
     // Staff (adjoints, recruteurs) et matchs amicaux internationaux.
     staff: publicStaff(m),
-    managers: can(access, "staff") ? (store.managerIndex || []).filter(x => x.key !== m.key).map(x => ({ mid: x.mid, pseudo: x.pseudo, clubName: x.clubName, country: x.country, division: x.division })) : [],
-    friendlies: can(access, "friendlies") || can(access, "convocView") ? NF.viewFor(store, team, ctx.season, ctx.calendarStartAt, now) : null,
+    staffMax: STAFF_MAX,
+    // Annuaire des managers à inviter (sélectionneur seulement) : déjà
+    // sélectionneur ou déjà dans un staff = pas invitable.
+    managers: can(access, "staff") ? managersFor(store, m) : [],
+    friendlies: can(access, "friendlies") ? NF.viewFor(store, team, ctx.season, ctx.calendarStartAt, now) : null,
+    // Analyse des adversaires : prochain adversaire (ou celui demandé).
+    analysis: can(access, "analysis") ? analysisOf(store, team, ctx.season, ctx.calendarStartAt, now, ctx.opp) : null,
     options: {
       offense: Object.keys(Engine.OFFENSE_PROFILES), defense: Object.keys(Engine.DEFENSES), rhythm: Object.keys(Engine.RHYTHMS),
       screenDefense: Object.keys(Engine.SCREEN_DEFENSES), helpDefense: Object.keys(Engine.HELP_DEFENSE_LEVELS), postDefense: Object.keys(Engine.POST_DEFENSES),
@@ -645,6 +654,69 @@ function coachView(store, me, teamId, now, ctx) {
       watchFocus: Object.keys(Engine.WATCH_FOCUS_EFFECTS), maxWatch: Engine.MAX_WATCH_ASSIGNMENTS, maxOffense: 3,
     },
   };
+}
+
+// --- Analyse des adversaires (retour utilisateur 2026-10-06) --------------
+// Prochain match de la sélection (qualifications, phase finale, amical) et
+// fiche de l'adversaire : sélectionneur, groupe de référence (fiches
+// publiques : stats en club, jamais les caractéristiques), convoqués une
+// fois la liste figée, derniers résultats, bilan, confrontations. `oppId` :
+// une autre sélection de la même catégorie, choisie par le staff.
+function upcomingMatchesOf(store, team, season) {
+  const NM = require("./nationalMatches.js");
+  const out = [];
+  const comp = NM.compOf(store, season, team.cat);
+  if (comp) comp.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: m.gid, label: `Fenêtre internationale ${m.w} · qualifications` }); });
+  const fin = NM.finalsOf(store, season, team.cat);
+  if (fin) fin.tournaments.forEach(t => t.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: `s${season}f`, label: m.label || `${t.label} · poule` }); }));
+  (store.intlFriendlies || []).forEach(f => { if (f.status === "accepted" && (f.home === team.id || f.away === team.id)) out.push({ id: f.id, at: f.at, home: f.home, away: f.away, gid: `s${f.season}x${f.id}`, label: "Match amical international" }); });
+  return out.sort((a, b) => a.at - b.at);
+}
+function analysisOf(store, team, season, calendarStartAt, now, oppId) {
+  const NM = require("./nationalMatches.js");
+  const next = upcomingMatchesOf(store, team, season).filter(m => m.at > now - 3 * 3600 * 1000)[0] || null;
+  const choices = Object.values(store.teams).filter(t => t.cat === team.cat && t.id !== team.id).map(t => ({ id: t.id, label: NT().teamLabel(t.id), country: t.country }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  const wanted = oppId && store.teams[oppId] && store.teams[oppId].cat === team.cat && oppId !== team.id ? oppId : null;
+  const opp = wanted || (next ? (next.home === team.id ? next.away : next.home) : null);
+  const base = { next: next ? { ...next, opponent: next.home === team.id ? next.away : next.home, venue: next.home === team.id ? "home" : "away" } : null, choices, opponent: null };
+  if (!opp || !store.teams[opp]) return base;
+  const om = NT().activeMandate(store, opp);
+  const sq = (store.squads || {})[opp];
+  const squad = ((sq && sq.players) || []).map(x => {
+    const pub = x.pub || {};
+    const log = Array.isArray(pub.matchLog) ? pub.matchLog : [];
+    const gp = log.length, sum = k => log.reduce((s, e) => s + (e[k] || 0), 0);
+    return {
+      name: x.name, position: x.position, age: x.age, height: pub.height || null, nationality: pub.nationality || null,
+      club: x.club ? { name: x.club.name, division: x.club.division || null } : null,
+      injured: typeof pub.injuryUntil === "number" && pub.injuryUntil > now,
+      gp, min: gp ? r1(sum("min") / gp) : 0, pts: gp ? r1(sum("pts") / gp) : 0, reb: gp ? r1(sum("reb") / gp) : 0, ast: gp ? r1(sum("ast") / gp) : 0,
+      eff: gp ? r1(log.reduce((s, e) => s + matchEff(e), 0) / gp) : 0,
+    };
+  });
+  // Convoqués de l'adversaire pour le prochain match (une fois la liste figée).
+  const conv = next && (next.home === opp || next.away === opp) ? convocationOf(store, opp, next.gid) : null;
+  const results = NM.resultsOf(store, opp).slice(0, 10).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) }));
+  let wins = 0, losses = 0, pf = 0, pa = 0;
+  results.forEach(r => { const h = r.home === opp; const f = h ? r.scoreHome : r.scoreAway, a = h ? r.scoreAway : r.scoreHome; pf += f; pa += a; if (f > a) wins++; else losses++; });
+  const q = NM.qualifView(store, opp, season);
+  const row = q && q.group ? q.group.standings.find(x => x.teamId === opp) : null;
+  base.opponent = {
+    id: opp, label: NT().teamLabel(opp), country: store.teams[opp].country,
+    coach: om ? (om.pseudo || (om.clubName ? `Manager de ${om.clubName}` : "Sélectionneur")) : null,
+    squad, convoked: conv && conv.frozenAt ? conv.players.map(r => r.n) : null,
+    results, record: { played: results.length, wins, losses, pf, pa },
+    group: q && q.group ? { label: q.group.label, continent: q.group.continent, rank: row ? row.rank : null, points: row ? row.points : null, played: row ? row.played : null } : null,
+    honours: NM.honoursOf(store, opp).slice(0, 5),
+    headToHead: NM.resultsOf(store, team.id).filter(r => r.home === opp || r.away === opp).slice(0, 5).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || null })),
+  };
+  return base;
+}
+function managersFor(store, m) {
+  const busy = new Set();
+  (store.mandates || []).filter(x => !x.endedAt).forEach(x => { busy.add(x.key); (x.staff || []).forEach(s => { if (s.status === "active") busy.add(s.key); }); });
+  return (store.managerIndex || []).filter(x => x.key !== m.key).map(x => ({ mid: x.mid, pseudo: x.pseudo, clubName: x.clubName, country: x.country, division: x.division, busy: busy.has(x.key) }));
 }
 
 // --- Staff de la sélection (retour utilisateur 2026-10-06) -----------------
@@ -745,5 +817,6 @@ module.exports = {
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
   coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
-  PERMS, accessOf, can, staffOf, staffInvite, staffRespond, staffRemove, publicStaff, queueNotice,
+  PERMS, accessOf, can, coachMandate, staffOf, staffInvite, staffRespond, staffRemove, publicStaff, queueNotice, STAFF_MAX,
+  analysisOf, upcomingMatchesOf,
 };

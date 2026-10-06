@@ -627,11 +627,16 @@ function resultsOf(store, teamId) {
   Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => t.matches.forEach(m => {
     if (m.status === "played" && (m.home === teamId || m.away === teamId)) out.push({ ...publicMatch(m), season: f.season, comp: t.kind, cat: f.cat, label: m.label || t.label, stage: m.stage });
   })));
+  // Matchs amicaux internationaux (server/nationalFriendlies.js).
+  (store.intlFriendlies || []).forEach(f => {
+    if (f.status === "played" && (f.home === teamId || f.away === teamId)) out.push({ ...publicMatch(f), season: f.season, comp: "friendly", cat: f.cat, label: f.label || "Match amical international" });
+  });
   return out.sort((a, b) => b.at - a.at);
 }
 function matchDetail(store, matchId) {
   const pools = Object.values(store.intl || {}).map(c => ({ season: c.season, comp: c.comp, matches: c.matches }))
-    .concat(Object.values(store.finals || {}).flatMap(f => f.tournaments.map(t => ({ season: f.season, comp: t.kind, matches: t.matches }))));
+    .concat(Object.values(store.finals || {}).flatMap(f => f.tournaments.map(t => ({ season: f.season, comp: t.kind, matches: t.matches }))))
+    .concat((store.intlFriendlies || []).filter(f => f.status === "played").map(f => ({ season: f.season, comp: "friendly", matches: [f] })));
   for (const c of pools) {
     const m = c.matches.find(x => x.id === matchId);
     if (m) return { ...publicMatch(m), label: m.label || null, stage: m.stage || null, season: c.season, comp: c.comp, boxHome: m.boxHome || [], boxAway: m.boxAway || [], injuries: m.injuries || [], homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0] };
