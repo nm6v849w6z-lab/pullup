@@ -517,7 +517,7 @@ function repairDuplicatePlayerIds(league) {
     if (list.length < 2) return;
     const keep = list.find(e => e.team && e.team.isHuman && e.kind === "pro") || list.find(e => e.team && e.team.isHuman) || list[0];
     list.filter(e => e !== keep).forEach(e => {
-      const from = e.p.id, to = uid();
+      const from = e.p.id, to = newPlayerId();
       e.p.id = to;
       if (e.team) {
         if (e.team.lineup) remap(e.team.lineup, from, to);
@@ -532,6 +532,35 @@ function repairDuplicatePlayerIds(league) {
   });
   return changes;
 }
+
+// IDs de joueurs (demande utilisateur 2026-10-06 : « chaque joueur doit
+// avoir un ID de 10 caractères ; un ID déjà pris par un joueur ne peut pas
+// être réattribué ») : 10 chiffres (1000000000 à 9999999999), tirés au
+// hasard et vérifiés contre le REGISTRE de tous les IDs déjà donnés (jamais
+// vidé, même quand le joueur part à la retraite). Côté serveur, le registre
+// est chargé depuis le stockage avant toute ligue et chaque nouvel ID y est
+// ajouté (server/store.js : loadPlayerIdRegistry / flushPlayerIdRegistry).
+const PLAYER_ID_MIN = 1000000000;
+const PLAYER_ID_SPAN = 9000000000;
+const usedPlayerIds = new Set();
+const pendingPlayerIds = [];
+function isPlayerIdFormat(id) {
+  return Number.isInteger(id) && id >= PLAYER_ID_MIN && id < PLAYER_ID_MIN + PLAYER_ID_SPAN;
+}
+function registerPlayerIds(ids) {
+  for (const id of ids || []) if (isPlayerIdFormat(id)) usedPlayerIds.add(id);
+}
+function newPlayerId() {
+  let id;
+  do { id = PLAYER_ID_MIN + Math.floor(Math.random() * PLAYER_ID_SPAN); } while (usedPlayerIds.has(id));
+  usedPlayerIds.add(id);
+  pendingPlayerIds.push(id);
+  return id;
+}
+// Nouveaux IDs pas encore enregistrés dans le stockage (vidé par l'appelant).
+function takePendingPlayerIds() { return pendingPlayerIds.splice(0); }
+function requeuePendingPlayerIds(ids) { pendingPlayerIds.push(...(ids || [])); }
+function playerIdRegistrySize() { return usedPlayerIds.size; }
 
 // Plancher d'horloge (bug du 2026-10-06, « joueur mis aux enchères sans
 // raison ») : reseedUidFromSave ne voit que les championnats CHARGÉS depuis
@@ -4676,8 +4705,10 @@ function retirementTalkChance(player, role) {
 const EFF_FACTOR_FLOOR = 0.5;
 
 class Player {
-  constructor({ name, position, height, age, attrs, aggressiveness, nationality }) {
-    this.id = uid();
+  constructor({ name, position, height, age, attrs, aggressiveness, nationality, id = null }) {
+    // ID à 10 chiffres jamais réattribué (voir newPlayerId) ; `id` fourni =
+    // joueur rechargé d'une sauvegarde (son ID est alors inscrit au registre).
+    if (id != null) { this.id = id; registerPlayerIds([id]); } else this.id = newPlayerId();
     this.name = name;
     // Nationalité (voir NATIONS) : fournie par generatePlayerIdentity pour un
     // nouveau joueur, ou par la sauvegarde ; à défaut (ancienne sauvegarde),
@@ -17731,7 +17762,7 @@ function playerFromSave(pdata) {
   const p = new Player({
     name: pdata.name, position: pdata.position, height: pdata.height,
     age: pdata.age, attrs: { ...pdata.attrs }, aggressiveness: pdata.aggressiveness,
-    nationality: pdata.nationality,
+    nationality: pdata.nationality, id: pdata.id || null,
   });
   p.number = Number.isInteger(pdata.number) && pdata.number >= 0 && pdata.number <= 99 ? pdata.number : null;
   p.look = normalizePlayerLook(pdata.look);
@@ -20655,6 +20686,7 @@ return {
   // définition (correctif "Cette enchère est déjà terminée" après un
   // redémarrage du process serveur, 2026-09).
   uid, reseedUidFromSave, bumpUidFloor, scanMaxId, clockUidFloor, repairDuplicatePlayerIds,
+  PLAYER_ID_MIN, isPlayerIdFormat, registerPlayerIds, newPlayerId, takePendingPlayerIds, requeuePendingPlayerIds, playerIdRegistrySize,
   stealGambleRate, determinationTrainingMult, ATTR_FAMILIES, correlatedUnitDraws,
   POSITIONS, ATTRS, TRAINING_LABELS, TRAINING_SYNERGY, TRAINING_FULL_MATCH_SECONDS, attendanceFactorForSeconds,
   // Catégorisation Fondamentaux/Physique/Mental (voir le grand commentaire

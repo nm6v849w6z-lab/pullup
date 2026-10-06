@@ -380,6 +380,9 @@ function deserializeMultiLeague(data) {
 // `leagueId` (2026-09-28) : championnat à charger (voir leagueStorage) —
 // omis = la ligue partagée historique ("fr-1"), comme avant.
 async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = HISTORIC_LEAGUE_ID) {
+  // Registre des IDs de joueurs chargé AVANT toute ligue (voir
+  // loadPlayerIdRegistry) : aucun nouvel ID ne peut reprendre un ID déjà donné.
+  await loadPlayerIdRegistry(savePath);
   const where = leagueStorage(leagueId, savePath);
   savePath = where.file;
   if (upstashConfigured()) {
@@ -432,6 +435,8 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
 // server/world.js:catchUpWorld, qui compare avant/après pour n'écrire que
 // les championnats modifiés).
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body = null) {
+  // Nouveaux IDs de joueurs inscrits au registre (jamais réattribués).
+  await flushPlayerIdRegistry(savePath);
   // Mémoire historique (assets/history.js) : événements en file, rangés à
   // part, un journal par club (jamais dans la ligue).
   await flushHistoryQueue(savePath);
@@ -722,6 +727,58 @@ async function appendClubHistory(clubName, events, savePath = defaultMultiLeague
   fs.writeFileSync(tmp, body, "utf-8");
   fs.renameSync(tmp, where.file);
 }
+// Registre des IDs de joueurs (demande utilisateur 2026-10-06 : ID de 10
+// chiffres, jamais réattribué). Tous les IDs déjà donnés, y compris ceux de
+// joueurs retraités ou disparus ; jamais vidé. Une clé/un fichier pour tout
+// le monde de jeu : { version: 1, ids: "base36,base36,…" }.
+function playerIdRegistryStorage(savePath) {
+  const base = String(savePath || defaultMultiLeaguePath()).replace(/\.json$/, "").replace(/\.world\.league\..*$/, "");
+  return { redis: `${redisPrefix()}pullup:player-ids`, file: `${base}.player-ids.json` };
+}
+const playerIdRegistryLoads = new Map();
+async function readPlayerIdRegistry(where) {
+  let raw = null;
+  if (upstashConfigured()) raw = await redisGet(where.redis, { fresh: true });
+  else if (fs.existsSync(where.file)) raw = fs.readFileSync(where.file, "utf-8");
+  if (raw == null) return [];
+  const data = JSON.parse(raw);
+  return String(data.ids || "").split(",").filter(Boolean).map(x => parseInt(x, 36));
+}
+function loadPlayerIdRegistry(savePath = defaultMultiLeaguePath()) {
+  const where = playerIdRegistryStorage(savePath);
+  const key = upstashConfigured() ? where.redis : where.file;
+  if (!playerIdRegistryLoads.has(key)) {
+    playerIdRegistryLoads.set(key, readPlayerIdRegistry(where).then(ids => { Engine.registerPlayerIds(ids); return ids.length; }).catch(e => {
+      // Lecture en échec : on réessaiera au prochain chargement ; les IDs
+      // des ligues chargées restent connus (inscrits au chargement).
+      playerIdRegistryLoads.delete(key);
+      console.warn("Registre des IDs de joueurs illisible :", e.message);
+      return 0;
+    }));
+  }
+  return playerIdRegistryLoads.get(key);
+}
+async function flushPlayerIdRegistry(savePath = defaultMultiLeaguePath()) {
+  const fresh = Engine.takePendingPlayerIds();
+  if (!fresh.length) return;
+  const where = playerIdRegistryStorage(savePath);
+  try {
+    await loadPlayerIdRegistry(savePath);
+    const all = new Set(await readPlayerIdRegistry(where));
+    fresh.forEach(id => all.add(id));
+    const body = JSON.stringify({ version: 1, ids: Array.from(all, id => id.toString(36)).join(",") });
+    if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+    fs.mkdirSync(path.dirname(where.file), { recursive: true });
+    const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tmp, body, "utf-8");
+    fs.renameSync(tmp, where.file);
+  } catch (e) {
+    // Jamais perdus : remis en attente pour la prochaine sauvegarde.
+    Engine.requeuePendingPlayerIds(fresh);
+    console.warn("Registre des IDs de joueurs non enregistré :", e.message);
+  }
+}
+
 async function flushHistoryQueue(savePath = defaultMultiLeaguePath()) {
   const History = require("../assets/history.js");
   const events = History.drain();
@@ -949,6 +1006,7 @@ module.exports = {
   // Multi-manager (voir bloc dédié plus haut) :
   MULTI_SAVE_VERSION, defaultMultiLeaguePath, createMultiManagerCareer,
   serializeMultiLeague, deserializeMultiLeague, loadMultiLeague, saveMultiLeague,
+  loadPlayerIdRegistry, flushPlayerIdRegistry, playerIdRegistryStorage,
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw, saveSeasonArchive, loadSeasonArchive,
