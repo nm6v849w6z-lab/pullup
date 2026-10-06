@@ -221,6 +221,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   jeu). Tests : server/player_permalink_test.js,
   player_permalink_ui_test.js (nouveaux), world_country_test.js (liste des
   champs cachés). Reste : push par l'utilisateur.
+- **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Résumé
+  de la semaine par e-mail** (demande du propriétaire 2026-10-01).
+  server/weeklyDigest.js (nouveau, serveur seul) : chaque lundi à partir de
+  9h Paris (mise à jour hebdo à 6h), jusqu'au mercredi 9h (sinon semaine
+  sautée), un e-mail HTML + texte par manager humain ayant un compte avec
+  e-mail : résultats officiels de la semaine (championnat via
+  league.results, Coupe/play-offs via Team.ordersHistory), classement,
+  joueurs RÉELLEMENT entraînés aux fondamentaux (tous, et eux seuls :
+  `digestTrainedPlayers`, lit Team.lastTrainingReport.effectiveFocus,
+  programme + ses fondamentaux montés d'au moins 1 point, avant → après ;
+  entraînés sans montée non listés, « Aucune progression visible… » si
+  aucun n'a monté ; À ADAPTER aux plans
+  individuels / slots du nouvel entraînement), bilan de la semaine
+  (Team.financeLedger) et budget, marché (gagnées/perdues/en cours,
+  surenchéri, ventes), contrats (dernière saison sans retraite,
+  raiseRequest), prochains matchs (heure de Paris), bouton vers le jeu,
+  lien de désinscription signé. 10 langues (STRINGS du module, langue du
+  compte). Accroché à index.js:maybeCatchUpWorld (jamais attendu ; préparé
+  sous le verrou, envoyé hors verrou par lots de 5). Garde-fous : rien sans
+  RESEND_API_KEY/MAIL_FROM ; `account.lastDigestWeekKey` (noté avant
+  l'envoi), `account.digestOptOut`, clubs IA, absents > 28 jours. Routes GET
+  /api/email/unsubscribe-digest et /resubscribe-digest?token=. Variables
+  optionnelles : BASKET_SITE_URL (défaut https://hoop-manager.com),
+  EMAIL_LINK_SECRET (sinon BASKET_ADMIN_TOKEN). Test :
+  server/weekly_digest_test.js. Reste : push par l'utilisateur.
 
 - **🟡 CODE FAIT, TESTS SANDBOX VERTS (2026-10-01), committé localement — Marché :
   pays au choix + barres âge/potentiel/prix** (retour utilisateur
