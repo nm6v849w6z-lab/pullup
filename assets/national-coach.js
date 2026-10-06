@@ -274,7 +274,9 @@
   }
   function missingNote(list) {
     var pm = poolByKey(), miss = list.filter(function (r) { return !pm[key(r)]; });
-    return miss.length ? '<p class="nc-small">' + miss.length + " joueur" + (miss.length > 1 ? "s" : "") + " de la liste ne " + (miss.length > 1 ? "sont" : "est") + " plus sélectionnable" + (miss.length > 1 ? "s" : "") + " : " + miss.map(function (r) { return esc(r.n); }).join(", ") + ".</p>" : "";
+    if (!miss.length) return "";
+    var names = miss.map(function (r) { return esc(r.n); }).join(", ");
+    return '<p class="nc-small">' + (miss.length > 1 ? miss.length + " joueurs de la liste ne sont plus sélectionnables : " + names + "." : "1 joueur de la liste n'est plus sélectionnable : " + names + ".") + "</p>";
   }
   // Présélection : la liste de travail centrale (présélection + joueurs suivis).
   function preselectionHtml(v) {
@@ -397,7 +399,7 @@
     h += '<div class="nc-sec" style="margin-top:14px"><span>Consignes individuelles (marquage)</span><span>' + d.watchAssignments.filter(Boolean).length + " / " + o.maxWatch + "</span></div><div class=\"nc-set\">";
     for (var w = 0; w < o.maxWatch; w++) {
       var wa = d.watchAssignments[w] || {};
-      h += "<label>Consigne " + (w + 1) + sel("watchPos:" + w, [["", "Aucune"]].concat(POS.map(function (p) { return [p, "Sur le " + p.toLowerCase()]; })), wa.position || "") +
+      h += "<label>Consigne " + (w + 1) + sel("watchPos:" + w, [["", "Aucune"]].concat(POS.map(function (p) { return [p, { "Meneur": "Sur le meneur", "Arrière": "Sur l'arrière", "Ailier shooteur": "Sur l'ailier shooteur", "Ailier fort": "Sur l'ailier fort", "Pivot": "Sur le pivot" }[p]]; })), wa.position || "") +
         (wa.position ? sel("watchFocus:" + w, o.watchFocus.map(function (f) { return [f, WATCH_LABELS[f] || f]; }), wa.focus || o.watchFocus[0]) : "") + "</label>";
     }
     h += '</div><div class="nc-row" style="margin-top:16px"><button type="button" class="nc-btn" data-nc-save-tactics="1"' + (ui.busy ? " disabled" : "") + ">Enregistrer la tactique</button>" +
@@ -411,9 +413,9 @@
   function frLine(f, acts) {
     var st = FR_STATE[f.state] || [f.state, ""];
     var why = f.state === "cancelled" ? (f.reason === "expired" ? " · sans réponse avant le gel des convocations" : f.reason === "conflict" ? " · date prise par un autre amical" : "") : "";
-    var score = f.state === "played" && f.scoreHome != null ? " · " + esc(f.homeLabel) + " " + esc(f.scoreHome) + " – " + esc(f.scoreAway) + " " + esc(f.awayLabel) : "";
-    return '<div class="nc-fr">' + flag(f.opponentCountry) + '<div class="nc-grow"><b>' + esc(f.opponentLabel) + '</b> <span class="nc-club">· ' + (f.venue === "home" ? "à domicile" : "à l'extérieur") + "</span><br>" +
-      '<span class="nc-club">' + esc(when(f.at, true)) + score + why + "</span></div>" + '<span class="nc-tag ' + st[1] + '">' + esc(st[0]) + "</span>" + (acts || "") + "</div>";
+    var score = f.state === "played" && f.scoreHome != null ? '<span class="nc-club"> · ' + esc(teamLab(f.home)) + " " + esc(f.scoreHome) + " – " + esc(f.scoreAway) + " " + esc(teamLab(f.away)) + "</span>" : "";
+    return '<div class="nc-fr">' + flag(f.opponentCountry) + '<div class="nc-grow"><b>' + esc(teamLab(f.opponent)) + '</b> <span class="nc-club">' + (f.venue === "home" ? "· à domicile" : "· à l'extérieur") + "</span><br>" +
+      '<span class="nc-club">' + esc(when(f.at, true)) + "</span>" + score + (why ? '<span class="nc-club"> ' + why + "</span>" : "") + "</div>" + '<span class="nc-tag ' + st[1] + '">' + esc(st[0]) + "</span>" + (acts || "") + "</div>";
   }
   function amicauxHtml(v) {
     var fr = v.friendlies;
@@ -428,7 +430,7 @@
     if (full) h += '<p class="nc-club">Nombre maximum de matchs amicaux atteint pour cette saison.</p>';
     else {
       h += '<div class="nc-set"><label>Adversaire<select class="nc-in" data-nc-fr="opp"><option value="">Choisir une sélection</option>' + opps.map(function (o) {
-        return '<option value="' + esc(o.id) + '"' + (ui.frOpp === o.id ? " selected" : "") + ">" + esc(o.label + (o.interim ? " · intérim (accepte d'office)" : " · " + o.coach) + (o.used >= fr.limits.perSeason ? " · complet" : "")) + "</option>";
+        return '<option value="' + esc(o.id) + '"' + (ui.frOpp === o.id ? " selected" : "") + ">" + esc(teamLab(o.id) + (o.interim ? " · intérim (accepte d'office)" : " · " + o.coach) + (o.used >= fr.limits.perSeason ? " · complet" : "")) + "</option>";
       }).join("") + "</select></label>" +
         '<label>Fenêtre internationale<select class="nc-in" data-nc-fr="at"><option value="">' + (dates.length ? "Choisir une fenêtre" : "Aucune fenêtre libre") + "</option>" + dates.map(function (d) {
           return '<option value="' + d.at + '"' + (String(ui.frAt) === String(d.at) ? " selected" : "") + ">" + esc("Fenêtre internationale " + d.window + " · " + when(d.at, true)) + "</option>";
@@ -493,11 +495,11 @@
     var o = a.opponent;
     var h = '<div class="nc-card"><div class="nc-row"><label class="nc-club" style="display:flex;flex-direction:column;gap:4px;font-weight:700">Sélection analysée<select class="nc-in" data-nc-opp="1">' +
       (a.next ? '<option value="">Prochain adversaire</option>' : '<option value="">Choisir une sélection</option>') +
-      a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (ui.opp === c.id ? " selected" : "") + ">" + esc(c.label) + "</option>"; }).join("") + "</select></label>" +
-      (a.next ? '<div class="nc-next" style="margin:0;flex:1;min-width:220px"><b>Prochain match</b> · ' + esc(a.next.label) + '<br><span class="nc-club">' + esc(when(a.next.at, true)) + " · " + (a.next.venue === "home" ? "à domicile" : "à l'extérieur") + " contre " + esc(teamLab(a.next.opponent)) + "</span></div>" : "") + "</div></div>";
+      a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (ui.opp === c.id ? " selected" : "") + ">" + esc(teamLab(c.id)) + "</option>"; }).join("") + "</select></label>" +
+      (a.next ? '<div class="nc-next" style="margin:0;flex:1;min-width:220px"><b>Prochain match</b><br><span>' + esc(a.next.label) + '</span><br><span class="nc-club">' + esc(when(a.next.at, true)) + '</span> <span class="nc-club">' + (a.next.venue === "home" ? "· à domicile contre " : "· à l'extérieur contre ") + esc(teamLab(a.next.opponent)) + "</span></div>" : "") + "</div></div>";
     if (!o) return h + '<div class="nc-card" style="margin-top:14px"><p class="nc-club">' + (a.next ? "Adversaire à déterminer." : "Aucun match à venir : choisissez une sélection à analyser.") + "</p></div>";
     var rec = o.record || {};
-    h += '<div class="nc-card" style="margin-top:14px"><div class="nc-opp-head">' + flag(o.country) + "<div><h3>" + esc(o.label) + '</h3><span class="nc-club">' + (o.coach ? "Sélectionneur : " + esc(o.coach) : "Sélection en intérim") + "</span></div></div>" +
+    h += '<div class="nc-card" style="margin-top:14px"><div class="nc-opp-head">' + flag(o.country) + "<div><h3>" + esc(teamLab(o.id)) + '</h3><span class="nc-club">' + (o.coach ? "Sélectionneur : " + esc(o.coach) : "Sélection en intérim") + "</span></div></div>" +
       '<div class="nc-kpis" style="margin-top:12px"><div><b>' + esc(rec.played || 0) + "</b><span>matchs internationaux récents</span></div><div><b>" + esc((rec.wins || 0) + " – " + (rec.losses || 0)) + "</b><span>victoires – défaites</span></div>" +
       "<div><b>" + (rec.played ? esc(Math.round(rec.pf / rec.played)) + " – " + esc(Math.round(rec.pa / rec.played)) : "–") + "</b><span>points marqués – encaissés par match</span></div>" +
       "<div><b>" + (o.group && o.group.rank ? esc(o.group.rank) + (o.group.rank === 1 ? "er" : "e") : "–") + "</b><span>" + (o.group ? esc(o.group.label) + " · " + esc(o.group.continent) : "pas de groupe de qualification") + "</span></div></div></div>";
@@ -517,7 +519,7 @@
     };
     h += '<div class="nc-card"><div class="nc-sec"><span>Derniers résultats</span></div>' + (o.results.length ? res(o.results) : '<p class="nc-club">Aucun match international joué.</p>') +
       '<div class="nc-sec" style="margin-top:14px"><span>Confrontations directes</span></div>' + (o.headToHead.length ? res(o.headToHead) : '<p class="nc-club">Aucune confrontation.</p>') +
-      (o.honours.length ? '<div class="nc-sec" style="margin-top:14px"><span>Palmarès</span></div>' + o.honours.map(function (x) { return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(x.season) + " · " + esc(x.label) + "</span><span class=\"nc-tag ok\">" + esc(x.rank) + (x.rank === 1 ? "er" : "e") + " / " + esc(x.of) + "</span></div>"; }).join("") : "") + "</div></div>";
+      (o.honours.length ? '<div class="nc-sec" style="margin-top:14px"><span>Palmarès</span></div>' + o.honours.map(function (x) { return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(x.season) + " · " + esc(x.label) + "</span><span class=\"nc-tag ok\">Classement final : " + esc(x.rank) + "e sur " + esc(x.of) + ".</span></div>"; }).join("") : "") + "</div></div>";
     return h;
   }
 
@@ -575,7 +577,7 @@
   function dashButtonHtml() {
     if (!mine.length || ui.mode) return "";
     var m = mine[0];
-    return '<button type="button" class="hm-btn hm-btn--ghost hm-head__nc-btn" data-nc-enter="' + esc(m.teamId) + '" title="' + esc((m.role === "coach" ? "Gérer " : "Staff de ") + m.label) + '">' + flag(m.country) +
+    return '<button type="button" class="hm-btn hm-btn--ghost hm-head__nc-btn" data-nc-enter="' + esc(m.teamId) + '" title="' + esc((m.role === "coach" ? "Gérer " : "Staff de ") + teamLab(m.teamId)) + '">' + flag(m.country) +
       '<span class="nc-lbl">Mode Sélectionneur</span>' + (m.unread ? '<span class="nc-badge">' + m.unread + "</span>" : "") + "</button>";
   }
   function syncDashButton() {
@@ -611,7 +613,7 @@
       for (var j = i + 1; j < NAV.length && NAV[j][0] !== "#"; j++) if (navAllowed(NAV[j])) return true;
       return false;
     }) : [];
-    if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.label || "") + '</b><div class="nc-club">' + esc(ROLE_LABEL[role] || role) + "</div></div></div>" + navs.map(function (n) {
+    if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.teamId ? teamLab(m.teamId) : "") + '</b><div class="nc-club">' + esc(ROLE_LABEL[role] || role) + "</div></div></div>" + navs.map(function (n) {
       if (n[0] === "#") return '<div class="nc-side-label">' + esc(n[1]) + "</div>";
       var badge = n[0] === "notifications" && v && v.unread ? '<span class="nc-badge">' + v.unread + "</span>" :
         n[0] === "convocations" && curGathering() ? '<span class="nc-club">' + curGathering().players.length + "</span>" :
@@ -621,7 +623,7 @@
     var left = document.querySelector(".topbar-left");
     if (left && !document.getElementById("ncTopTitle")) { var tt = document.createElement("div"); tt.id = "ncTopTitle"; left.appendChild(tt); }
     var top = document.getElementById("ncTopTitle");
-    if (top && v) top.innerHTML = flag(v.team.country) + "<div><b>" + esc(v.team.label) + "</b><span>" + esc(ROLE_LABEL[role] || "") + (role === "coach" ? "" : " · sélectionneur : " + esc(coachName(v))) + "</span></div>";
+    if (top && v) top.innerHTML = flag(v.team.country) + "<div><b>" + esc(teamLab(v.team.id)) + "</b><span>" + esc(ROLE_LABEL[role] || "") + (role === "coach" ? "" : " · sélectionneur : " + esc(coachName(v))) + "</span></div>";
   }
   function coachName(v) { var m = v && v.mandate; return m ? (m.pseudo || (m.clubName ? "Manager de " + m.clubName : "Sélectionneur")) : ""; }
   function isFinalsPeriod() {
@@ -701,7 +703,7 @@
     var rank = tv && tv.qualif && tv.qualif.group ? (tv.qualif.group.standings.filter(function (s) { return s.teamId === v.team.id; })[0] || {}).rank : null;
     var seasonNo = v.mandate ? Math.min(2, Math.max(1, v.season - v.mandate.fromSeason + 1)) : 1;
     var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="nc-k">' + k + '</div><div class="nc-v">' + val + '</div><div class="nc-s">' + sub + "</div></button>"; };
-    var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(ROLE_LABEL[v.role] || "") + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(v.team.label) + "</h1></div></div>";
+    var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(ROLE_LABEL[v.role] || "") + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(teamLab(v.team.id)) + "</h1></div></div>";
     h += '<div class="nc-dash">';
     h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Fenêtre " + nx.w + " · qualifications" : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
     if (can("calendar")) h += kpi("Qualifications", rank ? rank + (rank === 1 ? "er" : "e") + " du groupe" : "–", tv && tv.qualif && tv.qualif.group ? esc(tv.qualif.group.label) + " · " + esc(tv.qualif.group.continent) : "Groupes à venir", "qualifications");
@@ -741,7 +743,7 @@
       k("Joueurs utilisés", r.playersUsed, "") + k("Nouveaux internationaux", r.newInternationals, (r.newNames || []).slice(0, 6).map(esc).join(", ")) + "</div>";
     h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span>Compétitions</span></div>' + (r.seasonsDetail || []).map(function (s) {
       var comp = s.comp === "continental" ? "Compétition continentale" : s.comp === "world" ? "Coupe du monde" : "Compétition";
-      return '<div class="nc-slot"><span class="nc-grow"><b>Saison ' + esc(s.season) + "</b> · " + comp + "</span>" +
+      return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(s.season) + " · " + comp + "</span>" +
         (s.comp === "continental" && s.qualified != null ? '<span class="nc-tag ' + (s.qualified ? "ok" : "bad") + '">Qualification : ' + (s.qualified ? "oui" : "non") + "</span>" : "") +
         (s.tournament && s.tournament.rank ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " : " + esc(s.tournament.stage) + "</span>" : s.tournament ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " en cours</span>" : '<span class="nc-club">à venir</span>') + "</div>";
     }).join("") + (r.bestFinish ? '<p class="nc-small">Meilleur résultat : ' + esc(r.bestFinish) + "</p>" : "") + "</div>";
