@@ -29,7 +29,10 @@ function freePort() {
     await store.saveMultiLeague(lg, "/tmp/ignored.json");
     const { createClient } = require("./redisClient.js");
     const direct = createClient(process.env.REDIS_URL);
-    const keys = await direct.command("KEYS", "*");
+    const allKeys = await direct.command("KEYS", "*");
+    // Registre des IDs de joueurs (2026-10-06) : une clé à part.
+    assert.ok(allKeys.some(k => /pullup:player-ids$/.test(k)), "registre des IDs de joueurs enregistré");
+    const keys = allKeys.filter(k => !/pullup:player-ids$/.test(k));
     assert.strictEqual(keys.length, 1);
     const raw = await direct.command("GET", keys[0]);
     assert.ok(raw.startsWith("gz1:"), "valeur compressée");

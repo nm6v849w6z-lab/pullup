@@ -74,7 +74,8 @@ assert.ok(d.report.headToHead.length === 1 && d.report.headToHead[0].scoreFor ==
 assert.ok(d.report.standing && d.report.standing.rank >= 1, "classement du groupe");
 assert.ok(d.team.lineup && Object.keys(d.team.lineup.starters).length === 5, "5 majeur du dernier match");
 // Les ids provisoires du moteur ne fuient pas.
-assert.ok(d.team.players.every(p => p.id < 9000000 || p.id < 0), "ids réels des joueurs");
+// IDs provisoires du moteur : 9000001 et plus, jamais au format 10 chiffres.
+assert.ok(d.team.players.every(p => Engine.isPlayerIdFormat(p.id) || p.id < 9000000), "ids réels des joueurs");
 ok("adversaire : équipe virtuelle (stats moteur, quart-temps, tactiques), zones, stratégies, joueurs clés, forme, confrontations, classement");
 
 // 4) Sa propre sélection (« Analyse de ma sélection »).
