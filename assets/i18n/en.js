@@ -3,6 +3,8 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucune notification pour l'instant.": "No notifications yet.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Adjoint": "Assistant coach",
   "Adjoints": "Assistant coaches",
   "Recruteurs": "Scouts",

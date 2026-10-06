@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucune notification pour l'instant.": "Pranešimų kol kas nėra.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Adjoint": "Trenerio asistentas",
   "Adjoints": "Trenerio asistentai",
   "Recruteurs": "Skautai",

@@ -41,6 +41,8 @@
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucune notification pour l'instant.": "Nessuna notifica per ora.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Adjoint": "Vice allenatore",
   "Adjoints": "Vice allenatori",
   "Recruteurs": "Osservatori",
