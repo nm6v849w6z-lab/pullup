@@ -85,6 +85,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   - FAIT (2026-10-06) : convoqué retenu par sa sélection (Player.nationalDuty,
     posé au gel, retiré au remplacement, Engine.isOnNationalDuty) → absent
     des amicaux de son club ce jour-là (toute la semaine en phase finale).
+  - FAIT (2026-10-06) : Analyse du mode Sélectionneur = MÊME rapport que le
+    Scouting Pro du club (adversaire ou « Ma sélection »). Route
+    `/api/national/coach/analysis-data?teamId=&opp=` (droit "analysis",
+    nationalCoach.analysisData) : matchs joués saison en cours + précédente
+    (NM.playedMatchesOf) en « équipe virtuelle » (matchLog competition
+    "national", round = rang chronologique) + agrégats de server/scouting.js
+    sur une ligue de résultats équivalente. Client : scoutingProReportHtml
+    et blocs sp2* paramétrés par `report.virtual` (computeScoutingAdvancedStats
+    accepte une `source` de matchs) ; « Appliquer à ma tactique » écrit le
+    plan de match dans la tactique de la sélection (/coach/tactics).
+    Tests : server/national_analysis_test.js, national_analysis_ui_test.js.
   - Reste : traductions des écrans B à E ; pas de classement mondial FIBA
     (le bilan le signale). UI dans des fichiers assets/ séparés (limite 4 Mo
     de la page).

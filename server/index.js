@@ -2923,6 +2923,21 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             teamName: NationalTeams.teamLabel(match.home), opponentName: NationalTeams.teamLabel(match.away) });
           return;
         }
+        // Analyse Premium du Mode Sélectionneur (2026-10-06) : matchs
+        // internationaux (saison en cours et précédente) d'une sélection en
+        // « équipe virtuelle » pour le rapport Scouting Pro des clubs.
+        // GET /api/national/coach/analysis-data?teamId=&opp= (opp absent =
+        // sa propre sélection) ; staff ayant le droit "analysis".
+        if (req.method === "GET" && route.pathname === "/api/national/coach/analysis-data") {
+          const NationalCoach = require("./nationalCoach.js");
+          const teamId = route.searchParams.get("teamId") || route.searchParams.get("id");
+          const opp = route.searchParams.get("opp") || null;
+          const own = !opp || opp === teamId;
+          const pool = own && natStore.teams[teamId] ? await NationalCoach.loadPool(teamId, multiSavePath) : null;
+          const outA = NationalCoach.analysisData(natStore, me, teamId, own ? null : opp, now, { season, pool });
+          sendJson(res, outA.ok ? 200 : (outA.status || 400), outA);
+          return;
+        }
         // Phase B (server/nationalCoach.js) : espace du sélectionneur.
         // GET /api/national/coach?id= ; POST /api/national/coach/{list,
         // convocation,replace,tactics} — réservés au sélectionneur en poste.

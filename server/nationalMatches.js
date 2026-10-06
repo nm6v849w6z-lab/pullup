@@ -744,6 +744,23 @@ function resultsOf(store, teamId, now) {
   });
   return out.sort((a, b) => b.at - a.at);
 }
+// Matchs joués d'une sélection depuis la saison `minSeason` (analyse du Mode
+// Sélectionneur, 2026-10-06), objets bruts (box score complet, tactiques
+// jouées, scores par quart-temps) + { season, comp, label }, plus anciens
+// d'abord. Ni forfait (pas de box score) ni match encore en diffusion.
+function playedMatchesOf(store, teamId, minSeason, now) {
+  const out = [];
+  const add = (m, season, comp, label) => {
+    if (m.status !== "played" || (m.home !== teamId && m.away !== teamId) || season < minSeason || m.forfeit) return;
+    if (isLive(m, now)) return;
+    if (!Array.isArray(m.boxHome) || !Array.isArray(m.boxAway)) return;
+    out.push({ m, season, comp, label });
+  };
+  Object.values(store.intl || {}).forEach(c => c.matches.forEach(m => add(m, c.season, c.comp, m.label || (m.w ? `Fenêtre internationale ${m.w}` : "Qualifications"))));
+  Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => t.matches.forEach(m => add(m, f.season, t.kind, m.label || t.label))));
+  (store.intlFriendlies || []).forEach(f => add(f, f.season, "friendly", f.label || "Match amical international"));
+  return out.sort((a, b) => a.m.at - b.m.at);
+}
 // Match international par id (qualifications, phases finales, amicaux).
 function findMatch(store, matchId) {
   const pools = Object.values(store.intl || {}).map(c => ({ season: c.season, comp: c.comp, matches: c.matches }))
@@ -792,4 +809,4 @@ function finalsView(store, teamId, season, now) {
   return { season, comp: f.comp, tournaments: f.tournaments.filter(t => t.teams.includes(teamId)).map(pub), others: f.tournaments.filter(t => !t.teams.includes(teamId)).map(t => ({ key: t.key, label: t.label, champion: t.champion })) };
 }
 function honoursOf(store, teamId) { return ((store.honours || {})[teamId] || []).slice().sort((a, b) => b.season - a.season || a.rank - b.rank); }
-module.exports = { LIVE_GUEST_IDX, isLive, findMatch, takePendingLive, announceDue, publicMatch, CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, matchDetail };
+module.exports = { LIVE_GUEST_IDX, isLive, findMatch, takePendingLive, announceDue, publicMatch, CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, playedMatchesOf, matchDetail };

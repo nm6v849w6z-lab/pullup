@@ -411,4 +411,7 @@ module.exports = {
   // externe. Aucun changement de comportement : simples ajouts à cette
   // liste.
   recentFormFor, homeAwayRecordFor, streakFor, headToHeadFor, standingFor,
+  // Analyse d'une sélection (Mode Sélectionneur, server/nationalCoach.js
+  // analysisData) : mêmes joueurs clés que le rapport club.
+  keyPlayersFor,
 };
