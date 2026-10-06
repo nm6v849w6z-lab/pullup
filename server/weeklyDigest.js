@@ -707,7 +707,7 @@ function renderDigest(data, lang, { gameUrl = `${siteUrl()}/`, unsubscribeUrl = 
       const prog = p => I18n.translate(lang, p.programLabel || p.program || "");
       inner = rowsTable(markRows(ps.map(p => {
         const skills = p.skills.map(k => `${esc(attrLabel(k.attr, lang))} ${k.before} → <b style="color:${C.ok}">${k.after}</b> <span style="color:${C.ok}">(+${k.gain})</span>`).join("<br>");
-        text.push(`- ${p.name} — ${S.program}${CO}${prog(p)} — ${p.skills.map(k => `${attrLabel(k.attr, lang)} ${k.before} -> ${k.after} (+${k.gain})`).join(", ")}`);
+        text.push(`- ${p.name} · ${S.program}${CO}${prog(p)} · ${p.skills.map(k => `${attrLabel(k.attr, lang)} ${k.before} -> ${k.after} (+${k.gain})`).join(", ")}`);
         return row(`<b>${esc(p.name)}</b>${sub(`${esc(S.program)}${CO}<span style="color:${C.amber}">${esc(prog(p))}</span>`)}<div style="font:400 13px/1.5 ${FONT};color:${C.ink};margin-top:4px">${skills}</div>`,
           `+${p.total}`, { color: C.ok });
       })));
@@ -747,7 +747,7 @@ function renderDigest(data, lang, { gameUrl = `${siteUrl()}/`, unsubscribeUrl = 
     m.ongoing.forEach(x => {
       const st = x.leading ? S.leading : S.outbid;
       rowsArr.push(row(`${badge(x.leading ? "↑" : "!", x.leading ? C.ok : C.danger)}${who(x, S.ongoing, ` · <span style="color:${x.leading ? C.ok : C.danger}">${esc(st)}</span>`)}`, money(x.price, S)));
-      text.push(`- ${whoTxt(x, S.ongoing)} (${money(x.price, S)}) — ${st}`);
+      text.push(`- ${whoTxt(x, S.ongoing)} (${money(x.price, S)}) · ${st}`);
     });
     m.lost.forEach(x => { rowsArr.push(row(`${badge("✕", C.faint)}${who(x, S.lost)}`, money(x.price, S), { color: C.dim })); text.push(`- ${whoTxt(x, S.lost)} (${money(x.price, S)})`); });
     if (!rowsArr.length) text.push(S.noMarket);

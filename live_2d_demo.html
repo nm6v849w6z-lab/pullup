@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Démo — Vue 2D du terrain (live)</title>
+<title>Démo : Vue 2D du terrain (live)</title>
 <style>
   :root{
     --bg:#0d131d; --panel:#141c29; --panel-2:#1a2433; --line:#26334a; --line-soft:#1e2939;
@@ -150,15 +150,15 @@
 </head>
 <body>
 <div class="wrap">
-  <p class="eyebrow">Basket Manager — outil de test</p>
-  <h1>🏀 Démo — Vue 2D du terrain en direct</h1>
+  <p class="eyebrow">Basket Manager : outil de test</p>
+  <h1>🏀 Démo : Vue 2D du terrain en direct</h1>
   <p class="subnote">
     Page de test autonome (pas besoin du serveur) : génère un match aléatoire
     entre deux équipes CPU et le diffuse avec <b>exactement le même moteur et
-    le même code de vue 2D</b> que le vrai jeu — juste étalé sur une durée
+    le même code de vue 2D</b> que le vrai jeu : juste étalé sur une durée
     raccourcie pour pouvoir le regarder tout de suite, plutôt que sur la
     vraie fenêtre de diffusion d'1h30. Le jeu réel, lui, ne permet jamais
-    d'accélérer une diffusion — c'est une exception propre à cet outil de
+    d'accélérer une diffusion : c'est une exception propre à cet outil de
     test.
   </p>
 
@@ -177,11 +177,11 @@
   <div class="board">
     <div class="board-top">
       <span id="liveDot" class="live-dot off"></span>
-      <span id="boardStatus" class="board-status">Prêt — cliquez sur "Lancer un nouveau match"</span>
+      <span id="boardStatus" class="board-status">Prêt : cliquez sur "Lancer un nouveau match"</span>
     </div>
     <div class="score-row">
       <div class="team-block a">
-        <div class="team-name-row"><div class="team-name" id="nameA">—</div><span class="poss-dot off" id="possDotA" title="A la balle"></span></div>
+        <div class="team-name-row"><div class="team-name" id="nameA">–</div><span class="poss-dot off" id="possDotA" title="A la balle"></span></div>
         <div class="team-score" id="scoreA">0</div>
       </div>
       <div class="mid-col">
@@ -190,7 +190,7 @@
         <span class="shot-clock-badge off" id="shotClockDisplay">24</span>
       </div>
       <div class="team-block b">
-        <div class="team-name-row"><div class="team-name" id="nameB">—</div><span class="poss-dot off" id="possDotB" title="A la balle"></span></div>
+        <div class="team-name-row"><div class="team-name" id="nameB">–</div><span class="poss-dot off" id="possDotB" title="A la balle"></span></div>
         <div class="team-score" id="scoreB">0</div>
       </div>
     </div>
@@ -226,7 +226,7 @@
       </svg>
     </div>
     <div class="live-court-tooltip" id="liveCourtTooltip"></div>
-    <p class="live-court-note">Vue 2D simplifiée — un rond par tir réussi, une croix par tir raté, à l'emplacement approximatif du tir. Survolez un symbole pour voir qui a tiré.</p>
+    <p class="live-court-note">Vue 2D simplifiée : un rond par tir réussi, une croix par tir raté, à l'emplacement approximatif du tir. Survolez un symbole pour voir qui a tiré.</p>
   </div>
 
   <div class="feed" id="feed"></div>
@@ -358,20 +358,20 @@ function say(templates, vars) {
 const PHRASES = {
   madeShot: {
     three: [
-      "🏀 {shooter} plante le tir à 3 points ({quality}) — {team}.",
-      "🎯 {shooter} trouve le fond des filets de loin ({quality}) — {team}.",
-      "💥 {shooter} allume la mèche à 3 points ({quality}) — {team}.",
-      "🔥 {shooter} envoie une banderille à 3 points ({quality}) — {team}.",
+      "🏀 {shooter} plante le tir à 3 points ({quality}) : {team}.",
+      "🎯 {shooter} trouve le fond des filets de loin ({quality}) : {team}.",
+      "💥 {shooter} allume la mèche à 3 points ({quality}) : {team}.",
+      "🔥 {shooter} envoie une banderille à 3 points ({quality}) : {team}.",
     ],
     mid: [
-      "🏀 {shooter} marque en mi-distance ({quality}) — {team}.",
-      "🎯 {shooter} ajuste son tir à mi-distance ({quality}) — {team}.",
-      "🏀 {shooter} déclenche et marque à mi-distance ({quality}) — {team}.",
+      "🏀 {shooter} marque en mi-distance ({quality}) : {team}.",
+      "🎯 {shooter} ajuste son tir à mi-distance ({quality}) : {team}.",
+      "🏀 {shooter} déclenche et marque à mi-distance ({quality}) : {team}.",
     ],
     inside: [
-      "🏀 {shooter} marque près du panier ({quality}) — {team}.",
-      "💪 {shooter} s'impose sous le cercle ({quality}) — {team}.",
-      "🏀 {shooter} conclut au contact près du panier ({quality}) — {team}.",
+      "🏀 {shooter} marque près du panier ({quality}) : {team}.",
+      "💪 {shooter} s'impose sous le cercle ({quality}) : {team}.",
+      "🏀 {shooter} conclut au contact près du panier ({quality}) : {team}.",
     ],
   },
   andOne: [
@@ -5308,7 +5308,7 @@ class MatchEngine {
     // boucle plus bas (qui loggue le même marqueur pour Q2/Q3/Q4 et les
     // prolongations) saute cette première itération pour ne pas le
     // dupliquer (voir `if (q > 1)` plus bas).
-    this.log(events, 1, QUARTER_SECONDS, `— Début du 1er quart-temps —`, { type: "quarterStart" });
+    this.log(events, 1, QUARTER_SECONDS, `– Début du 1er quart-temps –`, { type: "quarterStart" });
 
     // Retour utilisateur : "à 10:00 du Q1, ça doit être dit, l'entre-deux
     // est remporté par ..." — jusqu'ici `possessionTeam` (qui a la balle en
@@ -5335,7 +5335,7 @@ class MatchEngine {
       // Le marqueur du 1er quart-temps est déjà loggué plus haut, AVANT
       // l'entre-deux (voir commentaire ci-dessus) — ne pas le dupliquer ici.
       if (q > 1) {
-        this.log(events, q, clock, `— Début ${isOvertime ? "de la" : "du"} ${label} —`, { type: "quarterStart" });
+        this.log(events, q, clock, `– Début ${isOvertime ? "de la" : "du"} ${label} –`, { type: "quarterStart" });
       }
       const startScoreA = score.A, startScoreB = score.B;
 
@@ -5395,7 +5395,7 @@ class MatchEngine {
 
       quarterScores.A[q - 1] = score.A - startScoreA;
       quarterScores.B[q - 1] = score.B - startScoreB;
-      this.log(events, q, 0, `— Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name} —`, { type: "quarterEnd" });
+      this.log(events, q, 0, `– Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name} –`, { type: "quarterEnd" });
 
       if (q >= 4 && score.A !== score.B) break;
       if (q >= 14) {
@@ -5605,7 +5605,7 @@ function addCourtMark(ev) {
     g.appendChild(svgEl("line", { x1: p.x - 6, y1: p.y + 6, x2: p.x + 6, y2: p.y - 6, class: "lcv-mark-x" }));
   }
   const title = document.createElementNS(SVG_NS, "title");
-  title.textContent = `${ev.shooter || "Joueur inconnu"} — ${zoneLabel(ev.zone)}, ${ev.made ? "réussi" : "raté"}`;
+  title.textContent = `${ev.shooter || "Joueur inconnu"} : ${zoneLabel(ev.zone)}, ${ev.made ? "réussi" : "raté"}`;
   g.appendChild(title);
   g.addEventListener("mouseenter", () => showCourtMarkTooltip(ev));
   g.addEventListener("mousemove", positionCourtMarkTooltip);
@@ -5617,7 +5617,7 @@ function showCourtMarkTooltip(ev) {
   const tip = document.getElementById("liveCourtTooltip");
   if (!tip) return;
   const isB = ev.team === "B";
-  tip.innerHTML = `<div class="lct-name">${escapeHtml(ev.shooter || "Joueur inconnu")}</div><div class="lct-meta">${escapeHtml(zoneLabel(ev.zone))} — ${ev.made ? "✅ Réussi" : "❌ Raté"}</div>`;
+  tip.innerHTML = `<div class="lct-name">${escapeHtml(ev.shooter || "Joueur inconnu")}</div><div class="lct-meta">${escapeHtml(zoneLabel(ev.zone))} : ${ev.made ? "✅ Réussi" : "❌ Raté"}</div>`;
   tip.classList.toggle("teamB", isB);
   tip.classList.toggle("teamA", !isB);
   tip.classList.add("visible");
@@ -5812,7 +5812,7 @@ function escapeHtml(s) {
 function appendFeedItem(ev) {
   const feed = document.getElementById("feed");
   const row = document.createElement("div");
-  const isMarker = ev.text.startsWith("—");
+  const isMarker = ev.text.startsWith("–");
   row.className = "feed-item" + (isMarker ? " header" : "");
   if (isMarker) {
     row.innerHTML = `<span>${escapeHtml(ev.text)}</span>`;

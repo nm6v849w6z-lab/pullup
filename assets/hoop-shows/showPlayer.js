@@ -285,7 +285,7 @@
     const answered = seg.questions.filter((q) => p.answers[q.id] != null).length;
     return head(seg) +
       '<div class="hs-grid hs-grid-2">' +
-      '<div class="hs-card hs-row-between"><span class="hs-iconline">' + ICON.globe + 'Classement mondial des pronostiqueurs</span><b class="hs-accent hs-lg">' + (lb ? esc(lb.rank) + 'e · ' + esc(lb.points) + ' pts' : '—') + '</b></div>' +
+      '<div class="hs-card hs-row-between"><span class="hs-iconline">' + ICON.globe + 'Classement mondial des pronostiqueurs</span><b class="hs-accent hs-lg">' + (lb ? esc(lb.rank) + 'e · ' + esc(lb.points) + ' pts' : '–') + '</b></div>' +
       '<div class="hs-card hs-prize">' + ICON.trophy + '<span>' + esc(ctx.opts.prizeText || 'Le n°1 en fin de saison gagne 1 mois de Premium') + '</span></div></div>' +
       '<div class="hs-grid hs-grid-q">' + seg.questions.map((q, qi) =>
         '<div class="hs-card hs-question' + (p.answers[q.id] != null ? ' is-answered' : '') + '"><span class="hs-qnum">Question ' + (qi + 1) + '/' + n + '</span><b>' + esc(q.label) + '</b>' + (q.note ? '<span class="hs-small">' + esc(q.note) + '</span>' : '') +
@@ -304,7 +304,7 @@
 
   R.poster = (seg, st, ctx) => {
     const D = ctx.D;
-    const form = (t) => '<span class="hs-form">' + (t.form.length ? t.form.map((r) => '<i class="' + (r === 'V' ? 'hs-w' : 'hs-l') + '">' + esc(r) + '</i>').join('') : '<span class="hs-small">—</span>') + '</span>';
+    const form = (t) => '<span class="hs-form">' + (t.form.length ? t.form.map((r) => '<i class="' + (r === 'V' ? 'hs-w' : 'hs-l') + '">' + esc(r) + '</i>').join('') : '<span class="hs-small">–</span>') + '</span>';
     const meta = (t) => (t.rank ? '<b>' + esc(ordinal(t.rank)) + '</b> · ' : '') + t.w + ' V · ' + t.l + ' D';
     const lm = seg.lastMeeting;
     return head(seg) +

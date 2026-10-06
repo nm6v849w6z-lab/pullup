@@ -20252,7 +20252,7 @@ const cohTone = v => (v >= 75 ? "coh-good" : v >= 60 ? "coh-mid" : "coh-bad");
 const COH_OK_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#33b4a1" stroke-width="2"/><path d="M5 8.2l2 2 4-4" fill="none" stroke="#33b4a1" stroke-width="2" stroke-linecap="round"/></svg>`;
 const COH_WARN_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#e8a33a" stroke-width="2"/><path d="M8 4v5M8 11.5v.5" stroke="#e8a33a" stroke-width="2" stroke-linecap="round"/></svg>`;
 function cohesionNoteHtml(n) {
-  return `<div class="coh-note${n.tone === "warn" ? " warn" : ""}">${n.who ? `<b>${n.who.map(escapeHtml).join(" · ")}</b> — ` : ""}<span>${escapeHtml(n.text)}</span></div>`;
+  return `<div class="coh-note${n.tone === "warn" ? " warn" : ""}">${n.who ? `<b>${n.who.map(escapeHtml).join(" · ")}</b> : ` : ""}<span>${escapeHtml(n.text)}</span></div>`;
 }
 // Panneau « Cohérence du cinq » (composition), phase 2 des rôles de jeu.
 function compoCohesionHtml(team) {
@@ -20277,7 +20277,7 @@ function compoCohesionHtml(team) {
   });
   h += `</div><div class="coh-col coh-col--notes">`;
   c.notes.slice(0, 5).forEach(n => { h += cohesionNoteHtml(n); });
-  (tac ? tac.notes : []).forEach(n => { h += `<div class="coh-note${n.tone === "warn" ? " warn" : ""}"><b>${escapeHtml(n.tactic)}</b> — <span>${escapeHtml(n.text)}</span></div>`; });
+  (tac ? tac.notes : []).forEach(n => { h += `<div class="coh-note${n.tone === "warn" ? " warn" : ""}"><b>${escapeHtml(n.tactic)}</b> : <span>${escapeHtml(n.text)}</span></div>`; });
   h += `</div></div></section>`;
   return h;
 }
@@ -33779,7 +33779,7 @@ function showPlayerSeasonStatsModal(teamIdx, playerId) {
   overlay.className = "upgrade-confirm-overlay player-season-stats-overlay";
   overlay.id = "playerSeasonStatsOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box player-season-stats-box">` +
-    `<h3>Statistiques de la saison — ${escapeHtml(player.name)}</h3>` +
+    `<h3>Statistiques de la saison : ${escapeHtml(player.name)}</h3>` +
     playerFullSeasonMatchesTableHtml(teamIdx, log) +
     playerSeasonAveragesTableHtml(log) +
     `<button type="button" class="upgrade-confirm-cancel-btn" id="playerSeasonStatsCloseBtn" style="margin-top:14px; width:100%;">Fermer</button>` +
@@ -33896,7 +33896,7 @@ function showPlayerHistoryModal(kind) {
   let body;
   if (kind === "injuries") {
     const list = playerInjuryEntries(player, team);
-    body = `<h3>Suivi des blessures — ${escapeHtml(player.name)}</h3>` +
+    body = `<h3>Suivi des blessures : ${escapeHtml(player.name)}</h3>` +
       `<div class="ph-table-wrap"><table class="pdp-games ph-table"><thead><tr><th class="num">#</th><th>Blessure</th><th>Date</th><th>Retour</th><th class="num">Durée</th><th class="num">Médecin</th><th>Contexte</th></tr></thead><tbody>` +
       list.map((e, i) => `<tr><td class="num">${list.length - i}</td><td class="strong">${escapeHtml(e.type)}</td><td>${escapeHtml(phDate(e.at))}</td><td>${escapeHtml(phDate(e.until))}</td>` +
         `<td class="num">${e.days ? `${e.days} j` : "–"}</td><td class="num">${e.doctor ? `niv. ${e.doctor}` : e.doctor === 0 ? "aucun" : "–"}</td><td>${phInjuryContext(e)}${e.club && team && e.club !== team.name ? ` · ${escapeHtml(e.club)}` : ""}</td></tr>`).join("") +
@@ -33904,7 +33904,7 @@ function showPlayerHistoryModal(kind) {
   } else {
     const ev = playerHistoryEvents(player);
     const types = Object.keys(PH_TYPE_LABELS).filter(t => ev.some(e => e.type === t));
-    body = `<h3>Historique du joueur — ${escapeHtml(player.name)}</h3>` +
+    body = `<h3>Historique du joueur : ${escapeHtml(player.name)}</h3>` +
       `<div class="ph-filters">${types.map(t => `<label><input type="checkbox" data-ph-filter="${t}" checked> ${escapeHtml(PH_TYPE_LABELS[t])}</label>`).join("")}</div>` +
       `<div class="ph-table-wrap"><table class="pdp-games ph-table"><thead><tr><th>Événement</th><th>Date</th><th class="num">Saison</th><th>Détails</th></tr></thead><tbody>` +
       ev.map(e => `<tr data-ph-type="${e.type}"><td class="strong">${escapeHtml(phEventLabel(e))}</td><td>${escapeHtml(phDate(e.at))}</td><td class="num">${e.season || "–"}</td><td>${phEventDetails(e)}</td></tr>`).join("") +
@@ -35289,8 +35289,8 @@ function thPriceHtml(e) {
     : `<div class="th-price zero">${escapeHtml(formatMoney(0))}<small>agent libre</small></div>`;
   if (/^loan/.test(e.kind)) return fee > 0
     ? `<div class="th-price ${e.dir === "in" ? "in" : "out"}">${e.dir === "in" ? "−" : "+"}${escapeHtml(formatMoney(fee))}<small>prêt</small></div>`
-    : `<div class="th-price zero">—<small>${e.kind === "loan_end" ? "sans frais" : "prêt"}</small></div>`;
-  return `<div class="th-price zero">—<small>sans transfert</small></div>`;
+    : `<div class="th-price zero">–<small>${e.kind === "loan_end" ? "sans frais" : "prêt"}</small></div>`;
+  return `<div class="th-price zero">–<small>sans transfert</small></div>`;
 }
 function transferHistoryTotalsClient(entries) {
   let spent = 0, earned = 0, arrivals = 0, departures = 0, freeArrivals = 0;
@@ -37286,7 +37286,7 @@ function pcNum(v) {
 }
 // Nom de club cliquable (fiche équipe, même d'un autre championnat).
 function pcClub(name, leagueId, idx) {
-  if (!name) return `<span class="pc-dim">—</span>`;
+  if (!name) return `<span class="pc-dim">–</span>`;
   if (!leagueId || !Number.isInteger(idx)) return `<span>${escapeHtml(name)}</span>`;
   const mine = leagueId === planeteState.data.myLeagueId && idx === planeteState.data.myTeamIndex;
   return `<button type="button" class="pc-link${mine ? " is-mine" : ""}" data-pc-club="${escapeHtml(leagueId)}" data-pc-idx="${idx}">${escapeHtml(name)}</button>`;
@@ -38179,7 +38179,7 @@ function tacticalReportHtml(opponent) {
     if (setup.assignments.length) {
       html += `<ul class="scouting-clean-list">` + setup.assignments.map(a =>
         `<li><span class="scouting-clean-score">${escapeHtml(POS_SHORT[a.position] || a.position)}</span>` +
-        `<span class="scouting-clean-opp">${escapeHtml(WATCH_FOCUS_LABELS[a.focus] || a.focus)}${a.target ? ` — ${escapeHtml(a.target)}` : ""}</span>` +
+        `<span class="scouting-clean-opp">${escapeHtml(WATCH_FOCUS_LABELS[a.focus] || a.focus)}${a.target ? ` : ${escapeHtml(a.target)}` : ""}</span>` +
         `<span class="scouting-clean-meta">${escapeHtml(a.reason)}</span></li>`
       ).join("") + `</ul>`;
     } else {
@@ -38635,7 +38635,7 @@ function scoutingStartingFiveCardHtml(team, teamIdx, now = Date.now(), startersO
   let html = `<div class="scouting-starting-five table-scroll"><table class="roster-table"><thead><tr>` +
     `<th>Poste</th><th>Nom</th><th>Salaire/sem.</th><th>Forme</th><th>Pts</th><th>Reb</th><th>Pas</th></tr></thead><tbody>`;
   rows.forEach(r => {
-    if (r.empty) { html += `<tr><td>${POS_SHORT[r.pos]}</td><td colspan="6" class="sub">— non pourvu —</td></tr>`; return; }
+    if (r.empty) { html += `<tr><td>${POS_SHORT[r.pos]}</td><td colspan="6" class="sub">Non pourvu</td></tr>`; return; }
     const p = r.player;
     const conditionText = r.injured ? `<span class="gain-down">blessé</span>` : (r.condition != null ? `${r.condition}%` : "–");
     html += `<tr><td>${POS_SHORT[r.pos]}</td><td><span style="display:inline-flex;align-items:center;gap:6px">${playerAvatarHtml(p, team, 22)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td>` +
@@ -38674,7 +38674,7 @@ function scoutingProTeaserHtml(access, opponentIdx) {
   html += `</div>`;
   html += remaining > 0
     ? `<p class="sp-lock-note">1 déblocage par pub par mois. Passe Premium pour un accès illimité à toutes les équipes.</p>`
-    : `<p class="sp-lock-note">Tu as déjà utilisé ta pub du mois${nextMonth ? ` — prochaine disponible le ${escapeHtml(nextMonth)}` : ""}. Passe Premium pour un accès illimité.</p>`;
+    : `<p class="sp-lock-note">Tu as déjà utilisé ta pub du mois${nextMonth ? ` (prochaine disponible le ${escapeHtml(nextMonth)})` : ""}. Passe Premium pour un accès illimité.</p>`;
   html += `<div id="scoutingProFeedback"></div></div>`;
   return html;
 }
@@ -38838,7 +38838,7 @@ function scoutingPlayerShareHtml(adv) {
   let html = `<h4 class="scouting-section-title">Répartition offensive</h4>`;
   html += `<ul class="scouting-clean-list">` + adv.playerShare.map(pl =>
     `<li><span class="scouting-clean-score">${escapeHtml(pl.name)}</span>` +
-    `<span class="scouting-clean-opp">${pl.ptsPerGame} pts/match${pl.pctOfTeamPoints != null ? ` — ${pl.pctOfTeamPoints}% des points` : ""}</span>` +
+    `<span class="scouting-clean-opp">${pl.ptsPerGame} pts/match${pl.pctOfTeamPoints != null ? ` · ${pl.pctOfTeamPoints}% des points` : ""}</span>` +
     `<span class="scouting-clean-meta">${pl.pctOfTeamShots != null ? `${pl.pctOfTeamShots}% des tirs` : ""}</span></li>`
   ).join("") + `</ul>`;
   if (adv.topPlayersPointsSharePct != null) {
@@ -38852,7 +38852,7 @@ function scoutingHomeAwayHtml(adv) {
   const ha = adv.homeAway;
   if (!ha || (!ha.home && !ha.away)) return "";
   const h = ha.home, a = ha.away;
-  const row = (label, hv, av, suffix) => `<tr><td>${label}</td><td>${hv != null ? hv + (suffix || "") : "—"}</td><td>${av != null ? av + (suffix || "") : "—"}</td></tr>`;
+  const row = (label, hv, av, suffix) => `<tr><td>${label}</td><td>${hv != null ? hv + (suffix || "") : "–"}</td><td>${av != null ? av + (suffix || "") : "–"}</td></tr>`;
   let html = `<h4 class="scouting-section-title">Domicile / Extérieur</h4>`;
   html += `<p class="sub">Championnat uniquement (${h ? h.games : 0} à domicile, ${a ? a.games : 0} à l'extérieur).</p>`;
   html += `<div class="table-scroll"><table class="roster-table"><thead><tr><th></th><th>Domicile</th><th>Extérieur</th></tr></thead><tbody>` +
@@ -38871,7 +38871,7 @@ function scoutingHalvesHtml(adv) {
   const hv = adv.halves;
   if (!hv) return "";
   let html = `<h4 class="scouting-section-title">1re / 2e mi-temps</h4>`;
-  html += `<p class="sub">Championnat uniquement, ${hv.games} match${hv.games > 1 ? "s" : ""} — uniquement les points (le détail % tir/pertes n'est pas tracké par mi-temps).</p>`;
+  html += `<p class="sub">Championnat uniquement, ${hv.games} match${hv.games > 1 ? "s" : ""} : uniquement les points (le détail % tir/pertes n'est pas tracké par mi-temps).</p>`;
   html += `<div class="table-scroll"><table class="roster-table"><thead><tr><th></th><th>1re m-t</th><th>2e m-t</th></tr></thead><tbody>` +
     `<tr><td>Points marqués/match</td><td>${hv.firstHalf.for}</td><td>${hv.secondHalf.for}</td></tr>` +
     `<tr><td>Points encaissés/match</td><td>${hv.firstHalf.against}</td><td>${hv.secondHalf.against}</td></tr>` +
@@ -38882,8 +38882,8 @@ function scoutingHalvesHtml(adv) {
 function scoutingRecentTrendHtml(adv) {
   const rv = adv.recentVsSeason;
   if (!rv) return "";
-  const row = (label, recent, season, suffix) => `<tr><td>${label}</td><td>${recent != null ? recent + (suffix || "") : "—"}</td><td>${season != null ? season + (suffix || "") : "—"}</td></tr>`;
-  let html = `<h4 class="scouting-section-title">Tendance — ${rv.recentGames} derniers matchs</h4>`;
+  const row = (label, recent, season, suffix) => `<tr><td>${label}</td><td>${recent != null ? recent + (suffix || "") : "–"}</td><td>${season != null ? season + (suffix || "") : "–"}</td></tr>`;
+  let html = `<h4 class="scouting-section-title">Tendance : ${rv.recentGames} derniers matchs</h4>`;
   html += `<p class="sub">${rv.recentWins}V-${rv.recentGames - rv.recentWins}D sur les ${rv.recentGames} derniers matchs de championnat, comparé à la moyenne des ${rv.seasonGames} matchs de championnat de la saison.</p>`;
   html += `<div class="table-scroll"><table class="roster-table"><thead><tr><th></th><th>Récent</th><th>Saison (champ.)</th></tr></thead><tbody>` +
     row("Points marqués/match", rv.recentPtsFor, rv.seasonPtsFor) +
@@ -39490,7 +39490,7 @@ function sp2ProfileStyleHtml(report, t, adv) {
   let ident = "";
   ident += `<h3 class="sp2-h">Identité</h3><div class="sp2-ident">` +
     chips.map(([label, val]) => {
-      const short = /^Non (déterminée?|identifiée)/.test(val) ? "—" : val;
+      const short = /^Non (déterminée?|identifiée)/.test(val) ? "–" : val;
       return `<div class="sp2-ident-item" title="${escapeHtml(label)} : ${escapeHtml(val)}"><span class="sp2-ident-label">${escapeHtml(shortLabel[label] || label)}</span><span class="sp2-ident-value">${escapeHtml(short)}</span></div>`;
     }).join("") + `</div>`;
 
@@ -42954,7 +42954,7 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
 // direct, affiché tel quel dans ce seul cas.
 function spectateStatusHtml(live, airedEvents) {
   if (live.forfeit) {
-    return `<p class="sub">Forfait — score final ${live.finalScore.home} - ${live.finalScore.away}.</p>`;
+    return `<p class="sub">Forfait : score final ${live.finalScore.home} - ${live.finalScore.away}.</p>`;
   }
   const last = airedEvents[airedEvents.length - 1];
   if (!last) return "<p class=\"sub\">Coup d'envoi imminent…</p>";
@@ -46090,7 +46090,7 @@ function dashBuildTasks(data) {
       id: "sponsors",
       icon: "sponsor",
       title: offers.length > 1 ? `${offers.length} offres de sponsors` : `Offre de sponsor : ${offers[0].sponsorName}`,
-      text: `${dashJoinFr(names.slice(0, 3))}${names.length > 3 ? "…" : ""} — à accepter ou refuser.`,
+      text: `${dashJoinFr(names.slice(0, 3))}${names.length > 3 ? "…" : ""}, à accepter ou refuser.`,
       badge: daysLeft <= 1 ? "Expire demain" : `${daysLeft} jours`,
       tone: daysLeft <= 1 ? "warn" : "info",
       cta: { label: "Voir les offres", href: "/sponsors", style: "ghost" },
@@ -49097,7 +49097,7 @@ function renderMarketKpis() {
       `<div class="mk-kpi-row"><span>Engagé en enchères</span><b class="${committed ? "is-bad" : ""}">${committed ? "−" : ""}${formatMoney(committed)}</b></div></div>` +
     `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Achats en cours</div><div class="mk-kpi-val">${leads.length} <small>en tête</small></div>` +
       `<div class="mk-kpi-row"><span>Dépassé${outs.length > 1 ? "s" : ""}</span><b class="${outs.length ? "is-bad" : ""}">${outs.length}</b></div>` +
-      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(l => l.closesAt)), now)) : "—"}</b></div></div>` +
+      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(l => l.closesAt)), now)) : "–"}</b></div></div>` +
     `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Mes ventes</div><div class="mk-kpi-val">${sales.length} <small>annonce${sales.length > 1 ? "s" : ""}</small></div>` +
       `<div class="mk-kpi-row"><span>Offres reçues</span><b class="${salesBid ? "is-up" : ""}">${salesBid ? "+" : ""}${formatMoney(salesBid)}</b></div>` +
       `<div class="mk-kpi-row"><span>Sans offre</span><b>${sales.filter(l => !l.currentBid).length}</b></div></div>` +
@@ -49674,7 +49674,7 @@ function renderMarketStaffKpis() {
       `<div class="mk-kpi-row"><span>Postes pourvus</span><b>${filled} / ${STAFF_ROLES.length}</b></div></div>` +
     `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Enchères staff</div><div class="mk-kpi-val">${leads.length} <small>en tête</small></div>` +
       `<div class="mk-kpi-row"><span>Dépassé${outs > 1 ? "s" : ""}</span><b class="${outs ? "is-bad" : ""}">${outs}</b></div>` +
-      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(x => x.l.closesAt)), now)) : "—"}</b></div></div>` +
+      `<div class="mk-kpi-row"><span>Prochaine clôture</span><b>${leads.length ? escapeHtml(mkTimeLeft(Math.min(...leads.map(x => x.l.closesAt)), now)) : "–"}</b></div></div>` +
     `<div class="mk-card mk-kpi"><div class="mk-kpi-lbl">Candidats</div><div class="mk-kpi-val">${all.length}</div>` +
       `<div class="mk-kpi-row"><span>Dans mon budget</span><b>${inBudget}</b></div>` +
       `<div class="mk-kpi-row"><span>Fin dans moins de 24 h</span><b>${soon}</b></div></div>` +
@@ -51414,7 +51414,7 @@ function cupPathChipsHtml(path) {
       ? (p.m.home === myTeamIndex ? `${p.m.scoreHome}-${p.m.scoreAway}` : `${p.m.scoreAway}-${p.m.scoreHome}`) : "";
     const map = {
       win: ["cal-form-win", "V", `victoire ${sc}`], loss: ["cal-form-loss", "D", `défaite ${sc}`], bye: ["cp-form-bye", "E", "exempté"],
-      pending: ["cp-form-next", "", "à jouer"], live: ["cp-form-next", "", "en direct"], future: ["cal-form-empty", "", "pas encore tiré"], out: ["cal-form-empty cp-form-out", "", "—"],
+      pending: ["cp-form-next", "", "à jouer"], live: ["cp-form-next", "", "en direct"], future: ["cal-form-empty", "", "pas encore tiré"], out: ["cal-form-empty cp-form-out", "", "–"],
     };
     const [cls, letter, what] = map[p.state];
     return `<button type="button" class="cp-step is-${p.state}" data-cup-round="${p.i}" title="${escapeHtml(cupRoundLabel(p.i))} : ${escapeHtml(what)}">` +
@@ -54040,7 +54040,7 @@ function showAttendanceModal() {
   overlay.className = "upgrade-confirm-overlay sl-hist-overlay";
   overlay.id = "attendanceAllOverlay";
   overlay.innerHTML = `<div class="upgrade-confirm-box sl-hist-box" role="dialog" aria-modal="true" aria-labelledby="attendanceAllTitle">` +
-    `<div class="sl-hist-head"><h3 id="attendanceAllTitle">Affluence — tous les matchs à domicile</h3><button type="button" class="sl-hist-close" aria-label="Fermer">×</button></div>` +
+    `<div class="sl-hist-head"><h3 id="attendanceAllTitle">Affluence : tous les matchs à domicile</h3><button type="button" class="sl-hist-close" aria-label="Fermer">×</button></div>` +
     `<div class="sl-legend">` + SEAT_CATEGORIES.map(cat => `<span><i style="background:${SEAT_CATEGORY_COLORS[cat.key]}"></i>${escapeHtml(cat.name)}</span>`).join("") + `</div>` +
     `<div class="training-report-list sl-history sl-history--all">` + history.map(attendanceLineHtml).join("") + `</div></div>`;
   document.body.appendChild(overlay);

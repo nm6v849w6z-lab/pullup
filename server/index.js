@@ -3143,7 +3143,7 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
       console.log("BASKET_ADMIN_TOKEN non défini : les routes /api/admin/* sont désactivées (toute requête sera refusée).");
     }
     if (Calendar.isFastTestModeEnabled()) {
-      console.log("MODE ACCÉLÉRÉ (TEST) ACTIVÉ (BASKET_FAST_CALENDAR=1) : un match toutes les 5h, entraînement + semaine économique tous les 2 matchs — les nouvelles carrières/ligues démarrées à partir de maintenant en profitent ; une ligue déjà en cours garde son rythme actuel.");
+      console.log("MODE ACCÉLÉRÉ (TEST) ACTIVÉ (BASKET_FAST_CALENDAR=1) : un match toutes les 5h, entraînement + semaine économique tous les 2 matchs : les nouvelles carrières/ligues démarrées à partir de maintenant en profitent ; une ligue déjà en cours garde son rythme actuel.");
     }
   });
   return server;

@@ -170,7 +170,7 @@ const MONDAY = Date.UTC(2026, 9, 5, 7, 30);
     "Dernière saison de contrat", "Demande une augmentation", "Prochains matchs", "heure de Paris", "Ouvrir Hoop Manager", "https://x.test/", "Ne plus recevoir ce résumé", "Nantes Coupe", "Coupe nationale", "Bonjour CoachTest"]) {
     assert.ok(fr.html.includes(s), `HTML : « ${s} »`);
   }
-  assert.ok(/Programme : Tir à 3 points — Tir à 3 points 40 -> 42 \(\+2\)/.test(fr.text) && /Ne plus recevoir ce résumé : https:\/\/x\.test/.test(fr.text), "version texte");
+  assert.ok(/Programme : Tir à 3 points · Tir à 3 points 40 -> 42 \(\+2\)/.test(fr.text) && /Ne plus recevoir ce résumé : https:\/\/x\.test/.test(fr.text), "version texte");
   assert.ok(!/font:[^;"]*"Segoe/.test(fr.html) && /font:[^;"]*'Segoe UI'/.test(fr.html), "attributs style bien fermés (police entre guillemets simples)");
   {
     const market = fr.html.slice(fr.html.indexOf("Marché des transferts"), fr.html.indexOf("Contrats"));

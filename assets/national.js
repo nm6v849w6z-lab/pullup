@@ -270,7 +270,7 @@
     var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat };
     var me = el.me || {};
     var h = back;
-    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px"><button type="button" class="nt-link" data-nt-team="' + esc(el.teamId) + '">' + teamNameHtml(t) + "</button> — <span>Élection du sélectionneur</span></b>" +
+    h += '<div class="nt-card" style="margin-top:10px"><div class="nt-row nt-head">' + flag(el.country) + '<div><b style="font-size:18px"><button type="button" class="nt-link" data-nt-team="' + esc(el.teamId) + '">' + teamNameHtml(t) + "</button> : <span>Élection du sélectionneur</span></b>" +
       '<div class="nt-small" style="margin:2px 0 0">Mandat : saison ' + esc(el.mandate ? el.mandate.fromSeason : "") + " → saison " + esc(el.mandate ? el.mandate.toSeason : "") + "</div><div class=\"nt-small\" style=\"margin:2px 0 0\">Saison " + esc(el.mandate ? el.mandate.fromSeason : "") + " : compétition continentale · saison " + esc(el.mandate ? el.mandate.toSeason : "") + " : Coupe du monde ou consolante</div></div></div>";
     // Étapes.
     var st = el.status, closed = !(st === "candidacy" || st === "vote");

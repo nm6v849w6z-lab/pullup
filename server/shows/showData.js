@@ -672,7 +672,7 @@
       rows: before.map((r, i) => ({
         pos: i + 1, teamId: r.teamId, name: H.tname(r.teamId), w: r.w, l: r.l, pct: Math.round(winPct(r) * 100),
         mine: r.teamId === my, opponentToday: fx && r.teamId === (fx.homeId === my ? fx.awayId : fx.homeId),
-        extra: oppOf.has(r.teamId) ? H.tshort(oppOf.get(r.teamId)) : '—',
+        extra: oppOf.has(r.teamId) ? H.tshort(oppOf.get(r.teamId)) : '–',
       })),
       extraLabel: 'ADVERSAIRE DU JOUR',
       note: '',
