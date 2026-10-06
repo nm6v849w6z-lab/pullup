@@ -216,6 +216,8 @@ function step(store, leagues, world, now, season, calendarStartAt) {
       if (g && !(conv && conv.frozenAt)) NC().freezeConvocation(store, store.teams[tid], g, NT().activeMandate(store, tid), leagues, world, now);
     });
     NM().playMatch(store, null, f, leagues, world, now);
+    // Direct en cours : résultat annoncé à la fin (nationalMatches.announceDue).
+    if (NM().isLive(f, now)) due.push(f.liveUntil + 1000);
     changed = true;
   }
   // Historique : 3 saisons ; demandes refusées / annulées gardées 14 jours.
@@ -231,9 +233,12 @@ function stateFor(f, teamId) {
   if (f.status === "accepted") return "scheduled";
   return f.status;
 }
-function publicFriendly(store, f, teamId) {
+function publicFriendly(store, f, teamId, now) {
   const opp = f.home === teamId ? f.away : f.home;
+  // Match encore en direct : ni score ni résultat avant la fin de la diffusion.
+  if (NM().isLive(f, now)) return { ...publicFriendly(store, { ...f, status: "accepted", scoreHome: null, scoreAway: null, forfeit: null }, teamId), state: "live", status: "live", liveUntil: f.liveUntil };
   return {
+    liveUntil: typeof f.liveUntil === "number" ? f.liveUntil : null,
     id: f.id, state: stateFor(f, teamId), status: f.status, season: f.season, at: f.at,
     home: f.home, away: f.away, homeLabel: NT().teamLabel(f.home), awayLabel: NT().teamLabel(f.away),
     venue: f.home === teamId ? "home" : "away", opponent: opp, opponentLabel: NT().teamLabel(opp), opponentCountry: String(opp).split("-")[0],
@@ -244,7 +249,7 @@ function publicFriendly(store, f, teamId) {
 }
 function viewFor(store, team, season, calendarStartAt, now) {
   const mine = listOf(store).filter(f => involves(f, team.id)).sort((a, b) => a.at - b.at);
-  const pub = f => publicFriendly(store, f, team.id);
+  const pub = f => publicFriendly(store, f, team.id, now);
   const by = st => mine.filter(f => stateFor(f, team.id) === st).map(pub);
   return {
     limits: { perSeason: LIMITS.perSeason, used: seasonCount(store, team.id, season), minGapDays: LIMITS.minGapDays },
@@ -260,8 +265,8 @@ function viewFor(store, team, season, calendarStartAt, now) {
   };
 }
 // Amicaux programmés et joués d'une sélection (page publique : calendrier).
-function publicListOf(store, teamId) {
-  return listOf(store).filter(f => involves(f, teamId) && (f.status === "accepted" || f.status === "played")).sort((a, b) => a.at - b.at).map(f => publicFriendly(store, f, teamId));
+function publicListOf(store, teamId, now) {
+  return listOf(store).filter(f => involves(f, teamId) && (f.status === "accepted" || f.status === "played")).sort((a, b) => a.at - b.at).map(f => publicFriendly(store, f, teamId, now));
 }
 
 module.exports = { LIMITS, LABEL, request, respond, cancel, step, viewFor, datesFor, candidateDays, slotError, publicFriendly, publicListOf, matchTimesOf };

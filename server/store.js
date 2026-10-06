@@ -536,6 +536,64 @@ async function appendLpReplays(lpId, items, savePath = defaultMultiLeaguePath())
   fs.renameSync(tmp, where.file);
 }
 
+// Directs des matchs internationaux (server/nationalMatches.js, 2026-10-06) :
+// rangés À PART du stock national (une diffusion pèse lourd : événements +
+// les deux sélections), une clé par emplacement d'un anneau de
+// NATIONAL_LIVE_SLOTS (le plus ancien direct est remplacé), clé
+// "pullup:natlive:<n>" / fichier "<multi-league>.natlive.<n>.json" ; l'index
+// "pullup:natlive:index" donne l'emplacement de chaque match. Entrée :
+// { id, at, entry (forme d'une entrée de league.liveMatches), teams }.
+const NATIONAL_LIVE_SLOTS = 240;
+function nationalLiveStorage(name, savePath) {
+  return { redis: `${redisPrefix()}pullup:natlive:${name}`, file: savePath.replace(/\.json$/, "") + `.natlive.${name}.json` };
+}
+async function readNationalLiveRaw(name, savePath) {
+  const where = nationalLiveStorage(name, savePath);
+  try {
+    if (upstashConfigured()) {
+      const raw = await redisGet(where.redis);
+      return raw == null ? null : JSON.parse(raw);
+    }
+    if (!fs.existsSync(where.file)) return null;
+    return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+  } catch (e) {
+    return null;
+  }
+}
+async function writeNationalLiveRaw(name, data, savePath) {
+  const where = nationalLiveStorage(name, savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+async function saveNationalLives(items, savePath = defaultMultiLeaguePath()) {
+  if (!Array.isArray(items) || !items.length) return;
+  const index = (await readNationalLiveRaw("index", savePath)) || { version: 1, next: 0, slots: {} };
+  for (const it of items) {
+    if (!it || typeof it.id !== "string") continue;
+    let slot = index.slots[it.id];
+    if (!Number.isInteger(slot)) {
+      slot = index.next % NATIONAL_LIVE_SLOTS;
+      index.next = slot + 1;
+      // Emplacement repris : l'ancien match n'a plus de direct.
+      Object.keys(index.slots).forEach(k => { if (index.slots[k] === slot) delete index.slots[k]; });
+    }
+    await writeNationalLiveRaw(String(slot), it, savePath);
+    index.slots[it.id] = slot;
+  }
+  await writeNationalLiveRaw("index", index, savePath);
+}
+async function loadNationalLive(id, savePath = defaultMultiLeaguePath()) {
+  const index = await readNationalLiveRaw("index", savePath);
+  const slot = index && index.slots ? index.slots[id] : null;
+  if (!Number.isInteger(slot)) return null;
+  const data = await readNationalLiveRaw(String(slot), savePath);
+  return data && data.id === id ? data : null;
+}
+
 // Chat de la ligue (server/leagueChat.js) : un bloc JSON par championnat,
 // clé "pullup:leaguechat:<id>" / fichier "<multi-league>.chat.<id>.json".
 // Contrairement aux replays, une lecture en échec LÈVE une exception : on ne
@@ -892,6 +950,7 @@ module.exports = {
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw, saveSeasonArchive, loadSeasonArchive,
   loadClubHistory, appendClubHistory, flushHistoryQueue,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
+  saveNationalLives, loadNationalLive, NATIONAL_LIVE_SLOTS,
   loadPlayerLinks, savePlayerLinks,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,

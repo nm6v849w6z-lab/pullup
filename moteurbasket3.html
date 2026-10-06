@@ -42727,6 +42727,8 @@ async function showSpectateMatch(teamIdx, pre) {
   overlay.innerHTML = `<div class="upgrade-confirm-box spectate-box">` +
     `<h3>${data.live && data.live.replay ? "▶ Revoir le direct" : "🔴 En direct"} : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
     (data.live && data.live.privateLeague ? `<p class="sub">Ligue privée · ${escapeHtml(data.live.privateLeague.name)} · Journée ${data.live.privateLeague.round + 1}</p>` : "") +
+    // Match international (route /api/national/live) : compétition.
+    (data.live && data.live.intl ? `<p class="sub">Sélections nationales · ${escapeHtml(data.live.intl.label)}</p>` : "") +
     `<div id="spectateSeekHolder"></div>` +
     `<div id="spectateStatusHolder"></div>` +
     `<div class="boxscore-toggle">` +
@@ -43999,7 +44001,7 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
     teamSide(awayTeam, "Extérieur", awayWon, "away") +
     `</div>` +
     `<div id="matchBoxscoreQuartersHolder" class="mbx-quarters">${boxscoreQuarterScoresHtml(st.quarterScores, homeTeam.name, awayTeam.name)}</div>` +
-    (ctx.replay ? `<div class="mbx-replay"><button type="button" class="secondary" id="matchReplayBtn">▶ Revoir le direct</button>${teamIsPremium(teamA) ? "" : ` <span class="prm-badge" title="Premium">★</span>`}<span class="mbx-replay-fb" id="matchReplayFeedback"></span></div>` : "") +
+    (ctx.replay ? `<div class="mbx-replay"><button type="button" class="secondary" id="matchReplayBtn">▶ Revoir le direct</button>${teamIsPremium(teamA) || ctx.replay.national ? "" : ` <span class="prm-badge" title="Premium">★</span>`}<span class="mbx-replay-fb" id="matchReplayFeedback"></span></div>` : "") +
     (ctx.noteHtml || "") +
     `<div class="mbx-body">` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
@@ -44019,7 +44021,9 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
   document.getElementById("matchBoxscoreCloseX").addEventListener("click", closeMatchBoxscore);
   overlay.querySelectorAll(".bs-tab").forEach(b => b.addEventListener("click", () => renderMatchBoxscoreTab(b.dataset.team)));
   const replayBtn = document.getElementById("matchReplayBtn");
-  if (replayBtn && ctx.replay) replayBtn.addEventListener("click", () => (ctx.replay.lp
+  if (replayBtn && ctx.replay) replayBtn.addEventListener("click", () => (ctx.replay.national
+    ? openNationalLive(ctx.replay, document.getElementById("matchReplayFeedback"))
+    : ctx.replay.lp
     ? openPrivateLeagueLive(ctx.replay, document.getElementById("matchReplayFeedback"))
     : startMatchReplay(ctx.replay, document.getElementById("matchReplayFeedback"))));
   renderMatchBoxscoreTab("A");
@@ -56202,6 +56206,51 @@ async function openPrivateLeagueLive(params, feedbackEl) {
   const status = document.getElementById("boardStatus");
   if (status && data.live.replay) status.dataset.replay = "1";
   return true;
+}
+// Direct d'un match international (server/nationalMatches.js, route
+// /api/national/live, 2026-10-06) : même écran que le direct d'un match de
+// ligue privée entre deux autres clubs (showSpectateMatch) ; les deux
+// sélections sont des invités (installGuestTeams). Terminé : rediffusion.
+async function openNationalLive(params, feedbackEl) {
+  const url = `/api/national/live?id=${encodeURIComponent(params.id)}`;
+  let res, data;
+  try {
+    res = await fetchApi(url);
+    data = await res.json().catch(() => ({}));
+  } catch (e) { if (feedbackEl) feedbackEl.textContent = "Serveur injoignable."; else showToast("Serveur injoignable."); return false; }
+  if (!res.ok || !data.ok) {
+    const msg = data.error || "Ce direct n'est plus disponible.";
+    if (feedbackEl) feedbackEl.textContent = msg; else showToast(msg);
+    return false;
+  }
+  if (Array.isArray(data.guestTeams) && data.guestTeams.length) installGuestTeams(league, data.guestTeams);
+  closeMatchBoxscore();
+  await showSpectateMatch(data.watchIdx, { data, url });
+  return true;
+}
+// Feuille de statistiques d'un match international : la même que celle des
+// matchs de club (openMatchBoxscoreModal), lignes complètes rangées par le
+// serveur (m.boxHome/boxAway, voir /api/national/match). `md` : détail du
+// match ; « Revoir le direct » quand le match a été diffusé.
+function showNationalBoxscore(md) {
+  if (!md || md.status !== "played") return;
+  closeMatchBoxscore();
+  const side = (label, country) => ({ name: label, country, players: [] });
+  const homeTeam = side(md.homeLabel, md.homeCountry), awayTeam = side(md.awayLabel, md.awayCountry);
+  const rows = list => (list || []).map(r => ({ ...r, isMvp: false }));
+  matchBoxscoreState = {
+    rowsHome: rows(md.boxHome), rowsAway: rows(md.boxAway),
+    nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
+    quarterScores: md.quarterScores || null,
+  };
+  openMatchBoxscoreModal(homeTeam, awayTeam, -1, -2, {
+    kicker: md.label || `Fenêtre internationale ${md.w} · qualifications`,
+    whenText: `${formatCalendarDayFr(md.at)} · ${formatCalendarTimeFr(md.at)}`,
+    scoreHome: md.scoreHome, scoreAway: md.scoreAway,
+    tactics: md.tacticsUsed || null,
+    replay: typeof md.liveUntil === "number" && !md.forfeit ? { national: true, id: md.id } : null,
+    noteHtml: md.forfeit ? `<div class="lp-mbx-note">Match décidé par forfait.</div>` : "",
+  });
 }
 document.addEventListener("click", e => {
   const sb = e.target.closest("[data-lp-show]");

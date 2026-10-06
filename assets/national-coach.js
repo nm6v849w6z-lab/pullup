@@ -428,14 +428,17 @@
   }
 
   // --- Amicaux internationaux ------------------------------------------------
-  var FR_STATE = { sent: ["Envoyée", "info"], received: ["Reçue", "mid"], scheduled: ["Programmé", "ok"], played: ["Joué", "ok"], refused: ["Refusée", "bad"], cancelled: ["Annulée", "bad"] };
+  var FR_STATE = { sent: ["Envoyée", "info"], received: ["Reçue", "mid"], scheduled: ["Programmé", "ok"], played: ["Joué", "ok"], refused: ["Refusée", "bad"], cancelled: ["Annulée", "bad"], live: ["En direct", "info"] };
   function frLine(f, acts) {
     var st = FR_STATE[f.state] || [f.state, ""];
     var why = f.state === "cancelled" ? (f.reason === "expired" ? " · sans réponse avant le gel des convocations" : f.reason === "conflict" ? " · date prise par un autre amical" : "") : "";
     var score = f.state === "played" && f.scoreHome != null ? '<span class="nc-club"> · ' + esc(teamLab(f.home)) + " " + esc(f.scoreHome) + " – " + esc(f.scoreAway) + " " + esc(teamLab(f.away)) + "</span>" : "";
     return '<div class="nc-fr">' + flag(f.opponentCountry) + '<div class="nc-grow"><b>' + esc(teamLab(f.opponent)) + '</b> <span class="nc-club">' + (f.venue === "home" ? "· à domicile" : "· à l'extérieur") + "</span><br>" +
-      '<span class="nc-club">' + esc(when(f.at, true)) + "</span>" + score + (why ? '<span class="nc-club"> ' + why + "</span>" : "") + "</div>" + '<span class="nc-tag ' + st[1] + '">' + esc(st[0]) + "</span>" + (acts || "") + "</div>";
+      '<span class="nc-club">' + esc(when(f.at, true)) + "</span>" + score + (why ? '<span class="nc-club"> ' + why + "</span>" : "") + "</div>" + '<span class="nc-tag ' + st[1] + '">' + esc(st[0]) + "</span>" + liveBtn(f) + (acts || "") + "</div>";
   }
+  // Bouton du direct (match en cours ou imminent), commun aux pages
+  // Sélections (assets/national.js) : même écran de direct que les clubs.
+  function liveBtn(m) { return window.HM_NATIONAL && window.HM_NATIONAL.liveBtnHtml ? window.HM_NATIONAL.liveBtnHtml(m) : ""; }
   function amicauxHtml(v) {
     var fr = v.friendlies;
     if (!fr) return '<div class="nc-card"><p class="nc-club">Réservé au sélectionneur.</p></div>';
@@ -689,7 +692,6 @@
     var cur = NAV.filter(function (n) { return n[0] === nav; })[0];
     if (cur && !navAllowed(cur)) nav = ui.nav = "dashboard";
     var err = ui.error ? '<p class="nc-err">' + esc(ui.error) + "</p>" : "";
-    if (nav === "match") return '<button type="button" class="lg-back" data-nc-nav="' + esc(ui.backNav || "dashboard") + '">← Retour</button>' + (ui.match ? window.HM_NATIONAL.matchSheetHtml(ui.match) : '<p class="training-empty">Chargement du match…</p>');
     var poolMissing = '<div class="nc-card"><p class="nc-club">Vivier en cours de préparation (calculé au prochain passage du monde, quelques minutes au plus).</p></div>';
     if (nav === "joueurs") return titleHtml(nav) + err + (v.pool ? joueursHtml(v) : poolMissing);
     if (nav === "preselection") return titleHtml(nav) + err + (v.pool ? preselectionHtml(v) : poolMissing);
@@ -712,8 +714,10 @@
     var ms = [];
     if (tv && tv.qualif) tv.qualif.matches.forEach(function (m) { ms.push(m); });
     if (tv && tv.finals) tv.finals.tournaments.forEach(function (tt) { tt.matches.forEach(function (m) { if (m.home === tv.team.id || m.away === tv.team.id) ms.push(Object.assign({ label: tt.label }, m)); }); });
-    if (tv && tv.friendlies) tv.friendlies.forEach(function (f) { if (f.status === "accepted") ms.push({ id: f.id, at: f.at, home: f.home, away: f.away, status: "scheduled", label: "Match amical" }); });
-    return ms.filter(function (m) { return m.status === "scheduled" && m.at > now - 3 * 3600 * 1000; }).sort(function (a, b) { return a.at - b.at; })[0] || null;
+    if (tv && tv.friendlies) tv.friendlies.forEach(function (f) { if (f.status === "accepted" || f.status === "live") ms.push({ id: f.id, at: f.at, home: f.home, away: f.away, status: f.status === "live" ? "live" : "scheduled", label: "Match amical" }); });
+    // Match en direct (status « live » : score caché jusqu'à la fin de la
+    // diffusion) : toujours le prochain match tant qu'il se joue.
+    return ms.filter(function (m) { return (m.status === "scheduled" || m.status === "live") && m.at > now - 3 * 3600 * 1000; }).sort(function (a, b) { return a.at - b.at; })[0] || null;
   }
   function dashboardHtml(v) {
     var tv = ui.tv, nx = nextMatch(), cur = curGathering(), r = v.report || {};
@@ -732,6 +736,10 @@
     if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : v.friendlies.limits.used + " / " + v.friendlies.limits.perSeason + " cette saison", "amicaux");
     h += kpi("Dernier résultat", last ? esc(teamLab(last.home)) + " " + esc(last.scoreHome) + " – " + esc(last.scoreAway) + " " + esc(teamLab(last.away)) : "–", last ? esc(when(last.at)) : "Aucun match joué", "calendrier");
     h += "</div>";
+    // Prochain match en direct ou imminent : bouton du direct (écran des clubs).
+    var nxLive = nx ? liveBtn(nx) : "";
+    if (nxLive) h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>' + (nx.status === "live" ? "Match en cours" : "Coup d'envoi imminent") + "</span></div>" +
+      '<div class="nc-slot"><span class="nc-grow">' + flag(nx.home.split("-")[0]) + " " + esc(teamLab(nx.home)) + " – " + flag(nx.away.split("-")[0]) + " " + esc(teamLab(nx.away)) + ' <span class="nc-club">· ' + esc(when(nx.at, true)) + "</span></span>" + nxLive + "</div></div>";
     h += '<div class="nc-two" style="margin-top:16px">';
     if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
     if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? gTitleText(cur) : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
@@ -792,8 +800,10 @@
     syncModeChrome();
   }
   function openModeMatch(id) {
-    ui.backNav = ui.nav === "match" ? ui.backNav : ui.nav; ui.nav = "match"; ui.match = null; showModePage(); paint();
-    api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) { ui.match = d.match; }).catch(function (e) { ui.error = e.message; }).then(paint);
+    // Feuille de statistiques des matchs de club (fenêtre par-dessus la page,
+    // voir HM_NATIONAL.openMatch) ; match encore en direct : le direct.
+    window.__lastNcMatch = window.HM_NATIONAL.openMatch(id);
+    return window.__lastNcMatch;
   }
 
   // --- Actions ------------------------------------------------------------------
@@ -938,9 +948,11 @@
   }
   function onModeClick(e) {
     if (!ui.mode) return;
-    var b = e.target.closest ? e.target.closest("[data-nc-nav],[data-nc-match],[data-nt-match],[data-nc-exit]") : null;
+    var b = e.target.closest ? e.target.closest("[data-nc-nav],[data-nc-match],[data-nt-match],[data-nt-live],[data-nc-exit]") : null;
     if (!b) return;
     e.stopPropagation(); e.preventDefault();
+    // Direct d'un match international (même écran que les clubs).
+    if (b.dataset.ntLive) { window.__lastNationalLive = window.HM_NATIONAL.openLive(b.dataset.ntLive); return; }
     if (b.dataset.ncExit) { exitMode(); return; }
     if (b.dataset.ncMatch || b.dataset.ntMatch) { openModeMatch(b.dataset.ncMatch || b.dataset.ntMatch); return; }
     ui.nav = b.dataset.ncNav; ui.replaceOut = null; ui.error = "";

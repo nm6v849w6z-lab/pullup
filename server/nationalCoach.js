@@ -378,11 +378,11 @@ function watchAlerts(store, m, team, pool, season, calendarStartAt, now) {
   });
 }
 // Statistiques des joueurs en sélection (matchs joués depuis `since`).
-function playerStatsOf(store, teamId, since) {
+function playerStatsOf(store, teamId, since, now) {
   const NM = require("./nationalMatches.js");
   const rows = new Map();
-  NM.resultsOf(store, teamId).filter(r => r.at >= (since || 0)).forEach(r => {
-    const md = NM.matchDetail(store, r.id);
+  NM.resultsOf(store, teamId, now).filter(r => r.at >= (since || 0)).forEach(r => {
+    const md = NM.matchDetail(store, r.id, now);
     const box = md ? (md.home === teamId ? md.boxHome : md.boxAway) : [];
     box.forEach(b => {
       if (!b.ref) return;
@@ -395,20 +395,20 @@ function playerStatsOf(store, teamId, since) {
   return [...rows.values()].filter(s => s.gp > 0).sort((a, b) => b.gp - a.gp || b.pts - a.pts);
 }
 // Bilan d'un mandat (en cours ou terminé).
-function mandateReport(store, m) {
+function mandateReport(store, m, now) {
   const NM = require("./nationalMatches.js");
   const end = m.endedAt || Infinity;
-  const res = NM.resultsOf(store, m.teamId).filter(r => r.at >= m.startedAt && r.at <= end);
+  const res = NM.resultsOf(store, m.teamId, now).filter(r => r.at >= m.startedAt && r.at <= end);
   let wins = 0, losses = 0, pf = 0, pa = 0;
   res.forEach(r => { const home = r.home === m.teamId; const f = home ? r.scoreHome : r.scoreAway, a = home ? r.scoreAway : r.scoreHome; pf += f; pa += a; if (f > a) wins++; else losses++; });
-  const stats = playerStatsOf(store, m.teamId, m.startedAt).filter(s => true);
+  const stats = playerStatsOf(store, m.teamId, m.startedAt, now).filter(s => true);
   const used = stats.length;
   const fresh = stats.filter(s => { const c = (store.caps || {})[refKey(s.ref)]; return c && c.first && c.first.teamId === m.teamId && c.first.at >= m.startedAt && c.first.at <= end; }).map(s => s.name);
   // Qualifications et compétitions des saisons du mandat.
   const seasons = [];
   for (let s = m.fromSeason; s <= m.toSeason; s++) {
-    const q = NM.qualifView(store, m.teamId, s);
-    const f = NM.finalsView(store, m.teamId, s);
+    const q = NM.qualifView(store, m.teamId, s, now);
+    const f = NM.finalsView(store, m.teamId, s, now);
     const t = f && f.tournaments[0];
     const rank = t && t.ranking ? t.ranking.indexOf(m.teamId) + 1 : null;
     const cfg = NT().configOf(store), pos = NT().cyclePos(cfg, s, store.teams[m.teamId].cat);
@@ -655,8 +655,8 @@ function coachView(store, me, teamId, now, ctx) {
     tactics: can(access, "tactics") ? (m.tactics || defaultOrders()) : null, tacticsPlayers: can(access, "tactics") ? nidPlayers : [],
     // Mode Sélectionneur (phase E) : notifications, statistiques, bilan.
     feed: can(access, "feed") ? (m.feed || []).slice(0, 40) : [], unread: role === "coach" ? Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) : 0,
-    stats: can(access, "stats") ? playerStatsOf(store, team.id, m.startedAt) : [],
-    report: can(access, "mandate") ? mandateReport(store, m) : null,
+    stats: can(access, "stats") ? playerStatsOf(store, team.id, m.startedAt, now) : [],
+    report: can(access, "mandate") ? mandateReport(store, m, now) : null,
     pastMandates: can(access, "mandate") ? store.mandates.filter(x => x.key === m.key && x.endedAt && x.report).slice(-5).map(x => x.report) : [],
     // Staff (adjoints, recruteurs) et matchs amicaux internationaux.
     staff: publicStaff(m),
@@ -744,10 +744,10 @@ function analysisOf(store, team, season, calendarStartAt, now, oppId) {
   });
   // Convoqués de l'adversaire pour le prochain match (une fois la liste figée).
   const conv = next && (next.home === opp || next.away === opp) ? convocationOf(store, opp, next.gid) : null;
-  const results = NM.resultsOf(store, opp).slice(0, 10).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) }));
+  const results = NM.resultsOf(store, opp, now).slice(0, 10).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || (r.w ? `Fenêtre internationale ${r.w}` : null) }));
   let wins = 0, losses = 0, pf = 0, pa = 0;
   results.forEach(r => { const h = r.home === opp; const f = h ? r.scoreHome : r.scoreAway, a = h ? r.scoreAway : r.scoreHome; pf += f; pa += a; if (f > a) wins++; else losses++; });
-  const q = NM.qualifView(store, opp, season);
+  const q = NM.qualifView(store, opp, season, now);
   const row = q && q.group ? q.group.standings.find(x => x.teamId === opp) : null;
   base.opponent = {
     id: opp, label: NT().teamLabel(opp), country: store.teams[opp].country,
@@ -756,7 +756,7 @@ function analysisOf(store, team, season, calendarStartAt, now, oppId) {
     results, record: { played: results.length, wins, losses, pf, pa },
     group: q && q.group ? { label: q.group.label, continent: q.group.continent, rank: row ? row.rank : null, points: row ? row.points : null, played: row ? row.played : null } : null,
     honours: NM.honoursOf(store, opp).slice(0, 5),
-    headToHead: NM.resultsOf(store, team.id).filter(r => r.home === opp || r.away === opp).slice(0, 5).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || null })),
+    headToHead: NM.resultsOf(store, team.id, now).filter(r => r.home === opp || r.away === opp).slice(0, 5).map(r => ({ id: r.id, at: r.at, home: r.home, away: r.away, scoreHome: r.scoreHome, scoreAway: r.scoreAway, label: r.label || null })),
   };
   return base;
 }

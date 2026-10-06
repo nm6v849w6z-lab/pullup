@@ -2884,9 +2884,43 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
         // Phase C : feuille d'un match international (public).
         if (req.method === "GET" && route.pathname === "/api/national/match") {
-          const md = require("./nationalMatches.js").matchDetail(natStore, route.searchParams.get("id"));
+          const md = require("./nationalMatches.js").matchDetail(natStore, route.searchParams.get("id"), now);
           if (!md) { sendJson(res, 404, { ok: false, error: "Match introuvable." }); return; }
           sendJson(res, 200, { ok: true, match: md });
+          return;
+        }
+        // Direct d'un match international (public), calqué sur
+        // /api/private-league/live : entrée rangée à part (store.loadNationalLive),
+        // vue construite par LiveMatch.viewLiveMatchForTeam depuis l'équipe à
+        // domicile ; les deux sélections sont des invités (index locaux
+        // NationalMatches.LIVE_GUEST_IDX…). Terminé : « Revoir le direct »,
+        // horaires recalés pour démarrer maintenant.
+        if (req.method === "GET" && route.pathname === "/api/national/live") {
+          const NationalMatches = require("./nationalMatches.js");
+          const hit = NationalMatches.findMatch(natStore, route.searchParams.get("id"));
+          if (!hit || hit.m.status !== "played") { sendJson(res, 404, { ok: false, error: "Le direct commence au coup d'envoi." }); return; }
+          const match = hit.m;
+          if (typeof match.liveUntil !== "number") { sendJson(res, 404, { ok: false, error: "Pas de direct pour ce match." }); return; }
+          const saved = await store.loadNationalLive(match.id, multiSavePath);
+          if (!saved || !saved.entry || !saved.teams) { sendJson(res, 404, { ok: false, error: "Ce direct n'est plus disponible." }); return; }
+          const entry = saved.entry;
+          const watchIdx = entry.homeIdx;
+          const view = LiveMatch.viewLiveMatchForTeam({ liveMatches: { [match.id]: entry } }, watchIdx);
+          view.intl = entry.intl || null;
+          const ended = now >= match.liveUntil;
+          if (ended) {
+            const delta = now + 2000 - entry.kickoffAt;
+            view.kickoffAt += delta;
+            view.events = view.events.map(ev => (typeof ev.airAt === "number" ? { ...ev, airAt: ev.airAt + delta } : ev));
+            view.pauses = (view.pauses || []).map(pz => (typeof pz.airAt === "number" ? { ...pz, airAt: pz.airAt + delta } : pz));
+            view.replay = true;
+          }
+          const guestTeams = [
+            { leagueId: null, idx: null, level: null, team: saved.teams.home, localIdx: entry.homeIdx },
+            { leagueId: null, idx: null, level: null, team: saved.teams.away, localIdx: entry.awayIdx },
+          ];
+          sendJson(res, 200, { ok: true, live: view, watchIdx, mine: false, ended, guestTeams,
+            teamName: NationalTeams.teamLabel(match.home), opponentName: NationalTeams.teamLabel(match.away) });
           return;
         }
         // Phase B (server/nationalCoach.js) : espace du sélectionneur.

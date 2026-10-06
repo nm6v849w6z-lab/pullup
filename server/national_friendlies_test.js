@@ -125,8 +125,16 @@ for (const [at, what] of steps) {
 const f1 = st.intlFriendlies.find(f => f.id === r1.friendly.id);
 assert.ok(f1.status === "played" && typeof f1.scoreHome === "number" && f1.boxHome.length > 0, "amical joué");
 assert.strictEqual(someFr.matchLog.length, logBefore, "jamais dans les stats de club");
-assert.ok(M.resultsOf(st, "fr-A").some(r => r.id === f1.id && r.comp === "friendly"), "dans les résultats de la sélection");
-assert.ok(M.matchDetail(st, f1.id) && M.matchDetail(st, f1.id).boxAway.length, "feuille de match");
+// Direct (2026-10-06) : résultat caché pendant la diffusion, annoncé à la fin.
+assert.ok(M.isLive(f1, now) && M.takePendingLive(st).some(x => x.id === f1.id), "amical en direct, diffusion rangée à part");
+assert.ok(!M.resultsOf(st, "fr-A", now).some(r => r.id === f1.id), "pendant le direct : pas dans les résultats");
+const livePub = viewOf("fr-A").played.find(f => f.id === f1.id);
+assert.ok(livePub.state === "live" && livePub.scoreHome == null, "pendant le direct : amical « en direct », sans score");
+assert.ok(!feed("fr-A").some(e => e.kind === "result" && e.matchId === f1.id), "pendant le direct : pas de résultat au sélectionneur");
+now = f1.liveUntil + 2000;
+N.step(st, leagues, world, now);
+assert.ok(M.resultsOf(st, "fr-A", now).some(r => r.id === f1.id && r.comp === "friendly"), "dans les résultats de la sélection");
+assert.ok(M.matchDetail(st, f1.id, now) && M.matchDetail(st, f1.id, now).boxAway.length, "feuille de match");
 assert.strictEqual(viewOf("fr-A").played[0].state, "played");
 assert.ok(feed("fr-A").some(e => e.kind === "result" && e.matchId === f1.id), "résultat dans le fil du sélectionneur");
 assert.ok(N.teamView(st, "fr-A", lyon, 2, now, start).friendlies.some(f => f.id === f1.id), "page publique : amicaux joués");

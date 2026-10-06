@@ -49,6 +49,21 @@ const FINAL_RECOVERY_SHARE = 0.5;
 // saison précédente), les autres jouent le tournoi de consolation.
 const WORLD_SLOTS = { "Europe": 5, "Amérique": 2, "Asie": 1 };
 const TEMP_ID_BASE = 9000000;
+// Direct (2026-10-06 : « tous les matchs internationaux ont un direct ») :
+// même moteur, même diffusion et même écran que les clubs. Les deux
+// sélections sont des invités du navigateur à ces index locaux (voir
+// installGuestTeams côté client et la route /api/national/live).
+const LIVE_GUEST_IDX = 5000;
+
+// Match encore en diffusion : score, résultat et classement cachés jusqu'à
+// la fin du direct (comme les ligues privées, match.liveUntil). `now`
+// absent : heure réelle.
+function isLive(m, now) {
+  return !!m && m.status === "played" && typeof m.liveUntil === "number" && (now == null ? Date.now() : now) < m.liveUntil;
+}
+// Joué ET diffusé jusqu'au bout (enchaînement des tours, classements,
+// phases finales). `now` absent : direct non pris en compte.
+function finished(m, now) { return m.status === "played" && !(now != null && isLive(m, now)); }
 
 function NT() { return require("./nationalTeams.js"); }
 function NC() { return require("./nationalCoach.js"); }
@@ -114,11 +129,12 @@ function drawGroups(store, season, cat, comp, leagues, world, now, calendarStart
 // --- Classement --------------------------------------------------------------
 // Victoire 2 points, défaite 1 (forfait 0), comme au basket FIBA. Départage :
 // points, confrontations directes entre égaux, différence, points marqués.
-function standings(comp, groupId) {
+function standings(comp, groupId, now) {
   const g = comp.groups.find(x => x.id === groupId);
   if (!g) return [];
   const rows = new Map(g.teams.map(id => [id, { teamId: id, played: 0, wins: 0, losses: 0, points: 0, pf: 0, pa: 0, diff: 0 }]));
-  const played = comp.matches.filter(m => m.groupId === groupId && m.status === "played");
+  // `now` (vues) : un match encore en direct n'entre pas au classement.
+  const played = comp.matches.filter(m => m.groupId === groupId && finished(m, now));
   played.forEach(m => {
     const h = rows.get(m.home), a = rows.get(m.away);
     if (!h || !a) return;
@@ -147,16 +163,16 @@ function standings(comp, groupId) {
 // Europe 2 premiers par groupe + 2 meilleurs 3es ; Amérique et Asie : tous.
 // Renvoie { teamId: "qualified" | "consolation" } (+ `final` quand tous les
 // matchs sont joués).
-function qualification(comp) {
+function qualification(comp, now) {
   const out = {};
-  const done = comp.matches.every(m => m.status === "played");
+  const done = comp.matches.every(m => finished(m, now));
   if (comp.comp !== "continental") return { status: {}, final: done };
   const byCont = {};
   comp.groups.forEach(g => { (byCont[g.continent] = byCont[g.continent] || []).push(g); });
   Object.entries(byCont).forEach(([cont, groups]) => {
     if (cont !== "Europe") { groups.forEach(g => g.teams.forEach(t => { out[t] = "qualified"; })); return; }
     const thirds = [];
-    groups.forEach(g => standings(comp, g.id).forEach(r => {
+    groups.forEach(g => standings(comp, g.id, now).forEach(r => {
       if (r.rank <= 2) out[r.teamId] = "qualified";
       else if (r.rank === 3) thirds.push(r);
       else out[r.teamId] = "consolation";
@@ -264,12 +280,34 @@ function playMatch(store, comp, m, leagues, world, now) {
     }));
     if (homeOk && awayOk) {
       const tacticsUsed = { home: Engine.tacticsSnapshotFor(home.shell), away: Engine.tacticsSnapshotFor(away.shell) };
+      // Équipes du direct : les coquilles telles qu'au coup d'envoi, ids
+      // provisoires compris (ceux du fil d'événements).
+      const guests = [liveGuestOf(home.shell), liveGuestOf(away.shell)];
       const result = new Engine.MatchEngine(home.shell, away.shell, { homeAdvantage: true }).simulate(m.at);
       m.scoreHome = result.finalScore.A; m.scoreAway = result.finalScore.B;
       m.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
       m.boxHome = boxOf(result.boxScoreA, tempIds); m.boxAway = boxOf(result.boxScoreB, tempIds);
       // Tactiques réellement jouées (analyse, comme tacticsUsed d'un club).
       m.tacticsUsed = tacticsUsed; m.seed = result.seed;
+      // Direct : diffusion calée sur le coup d'envoi (LiveMatch.schedulePlayback,
+      // comme un match de club) ; l'entrée, lourde, est rangée À PART du
+      // stock national (store.saveNationalLives, voir takePendingLive).
+      if (Array.isArray(result.events) && result.events.length) {
+        const pb = require("./liveMatch.js").schedulePlayback(result.events, m.at);
+        m.liveUntil = m.at + pb.totalDurationMs;
+        queueLive(store, {
+          id: m.id, at: m.at,
+          entry: {
+            round: 0, kickoffAt: m.at, homeIdx: LIVE_GUEST_IDX, awayIdx: LIVE_GUEST_IDX + 1, competition: "national",
+            intl: { id: m.id, label: matchLabel(m), home: m.home, away: m.away, homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away) },
+            forfeit: false, finalScore: { home: m.scoreHome, away: m.scoreAway },
+            quarterScores: m.quarterScores, seed: result.seed, tacticsUsed,
+            events: pb.events, pauses: pb.pauses, totalDurationMs: pb.totalDurationMs,
+            boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
+          },
+          teams: { home: guests[0], away: guests[1] },
+        });
+      }
       // Fatigue normale (moteur des clubs), puis entrée retirée du journal.
       Engine.recordMatchStatsForTeam(home.shell, -1, "national", m.at, null, tacticsUsed.home);
       Engine.recordMatchStatsForTeam(away.shell, -1, "national", m.at, null, tacticsUsed.away);
@@ -319,11 +357,25 @@ function playMatch(store, comp, m, leagues, world, now) {
     const club = lg && lg.teams[t.club.idx];
     if (club && typeof club.recordInjury === "function") club.recordInjury({ ...entry, playerId: t.id, opponentName: entry.opponentName || null });
     m.injuries.push({ ref: { p: t.id, n: t.player.name }, type: entry.injuryType || "Blessure", until: t.player.injuryUntil || null });
-    NT().notify(leagues, { leagueId: t.club.leagueId, idx: t.club.idx }, {
+    // Prévenu à la fin du direct (announce), jamais pendant.
+    m.pendingNotices = m.pendingNotices || [];
+    m.pendingNotices.push({
+      leagueId: t.club.leagueId, idx: t.club.idx,
       key: `nat_inj_${m.id}_${t.id}`, title: `Blessé en sélection : ${t.player.name}`,
       text: `${t.player.name} s'est blessé avec ${NT().teamLabel(home && home.sheet.some(x => x.src === t.player) ? m.home : m.away)} (${entry.injuryType || "blessure"}).`,
-    }, now);
+    });
   });
+  // Résultat au sélectionneur et blessures aux clubs : à la fin du direct
+  // (announceDue), tout de suite si la diffusion est déjà finie (rattrapage).
+  m.resultPending = true;
+  if (!isLive(m, now)) announce(store, leagues, m, now);
+  return m;
+}
+function matchLabel(m) { return m.label || `Fenêtre internationale ${m.w} · qualifications`; }
+function announce(store, leagues, m, now) {
+  (m.pendingNotices || []).forEach(n => NT().notify(leagues, { leagueId: n.leagueId, idx: n.idx }, { key: n.key, title: n.title, text: n.text }, now));
+  delete m.pendingNotices;
+  delete m.resultPending;
   // Résultat au sélectionneur de chaque équipe.
   [[m.home, m.scoreHome, m.scoreAway, m.away], [m.away, m.scoreAway, m.scoreHome, m.home]].forEach(([tid, pf, pa, opp]) => {
     const md = NT().activeMandate(store, tid);
@@ -331,7 +383,46 @@ function playMatch(store, comp, m, leagues, world, now) {
     // Notification du mode Sélectionneur (phase E), jamais dans le fil du club.
     NC().coachFeed(md, { key: `res_${m.id}`, kind: "result", at: now, title: `${NT().teamLabel(tid)} : ${pf > pa ? "victoire" : "défaite"} ${pf}-${pa} contre ${NT().teamLabel(opp)}`, text: m.label || `Fenêtre internationale ${m.w}, qualifications.`, matchId: m.id });
   });
-  return m;
+}
+// Tous les matchs internationaux gardés (qualifications, phases finales, amicaux).
+function allMatches(store) {
+  const out = [];
+  Object.values(store.intl || {}).forEach(c => out.push(...c.matches));
+  Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => out.push(...t.matches)));
+  (store.intlFriendlies || []).forEach(f => out.push(f));
+  return out;
+}
+// Fin des directs : annonces en attente envoyées ; `due` reçoit la fin des
+// diffusions encore en cours (le monde repasse à cette heure-là).
+function announceDue(store, leagues, now, due) {
+  let changed = false;
+  allMatches(store).forEach(m => {
+    if (!m.resultPending) return;
+    if (isLive(m, now)) { due.push(m.liveUntil + 1000); return; }
+    announce(store, leagues, m, now);
+    changed = true;
+  });
+  return changed;
+}
+// Directs en attente d'enregistrement (jamais dans le stock national, voir
+// store.saveNationalLives) : propriété non sérialisée, vidée à la lecture.
+function queueLive(store, item) {
+  if (!store.pendingLive) Object.defineProperty(store, "pendingLive", { value: [], writable: true, enumerable: false, configurable: true });
+  store.pendingLive.push(item);
+}
+function takePendingLive(store) {
+  const list = store.pendingLive || [];
+  if (store.pendingLive) store.pendingLive = [];
+  return list;
+}
+// Coquille d'une sélection pour le direct du navigateur : épurée comme un
+// invité de la Coupe nationale (nationalCup.guestForTeam), sans le journal
+// de matchs des joueurs (inutile au direct, et lourd).
+function liveGuestOf(shell) {
+  const g = require("./nationalCup.js").guestForTeam(Engine, shell, { leagueId: null, idx: null, level: null });
+  (g.team.players || []).forEach(p => { delete p.matchLog; });
+  g.team.isHuman = false;
+  return g.team;
 }
 
 // =====================================================================
@@ -387,7 +478,7 @@ function makeTournament(key, kind, label, seeds, days, cat, season) {
   return { key, kind, label, ko: f.ko, teams: seeds.slice(), groups, matches, ranking: null, champion: null };
 }
 // Classement d'un groupe de tournoi (mêmes règles que les qualifications).
-function tGroupStandings(t, groupId) { return standings({ groups: t.groups, matches: t.matches.filter(m => m.stage === "group") }, groupId); }
+function tGroupStandings(t, groupId, now) { return standings({ groups: t.groups, matches: t.matches.filter(m => m.stage === "group") }, groupId, now); }
 function winnerOf(m) { return m.scoreHome > m.scoreAway ? m.home : m.away; }
 function loserOf(m) { return m.scoreHome > m.scoreAway ? m.away : m.home; }
 function koMatch(t, stage, n, home, away, days, season, cat) {
@@ -395,8 +486,10 @@ function koMatch(t, stage, n, home, away, days, season, cat) {
 }
 // Fait avancer un tournoi : tableau final créé quand l'étape précédente est
 // terminée ; classement final quand tout est joué.
-function advanceTournament(t, days, season, cat) {
-  const done = st => t.matches.filter(m => m.stage === st).every(m => m.status === "played");
+function advanceTournament(t, days, season, cat, now) {
+  // `now` : un match encore en direct ne fait pas avancer le tournoi (tableau
+  // final, classement) avant la fin de sa diffusion.
+  const done = st => t.matches.filter(m => m.stage === st).every(m => finished(m, now));
   const has = st => t.matches.some(m => m.stage === st);
   if (!done("group")) return false;
   const gs = t.groups.map(g => tGroupStandings(t, g.id).map(r => r.teamId));
@@ -420,7 +513,7 @@ function advanceTournament(t, days, season, cat) {
       add(koMatch(t, "third", 1, loserOf(sf[0]), loserOf(sf[1]), days, season, cat));
     } else if (t.ko === 2) add(koMatch(t, "final", 1, gs[0][0], gs.length === 2 ? gs[1][0] : gs[0][1], days, season, cat));
   }
-  if (!t.ranking && t.matches.every(m => m.status === "played") && (t.ko === 0 || has("final"))) {
+  if (!t.ranking && t.matches.every(m => finished(m, now)) && (t.ko === 0 || has("final"))) {
     t.ranking = rankTournament(t, gs);
     t.champion = t.ranking[0];
     changed = true;
@@ -544,6 +637,8 @@ function step(store, leagues, world, now, season, calendarStartAt) {
   const cfg = NT().configOf(store);
   let changed = false;
   const due = [];
+  // Fin des directs : résultats annoncés (sélectionneurs, clubs des blessés).
+  if (announceDue(store, leagues, now, due)) changed = true;
   if (!cfg.matchesLive || typeof calendarStartAt !== "number") return { changed, due };
   for (const cat of NT().CATEGORIES) {
     const pos = NT().cyclePos(cfg, season, cat);
@@ -560,6 +655,7 @@ function step(store, leagues, world, now, season, calendarStartAt) {
         if (g && !(conv && conv.frozenAt)) NC().freezeConvocation(store, store.teams[tid], g, NT().activeMandate(store, tid), leagues, world, now);
       });
       playMatch(store, comp, m, leagues, world, now);
+      if (isLive(m, now)) due.push(m.liveUntil + 1000);
       changed = true;
     }
     // Phase D : phases finales de la dernière semaine, créées dès que les
@@ -567,13 +663,14 @@ function step(store, leagues, world, now, season, calendarStartAt) {
     const finalCal = NT().seasonCalendar(cfg, calendarStartAt, season, cat).find(c => c.kind === "final");
     if (!finalCal) continue;
     let fin = finalsOf(store, season, cat);
-    if (!fin && comp.matches.every(m => m.status === "played")) { fin = createFinals(store, season, cat, comp, finalCal.days); changed = true; }
+    // Qualifications finies ET diffusées : pas de tirage pendant un direct.
+    if (!fin && comp.matches.every(m => finished(m, now))) { fin = createFinals(store, season, cat, comp, finalCal.days); changed = true; }
     if (!fin) { due.push(finalCal.days[0] - 3 * DAY_MS); continue; }
     let progress = true;
     while (progress) {
       progress = false;
       for (const t of fin.tournaments) {
-        if (advanceTournament(t, finalCal.days, season, cat)) { changed = true; progress = true; }
+        if (advanceTournament(t, finalCal.days, season, cat, now)) { changed = true; progress = true; }
         for (const m of t.matches) {
           if (m.status !== "scheduled") continue;
           if (now < m.at) { due.push(m.at); continue; }
@@ -585,6 +682,7 @@ function step(store, leagues, world, now, season, calendarStartAt) {
           m.gid = g ? g.gid : `s${season}f`;
           m.label = m.label || `${t.label} · poule`;
           playMatch(store, fin, m, leagues, world, now);
+          if (isLive(m, now)) due.push(m.liveUntil + 1000);
           changed = true; progress = true;
         }
       }
@@ -603,49 +701,72 @@ function step(store, leagues, world, now, season, calendarStartAt) {
 }
 
 // --- Vues ---------------------------------------------------------------
-function publicMatch(m) {
-  return { id: m.id, groupId: m.groupId, w: m.w, home: m.home, away: m.away, at: m.at, status: m.status, scoreHome: m.scoreHome, scoreAway: m.scoreAway, forfeit: m.forfeit || null, quarterScores: m.quarterScores || null };
+// `now` (absent : heure réelle) : un match encore en direct est « live »,
+// sans score ni quarts (pas de spoiler) ; `liveUntil` : il a un direct (en
+// cours ou à revoir).
+function publicMatch(m, now) {
+  if (isLive(m, now)) return { id: m.id, groupId: m.groupId, w: m.w, home: m.home, away: m.away, at: m.at, status: "live", scoreHome: null, scoreAway: null, forfeit: null, quarterScores: null, liveUntil: m.liveUntil };
+  return { id: m.id, groupId: m.groupId, w: m.w, home: m.home, away: m.away, at: m.at, status: m.status, scoreHome: m.scoreHome, scoreAway: m.scoreAway, forfeit: m.forfeit || null, quarterScores: m.quarterScores || null, liveUntil: typeof m.liveUntil === "number" ? m.liveUntil : null };
 }
+function viewNow(now) { return now == null ? Date.now() : now; }
 // Qualifications d'une sélection (page de la sélection) : son groupe, le
 // classement, ses matchs, statut de qualification.
-function qualifView(store, teamId, season) {
+function qualifView(store, teamId, season, now) {
   const team = store.teams[teamId];
   if (!team) return null;
   const comp = compOf(store, season, team.cat);
   if (!comp) return null;
+  const at = viewNow(now);
   const g = comp.groups.find(x => x.teams.includes(teamId));
-  const q = qualification(comp);
+  const q = qualification(comp, at);
   return {
     comp: comp.comp, season,
-    group: g ? { id: g.id, label: g.label, continent: g.continent, standings: standings(comp, g.id).map(r => ({ ...r, label: NT().teamLabel(r.teamId), country: store.teams[r.teamId].country, status: q.final ? (q.status[r.teamId] || null) : null })) } : null,
-    matches: comp.matches.filter(m => m.home === teamId || m.away === teamId).map(publicMatch),
+    group: g ? { id: g.id, label: g.label, continent: g.continent, standings: standings(comp, g.id, at).map(r => ({ ...r, label: NT().teamLabel(r.teamId), country: store.teams[r.teamId].country, status: q.final ? (q.status[r.teamId] || null) : null })) } : null,
+    matches: comp.matches.filter(m => m.home === teamId || m.away === teamId).map(m => publicMatch(m, at)),
     finalStatus: q.final ? (q.status[teamId] || null) : null,
   };
 }
-// Résultats d'une sélection (toutes saisons gardées), plus récents d'abord.
-function resultsOf(store, teamId) {
+// Résultats d'une sélection (toutes saisons gardées), plus récents d'abord ;
+// un match encore en direct n'y est pas (fin de la diffusion).
+function resultsOf(store, teamId, now) {
+  const at = viewNow(now);
   const out = [];
+  const done = m => finished(m, at) && (m.home === teamId || m.away === teamId);
   Object.values(store.intl || {}).forEach(c => c.matches.forEach(m => {
-    if (m.status === "played" && (m.home === teamId || m.away === teamId)) out.push({ ...publicMatch(m), season: c.season, comp: c.comp, cat: c.cat });
+    if (done(m)) out.push({ ...publicMatch(m, at), season: c.season, comp: c.comp, cat: c.cat });
   }));
   Object.values(store.finals || {}).forEach(f => f.tournaments.forEach(t => t.matches.forEach(m => {
-    if (m.status === "played" && (m.home === teamId || m.away === teamId)) out.push({ ...publicMatch(m), season: f.season, comp: t.kind, cat: f.cat, label: m.label || t.label, stage: m.stage });
+    if (done(m)) out.push({ ...publicMatch(m, at), season: f.season, comp: t.kind, cat: f.cat, label: m.label || t.label, stage: m.stage });
   })));
   // Matchs amicaux internationaux (server/nationalFriendlies.js).
   (store.intlFriendlies || []).forEach(f => {
-    if (f.status === "played" && (f.home === teamId || f.away === teamId)) out.push({ ...publicMatch(f), season: f.season, comp: "friendly", cat: f.cat, label: f.label || "Match amical international" });
+    if (done(f)) out.push({ ...publicMatch(f, at), season: f.season, comp: "friendly", cat: f.cat, label: f.label || "Match amical international" });
   });
   return out.sort((a, b) => b.at - a.at);
 }
-function matchDetail(store, matchId) {
+// Match international par id (qualifications, phases finales, amicaux).
+function findMatch(store, matchId) {
   const pools = Object.values(store.intl || {}).map(c => ({ season: c.season, comp: c.comp, matches: c.matches }))
     .concat(Object.values(store.finals || {}).flatMap(f => f.tournaments.map(t => ({ season: f.season, comp: t.kind, matches: t.matches }))))
     .concat((store.intlFriendlies || []).filter(f => f.status === "played").map(f => ({ season: f.season, comp: "friendly", matches: [f] })));
   for (const c of pools) {
     const m = c.matches.find(x => x.id === matchId);
-    if (m) return { ...publicMatch(m), label: m.label || null, stage: m.stage || null, season: c.season, comp: c.comp, boxHome: m.boxHome || [], boxAway: m.boxAway || [], injuries: m.injuries || [], homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0] };
+    if (m) return { m, season: c.season, comp: c.comp };
   }
   return null;
+}
+// Feuille de match (box score du Mode Club côté navigateur) : lignes
+// complètes du moteur, tactiques jouées. En direct : ni score, ni feuille.
+function matchDetail(store, matchId, now) {
+  const hit = findMatch(store, matchId);
+  if (!hit) return null;
+  const { m, season, comp } = hit;
+  const live = isLive(m, viewNow(now));
+  return {
+    ...publicMatch(m, viewNow(now)), label: m.label || null, stage: m.stage || null, season, comp,
+    boxHome: live ? [] : m.boxHome || [], boxAway: live ? [] : m.boxAway || [], injuries: live ? [] : m.injuries || [], tacticsUsed: live ? null : m.tacticsUsed || null,
+    homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0],
+  };
 }
 
 function notifyChampion(store, t, leagues, now) {
@@ -656,18 +777,19 @@ function notifyChampion(store, t, leagues, now) {
   });
 }
 // Vue des phases finales d'une sélection (page de la sélection).
-function finalsView(store, teamId, season) {
+function finalsView(store, teamId, season, now) {
   const team = store.teams[teamId];
   if (!team) return null;
   const f = finalsOf(store, season, team.cat);
   if (!f) return null;
+  const at = viewNow(now);
   const pub = t => ({
     key: t.key, kind: t.kind, label: t.label, ko: t.ko, continent: t.continent || null, champion: t.champion, ranking: t.ranking,
-    groups: t.groups.map(g => ({ id: g.id, label: g.label, standings: tGroupStandings(t, g.id).map(r => ({ ...r, label: NT().teamLabel(r.teamId), country: r.teamId.split("-")[0] })) })),
-    matches: t.matches.map(m => ({ ...publicMatch(m), stage: m.stage, n: m.n || null, day: m.day })),
+    groups: t.groups.map(g => ({ id: g.id, label: g.label, standings: tGroupStandings(t, g.id, at).map(r => ({ ...r, label: NT().teamLabel(r.teamId), country: r.teamId.split("-")[0] })) })),
+    matches: t.matches.map(m => ({ ...publicMatch(m, at), stage: m.stage, n: m.n || null, day: m.day })),
     mine: t.teams.includes(teamId),
   });
   return { season, comp: f.comp, tournaments: f.tournaments.filter(t => t.teams.includes(teamId)).map(pub), others: f.tournaments.filter(t => !t.teams.includes(teamId)).map(t => ({ key: t.key, label: t.label, champion: t.champion })) };
 }
 function honoursOf(store, teamId) { return ((store.honours || {})[teamId] || []).slice().sort((a, b) => b.season - a.season || a.rank - b.rank); }
-module.exports = { CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, matchDetail };
+module.exports = { LIVE_GUEST_IDX, isLive, findMatch, takePendingLive, announceDue, publicMatch, CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, matchDetail };

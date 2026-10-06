@@ -80,15 +80,48 @@ const box = m1.boxHome;
 assert.ok(box.length <= 12 && box.every(r => r.ref && r.club && r.club.name), "12 joueurs au plus sur la feuille, joueurs et clubs identifiés");
 ok("fenêtre : convocation figée 3 jours avant, matchs joués au coup d'envoi (moteur des clubs), fatigue normale, stats de club intactes");
 
+// 2 bis) Direct (2026-10-06) : diffusion du moteur des clubs calée sur le
+// coup d'envoi, rangée à part ; score et résultat cachés jusqu'à la fin.
+const w1 = compA.matches.filter(m => m.w === 1);
+assert.ok(w1.every(m => typeof m.liveUntil === "number" && m.liveUntil > m.at + 3600e3), "chaque match a un direct (plus d'une heure)");
+const lives = M.takePendingLive(st);
+assert.strictEqual(lives.length, w1.length, "un direct par match, en attente d'enregistrement");
+assert.strictEqual(M.takePendingLive(st).length, 0, "vidé à la lecture");
+assert.ok(!JSON.stringify(st).includes('"events"') && !Object.keys(st).includes("pendingLive"), "jamais dans le stock national");
+const lv = lives.find(x => x.id === m1.id);
+assert.ok(lv.entry.competition === "national" && lv.entry.homeIdx === M.LIVE_GUEST_IDX && lv.entry.awayIdx === M.LIVE_GUEST_IDX + 1, "entrée de direct (forme d'un match de club)");
+assert.ok(lv.entry.events.length > 100 && lv.entry.events.every(e => typeof e.airAt === "number" && e.airAt >= m1.at), "événements avec heure de diffusion");
+assert.strictEqual(lv.entry.kickoffAt + lv.entry.totalDurationMs, m1.liveUntil);
+assert.deepStrictEqual(lv.entry.finalScore, { home: m1.scoreHome, away: m1.scoreAway });
+const liveIds = new Set(lv.teams.home.players.concat(lv.teams.away.players).map(p => p.id));
+assert.ok([...liveIds].every(id => id > 9000000) && lv.entry.boxScoreA.every(r => liveIds.has(r.id)), "sélections du direct : ids provisoires du fil d'événements");
+assert.ok(lv.teams.home.players.every(p => !p.matchLog && !p.weeklyHistory) && !lv.teams.home.feed, "sélections épurées");
+const view = require("./liveMatch.js").viewLiveMatchForTeam({ liveMatches: { [m1.id]: lv.entry } }, lv.entry.homeIdx);
+assert.ok(view && view.opponentIdx === M.LIVE_GUEST_IDX + 1 && view.events.length === lv.entry.events.length, "vue du direct (viewLiveMatchForTeam)");
+const during = m1.at + 60e3;
+assert.strictEqual(M.resultsOf(st, TID, during).length, 0, "pendant le direct : pas dans les résultats");
+const qd = M.qualifView(st, TID, 2, during);
+const pmd = qd.matches.find(x => x.id === m1.id);
+assert.ok(pmd.status === "live" && pmd.scoreHome == null && pmd.quarterScores == null, "pendant le direct : match « live », sans score");
+assert.ok(qd.group.standings.every(r => r.played === 0), "pendant le direct : classement inchangé");
+const mdd = M.matchDetail(st, m1.id, during);
+assert.ok(mdd.status === "live" && mdd.scoreHome == null && !mdd.boxHome.length && !mdd.tacticsUsed, "pendant le direct : feuille de match cachée");
+assert.ok(m1.resultPending, "annonce du résultat en attente");
+const after = Math.max(...w1.map(m => m.liveUntil)) + 2000;
+N.step(st, leagues, world, after);
+assert.ok(w1.every(m => !m.resultPending), "fin du direct : résultat annoncé");
+ok("direct : diffusion calée sur le coup d'envoi, rangée à part, score et classement cachés jusqu'à la fin");
+
 // 3) Classement et résultats.
-const q = M.qualifView(st, TID, 2);
+const q = M.qualifView(st, TID, 2, after);
 assert.ok(q.group && q.group.standings.length >= 3 && q.matches.length >= 2);
 const played1 = q.group.standings.filter(r => r.played === 1);
 assert.ok(played1.every(r => r.points === 2 || r.points === 1 || r.points === 0), "victoire 2 points, défaite 1");
-assert.ok(M.resultsOf(st, TID).length === 1, "résultat dans l'historique");
-const tv = N.teamView(st, TID, null, 2, m1.at + 60e3, start);
+assert.ok(M.resultsOf(st, TID, after).length === 1, "résultat dans l'historique");
+const tv = N.teamView(st, TID, null, 2, after, start);
 assert.ok(tv.qualif && tv.results.length === 1, "page de la sélection : qualifications et résultats");
-assert.ok(M.matchDetail(st, m1.id).boxHome.length, "feuille de match");
+const md1 = M.matchDetail(st, m1.id, after);
+assert.ok(md1.boxHome.length && md1.boxHome[0].oreb !== undefined && md1.tacticsUsed && md1.liveUntil === m1.liveUntil, "feuille de match complète (box score du Mode Club) et direct à revoir");
 ok("classement (2 pts victoire, 1 défaite, départages), résultats et feuille de match");
 
 // 4) Fenêtres 2 et 3, qualification.

@@ -219,7 +219,8 @@ function endMandate(store, mandate, reason, now, leagues) {
   mandate.endedAt = now;
   mandate.endReason = reason;
   // Phase E : bilan complet du mandat, gardé dans l'historique.
-  try { mandate.report = require("./nationalCoach.js").mandateReport(store, mandate); } catch (e) { /* bilan indisponible */ }
+  // Bilan figé : tous les matchs joués, direct en cours compris (Infinity).
+  try { mandate.report = require("./nationalCoach.js").mandateReport(store, mandate, Infinity); } catch (e) { /* bilan indisponible */ }
   const t = store.teams[mandate.teamId];
   if (t && t.mandateId === mandate.id) t.mandateId = null;
   notify(leagues, mandate.ref, {
@@ -560,13 +561,13 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     calendar: seasonCalendar(cfg, calendarStartAt, season, team.cat),
     coaches: store.mandates.filter(m => m.teamId === team.id).slice(-20).reverse().map(publicMandate),
     // Phase C : qualifications (groupe, classement, matchs) et résultats.
-    qualif: require("./nationalMatches.js").qualifView(store, team.id, season),
-    results: require("./nationalMatches.js").resultsOf(store, team.id).slice(0, 20),
+    qualif: require("./nationalMatches.js").qualifView(store, team.id, season, now),
+    results: require("./nationalMatches.js").resultsOf(store, team.id, now).slice(0, 20),
     // Phase D : phases finales et palmarès.
-    finals: require("./nationalMatches.js").finalsView(store, team.id, season),
+    finals: require("./nationalMatches.js").finalsView(store, team.id, season, now),
     honours: require("./nationalMatches.js").honoursOf(store, team.id),
     // Matchs amicaux internationaux programmés et joués.
-    friendlies: require("./nationalFriendlies.js").publicListOf(store, team.id),
+    friendlies: require("./nationalFriendlies.js").publicListOf(store, team.id, now),
   };
 }
 

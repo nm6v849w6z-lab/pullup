@@ -26,6 +26,8 @@ fresh(start);
 const leagues = new Map([["fr-1", lg]]);
 const world = { leagues: [{ id: "fr-1", country: "fr", level: 1, group: 0 }] };
 const st = N.emptyStore(); st.config = { cycleStartSeason: 2 };
+// Durée sûre d'un direct (diffusion d'un match, prolongations comprises).
+const LIVE = 5 * 3600e3;
 const runSeason = (season, s0) => {
   lg.seasonNumber = season; lg.calendarStartAt = s0;
   N.step(st, leagues, world, s0 + 3600e3);
@@ -35,6 +37,8 @@ const runSeason = (season, s0) => {
     fresh(at - DAY);
     N.step(st, leagues, world, at - 3 * DAY + 1000);
     N.step(st, leagues, world, at + 60e3);
+    // Fin des directs (2026-10-06) : résultats, classement, tirage.
+    N.step(st, leagues, world, at + LIVE);
   }
   return comp;
 };
@@ -77,7 +81,7 @@ assert.ok(losses.length && losses.every(l => l >= 0), "la fatigue existe toujour
 if (normal) assert.ok(Math.max(...losses) <= normal * 0.5 + 1.5 + 1, `récupération améliorée (perte ${Math.max(...losses)} pour ~${normal} normalement)`);
 ok("phase finale jour par jour, récupération améliorée (moitié de la fatigue d'un match rendue)");
 // Mardi → vendredi (quarts).
-for (const d of [1, 2, 3, 4]) N.step(st, leagues, world, days[d] + 60e3);
+for (const d of [1, 2, 3, 4]) { N.step(st, leagues, world, days[d] + 60e3); N.step(st, leagues, world, days[d] + LIVE); }
 const qf = t0.matches.filter(m => m.stage === "qf");
 assert.strictEqual(qf.length, 4);
 assert.ok(qf.every(m => m.status === "played" && dayOf(m) === 4), "quarts le vendredi");
@@ -108,11 +112,12 @@ ok("règle de la Supercoupe : joueurs encore en course retenus (écartés le tem
 // 4) Samedi, dimanche : classement final, palmarès.
 N.step(st, leagues, world, days[5] + 60e3);
 N.step(st, leagues, world, days[6] + 60e3);
+N.step(st, leagues, world, days[6] + LIVE);
 assert.ok(fin.tournaments.every(t => t.ranking && t.ranking.length === t.teams.length), "classement final complet");
 assert.ok(fin.honoured);
 const champ = t0.champion;
 assert.ok(M.honoursOf(st, champ).some(h => h.rank === 1 && h.label === "Euro"), "palmarès du vainqueur");
-const tv = N.teamView(st, champ, null, 2, days[6] + 60e3, start);
+const tv = N.teamView(st, champ, null, 2, days[6] + LIVE, start);
 assert.ok(tv.finals && tv.finals.tournaments[0].champion === champ && tv.honours.length);
 ok("dimanche : finale et 3e place, classement final, palmarès sur la page de la sélection");
 

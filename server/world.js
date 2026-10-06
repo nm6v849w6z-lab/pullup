@@ -832,6 +832,12 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
     const natStore = await NationalTeams.loadStore(savePath);
     if (natStore) {
       const r = NationalTeams.step(natStore, allLeagues, world, now);
+      // Directs des matchs internationaux joués à ce passage : rangés à part
+      // (jamais dans le stock national), avant le stock qui les annonce.
+      const lives = require("./nationalMatches.js").takePendingLive(natStore);
+      if (lives.length) {
+        try { await store.saveNationalLives(lives, savePath); } catch (e) { console.warn("[sélections] directs non rangés :", e.message); }
+      }
       if (r.changed) await NationalTeams.saveStore(natStore, savePath);
       // Viviers des sélectionneurs (phase B), rangés à part.
       const NationalCoach = require("./nationalCoach.js");

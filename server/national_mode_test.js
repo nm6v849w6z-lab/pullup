@@ -49,9 +49,13 @@ assert.ok(md().feed.some(e => e.kind === "convocation" && /finalisées/.test(e.t
 all.forEach(p => { p.condition = 100; p.conditionUpdatedAt = w1.startAt - DAY; });
 N.step(st, leagues, world, w1.freezeAt + 1000);
 N.step(st, leagues, world, w1.startAt + 60e3);
+// Direct (2026-10-06) : résultat annoncé à la fin de la diffusion, jamais avant.
+assert.ok(!md().feed.some(e => e.kind === "result"), "pas de résultat pendant le direct");
+const afterW1 = Math.max(...comp.matches.filter(m => m.w === 1).map(m => m.liveUntil)) + 2000;
+N.step(st, leagues, world, afterW1);
 assert.ok(md().feed.some(e => e.kind === "result" && e.matchId), "résultat dans le fil du sélectionneur");
 assert.ok(!clubFeedTitles().some(t => /victoire|défaite/.test(t) && t.includes(N.teamLabel(TID))), "jamais dans le fil du club");
-const view = C.coachView(st, lyon, TID, w1.startAt + 60e3, { pool, season: 2, calendarStartAt: start });
+const view = C.coachView(st, lyon, TID, afterW1, { pool, season: 2, calendarStartAt: start });
 assert.ok(view.feed.length >= 3 && view.unread >= 3 && view.stats.length >= 5 && view.report.played === 1, "vue : notifications, non lues, statistiques, bilan en cours");
 assert.ok(C.markSeen(st, lyon, { teamId: TID }, w1.startAt).ok && C.coachView(st, lyon, TID, w1.startAt, { pool, season: 2, calendarStartAt: start }).unread === 0, "notifications marquées lues");
 ok("mode Sélectionneur : notifications propres (blessure, convocations à finaliser, résultat), jamais dans le fil du club, non lues");

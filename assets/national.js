@@ -347,7 +347,33 @@
     var o = oppSide(tv, m), cc = o.id.split("-")[0];
     var played = m.status === "played";
     return (o.home ? "" : "@ ") + flag(cc) + " " + esc(teamLabelOf(o.id)) +
-      (played ? ' <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '"><b class="' + (o.pf > o.pa ? "nt-win" : "nt-loss") + '">' + (o.pf > o.pa ? "V " : "D ") + esc(o.pf) + "-" + esc(o.pa) + "</b></button>" : "");
+      (played ? ' <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '"><b class="' + (o.pf > o.pa ? "nt-win" : "nt-loss") + '">' + (o.pf > o.pa ? "V " : "D ") + esc(o.pf) + "-" + esc(o.pa) + "</b></button>" : liveBtnHtml(m));
+  }
+  // Direct d'un match international (même écran que les clubs, voir
+  // openNationalLive) : « Voir le direct » pendant la diffusion, « Suivre le
+  // match » dans l'heure qui précède le coup d'envoi. Score caché jusqu'à la
+  // fin du direct (status « live » envoyé par le serveur).
+  var LIVE_SOON_MS = 3600e3;
+  function liveBtnHtml(m) {
+    var now = Date.now();
+    if (m.status === "live") return ' <button type="button" class="nt-btn2 nt-live-btn" data-nt-live="' + esc(m.id) + '">Voir le direct</button>';
+    if ((m.status === "scheduled" || m.status === "accepted") && m.at - now <= LIVE_SOON_MS && m.at + 3 * 3600e3 > now) return ' <button type="button" class="nt-btn2 nt-live-btn" data-nt-live="' + esc(m.id) + '">Suivre le match</button>';
+    return "";
+  }
+  // Match de la sélection en direct ou imminent (qualifications, phase
+  // finale, amical), sinon null.
+  function liveMatchOf(tv) {
+    var id = tv.team.id, ms = [];
+    ((tv.qualif && tv.qualif.matches) || []).forEach(function (m) { ms.push(m); });
+    ((tv.finals && tv.finals.tournaments) || []).forEach(function (tt) { tt.matches.forEach(function (m) { if (m.home === id || m.away === id) ms.push(m); }); });
+    (tv.friendlies || []).forEach(function (f) { ms.push(f); });
+    return ms.filter(function (m) { return liveBtnHtml(m); }).sort(function (a, b) { return a.at - b.at; })[0] || null;
+  }
+  function openLive(id) {
+    var f = g("openNationalLive");
+    var p = f ? f({ id: id }) : Promise.resolve(false);
+    window.__lastNationalLive = p;
+    return p;
   }
   function recordOf(tv) {
     var w = 0, l = 0;
@@ -392,6 +418,9 @@
     if (nx) {
       var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : null;
       h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "face à" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
+      // Match en direct ou imminent (fenêtre, phase finale, amical) : bouton du direct.
+      var lm = liveMatchOf(tv);
+      if (lm) h += '<div style="margin-top:10px;text-align:center">' + liveBtnHtml(lm) + "</div>";
     } else h += '<p class="nt-small">Aucune échéance cette saison.</p>';
     var res = (tv.results || []).slice(0, 5);
     h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>' +
@@ -534,7 +563,7 @@
     });
     // Matchs amicaux internationaux programmés et joués (dimanche 20:00).
     (tv.friendlies || []).filter(function (f) { return f.season === tv.season; }).forEach(function (f) {
-      h += '<tr><td class="nt-small">' + esc(shortDate(f.at)) + '</td><td><span class="nt-tag2">Amical</span></td><td>' + matchLine(tv, { id: f.id, home: f.home, away: f.away, status: f.status, scoreHome: f.scoreHome, scoreAway: f.scoreAway }) + "</td></tr>";
+      h += '<tr><td class="nt-small">' + esc(shortDate(f.at)) + '</td><td><span class="nt-tag2">Amical</span></td><td>' + matchLine(tv, { id: f.id, at: f.at, home: f.home, away: f.away, status: f.status, scoreHome: f.scoreHome, scoreAway: f.scoreAway }) + "</td></tr>";
     });
     return h + "</tbody></table></div>";
   }
@@ -584,7 +613,7 @@
     var side = function (id, pts, win) { return '<span class="nt-ko-team' + (played && win ? " is-win" : "") + '">' + flag(id.split("-")[0]) + " " + esc(teamLabelOf(id)) + (played ? " <b>" + esc(pts) + "</b>" : "") + "</span>"; };
     var hw = played && m.scoreHome > m.scoreAway;
     return '<div class="nt-ko">' + side(m.home, m.scoreHome, hw) + side(m.away, m.scoreAway, played && !hw) +
-      '<span class="nt-small">' + esc(when(m.at)) + (played ? ' · <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '">Feuille de match</button>' : "") + "</span></div>";
+      '<span class="nt-small">' + esc(when(m.at)) + (played ? ' · <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '">Feuille de match</button>' : liveBtnHtml(m)) + "</span></div>";
   }
   function teamFinalsHtml(tv) {
     var f = tv.finals;
@@ -607,30 +636,17 @@
     if (f.others && f.others.length) h += '<p class="nt-small">Autres tournois : ' + f.others.map(function (o) { return "<span>" + esc(o.label) + (o.champion ? " (vainqueur : " + esc(teamLabelOf(o.champion)) + ")" : "") + "</span>"; }).join(" · ") + "</p>";
     return h;
   }
-  // Feuille d'un match international.
-  function matchHtml() {
-    var back = '<button type="button" class="lg-back" data-nt-match-back>← ' + esc(ui.team ? teamLabelOf(ui.team.team.id) : "Sélection") + "</button>";
-    var m = ui.match;
-    if (!m) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement du match…") + "</p>";
-    return back + matchSheetHtml(m);
-  }
-  // Feuille de match seule (aussi utilisée par le mode Sélectionneur).
-  function matchSheetHtml(m) {
-    var box = function (rows, label) {
-      var b = '<div class="nt-card nt-tablewrap" style="margin-top:12px"><div class="nt-k" style="padding:4px 2px 8px">' + esc(label) + '</div><table class="nt-table"><thead><tr><th>Joueur</th><th>Club</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Int</th><th>Ctr</th><th>BP</th><th>+/-</th></tr></thead><tbody>';
-      rows.forEach(function (r) { b += "<tr><td>" + (r.starter ? "<b>" + esc(r.name) + "</b>" : esc(r.name)) + '</td><td class="nt-small">' + esc(r.club ? r.club.name : "") + "</td><td>" + esc(r.min) + "</td><td>" + esc(r.pts) + "</td><td>" + esc(r.reb) + "</td><td>" + esc(r.ast) + "</td><td>" + esc(r.stl) + "</td><td>" + esc(r.blk) + "</td><td>" + esc(r.tov) + "</td><td>" + (r.plusMinus > 0 ? "+" : "") + esc(r.plusMinus) + "</td></tr>"; });
-      return b + "</tbody></table></div>";
-    };
-    var h = '<div class="nt-card" style="margin-top:12px;text-align:center"><div class="nt-small">' + esc(m.label || ("Fenêtre internationale " + m.w)) + " · " + esc(when(m.at)) + '</div><div class="nt-next" style="justify-content:center">' +
-      flag(m.homeCountry) + " " + esc(teamLabelOf(m.home)) + ' <span class="nt-big" style="margin:0 14px">' + esc(m.scoreHome) + " – " + esc(m.scoreAway) + "</span> " + esc(teamLabelOf(m.away)) + " " + flag(m.awayCountry) + "</div>" +
-      (m.injuries && m.injuries.length ? '<p class="nt-small">Blessé' + (m.injuries.length > 1 ? "s" : "") + " : " + m.injuries.map(function (i) { return esc(i.ref.n) + " (" + esc(i.type) + ")"; }).join(", ") + "</p>" : "") + "</div>";
-    if (m.forfeit) return h + '<p class="nt-small">Match décidé par forfait.</p>';
-    return h + box(m.boxHome, teamLabelOf(m.home)) + box(m.boxAway, teamLabelOf(m.away));
-  }
+  // Feuille d'un match international : la feuille de statistiques des
+  // matchs de club (showNationalBoxscore → openMatchBoxscoreModal, 2026-10-06),
+  // plus de tableau propre aux sélections. Match encore en direct : le direct.
+  // Aussi utilisée par le mode Sélectionneur (HM_NATIONAL.openMatch).
   function openMatch(id) {
-    ui.matchId = id; ui.match = null; ui.error = "";
-    paint();
-    var p = api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) { ui.match = d.match; }).catch(function (e) { ui.error = e.message; }).then(paint);
+    var p = api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) {
+      var m = d.match;
+      if (m && m.status === "live") return openLive(m.id);
+      var f = g("showNationalBoxscore");
+      if (f) f(m);
+    }).catch(function (e) { toast(e.message); });
     window.__lastNational = p;
     return p;
   }
@@ -647,7 +663,6 @@
     var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
     var tv = ui.team, now = Date.now();
     if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
-    if (ui.matchId) return matchHtml();
     var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["finale", "Phase finale"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
     var h = back + '<div class="nt-tabs">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
     h += '<div class="nt-hero">' + flag(tv.team.country) + '<div><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
@@ -676,7 +691,7 @@
     if (sec && sec.classList.contains("hidden")) {
       try { window.showPage("selectionsSection"); window.setActiveTab("selections"); } catch (e) { /* page sans ces fonctions */ }
     }
-    ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = ""; ui.matchId = null; ui.match = null;
+    ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = "";
     paint();
     var p = loadTeam(id).then(paint);
     window.__lastNational = p;
@@ -791,7 +806,7 @@
     if (d.ntTeam) { openTeam(d.ntTeam); return; }
     if (d.ntTab && ui.teamId) { ui.teamTab = d.ntTab; paint(); return; }
     if (d.ntMatch) { openMatch(d.ntMatch); return; }
-    if (d.ntMatchBack !== undefined) { ui.matchId = null; ui.match = null; paint(); return; }
+    if (d.ntLive) { openLive(d.ntLive); return; }
     if (d.ntGroupView && ui.teamId) { ui.groupView = d.ntGroupView; paint(); return; }
     if (d.ntPlayer) { var q = d.ntPlayer.split("|"); openPlayer(q[0], Number(q[1]), q[2]); return; }
     if (d.ntBack !== undefined) { render(); return; }
@@ -855,5 +870,5 @@
     if (tab === "selectionneurs") return teamCoachesHtml(tv);
     return teamApercuHtml(tv, Date.now());
   }
-  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, matchSheetHtml: function (m) { ensureCss(); return matchSheetHtml(m); }, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml };
+  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml };
 })();
