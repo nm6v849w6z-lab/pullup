@@ -19,7 +19,7 @@
   var POS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
   var WATCH_LABELS = { denyPostUp: "Empêcher le post-up", denyDrive: "Coller sur les pénétrations", harassOutsideShot: "Harceler le tir extérieur", reboundPriority: "Priorité au rebond", denyEntry: "Couper du ballon" };
   var ROLE_LABEL = { coach: "Sélectionneur", assistant: "Adjoint", scout: "Recruteur" };
-  var ui = { teamId: null, view: null, tab: "joueurs", pos: "", filter: "", shown: 50, gid: null, error: "", busy: false, replaceOut: null, draft: null,
+  var ui = { teamId: null, view: null, tab: "joueurs", pos: "", filter: "", shown: 50, gid: null, error: "", busy: false, replaceOut: null, tq: null, tqMatch: null,
     sort: { key: "gen", dir: -1 }, nav: "dashboard", opp: null, frOpp: "", frAt: "", frVenue: "home", staffQ: "" };
 
   var ICON = {
@@ -369,64 +369,242 @@
     return h + "</div></div>";
   }
 
-  // --- Tactique -------------------------------------------------------------
-  function draftOrders(v) {
-    if (!ui.draft) ui.draft = JSON.parse(JSON.stringify(v.tactics));
-    var d = ui.draft;
-    d.lineup = d.lineup || { starters: {}, backupPositions: {} };
-    d.lineup.starters = d.lineup.starters || {};
-    d.lineup.backupPositions = d.lineup.backupPositions || {};
-    d.watchAssignments = d.watchAssignments || [];
-    return d;
+  // --- Tactique (retour utilisateur 2026-10-06) -------------------------------
+  // Même page que les Ordres d'un club (moteurbasket3.html : buildTeamPanel,
+  // renderLineupEditor, renderPlayingTimeCard), sur un « proxy » d'équipe
+  // (tqProxyFrom, comme une tactique enregistrée du club) construit avec les
+  // joueurs du match : fiches du vivier (caractéristiques, forme, poste…),
+  // ids = numéros propres à la sélection (`nid`). Ordres PAR MATCH (sélecteur
+  // des matchs à venir, comme les journées du club), enregistrés côté serveur
+  // (m.plans[matchId]) et verrouillés à T − 5 min ; « Tactique par défaut »
+  // = ordres des matchs sans ordres.
+  var TQ_DEFAULT = "default";
+  var TQ_TABS = [["ordresCardCinq", "Composition"], ["ordresCardAttaque", "Attaque"], ["ordresCardDefense", "Défense"], ["ordresCardMinutes", "Temps de jeu"], ["ordresCardAdversaires", "Adversaires"]];
+  function tqUpcoming(v) { return (v && v.upcoming) || []; }
+  function tqLocked(x) { return !!x && (x.locked || Date.now() >= x.lockAt); }
+  function tqEntry(v, k) { return tqUpcoming(v).filter(function (x) { return String(x.id) === String(k); })[0] || null; }
+  // Match affiché : celui choisi, sinon le prochain qui n'est pas verrouillé.
+  function tqKey(v) {
+    if (ui.tqMatch === TQ_DEFAULT || tqEntry(v, ui.tqMatch)) return ui.tqMatch;
+    var list = tqUpcoming(v), open = list.filter(function (x) { return !tqLocked(x); })[0];
+    ui.tqMatch = open ? String(open.id) : list[0] ? String(list[0].id) : TQ_DEFAULT;
+    return ui.tqMatch;
   }
-  function sel(name, opts, value, attrs) {
-    return '<select ' + (attrs || "") + ' data-nc-set="' + name + '">' + opts.map(function (o) { var val = Array.isArray(o) ? o[0] : o, lab = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(val) + '"' + (String(val) === String(value) ? " selected" : "") + ">" + esc(lab) + "</option>"; }).join("") + "</select>";
+  // Prochain match (bouton de la barre du haut).
+  function tqNext(v) { return tqUpcoming(v)[0] || null; }
+  // Joueur du match pour le moteur des Ordres, depuis sa fiche du vivier.
+  // Objet Player du jeu (méthodes overall…, sans le constructeur qui tire
+  // une nouvelle identité au hasard).
+  function tqPlayer(x, f) {
+    var data = {
+      id: x.nid, name: (f && f.name) || x.ref.n, position: (f && f.position) || "Meneur", age: f ? f.age : null, height: f ? f.height : null,
+      nationality: f ? f.nationality : null, attrs: f && f.attrs ? Object.assign({}, f.attrs) : {}, form: 70,
+      condition: f && typeof f.condition === "number" ? f.condition : 100, conditionUpdatedAt: Date.now(),
+      injuryUntil: f ? f.injuryUntil : null, injuryType: f ? f.injuryType : null, look: f ? f.look : null, matchLog: [],
+    };
+    return typeof Player === "function" ? Object.assign(Object.create(Player.prototype), data) : data;
+  }
+  // Ordres envoyés au serveur (même forme que snapshotTactics d'un club) :
+  // les 12 de la feuille de match toujours explicites.
+  function tqSnap(px) {
+    var o = {};
+    ["offensivePriorities", "defense", "rhythm", "tacticalTier", "screenDefense", "helpDefense", "postDefense", "closeoutStyle", "offRebStyle", "endgameManagement"].forEach(function (k) { o[k] = Array.isArray(px[k]) ? px[k].slice() : px[k]; });
+    o.watchAssignments = (px.watchAssignments || []).map(function (w) { return { position: w.position, focus: w.focus }; });
+    var L = px.lineup || {};
+    o.lineup = JSON.parse(JSON.stringify({ starters: L.starters || {}, backupPositions: L.backupPositions || {}, minutes: L.minutes || undefined }));
+    o.lineup.convoked = px.convokedIds();
+    return o;
+  }
+  function tqBuild(v, k) {
+    var e = k === TQ_DEFAULT ? null : tqEntry(v, k);
+    var orders = (e && v.plans && v.plans[e.id]) || v.tactics;
+    var roster = e ? e.players : v.tacticsPlayers;
+    var pm = poolByKey(), fiches = {};
+    var players = roster.map(function (x) { fiches[x.nid] = pm[key(x.ref)] || null; return tqPlayer(x, fiches[x.nid]); });
+    var px = window.tqProxyFrom(JSON.parse(JSON.stringify(orders)), players, teamLab(v.team.id));
+    // tqProxyFrom laisse les consignes de marquage vides (tactiques du
+    // club) : celles des ordres de la sélection sont reprises.
+    px.watchAssignments = (orders.watchAssignments || []).map(function (w) { return { position: w.position, focus: w.focus }; });
+    // Aucun titulaire choisi : cinq proposé comme le fait le serveur au
+    // coup d'envoi (NationalMatches.buildSide : poste de carte, puis note).
+    if (players.length >= 5 && POS.every(function (p) { return px.lineup.starters[p] == null; })) {
+      var conv = px.convokedIds(), used = {};
+      POS.forEach(function (pos) {
+        var c = players.filter(function (p) { return conv.indexOf(p.id) >= 0 && !used[p.id]; })
+          .sort(function (a, b) { return ((b.position === pos) - (a.position === pos)) || (genOf(fiches[b.id] || {}) || 0) - (genOf(fiches[a.id] || {}) || 0); })[0];
+        if (c) { used[c.id] = 1; px.setStarter(pos, c.id); }
+      });
+    }
+    ui.tq = { key: k, proxy: px, fiches: fiches, dirty: false, saved: JSON.stringify(tqSnap(px)), feedback: "" };
+    return ui.tq;
+  }
+  // Adversaire pour la carte « Postes à surveiller » : nom et titulaires
+  // pressentis (ordres de l'autre sélection), comme le titulaire adverse
+  // actuel côté club.
+  function tqOpponent(e) {
+    if (!e || !e.opponent) return null;
+    var players = [], starters = {};
+    Object.keys(e.pressentis || {}).forEach(function (pos, i) { players.push({ id: i + 1, name: e.pressentis[pos] }); starters[pos] = i + 1; });
+    return { name: teamLab(e.opponent), players: players, lineup: { starters: starters } };
+  }
+  // Effectif hors club pour renderLineupEditor (voir compoRosterRowsData) :
+  // stats de la saison en club et 5 derniers matchs des fiches du vivier.
+  function tqRosterCtx(tq) {
+    var fiche = function (p) { return tq.fiches[p.id] || null; };
+    return {
+      seasonLine: function (p) {
+        var s = (fiche(p) || {}).season || { gp: 0 }, gp = s.gp || 0, sum = {};
+        ["min", "pts", "reb", "ast"].forEach(function (k) { sum[k] = (s[k] || 0) * gp; });
+        return { gp: gp, sum: sum };
+      },
+      evalAvg: function (p) { var l = (fiche(p) || {}).last5 || []; return l.length ? l.reduce(function (s, e) { return s + (e.eff || 0); }, 0) / l.length : -Infinity; },
+      evalHtml: function (p) {
+        var l = ((fiche(p) || {}).last5 || []).slice(-5), h = '<span class="eval-squares">';
+        for (var i = l.length; i < 5; i++) h += '<span class="eval-square"></span>';
+        l.forEach(function (e) {
+          var col = typeof pirTier === "function" && typeof PIR_TIER_COLORS !== "undefined" ? PIR_TIER_COLORS[pirTier(e.eff || 0)] : effColor(e.eff || 0);
+          h += '<span class="eval-square" style="background:' + col + '" title="' + esc(t("Évaluation") + " " + ((e.eff || 0) >= 0 ? "+" : "") + (e.eff || 0) + (e.opp ? " · " + e.opp : "")) + '"></span>';
+        });
+        return h + "</span>";
+      },
+      linkHtml: function (p) {
+        var f = fiche(p);
+        return f && f.club ? '<button type="button" class="nc-nm" data-nc-profile="' + esc(f.club.leagueId + "|" + f.club.idx + "|" + f.p) + '">' + esc(p.name) + "</button>" : esc(p.name);
+      },
+    };
+  }
+  function tqMatchLabel(x) { return teamLab(x.opponent) + " · " + x.comp + " · " + when(x.at, true); }
+  function tqStatus(tq, e) {
+    if (tqLocked(e)) return ["locked", "Ordres verrouillés"];
+    if (tq && tq.dirty) return ["dirty", "Modifications à valider"];
+    if (!e) return ["ok", "Tactique par défaut"];
+    return e.hasPlan ? ["ok", "Ordres validés"] : ["todo", "Ordres pas encore validés"];
   }
   function tactiqueHtml(v) {
-    var d = draftOrders(v), pm = poolByKey(), o = v.options;
-    var roster = v.tacticsPlayers.map(function (x) { return { nid: x.nid, ref: x.ref, p: pm[key(x.ref)] }; });
-    var sheet = d.lineup.convoked && d.lineup.convoked.length ? d.lineup.convoked : roster.slice(0, v.limits.matchSquad).map(function (x) { return x.nid; });
-    d.lineup.convoked = sheet;
-    var onSheet = roster.filter(function (x) { return sheet.indexOf(x.nid) >= 0; });
-    var startOf = {};
-    POS.forEach(function (p) { if (d.lineup.starters[p] != null) startOf[d.lineup.starters[p]] = p; });
-    var minsOf = function (nid) { var pos = startOf[nid] || ((d.lineup.backupPositions[nid] || [])[0]); var mm = d.lineup.minutes && pos && d.lineup.minutes[pos]; return mm && mm[nid] != null ? mm[nid] : ""; };
-    var cur = curGathering();
-    var h = '<div class="nc-two"><div class="nc-card"><div class="nc-sec"><span>Feuille de match</span><span>' + sheet.length + " / " + v.limits.matchSquad + "</span></div>";
-    if (!roster.length) h += '<p class="nc-club">Aucun joueur : convoquez (ou présélectionnez) des joueurs d\'abord.</p>';
-    else {
-      h += '<p class="nc-small" style="margin:0 0 8px">' + (cur && cur.players.length ? "Les " + roster.length + " convoqués de « " + esc(gTitleText(cur)) + " » : cochez les 12 du match." : "Pas encore de convoqués : la tactique se prépare avec la présélection.") + "</p>";
-      h += '<div class="nc-scroll"><table class="nc-sheet"><thead><tr><th></th><th>Joueur</th><th>Poste</th><th>Titulaire</th><th>Remplaçant à</th><th>Minutes</th></tr></thead><tbody>';
-      roster.forEach(function (x) {
-        var on = sheet.indexOf(x.nid) >= 0;
-        h += "<tr><td><input type=\"checkbox\" data-nc-sheet=\"" + x.nid + "\"" + (on ? " checked" : "") + (!on && sheet.length >= v.limits.matchSquad ? " disabled" : "") + "></td>" +
-          "<td>" + esc(x.ref.n) + (x.p && x.p.injuryUntil ? ' <span class="nc-tag bad">Blessé</span>' : "") + "</td><td>" + (x.p ? posBadge(x.p.position) : "–") + "</td>" +
-          "<td>" + (startOf[x.nid] ? posBadge(startOf[x.nid]) : "") + "</td>" +
-          "<td>" + (on && !startOf[x.nid] ? sel("backup:" + x.nid, [["", "Auto"]].concat(POS.map(function (p) { return [p, p]; })), (d.lineup.backupPositions[x.nid] || [])[0] || "") : "") + "</td>" +
-          "<td>" + (on ? '<input type="number" min="0" max="40" data-nc-min="' + x.nid + '" value="' + esc(minsOf(x.nid)) + '" placeholder="auto">' : "") + "</td></tr>";
-      });
-      h += "</tbody></table></div>";
-      h += '<div class="nc-sec" style="margin-top:14px"><span>Cinq majeur</span></div><div class="nc-set">' + POS.map(function (p) {
-        return "<label>" + esc(p) + sel("starter:" + p, [["", "Aucun"]].concat(onSheet.map(function (x) { return [x.nid, x.ref.n + (x.p ? " (" + posShort(x.p.position) + ")" : "")]; })), d.lineup.starters[p] != null ? d.lineup.starters[p] : "") + "</label>";
-      }).join("") + "</div>";
+    var k = tqKey(v), e = k === TQ_DEFAULT ? null : tqEntry(v, k), locked = tqLocked(e);
+    var tq = ui.tq && ui.tq.key === k ? ui.tq : null;
+    var st = tqStatus(tq, e);
+    var h = '<div id="ncOrdres"><div class="ordres-actionbar"><div class="oab-left"><h1 class="oab-title">' + esc(t("Tactique")) + '</h1><nav class="oab-tabs" aria-label="' + esc(t("Sections des ordres")) + '">' +
+      TQ_TABS.map(function (x) { return '<button type="button" class="oab-tab" data-nc-jump="' + x[0] + '">' + esc(t(x[1])) + "</button>"; }).join("") + "</nav></div>";
+    var pill = "";
+    if (e) {
+      var left = e.lockAt - Date.now();
+      pill = locked ? '<span class="ordres-lock-pill is-locked">' + esc(t("Verrouillé")) + "</span>"
+        : '<span class="ordres-lock-pill' + (left < 3600e3 ? " is-soon" : "") + '">' + esc(t("Verrouillage dans") + " " + (typeof window.formatLockDelay === "function" ? window.formatLockDelay(left) : when(e.lockAt, true))) + "</span>";
     }
-    h += "</div><div class=\"nc-card\"><div class=\"nc-sec\"><span>Systèmes de jeu</span></div><div class=\"nc-set\">";
-    for (var i = 0; i < o.maxOffense; i++) h += "<label>Priorité offensive " + (i + 1) + sel("offense:" + i, (i ? [["", "Aucune"]] : []).concat(o.offense.map(function (x) { return [x, x]; })), (d.offensivePriorities || [])[i] || "") + "</label>";
-    h += "<label>Défense" + sel("defense", o.defense, d.defense) + "</label><label>Rythme" + sel("rhythm", o.rhythm, d.rhythm) + "</label>" +
-      "<label>Défense sur écrans" + sel("screenDefense", o.screenDefense, d.screenDefense) + "</label><label>Aide défensive" + sel("helpDefense", o.helpDefense, d.helpDefense) + "</label>" +
-      "<label>Défense au poste" + sel("postDefense", o.postDefense, d.postDefense) + "</label><label>Sortie sur le tireur" + sel("closeoutStyle", o.closeoutStyle, d.closeoutStyle) + "</label>" +
-      "<label>Rebond offensif" + sel("offRebStyle", o.offRebStyle, d.offRebStyle) + "</label><label>Fin de match" + sel("endgameManagement", o.endgameManagement, d.endgameManagement) + "</label>" +
-      "<label>Niveau tactique" + sel("tacticalTier", [["débutant", "Débutant"], ["confirmée", "Confirmée"]], d.tacticalTier) + "</label></div>";
-    h += '<div class="nc-sec" style="margin-top:14px"><span>Consignes individuelles (marquage)</span><span>' + d.watchAssignments.filter(Boolean).length + " / " + o.maxWatch + "</span></div><div class=\"nc-set\">";
-    for (var w = 0; w < o.maxWatch; w++) {
-      var wa = d.watchAssignments[w] || {};
-      h += "<label>Consigne " + (w + 1) + sel("watchPos:" + w, [["", "Aucune"]].concat(POS.map(function (p) { return [p, { "Meneur": "Sur le meneur", "Arrière": "Sur l'arrière", "Ailier shooteur": "Sur l'ailier shooteur", "Ailier fort": "Sur l'ailier fort", "Pivot": "Sur le pivot" }[p]]; })), wa.position || "") +
-        (wa.position ? sel("watchFocus:" + w, o.watchFocus.map(function (f) { return [f, WATCH_LABELS[f] || f]; }), wa.focus || o.watchFocus[0]) : "") + "</label>";
+    h += '<div class="oab-right">' + pill + "</div></div>";
+    // Carte du match : compétition, date, lieu, affiche ; sélecteur des matchs.
+    h += '<section class="ordres-match-card nc-omc"><div class="omc-match"><div class="ordres-round-datetime">';
+    if (e) {
+      var me = '<span class="omc-team omc-team-me">' + flag(v.team.country) + " " + esc(teamLab(v.team.id)) + "</span>", them = '<span class="omc-team">' + esc(teamLab(e.opponent)) + "</span>";
+      h += '<div class="omc-meta"><span class="omc-badge">' + esc(e.comp) + "</span><span>" + esc(when(e.at, true)) + '</span><span aria-hidden="true">·</span><span>' + esc(t(e.venue === "home" ? "À domicile" : "À l'extérieur")) + "</span></div>" +
+        '<div class="omc-teams">' + (e.venue === "home" ? me + '<span class="omc-vs">vs</span>' + them : them + '<span class="omc-vs">vs</span>' + me) + "</div>";
+    } else {
+      h += '<div class="omc-meta"><span class="omc-badge">' + esc(t("Tactique par défaut")) + '</span></div><p class="nc-small">' + esc(t("Appliquée aux matchs pour lesquels aucun ordre n'a été donné.")) + "</p>";
     }
-    h += '</div><div class="nc-row" style="margin-top:16px"><button type="button" class="nc-btn" data-nc-save-tactics="1"' + (ui.busy ? " disabled" : "") + ">Enregistrer la tactique</button>" +
-      '<span class="nc-small" style="margin:0">' + (v.tactics && v.tactics.updatedAt ? "Enregistrée le " + esc(when(v.tactics.updatedAt, true)) : "Pas encore enregistrée") + "</span></div>" +
-      '<p class="nc-small">Tactique propre à la sélection, sans lien avec celle de votre club. Mêmes réglages que les Ordres d\'un club ; minutes laissées vides = rotation automatique.</p></div></div>';
+    h += '</div><div class="ordres-round-selector"><label class="field-label" for="ncTqMatch">' + esc(t("Préparer le match")) + '</label><select id="ncTqMatch" data-nc-tq-match="1">' +
+      tqUpcoming(v).map(function (x) {
+        return '<option value="' + esc(x.id) + '"' + (String(x.id) === k ? " selected" : "") + ">" + esc(tqMatchLabel(x)) + (tqLocked(x) ? " (" + esc(t("verrouillé")) + ")" : x.hasPlan ? " (" + esc(t("préparé")) + ") ●" : "") + "</option>";
+      }).join("") + '<option value="' + TQ_DEFAULT + '"' + (k === TQ_DEFAULT ? " selected" : "") + ">" + esc(t("Tactique par défaut")) + "</option></select></div></div></section>";
+    if (locked) h += '<p class="ordres-lock-note">' + esc(t("Compositions verrouillées : le coup d'envoi est imminent.")) + "</p>";
+    var roster = e ? e.players : v.tacticsPlayers;
+    h += roster.length ? '<div class="prep-grid" id="ncTqGrid"></div>' : '<div class="nc-card"><p class="nc-club">' + esc(t("Aucun joueur : convoquez (ou présélectionnez) des joueurs d'abord.")) + "</p></div>";
+    h += '<div class="ordres-savebar' + (st[0] === "dirty" ? " is-dirty" : "") + '"><div class="osb-left"><span class="ordres-status ' + st[0] + '" id="ncTqStatus" role="status"><span class="ordres-status-dot" aria-hidden="true"></span><span>' + esc(t(st[1])) + "</span></span>" +
+      '<p class="ordres-validate-feedback ok" role="status">' + esc(tq && tq.feedback ? t(tq.feedback) : "") + "</p></div>" +
+      '<div class="osb-actions"><button type="button" class="osb-cancel" data-nc-tq-revert="1"' + (!tq || !tq.dirty || locked ? " disabled" : "") + ">" + esc(t("Annuler")) + "</button>" +
+      '<button type="button" class="ordres-validate-btn" data-nc-tq-save="1"' + (locked || ui.busy || !roster.length ? " disabled" : "") + ">" + esc(t("Enregistrer")) + "</button></div></div></div>";
     return h;
+  }
+  // Panneau des Ordres du club monté dans la page (après chaque rendu).
+  function tqMount() {
+    var grid = document.getElementById("ncTqGrid"), v = ui.view;
+    if (!grid || !v || typeof window.buildTeamPanel !== "function" || typeof window.tqProxyFrom !== "function") return;
+    ensureOrdresCss();
+    var k = tqKey(v), e = k === TQ_DEFAULT ? null : tqEntry(v, k);
+    var tq = ui.tq && ui.tq.key === k ? ui.tq : tqBuild(v, k);
+    grid.appendChild(window.buildTeamPanel(tq.proxy, "b", {
+      editable: !tqLocked(e), opponent: tqOpponent(e), roster: tqRosterCtx(tq),
+      onDirty: function () { tq.dirty = JSON.stringify(tqSnap(tq.proxy)) !== tq.saved; tq.feedback = ""; tqPaintStatus(); },
+    }));
+    tqPaintTabs();
+  }
+  function tqPaintStatus() {
+    var v = ui.view, k = tqKey(v), e = k === TQ_DEFAULT ? null : tqEntry(v, k), tq = ui.tq;
+    var st = tqStatus(tq, e), el = document.getElementById("ncTqStatus");
+    if (el) { el.className = "ordres-status " + st[0]; el.lastChild.textContent = t(st[1]); }
+    var bar = el && el.closest(".ordres-savebar");
+    if (bar) bar.classList.toggle("is-dirty", st[0] === "dirty");
+    var fb = document.querySelector("#ncOrdres .ordres-validate-feedback");
+    if (fb) fb.textContent = tq && tq.feedback ? t(tq.feedback) : "";
+    var rv = document.querySelector("[data-nc-tq-revert]");
+    if (rv) rv.disabled = !tq || !tq.dirty || tqLocked(e);
+    tqPaintTabs();
+  }
+  // Onglet « Adversaires » masqué en niveau tactique débutant (comme le club).
+  function tqPaintTabs() {
+    Array.prototype.forEach.call(document.querySelectorAll("#ncOrdres [data-nc-jump]"), function (b) {
+      var target = document.querySelector("#ncOrdres .area-" + b.dataset.ncJump);
+      b.classList.toggle("hidden", !target || target.classList.contains("hidden"));
+    });
+  }
+  // Styles des Ordres du club, écrits pour #prepSection : repris tels quels
+  // pour #ncOrdres (une seule source, rien de recopié à la main).
+  function ensureOrdresCss() {
+    if (document.getElementById("ncOrdresCss")) return;
+    var out = [];
+    var walk = function (rules, into) {
+      Array.prototype.forEach.call(rules || [], function (r) {
+        if (r.cssRules && r.media) { var inner = []; walk(r.cssRules, inner); if (inner.length) out.push("@media " + r.media.mediaText + "{" + inner.join("\n") + "}"); return; }
+        if (r.selectorText && r.selectorText.indexOf("#prepSection") >= 0) into.push(r.cssText.replace(/#prepSection/g, "#ncOrdres"));
+      });
+    };
+    Array.prototype.forEach.call(document.styleSheets || [], function (sh) { try { walk(sh.cssRules, out); } catch (err) { /* feuille d'un autre domaine */ } });
+    out.push("#ncOrdres .ordres-match-card.nc-omc{grid-template-columns:minmax(0,1fr)}#ncOrdres .omc-team .nat-flag{width:34px;height:23px;border-radius:3px;object-fit:cover;vertical-align:middle}#ncOrdres .oab-tab.hidden{display:none}");
+    var s = document.createElement("style"); s.id = "ncOrdresCss"; s.textContent = out.join("\n"); document.head.appendChild(s);
+  }
+  function tqSave() {
+    var tq = ui.tq;
+    if (!ui.view || !tq || ui.busy) return Promise.resolve();
+    var body = { orders: tqSnap(tq.proxy) };
+    if (tq.key !== TQ_DEFAULT) body.matchId = tq.key;
+    var k0 = tq.key;
+    return post("/api/national/coach/tactics", body, k0 === TQ_DEFAULT ? "Tactique par défaut enregistrée." : "Ordres enregistrés.").then(function () {
+      if (ui.error) return;
+      // Ordres relus depuis la réponse du serveur (vue à jour).
+      ui.tq = null; ui.tqMatch = k0;
+      paint();
+      if (ui.tq) { ui.tq.feedback = "Ordres enregistrés."; tqPaintStatus(); }
+    });
+  }
+  // Bouton « Donnez / Modifier vos ordres » de la barre du haut (même style
+  // et mêmes états que #topbarOrdersBtn du club) : ordres du prochain match.
+  function syncOrdersButton() {
+    var right = document.querySelector(".topbar-right");
+    var btn = document.getElementById("ncOrdersBtn");
+    var nx = ui.mode && can("tactics") ? tqNext(ui.view) : null;
+    if (!nx || !right) { if (btn) btn.remove(); return; }
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button"; btn.id = "ncOrdersBtn"; btn.className = "topbar-cta";
+      var mb = document.getElementById("ncModeBtn");
+      right.insertBefore(btn, mb ? mb.nextSibling : right.firstChild);
+      btn.addEventListener("click", openNextOrders);
+    }
+    var locked = tqLocked(nx);
+    btn.textContent = t(locked ? "Ordres verrouillés" : nx.hasPlan ? "Modifier vos ordres" : "Donnez vos ordres");
+    btn.classList.toggle("topbar-cta-validated", !!nx.hasPlan && !locked);
+    btn.disabled = locked;
+    btn.classList.toggle("is-locked", locked);
+    btn.title = locked ? t("Coup d'envoi dans moins de 5 minutes : les ordres ne sont plus modifiables.") : teamLab(nx.opponent) + " · " + when(nx.at, true);
+  }
+  function openNextOrders() {
+    var n = tqNext(ui.view);
+    if (!n || tqLocked(n)) return;
+    if (ui.tq && ui.tq.dirty && String(n.id) !== ui.tq.key && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) return;
+    ui.nav = "tactique"; ui.tqMatch = String(n.id); ui.error = "";
+    if (ui.tq && ui.tq.key !== ui.tqMatch) ui.tq = null;
+    showModePage(); paint();
+    try { var sc = document.querySelector(".content-scroll"); if (sc) sc.scrollTop = 0; } catch (err) { /* rien */ }
   }
 
   // --- Amicaux internationaux ------------------------------------------------
@@ -654,7 +832,7 @@
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
     "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
-    "body.nc-mode .topbar-right > :not(#ncModeBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#ncModeBtn):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
     "body.nc-mode .topbar-search, body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
     "body.nc-mode #selectionsSection .page-title{display:none}",
@@ -703,7 +881,7 @@
   function syncModeButton() {
     var right = document.querySelector(".topbar-right");
     var btn = document.getElementById("ncModeBtn");
-    if (!ui.mode || !right) { if (btn) btn.remove(); syncDashButton(); return; }
+    if (!ui.mode || !right) { if (btn) btn.remove(); syncOrdersButton(); syncDashButton(); return; }
     if (!btn) {
       btn = document.createElement("button");
       btn.type = "button"; btn.id = "ncModeBtn";
@@ -712,6 +890,7 @@
     }
     btn.innerHTML = icon("back") + " Retour au mode Club";
     btn.title = "Revenir à la gestion de votre club";
+    syncOrdersButton();
     syncDashButton();
   }
   function syncModeChrome() {
@@ -752,7 +931,7 @@
   }
   function enterMode(teamId) {
     ensureCss(); ensureModeCss();
-    ui.mode = teamId; ui.teamId = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null; ui.view = null; ui.gid = null; ui.draft = null; ui.replaceOut = null; ui.opp = null; ui.error = "";
+    ui.mode = teamId; ui.teamId = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null; ui.view = null; ui.gid = null; ui.tq = null; ui.tqMatch = null; ui.replaceOut = null; ui.opp = null; ui.error = "";
     ui.ana = null; ui.anaSelf = false; ui.anaTeam = null;
     lsSet(teamId);
     document.body.classList.add("nc-mode");
@@ -761,10 +940,20 @@
     paint();
     var p = load().then(paint);
     window.__lastNationalCoach = p;
+    // Verrou T − 5 min : bouton de la barre du haut et page Tactique à jour
+    // sans recharger (comme la pastille de verrou des Ordres du club).
+    if (!ui.lockTimer) ui.lockTimer = setInterval(function () {
+      if (!ui.mode || !ui.view) return;
+      syncOrdersButton();
+      if (ui.nav !== "tactique" || !document.getElementById("ncOrdres")) return;
+      var e = tqEntry(ui.view, tqKey(ui.view));
+      if (!!document.querySelector("#ncOrdres .ordres-lock-note") !== tqLocked(e)) paint();
+    }, 30000);
     return p;
   }
   function exitMode() {
-    ui.mode = null; ui.teamId = null; ui.view = null;
+    ui.mode = null; ui.teamId = null; ui.view = null; ui.tq = null;
+    if (ui.lockTimer) { clearInterval(ui.lockTimer); ui.lockTimer = null; }
     lsSet(null);
     document.body.classList.remove("nc-mode");
     ["ncSidebar", "ncTopTitle"].forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
@@ -789,7 +978,7 @@
     if (nav === "joueurs") return titleHtml(nav) + err + (v.pool ? joueursHtml(v) : poolMissing);
     if (nav === "preselection") return titleHtml(nav) + err + (v.pool ? preselectionHtml(v) : poolMissing);
     if (nav === "convocations") return titleHtml(nav) + err + convocationsHtml(v);
-    if (nav === "tactique") return titleHtml(nav) + err + tactiqueHtml(v);
+    if (nav === "tactique") return err + tactiqueHtml(v);
     if (nav === "amicaux") return titleHtml(nav) + err + amicauxHtml(v);
     if (nav === "staff") return titleHtml(nav) + err + staffHtml(v);
     if (nav === "analyse") return titleHtml(nav) + err + analyseHtml(v);
@@ -890,6 +1079,7 @@
     var holder = document.getElementById("nationalContent");
     if (!holder || !ui.mode) return;
     holder.innerHTML = modeHtml();
+    if (ui.nav === "tactique") tqMount();
     syncModeChrome();
     // Rapport Scouting Pro : placement adaptatif des blocs (comme le club).
     var sp = document.getElementById("ncScoutingPanel");
@@ -918,27 +1108,6 @@
     var list = convRefs(cur).filter(function (x) { return !(x.p === r.p && x.n === r.n); });
     if (on) list.push(r);
     post("/api/national/coach/convocation", { gatheringId: cur.gid, players: list }, on ? "Joueur convoqué." : "Joueur retiré des convoqués.");
-  }
-  function collectOrders() {
-    var d = ui.draft;
-    var orders = JSON.parse(JSON.stringify(d));
-    orders.offensivePriorities = (d.offensivePriorities || []).filter(Boolean);
-    orders.watchAssignments = (d.watchAssignments || []).filter(function (w) { return w && w.position && w.focus; });
-    var L = orders.lineup;
-    var mins = {};
-    Object.keys(d.__mins || {}).forEach(function (nid) {
-      var n = d.__mins[nid];
-      if (n === "" || n == null) return;
-      var pos = null;
-      POS.forEach(function (p) { if (String(L.starters[p]) === String(nid)) pos = p; });
-      pos = pos || (L.backupPositions[nid] || [])[0];
-      if (!pos) return;
-      mins[pos] = mins[pos] || {};
-      mins[pos][nid] = Number(n);
-    });
-    if (d.__mins) L.minutes = Object.keys(mins).length ? mins : undefined;
-    delete orders.__mins; delete orders.updatedAt;
-    return orders;
   }
   function onClick(e) {
     if (!ui.mode) return;
@@ -974,32 +1143,39 @@
       post("/api/national/coach/replace", { gatheringId: cur.gid, out: { p: Number(outK[0]), n: outK.slice(1).join("|") }, in: { p: Number(inK[0]), n: inK.slice(1).join("|") } }, "Remplacement enregistré, le club du joueur est prévenu.");
       return;
     }
-    if (d.ncSheet) {
-      var dd = draftOrders(ui.view), nid = Number(d.ncSheet), L = dd.lineup;
-      L.convoked = (L.convoked || []).filter(function (x) { return x !== nid; });
-      if (b.checked) L.convoked.push(nid);
-      else { POS.forEach(function (p) { if (L.starters[p] === nid) L.starters[p] = null; }); delete L.backupPositions[nid]; }
-      paint();
+    // Tactique (ordres du match affiché).
+    if (d.ncJump) {
+      var target = document.querySelector("#ncOrdres .area-" + d.ncJump);
+      Array.prototype.forEach.call(document.querySelectorAll("#ncOrdres [data-nc-jump]"), function (x) { x.classList.toggle("active", x === b); });
+      if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    if (d.ncTqSave) { tqSave(); return; }
+    if (d.ncTqRevert) { ui.tq = null; paint(); return; }
     if (d.ncOwnAnalysis) { ui.anaSelf = true; paint(); return; }
     // « Appliquer à ma tactique » (équivalent de « Appliquer à mes ordres »
-    // du club) : le Plan de match (scoutingGamePlanPatch, recalculé au
-    // clic) écrit dans la tactique de la sélection, puis la rubrique Tactique.
+    // du club) : le Plan de match (scoutingGamePlanPatch, recalculé au clic)
+    // prérempli dans les ordres du PROCHAIN match non verrouillé (sinon la
+    // tactique par défaut), puis la Tactique ouverte sur ce match : rien
+    // n'est enregistré avant « Enregistrer ».
     if (d.ncApplyPlan) {
       var fb = document.getElementById("scoutingApplyOrdresFeedback");
-      var plan = ui.anaTeam && g("scoutingGamePlanPatch") ? window.scoutingGamePlanPatch(ui.anaTeam, ui.view.tactics) : null;
-      if (!plan || !ui.view.tactics) { if (fb) fb.textContent = t("Pas encore assez de données sur cet adversaire pour préremplir votre tactique."); return; }
-      var orders = JSON.parse(JSON.stringify(ui.view.tactics));
-      Object.keys(plan.patch).forEach(function (k) { orders[k] = plan.patch[k]; });
-      delete orders.updatedAt;
-      post("/api/national/coach/tactics", { orders: orders }, "Plan de match appliqué à la tactique de la sélection. Vérifiez-la.").then(function () {
-        if (ui.error) return;
-        ui.draft = null; ui.nav = "tactique"; paint();
-      });
+      var nx = tqUpcoming(ui.view).filter(function (x) { return !tqLocked(x); })[0] || null;
+      var tk = nx ? String(nx.id) : TQ_DEFAULT;
+      var base = (nx && ui.view.plans && ui.view.plans[nx.id]) || ui.view.tactics;
+      var plan = ui.anaTeam && base && g("scoutingGamePlanPatch") ? window.scoutingGamePlanPatch(ui.anaTeam, base) : null;
+      if (!plan) { if (fb) fb.textContent = t("Pas encore assez de données sur cet adversaire pour préremplir votre tactique."); return; }
+      if (ui.tq && ui.tq.dirty && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) return;
+      ui.tqMatch = tk;
+      var tq = tqBuild(ui.view, tk);
+      Object.keys(plan.patch).forEach(function (k) { tq.proxy[k] = Array.isArray(plan.patch[k]) ? JSON.parse(JSON.stringify(plan.patch[k])) : plan.patch[k]; });
+      tq.dirty = JSON.stringify(tqSnap(tq.proxy)) !== tq.saved;
+      tq.feedback = "Plan de match prérempli : vérifiez puis enregistrez.";
+      ui.nav = "tactique"; ui.error = "";
+      showModePage(); paint();
+      try { var sc2 = document.querySelector(".content-scroll"); if (sc2) sc2.scrollTop = 0; } catch (err) { /* rien */ }
       return;
     }
-    if (d.ncSaveTactics) { post("/api/national/coach/tactics", { orders: collectOrders() }, "Tactique de la sélection enregistrée.").then(function () { if (!ui.error) ui.draft = null; paint(); }); return; }
     // Amicaux.
     if (d.ncFrSend) {
       post("/api/national/coach/friendly/request", { opponent: ui.frOpp, at: Number(ui.frAt), venue: ui.frVenue }, "Demande de match amical envoyée.").then(function () { if (!ui.error) { ui.frOpp = ""; ui.frAt = ""; } paint(); });
@@ -1037,22 +1213,11 @@
       window.__lastNationalCoach = p;
       return;
     }
-    var dd = draftOrders(ui.view);
-    if (ds.ncMin) { dd.__mins = dd.__mins || {}; dd.__mins[ds.ncMin] = el.value; return; }
-    var name = ds.ncSet;
-    if (!name) return;
-    var v = el.value, parts = name.split(":");
-    if (parts[0] === "offense") { dd.offensivePriorities = dd.offensivePriorities || []; dd.offensivePriorities[Number(parts[1])] = v || null; }
-    else if (parts[0] === "starter") {
-      var nid = v === "" ? null : Number(v);
-      POS.forEach(function (pp) { if (nid != null && dd.lineup.starters[pp] === nid) dd.lineup.starters[pp] = null; });
-      dd.lineup.starters[parts[1]] = nid;
-      if (nid != null) delete dd.lineup.backupPositions[nid];
-    } else if (parts[0] === "backup") { if (v) dd.lineup.backupPositions[parts[1]] = [v]; else delete dd.lineup.backupPositions[parts[1]]; }
-    else if (parts[0] === "watchPos") { var i = Number(parts[1]); dd.watchAssignments[i] = v ? { position: v, focus: (dd.watchAssignments[i] && dd.watchAssignments[i].focus) || ui.view.options.watchFocus[0] } : null; }
-    else if (parts[0] === "watchFocus") { var j = Number(parts[1]); if (dd.watchAssignments[j]) dd.watchAssignments[j].focus = v; }
-    else dd[parts[0]] = v;
-    paint();
+    if (ds.ncTqMatch) {
+      if (ui.tq && ui.tq.dirty && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) { el.value = ui.tq.key; return; }
+      ui.tqMatch = el.value; ui.tq = null; ui.error = "";
+      paint();
+    }
   }
   function onInput(e) {
     if (!ui.mode || !e.target.dataset || !e.target.dataset.ncStaffQ) return;

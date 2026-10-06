@@ -135,6 +135,37 @@ const w1 = gs[0];
   ok("tactique propre à la sélection (validée comme les ordres d'un club), 12 joueurs par match parmi les 15");
 }
 
+// 4 bis) Ordres PAR MATCH (comme les clubs) : m.plans[matchId], verrou à
+// T − 5 min, appliqués par buildSide pour CE match ; m.tactics reste la
+// tactique par défaut.
+{
+  const M = require("./nationalMatches.js");
+  const view = C.coachView(st, lyon, "fr-A", now, ctx);
+  const up = view.upcoming[0];
+  assert.ok(up && up.players.length === 15 && !up.hasPlan && !up.locked && up.comp && up.opponent && up.lockAt === up.at - 5 * 60e3, "match à venir : adversaire, compétition, verrou, 15 joueurs");
+  const nids = up.players.map(x => x.nid);
+  const orders = C.defaultOrders();
+  orders.defense = "Zone intérieure"; orders.rhythm = "Lent";
+  orders.lineup = { starters: { Meneur: nids[0], "Arrière": nids[1], "Ailier shooteur": nids[2], "Ailier fort": nids[3], Pivot: nids[4] }, backupPositions: {}, convoked: nids.slice(0, 12) };
+  assert.ok(!C.setTactics(st, lyon, { teamId: "fr-A", matchId: "inconnu", orders }, now, ctx).ok, "match inconnu refusé");
+  assert.ok(!C.setTactics(st, lyon, { teamId: "fr-A", matchId: up.id, orders }, up.at - 4 * 60e3, ctx).ok, "verrouillé à T − 5 min");
+  const r = C.setTactics(st, lyon, { teamId: "fr-A", matchId: up.id, orders }, now, ctx);
+  assert.ok(r.ok, r.error);
+  const md = N.activeMandate(st, "fr-A");
+  assert.strictEqual(md.plans[up.id].defense, "Zone intérieure");
+  assert.strictEqual(md.tactics.defense, "Zone press", "tactique par défaut inchangée");
+  const v2 = C.coachView(st, lyon, "fr-A", now, ctx);
+  assert.ok(v2.upcoming[0].hasPlan && v2.plans[up.id].rhythm === "Lent", "la vue expose les ordres du match");
+  // buildSide applique les ordres de CE match, la tactique par défaut sinon.
+  const side = (matchId) => {
+    const tempIds = new Map();
+    try { return M.buildSide(st, "fr-A", up.gid, leagues, world, up.at, tempIds, matchId).shell; } finally { for (const t of tempIds.values()) t.player.id = t.id; }
+  };
+  assert.strictEqual(side(up.id).defense, "Zone intérieure");
+  assert.strictEqual(side("autre").defense, "Zone press");
+  ok("ordres par match : validés contre les matchs à venir, verrouillés à T − 5 min, appliqués à ce match seulement");
+}
+
 // 5) Fin de mandat : listes conservées dans l'historique, accès retiré.
 {
   const m = N.activeMandate(st, "fr-A");

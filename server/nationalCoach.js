@@ -544,8 +544,12 @@ function replaceConvoked(store, me, body, now, ctx) {
   conv.players = conv.players.map(r => sameRef(r, out) ? inn : r);
   conv.changes = conv.changes || [];
   conv.changes.push({ at: now, out, in: inn, reason: st });
-  // Retiré du match de la tactique s'il y figurait.
+  // Retiré du match de la tactique s'il y figurait (tactique par défaut et
+  // ordres des matchs de ce rassemblement).
   if (m.tactics && m.tactics.lineup) m.tactics = scrubTactics(m, m.tactics, conv.players);
+  upcomingMatchesOf(store, team, ctx.season).forEach(x => {
+    if (x.gid === g.gid && m.plans && m.plans[x.id]) m.plans[x.id] = scrubTactics(m, m.plans[x.id], conv.players);
+  });
   notifyConvoked(store, team.id, g, pm.get(refKey(inn)), "replacement");
   return { ok: true, convocation: conv };
 }
@@ -561,9 +565,39 @@ function nidOf(m, r) {
 // cours ou à venir, sinon la présélection (préparer avant les convocations).
 function tacticsRoster(store, m, team, ctx) {
   const g = currentGathering(gatheringsOf(store, team, ctx.season, ctx.calendarStartAt), Date.now());
-  const conv = g && convocationOf(store, team.id, g.gid);
-  const refs = conv && conv.players.length ? conv.players : (m.preselection || []);
-  return { gathering: g, refs };
+  return { gathering: g, refs: rosterRefsOf(store, m, team, g && g.gid) };
+}
+// Joueurs des ordres d'UN match : les convoqués de son rassemblement, sinon
+// la présélection.
+function rosterRefsOf(store, m, team, gid) {
+  const conv = gid && convocationOf(store, team.id, gid);
+  return conv && conv.players.length ? conv.players : (m.preselection || []);
+}
+// --- Ordres par match (retour utilisateur 2026-10-06) ------------------------
+// Comme les matchs de club : des ordres propres à chaque match à venir
+// (m.plans[matchId], appliqués par NationalMatches.buildSide pour CE match),
+// verrouillés à T − 5 min (Shows.lineupLocked, même règle que les clubs).
+// m.tactics reste la tactique par défaut (matchs sans ordres).
+function lockAtOf(at) { return at - require("./shows.js").LINEUP_LOCK_BEFORE_KICKOFF_MS; }
+function ordersLocked(now, at) { return require("./shows.js").lineupLocked(now, at); }
+// Titulaires « pressentis » de l'adversaire d'un match (carte Postes à
+// surveiller, comme le titulaire adverse actuel côté club) : ceux de ses
+// ordres pour ce match, sinon de sa tactique par défaut, parmi ses convoqués.
+function pressentisOf(store, oppId, gid, matchId) {
+  const om = NT().activeMandate(store, oppId);
+  const t = om && ((om.plans && om.plans[matchId]) || om.tactics);
+  const starters = t && t.lineup && t.lineup.starters;
+  if (!starters || !om.nids) return null;
+  const conv = convocationOf(store, oppId, gid);
+  const allowed = conv && conv.players.length ? new Set(conv.players.map(refKey)) : null;
+  const byNid = {};
+  Object.entries(om.nids).forEach(([k, nid]) => { byNid[nid] = k; });
+  const out = {};
+  Object.entries(starters).forEach(([pos, nid]) => {
+    const k = nid != null ? byNid[nid] : null;
+    if (k && (!allowed || allowed.has(k))) out[pos] = k.slice(k.indexOf("|") + 1);
+  });
+  return Object.keys(out).length ? out : null;
 }
 // Retire de la tactique les joueurs qui ne sont plus dans `refs`.
 function scrubTactics(m, tactics, refs) {
@@ -580,7 +614,14 @@ function setTactics(store, me, body, now, ctx) {
   const m = coachMandate(store, me, body && body.teamId, "tactics");
   if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
   const team = store.teams[body.teamId];
-  const { refs } = tacticsRoster(store, m, team, ctx);
+  // Ordres d'un match précis (matchId) ou tactique par défaut.
+  let match = null;
+  if (body.matchId != null) {
+    match = upcomingMatchesOf(store, team, ctx.season).find(x => String(x.id) === String(body.matchId)) || null;
+    if (!match) return fail("Ce match n'est pas un match à venir de la sélection.");
+    if (ordersLocked(now, match.at)) return fail("Ordres verrouillés : le coup d'envoi est imminent.");
+  }
+  const refs = match ? rosterRefsOf(store, m, team, match.gid) : tacticsRoster(store, m, team, ctx).refs;
   const pm = poolMap(ctx.pool);
   const players = refs.map(r => ({ id: nidOf(m, r), position: (pm.get(refKey(r)) || {}).position || null }));
   const Actions = require("./actions.js");
@@ -599,6 +640,13 @@ function setTactics(store, me, body, now, ctx) {
     const w = validateWatch(body.orders.watchAssignments);
     if (!w.ok) return fail(w.error);
     v.value.watchAssignments = w.value;
+  }
+  if (match) {
+    // Ordres des matchs joués ou annulés retirés au passage.
+    const live = new Set(upcomingMatchesOf(store, team, ctx.season).map(x => String(x.id)));
+    m.plans = Object.fromEntries(Object.entries(m.plans || {}).filter(([id]) => live.has(id)));
+    m.plans[String(match.id)] = { ...v.value, updatedAt: now };
+    return { ok: true, matchId: match.id, plan: m.plans[String(match.id)] };
   }
   m.tactics = { ...v.value, updatedAt: now };
   return { ok: true, tactics: m.tactics };
@@ -653,6 +701,11 @@ function coachView(store, me, teamId, now, ctx) {
     preselection: can(access, "preselectView") ? (m.preselection || []) : [], watchlist: m.watchlist || [],
     gatherings: can(access, "convocView") ? gatherings : [], currentGid: can(access, "convocView") && cur ? cur.gid : null,
     tactics: can(access, "tactics") ? (m.tactics || defaultOrders()) : null, tacticsPlayers: can(access, "tactics") ? nidPlayers : [],
+    // Ordres par match : matchs à venir (adversaire, compétition, verrou,
+    // joueurs du match, titulaires pressentis de l'adversaire) et ordres
+    // enregistrés pour chacun.
+    upcoming: can(access, "tactics") ? upcomingOrdersOf(store, m, team, ctx, now) : [],
+    plans: can(access, "tactics") ? (m.plans || {}) : {},
     // Mode Sélectionneur (phase E) : notifications, statistiques, bilan.
     feed: can(access, "feed") ? (m.feed || []).slice(0, 40) : [], unread: role === "coach" ? Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) : 0,
     stats: can(access, "stats") ? playerStatsOf(store, team.id, m.startedAt, now) : [],
@@ -718,6 +771,20 @@ function upcomingMatchesOf(store, team, season) {
   if (fin) fin.tournaments.forEach(t => t.matches.forEach(m => { if (m.status === "scheduled" && (m.home === team.id || m.away === team.id)) out.push({ id: m.id, at: m.at, home: m.home, away: m.away, gid: `s${season}f`, label: m.label || `${t.label} · poule` }); }));
   (store.intlFriendlies || []).forEach(f => { if (f.status === "accepted" && (f.home === team.id || f.away === team.id)) out.push({ id: f.id, at: f.at, home: f.home, away: f.away, gid: `s${f.season}x${f.id}`, label: "Match amical international" }); });
   return out.sort((a, b) => a.at - b.at);
+}
+function upcomingOrdersOf(store, m, team, ctx, now) {
+  const gMatches = gatheringMatchesOf(store, team, ctx.season, now);
+  const compById = {};
+  Object.values(gMatches).forEach(list => list.forEach(x => { compById[x.id] = x.comp; }));
+  return upcomingMatchesOf(store, team, ctx.season).map(x => {
+    const opponent = x.home === team.id ? x.away : x.home;
+    return {
+      id: x.id, at: x.at, home: x.home, away: x.away, opponent, venue: x.home === team.id ? "home" : "away", gid: x.gid,
+      comp: compById[x.id] || x.label, lockAt: lockAtOf(x.at), locked: ordersLocked(now, x.at), hasPlan: !!(m.plans && m.plans[x.id]),
+      players: rosterRefsOf(store, m, team, x.gid).map(r => ({ nid: nidOf(m, r), ref: r })),
+      pressentis: opponent ? pressentisOf(store, opponent, x.gid, x.id) : null,
+    };
+  });
 }
 function analysisOf(store, team, season, calendarStartAt, now, oppId) {
   const NM = require("./nationalMatches.js");
@@ -952,5 +1019,5 @@ module.exports = {
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
   coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
   PERMS, accessOf, can, coachMandate, staffOf, staffInvite, staffRespond, staffRemove, publicStaff, queueNotice, STAFF_MAX,
-  analysisOf, upcomingMatchesOf, analysisData,
+  analysisOf, upcomingMatchesOf, ordersLocked, analysisData,
 };

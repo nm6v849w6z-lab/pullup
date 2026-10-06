@@ -84,11 +84,20 @@ function fixture() {
   assert(!panel.querySelector("#scoutingApplyOrdresBtn") && panel.querySelector("[data-nc-apply-plan]"), "« Appliquer à ma tactique » (équivalent des ordres du club)");
   assert(content().textContent.includes("Joueurs de référence"), "joueurs de référence conservés");
 
-  // 3) Appliquer à ma tactique : enregistrée, rubrique Tactique.
+  // 3) Appliquer à ma tactique : ordres du prochain match non verrouillé
+  // préremplis (comme le club), Tactique ouverte sur ce match, enregistrés
+  // par « Enregistrer ».
   const before = JSON.stringify(st.view.tactics);
   panel.querySelector("[data-nc-apply-plan]").click();
   await wait(() => st.nav === "tactique", "rubrique Tactique après application");
-  assert(JSON.stringify(st.view.tactics) !== before && st.view.tactics.defense, "tactique de la sélection mise à jour par le plan de match");
+  const nx = (st.view.upcoming || []).find(x => !x.locked);
+  assert(st.tq && st.tq.key === (nx ? String(nx.id) : "default") && /prérempli/.test(st.tq.feedback), "Tactique ouverte sur le prochain match, plan de match prérempli");
+  assert(JSON.stringify(st.view.tactics) === before, "rien d'enregistré avant « Enregistrer »");
+  if (doc.querySelector("[data-nc-tq-save]") && !doc.querySelector("[data-nc-tq-save]").disabled) {
+    doc.querySelector("[data-nc-tq-save]").click();
+    await win.__lastNationalCoach; await flush(dom);
+    assert(nx ? st.view.plans[nx.id] && st.view.plans[nx.id].defense : JSON.stringify(st.view.tactics) !== before, "plan de match enregistré dans les ordres du match");
+  }
 
   // 4) Ma sélection avec des matchs : même rapport, sans bouton d'application.
   st.anaSelf = true; st.nav = "analyse";

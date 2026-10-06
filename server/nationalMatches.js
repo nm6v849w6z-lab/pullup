@@ -188,7 +188,9 @@ function qualification(comp, now) {
 // --- Jouer un match -------------------------------------------------------
 // Équipe « coquille » d'une sélection : les 12 joueurs du match (tactique
 // du sélectionneur, sinon les meilleurs disponibles des 15), ids provisoires.
-function buildSide(store, teamId, gid, leagues, world, at, tempIds) {
+// `matchId` : ordres donnés pour CE match (m.plans[matchId], voir
+// nationalCoach.setTactics), sinon la tactique par défaut de la sélection.
+function buildSide(store, teamId, gid, leagues, world, at, tempIds, matchId) {
   const cfg = NT().configOf(store);
   const team = store.teams[teamId];
   const el = NT().eligiblePlayers(cfg, team, leagues, world, at).players;
@@ -199,7 +201,7 @@ function buildSide(store, teamId, gid, leagues, world, at, tempIds) {
   // Pas de convocation (ne devrait pas arriver après le gel) : meilleurs disponibles.
   if (!pool.length) pool = NT().pickSquad(el.filter(fit), NC().LIMITS.convocation);
   const m = NT().activeMandate(store, teamId);
-  const tactics = m && m.tactics;
+  const tactics = m && ((matchId != null && m.plans && m.plans[String(matchId)]) || m.tactics);
   const nidOf = x => (m && m.nids ? m.nids[NC().refKey(NC().refOf(x.src))] : null);
   // Les 12 du match.
   let sheet = pool;
@@ -266,8 +268,8 @@ function playMatch(store, comp, m, leagues, world, now) {
   const injuries = [];
   let home, away;
   try {
-    home = buildSide(store, m.home, m.gid, leagues, world, m.at, tempIds);
-    away = buildSide(store, m.away, m.gid, leagues, world, m.at, tempIds);
+    home = buildSide(store, m.home, m.gid, leagues, world, m.at, tempIds, m.id);
+    away = buildSide(store, m.away, m.gid, leagues, world, m.at, tempIds, m.id);
     // Blessures : rangées dans le carnet du VRAI club une fois les ids remis.
     // Connaissance tactique des joueurs : celle de leur club, jamais touchée.
     [home.shell, away.shell].forEach(sh => { sh.recordInjury = entry => { injuries.push(entry); }; sh.syncCollectiveTrainingLog = () => {}; sh.updateTacticalKnowledge = () => {}; });
@@ -809,4 +811,4 @@ function finalsView(store, teamId, season, now) {
   return { season, comp: f.comp, tournaments: f.tournaments.filter(t => t.teams.includes(teamId)).map(pub), others: f.tournaments.filter(t => !t.teams.includes(teamId)).map(t => ({ key: t.key, label: t.label, champion: t.champion })) };
 }
 function honoursOf(store, teamId) { return ((store.honours || {})[teamId] || []).slice().sort((a, b) => b.season - a.season || a.rank - b.rank); }
-module.exports = { LIVE_GUEST_IDX, isLive, findMatch, takePendingLive, announceDue, publicMatch, CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, step, qualifView, resultsOf, playedMatchesOf, matchDetail };
+module.exports = { LIVE_GUEST_IDX, isLive, findMatch, takePendingLive, announceDue, publicMatch, CONTINENTS, roundRobin, formatFor, finalsOf, createFinals, advanceTournament, tournamentOf, aliveTeams, unavailableAt, finalsView, honoursOf, FINAL_RECOVERY_SHARE, WORLD_SLOTS, continentOf, compOf, groupSizes, drawGroups, standings, qualification, playMatch, buildSide, step, qualifView, resultsOf, playedMatchesOf, matchDetail };
