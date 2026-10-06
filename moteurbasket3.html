@@ -5174,12 +5174,14 @@
   */
   /* Pleine largeur (retour utilisateur 2026-09-30 : « le rapport ne prend
      pas toute la largeur de la page »), ex-max-width:1120px. */
-  #scoutingProPanel{
+  /* .sp2-host : même rapport dans le Mode Sélectionneur (analyse d'une
+     sélection, assets/national-coach.js). */
+  #scoutingProPanel, .sp2-host{
     font-size:14px; line-height:1.45;
     --display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   }
-  #scoutingProPanel p{margin:0;}
-  #scoutingProPanel .sub{font-size:12.5px; color:var(--ink-dim);}
+  #scoutingProPanel p, .sp2-host p{margin:0;}
+  #scoutingProPanel .sub, .sp2-host .sub{font-size:12.5px; color:var(--ink-dim);}
   .sp2-note{font-size:11.5px; color:var(--ink-faint); margin-top:10px !important; line-height:1.5;}
   .sp2-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:14px;}
   .sp2-title{font-size:26px; font-weight:800; letter-spacing:-.01em; margin:0;}
@@ -5262,7 +5264,7 @@
      - Profil et Forme : placement adaptatif des blocs (sp2LayoutMasonry,
        chaque bloc dans la colonne la plus courte, hauteurs mesurées) ;
      - Effectif : joueurs clés + répartition à gauche, 5 majeur à droite. */
-  #scoutingProPanel{container-type:inline-size; container-name:sp2;}
+  #scoutingProPanel, .sp2-host{container-type:inline-size; container-name:sp2;}
   .sp2-row-plan{display:grid; grid-template-columns:minmax(0,1fr); gap:0 20px;}
   .sp2-row-plan > .sp2-plan, .sp2-row-plan > .sp2-five{margin-bottom:20px; min-width:0;}
   /* Placement adaptatif (sp2LayoutMasonry) : nombre de colonnes par
@@ -35565,8 +35567,8 @@ document.getElementById("teamDetailContent").addEventListener("click", (e) => {
 // "Scouting Pro v2" : tableau "Effectif complet" du nouveau design) pour que
 // les DEUX tableaux (l'ancien ci-dessous ET le nouveau sp2Roster*) partagent
 // la MÊME agrégation plutôt que de la dupliquer avec un risque de diverger.
-function teamSeasonStatsRows(teamIdx) {
-  const team = league.teams[teamIdx];
+// `team` (optionnel) : équipe virtuelle d'une sélection (Mode Sélectionneur).
+function teamSeasonStatsRows(teamIdx, team = league.teams[teamIdx]) {
   return team.players
     .map(p => {
       const log = p.matchLog || [];
@@ -37507,7 +37509,10 @@ function computeScoutingTendencies(team) {
 //   streakFor (server/scouting.js) — "la Coupe ne tient pas ce même
 //   registre à plat, hors scope v1" (commentaire déjà existant), pas la
 //   peine de le refaire différemment ici en repartant de league.cup.rounds.
-function computeScoutingAdvancedStats(team, teamIdx) {
+// `source` (optionnel, Mode Sélectionneur 2026-10-06) : matchs hors
+// championnat de club — { competition, contextFor(entry), recentRounds } ;
+// par défaut le championnat de la ligue (league.results), comme avant.
+function computeScoutingAdvancedStats(team, teamIdx, source = null) {
   // ---- Étape 1 : reconstitue le box-score D'ÉQUIPE de CHAQUE match joué
   // (matchLog est par JOUEUR ; on regroupe par (round, competition)). -------
   const gameBuckets = new Map();
@@ -37634,20 +37639,22 @@ function computeScoutingAdvancedStats(team, teamIdx) {
 
   // ---- Étape 5 : tout ce qui a besoin du score adverse / domicile-extérieur
   // — CHAMPIONNAT UNIQUEMENT (voir le grand commentaire de la fonction). ----
-  const champGames = games.filter(g => g.competition === "championship");
+  const scope = (source && source.competition) || "championship";
+  const contextFor = source && source.contextFor ? source.contextFor : e => matchContextForLogEntry(teamIdx, e);
+  const champGames = games.filter(g => g.competition === scope);
   let champCount = 0, possSum = 0, champPts = 0, champPtsAgainst = 0;
   let champFga = 0, champFgm = 0, champFga3 = 0, champFgm3 = 0;
   const homeAgg = { games: 0, pts: 0, ptsAgainst: 0, fga: 0, fgm: 0, fga3: 0, fgm3: 0, tov: 0, oreb: 0, dreb: 0 };
   const awayAgg = { games: 0, pts: 0, ptsAgainst: 0, fga: 0, fgm: 0, fga3: 0, fgm3: 0, tov: 0, oreb: 0, dreb: 0 };
   let firstHalfFor = 0, firstHalfAgainst = 0, secondHalfFor = 0, secondHalfAgainst = 0, halfGames = 0;
-  const champResultsSorted = league.results
+  const recentRounds = new Set(source && source.recentRounds ? source.recentRounds : league.results
     .filter(r => r.home === teamIdx || r.away === teamIdx)
-    .sort((a, b) => b.round - a.round);
-  const recentRounds = new Set(champResultsSorted.slice(0, 3).map(r => r.round));
+    .sort((a, b) => b.round - a.round)
+    .slice(0, 3).map(r => r.round));
   let rGames = 0, rWins = 0, rPts = 0, rPtsAgainst = 0, rFga = 0, rFgm = 0, rFga3 = 0, rFgm3 = 0;
 
   champGames.forEach(g => {
-    const ctx = matchContextForLogEntry(teamIdx, { round: g.round, competition: g.competition });
+    const ctx = contextFor({ round: g.round, competition: g.competition });
     if (!ctx) return;
     const gFga = g.fga2 + g.fga3, gFgm = g.fgm2 + g.fgm3;
     champCount++;
@@ -38957,12 +38964,13 @@ function sp2HeroHtml(report, oppTeam, adv) {
     stats += `<div class="sp2-hs${netRating >= 0 ? " ok" : ""}"><div class="sp2-hs-label">Net rating</div><div class="sp2-hero-num">${netRating > 0 ? "+" : ""}${netRating}</div><div class="sp2-hs-sub">pour 100 possessions</div></div>`;
   }
   return `<header class="sp2-hero">${SP2_HERO_COURT_SVG}` +
-    `<div class="sp2-crest">${teamLogoHtml(oppTeam, 92)}</div>` +
+    `<div class="sp2-crest">${report.virtual && report.virtual.crestHtml != null ? report.virtual.crestHtml : teamLogoHtml(oppTeam, 92)}</div>` +
     `<div class="sp2-hero-id"><div class="sp2-hero-kicker"><span class="sp2-pro">PRO</span>Rapport de scouting</div>` +
     `<h1 class="sp2-hero-name">${escapeHtml(oppTeam.name)}</h1>` +
     `<div class="sp2-hero-sub">${formSquares ? `<span class="sp2-form">${formSquares}</span>` : ""}` +
     `<span>${report.gamesPlayed} match${report.gamesPlayed > 1 ? "s" : ""} analysé${report.gamesPlayed > 1 ? "s" : ""}</span>` +
-    (standing ? `<span>${standing.pf} marqués · ${standing.pa} encaissés</span>` : "") + `</div></div>` +
+    (standing ? `<span>${standing.pf} marqués · ${standing.pa} encaissés</span>` : "") +
+    (report.virtual && report.virtual.heroSub ? `<span>${escapeHtml(report.virtual.heroSub)}</span>` : "") + `</div></div>` +
     (stats ? `<div class="sp2-hero-stats">${stats}</div>` : "") +
     `</header>`;
 }
@@ -39039,10 +39047,15 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
   };
   // Sa propre équipe (Premium) : pas de bouton « Appliquer à mes ordres »
   // (le plan décrit comment battre CE club, donc le sien).
-  const ownTeam = teamIdx === myTeamIndex;
+  // Équipe virtuelle (Mode Sélectionneur) : `virtual.own` pour sa propre
+  // sélection, `virtual.apply` = { attrs, label, sub } pour le bouton
+  // équivalent (tactique de la sélection), absent = pas de bouton.
+  const vr = report && report.virtual;
+  const ownTeam = vr ? !!vr.own : teamIdx === myTeamIndex;
+  const apply = vr ? vr.apply : { attrs: `id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"`, label: "Appliquer à mes ordres", sub: "Préremplit tes ordres avec ces consignes" };
   let html = `<section class="sp2-plan"><div class="sp2-plan-top"><h2>${ownTeam ? "Comment vos adversaires peuvent vous battre" : "Plan de match"}</h2>` +
-    (ownTeam ? "" : `<div class="sp2-apply"><span class="sub">Préremplit tes ordres avec ces consignes</span>` +
-    `<button type="button" class="primary" id="scoutingApplyOrdresBtn" data-opponent-idx="${teamIdx}"${setup || keys.length ? "" : " disabled"}>Appliquer à mes ordres</button></div>`) + `</div>`;
+    (ownTeam || !apply ? "" : `<div class="sp2-apply"><span class="sub">${escapeHtml(apply.sub)}</span>` +
+    `<button type="button" class="primary" ${apply.attrs}${setup || keys.length ? "" : " disabled"}>${escapeHtml(apply.label)}</button></div>`) + `</div>`;
   html += `<div id="scoutingApplyOrdresFeedback" class="sub"></div>`;
   html += `<div class="sp2-plan-cols">`;
   html += `<div class="sp2-plan-col threat"><h3>À neutraliser</h3>` +
@@ -39060,25 +39073,29 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
 // dans Scouting Pro — le rapport gratuit, qui ne contenait plus que ça une
 // fois "Tendances observées" retiré, est masqué quand Pro est débloqué
 // (voir refreshScoutingProPanel), pour ne rien afficher deux fois.
-function sp2SuggestedFiveHtml(setup) {
+// `mine` (optionnel, Mode Sélectionneur) : { team, link(p), sub(p), intro, avg(p, k) }
+// — l'effectif du sélectionneur (ses convoqués) à la place de teamA.
+function sp2SuggestedFiveHtml(setup, mine = null) {
   const now = Date.now();
-  const five = suggestStartingFive(teamA, now);
+  const myTeam = mine ? mine.team : teamA;
+  if (!myTeam) return "";
+  const five = suggestStartingFive(myTeam, now);
   if (!five) return "";
   // 5 cartes joueurs côte à côte (refonte 2026-10-05 : un tableau de 5
   // lignes laissait de grands vides) — mêmes infos que l'ancien tableau
   // (poste, joueur, salaire, forme, pts/reb/pas), forme physique à jour
   // (currentCondition) au lieu de la valeur brute enregistrée.
-  const recovery = teamA.conditionRecoveryPerDay ? teamA.conditionRecoveryPerDay() : undefined;
+  const recovery = myTeam.conditionRecoveryPerDay ? myTeam.conditionRecoveryPerDay() : undefined;
   const cards = POSITIONS.map(pos => {
     const pid = five[pos];
-    const p = pid ? teamA.players.find(x => x.id === pid) : null;
+    const p = pid ? myTeam.players.find(x => x.id === pid) : null;
     if (!p) return `<div class="sp2-fcard empty"><span class="sp2-fcard-pos">${effPosBadgeHtml(pos)}</span><span class="sub">Non pourvu</span></div>`;
     const log = p.matchLog || [], gp = log.length;
-    const avg = k => gp ? (log.reduce((t, m) => t + (m[k] || 0), 0) / gp).toFixed(1) : "0.0";
+    const avg = mine && mine.avg ? k => mine.avg(p, k) : k => gp ? (log.reduce((t, m) => t + (m[k] || 0), 0) / gp).toFixed(1) : "0.0";
     const injured = !!(p.injuryUntil && p.injuryUntil > now);
-    return `<div class="sp2-fcard${injured ? " injured" : ""}"><div class="sp2-fcard-top">${playerAvatarHtml(p, teamA, 40)}<div class="sp2-fcard-id">${effPosBadgeHtml(pos)}` +
-      `<span class="sp2-fcard-name">${playerLinkHtml(myTeamIndex, p.id, p.name)}</span><span class="sp2-fcard-sal">${escapeHtml(formatMoney(p.salary))}/sem.</span></div></div>` +
-      `<div class="sp2-fcard-cond">${injured ? `<span class="gain-down">Blessé</span>` : effConditionHtml(p, now, recovery)}</div>` +
+    return `<div class="sp2-fcard${injured ? " injured" : ""}"><div class="sp2-fcard-top">${playerAvatarHtml(p, myTeam, 40)}<div class="sp2-fcard-id">${effPosBadgeHtml(pos)}` +
+      `<span class="sp2-fcard-name">${mine ? mine.link(p) : playerLinkHtml(myTeamIndex, p.id, p.name)}</span><span class="sp2-fcard-sal">${escapeHtml(mine ? mine.sub(p) : formatMoney(p.salary) + "/sem.")}</span></div></div>` +
+      `<div class="sp2-fcard-cond">${injured ? `<span class="gain-down">Blessé</span>` : typeof p.condition === "number" ? effConditionHtml(p, now, recovery) : ""}</div>` +
       `<div class="sp2-fcard-stats"><span><b>${avg("pts")}</b>pts</span><span><b>${avg("reb")}</b>reb</span><span><b>${avg("ast")}</b>pas</span></div></div>`;
   }).join("");
   const table = `<div class="sp2-fcards">${cards}</div>`;
@@ -39088,7 +39105,7 @@ function sp2SuggestedFiveHtml(setup) {
   // 2026-10-05 : remplit la carte au lieu d'un tableau étiré).
   const why = setup && setup.defenseReason ? `<div class="sp2-five-why"><span class="sp2-five-why-k">Défense conseillée</span><b class="sp2-five-why-name">${escapeHtml(setup.defense)}</b><p>${escapeHtml(setup.defenseReason.replace(/<[^>]*>/g, ""))}</p></div>` : "";
   return `<section class="sp2-panel sp2-five"><h2 class="sp2-panel-title">5 de départ suggéré</h2>` +
-    `<div class="sp2-five-head"><span class="sub">Ton meilleur joueur disponible à chaque poste pour ce match.</span>${def}</div>` +
+    `<div class="sp2-five-head"><span class="sub">${mine && mine.intro ? escapeHtml(mine.intro) : "Ton meilleur joueur disponible à chaque poste pour ce match."}</span>${def}</div>` +
     `<div class="sp2-five-body single">${table}${why}</div></section>`;
 }
 
@@ -39127,7 +39144,8 @@ function computeScoringOrigins(team) {
   keys.forEach(k => { totals[k] = 0; byPlayer[k] = new Map(); });
   let total = 0;
   (team.players || []).forEach(p => (p.matchLog || []).forEach(m => {
-    if (m.competition !== "championship" && m.competition !== "cup") return;
+    // "national" : équipe virtuelle d'une sélection (Mode Sélectionneur).
+    if (m.competition !== "championship" && m.competition !== "cup" && m.competition !== "national") return;
     if (m.ptsPaint === undefined) return; // match joué avant l'enregistrement de l'origine
     games.add(`${m.competition}|${m.round}`);
     total += Number(m.pts) || 0;
@@ -39254,7 +39272,7 @@ function sp2ProfileStyleHtml(report, t, adv) {
   // « Comment ils marquent » dans sa propre colonne (retour utilisateur
   // 2026-09-30 : gros vide sous la colonne Identité, la carte des zones
   // détaillée allongeant la colonne de droite).
-  const origins = sp2ScoringOriginsHtml(league.teams[report.opponentIdx]);
+  const origins = sp2ScoringOriginsHtml(report.virtual ? report.virtual.team : league.teams[report.opponentIdx]);
 
   if (!left && !right && !origins && !ident) return "";
   return `<section class="sp2-panel"><h2 class="sp2-panel-title">Profil et style de jeu</h2>` +
@@ -39315,7 +39333,8 @@ function sp2PointDiffChartHtml(games) {
     const labelY = win ? y - 8 : y + h + 21;
     bars += `<text x="${cx.toFixed(1)}" y="${labelY}" text-anchor="middle" font-size="13" font-weight="800" fill="${color}">${diff > 0 ? "+" : ""}${diff}</text>`;
     bars += `<text x="${cx.toFixed(1)}" y="204" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--ink)">${g.scoreFor}-${g.scoreAgainst}</text>`;
-    bars += `<text x="${cx.toFixed(1)}" y="220" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">J${g.round + 1} · ${g.isHome ? "vs" : "@"} ${escapeHtml((g.opponentName || "").slice(0, 14))}</text>`;
+    // `g.label` : date du match d'une sélection (pas de journée).
+    bars += `<text x="${cx.toFixed(1)}" y="220" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">${g.label ? escapeHtml(g.label) : `J${g.round + 1}`} · ${g.isHome ? "vs" : "@"} ${escapeHtml((g.opponentName || "").slice(0, 14))}</text>`;
   });
   return `<div class="sp2-chart"><svg viewBox="0 0 ${chartW} ${chartH}" width="100%" role="img" aria-label="Écart de points par match" style="display:block;overflow:visible">` +
     `<line x1="24" y1="${baseline}" x2="${chartW - 24}" y2="${baseline}" stroke="var(--line)" stroke-width="1"/>` + bars + `</svg></div>`;
@@ -39419,14 +39438,14 @@ function sp2FormContextHtml(report, adv) {
 
   // Pastille "Face à toi" dans l'en-tête (voir commentaire ci-dessus).
   const h2hList = report.headToHead || [];
-  const h2h = `<div class="sp2-h2h"><span class="sp2-h2h-label">Face à toi cette saison</span>` +
+  const h2h = `<div class="sp2-h2h"><span class="sp2-h2h-label">${escapeHtml(report.virtual && report.virtual.h2hLabel ? report.virtual.h2hLabel : "Face à toi cette saison")}</span>` +
     // Plusieurs confrontations (Coupe/playoffs) : pastilles côte à côte, la
     // plus récente d'abord (headToHead est déjà trié par journée
     // décroissante), 3 au maximum + "+N" pour ne jamais faire exploser
     // l'en-tête ; bilan V-D global en tête dès 2 matchs.
     (h2hList.length > 1 ? `<span class="sp2-h2h-rec">${h2hList.filter(g => g.win).length}V-${h2hList.filter(g => !g.win).length}D</span>` : "") +
     (h2hList.length
-      ? h2hList.slice(0, 3).map(g => `<span class="sp2-h2h-game">${scoutingFormSquareHtml(g.win)}<b>${g.scoreFor}-${g.scoreAgainst}</b><small>${g.isHome ? "dom." : "ext."} · J${g.round + 1}</small></span>`).join("") +
+      ? h2hList.slice(0, 3).map(g => `<span class="sp2-h2h-game">${scoutingFormSquareHtml(g.win)}<b>${g.scoreFor}-${g.scoreAgainst}</b><small>${g.isHome ? "dom." : "ext."} · ${g.label ? escapeHtml(g.label) : `J${g.round + 1}`}</small></span>`).join("") +
         (h2hList.length > 3 ? `<span class="sp2-h2h-more">+${h2hList.length - 3}</span>` : "")
       : `<span class="sp2-h2h-none">Aucune confrontation</span>`) + `</div>`;
 
@@ -39452,7 +39471,9 @@ function sp2FormContextHtml(report, adv) {
 // CSS de la maquette) — jamais un nouveau calcul, juste un test `att < 10`
 // sur les tentatives déjà agrégées.
 const SP2_LOW_ATTEMPTS_THRESHOLD = 10;
-function sp2RosterTableHtml(teamIdx, rowsData) {
+// `link` (optionnel) : lien vers la fiche d'un joueur hors de la ligue
+// (Mode Sélectionneur), playerLinkHtml(teamIdx, …) sinon.
+function sp2RosterTableHtml(teamIdx, rowsData, link = null) {
   const shotCell = (made, att) => {
     if (!att) return `<td class="sp2-na">–</td>`;
     const pct = Math.round((made / att) * 100);
@@ -39466,7 +39487,7 @@ function sp2RosterTableHtml(teamIdx, rowsData) {
   rowsData.forEach(({ player: p, gp, sum }) => {
     const ppg = sum.pts / gp;
     const barW = Math.round((ppg / maxPpg) * 100);
-    html += `<tr><td>${playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${gp}</td>` +
+    html += `<tr><td>${link ? link(p) : playerLinkHtml(teamIdx, p.id, p.name)}</td><td>${POS_SHORT[p.position]}</td><td>${gp}</td>` +
       `<td>${(sum.min / gp).toFixed(1)}</td>` +
       `<td class="sp2-ptscell"><span class="sp2-ptsbar"><span style="width:${barW}%"></span></span><b>${ppg.toFixed(1)}</b></td>` +
       `<td>${(sum.reb / gp).toFixed(1)}</td><td>${(sum.ast / gp).toFixed(1)}</td><td>${(sum.stl / gp).toFixed(1)}</td>` +
@@ -39485,6 +39506,10 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
   // Haut de l'effectif (refonte 2026-10-05) : joueurs clés + « qui marque »
   // à gauche, 5 majeur à droite (le terrain centré seul laissait de grands
   // vides de part et d'autre) ; empilés sur un rapport étroit.
+  // Équipe virtuelle (Mode Sélectionneur) : liens vers les fiches par
+  // `virtual.playerLink`, stats calculées sur ses propres joueurs.
+  const vlink = report.virtual && report.virtual.playerLink;
+  const linkOf = p => (vlink ? vlink(p) : playerLinkHtml(teamIdx, p.id, p.name));
   let html = "", lineupHtml = "", shareHtml = "";
   if (report.keyPlayers && report.keyPlayers.length) {
     const shareByName = new Map();
@@ -39500,7 +39525,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
       }
       return `<div class="sp2-leader"><span class="sp2-leader-rank">${i + 1}</span>` +
         playerAvatarHtml(p, oppTeam, 60) +
-        `<div class="sp2-leader-info"><span class="sp2-leader-name">${playerLinkHtml(teamIdx, p.id, p.name)}</span>` +
+        `<div class="sp2-leader-info"><span class="sp2-leader-name">${linkOf(p)}</span>` +
         `<span class="sp2-leader-line">${escapeHtml(POS_SHORT[p.position] || p.position)} · ${p.rpg} reb · ${p.apg} pd${state ? " · " + state : ""}</span></div>` +
         `<div class="sp2-leader-pts">${p.ppg}<small>pts/match</small></div>` + shareHtml + `</div>`;
     }).join("");
@@ -39540,7 +39565,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
       const meta = injured ? `<span class="gain-down">blessé</span>` : "";
       return `<div class="sp2-token" style="left:${spot[0]}%;top:${spot[1]}%"><div class="sp2-token-av">` +
         playerAvatarHtml(p, oppTeam, 52) + `<span class="sp2-token-pos">${POS_SHORT[pos]}</span></div>` +
-        `<button type="button" class="player-link sp2-token-name" data-player-team="${teamIdx}" data-player-id="${p.id}">${escapeHtml(p.name)}</button>` +
+        (vlink ? vlink(p, "sp2-token-name") : `<button type="button" class="player-link sp2-token-name" data-player-team="${teamIdx}" data-player-id="${p.id}">${escapeHtml(p.name)}</button>`) +
         `<div class="sp2-token-stats"><b>${ppg}</b> pts · ${rpg} reb · ${apg} pd</div>` +
         (meta ? `<div class="sp2-token-meta">${meta}</div>` : "") + `</div>`;
     }).join("");
@@ -39552,9 +39577,9 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
   let out = anyLeft || lineupHtml ? `<div class="sp2-eff-top${anyLeft && lineupHtml ? "" : " single"}">` +
     (html ? `<div class="sp2-eff-main sp2-eff-l">${html}</div>` : "") + (shareHtml ? `<div class="sp2-eff-main sp2-eff-s">${shareHtml}</div>` : "") +
     (lineupHtml ? `<div class="sp2-eff-court">${lineupHtml}</div>` : "") + `</div>` : "";
-  const rowsData = teamSeasonStatsRows(teamIdx);
+  const rowsData = teamSeasonStatsRows(teamIdx, report.virtual ? oppTeam : undefined);
   if (rowsData.length) {
-    out += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData);
+    out += `<h3 class="sp2-h" style="margin-top:22px">Statistiques par joueur</h3>` + sp2RosterTableHtml(teamIdx, rowsData, vlink || null);
   }
   return out ? `<section class="sp2-panel"><h2 class="sp2-panel-title">Effectif</h2>${out}</section>` : "";
 }
@@ -39615,7 +39640,13 @@ function scoutingProReportHtml(report) {
       `<p class="sub">Pas encore assez de matchs disputés cette saison par ${escapeHtml(report.opponentName)} pour ce rapport.</p>` +
       scoutingProDowngradeHtml();
   }
-  const oppTeam = league.teams[report.opponentIdx];
+  // `report.virtual` (Mode Sélectionneur, 2026-10-06) : MÊME rapport pour
+  // une sélection nationale, dont l'« équipe virtuelle » est reconstruite
+  // depuis ses matchs internationaux (voir assets/national-coach.js) :
+  // { team, matchSource (computeScoutingAdvancedStats), crestHtml, heroSub,
+  // own, apply, mine (sp2SuggestedFiveHtml), playerLink, h2hLabel }.
+  const vr = report.virtual || null;
+  const oppTeam = vr ? vr.team : league.teams[report.opponentIdx];
   if (!oppTeam) {
     return `<h3>Scouting Pro · ${escapeHtml(report.opponentName)}</h3><p class="sub">Impossible de charger cette équipe.</p>`;
   }
@@ -39626,7 +39657,7 @@ function scoutingProReportHtml(report) {
   // match" (demande explicite de l'utilisateur), jamais deux calculs
   // parallèles susceptibles de diverger.
   const t = computeScoutingTendencies(oppTeam);
-  const adv = computeScoutingAdvancedStats(oppTeam, report.opponentIdx);
+  const adv = computeScoutingAdvancedStats(oppTeam, report.opponentIdx, vr ? vr.matchSource : null);
   const setup = suggestTacticalSetup(t);
   const attackTips = suggestOffensiveApproach(t);
 
@@ -39635,7 +39666,7 @@ function scoutingProReportHtml(report) {
   // page 2026-10-05 : le tableau de 5 lignes étalé sur toute la largeur
   // laissait de grands vides) ; côte à côte dès que le rapport est assez
   // large, empilés sinon (requêtes de conteneur, voir .sp2-row-plan).
-  html += `<div class="sp2-row-plan">` + sp2PlanHtml(report, report.opponentIdx, setup, attackTips) + sp2SuggestedFiveHtml(setup) + `</div>`;
+  html += `<div class="sp2-row-plan">` + sp2PlanHtml(report, report.opponentIdx, setup, attackTips) + (vr && !vr.mine ? "" : sp2SuggestedFiveHtml(setup, vr ? vr.mine : null)) + `</div>`;
   html += sp2ProfileStyleHtml(report, t, adv);
   html += sp2FormContextHtml(report, adv);
   html += sp2RosterHtml(report, oppTeam, adv, report.opponentIdx);
