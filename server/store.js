@@ -779,6 +779,28 @@ async function flushPlayerIdRegistry(savePath = defaultMultiLeaguePath()) {
   }
 }
 
+// Réécriture complète d'un journal d'histoire (migration des IDs de joueurs).
+async function replaceClubHistory(clubName, events, savePath = defaultMultiLeaguePath()) {
+  const where = historyStorage(clubName, savePath);
+  const body = JSON.stringify({ version: 1, events });
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+// Copie de sauvegarde avant une migration de données (jamais relue par le
+// jeu) : `pullup:backup:<tag>` ou `<base>.backup.<tag>.json`.
+async function saveMigrationBackup(tag, data, savePath = defaultMultiLeaguePath()) {
+  const safe = String(tag).toLowerCase().replace(/[^a-z0-9.-]+/g, "-").slice(0, 80);
+  const base = String(savePath || defaultMultiLeaguePath()).replace(/\.json$/, "").replace(/\.world\.league\..*$/, "");
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(`${redisPrefix()}pullup:backup:${safe}`, body); return; }
+  const file = `${base}.backup.${safe}.json`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, body, "utf-8");
+}
+
 async function flushHistoryQueue(savePath = defaultMultiLeaguePath()) {
   const History = require("../assets/history.js");
   const events = History.drain();
@@ -1010,7 +1032,7 @@ module.exports = {
   resolveManagerTeam,
   // Championnats par pays (voir server/world.js) :
   HISTORIC_LEAGUE_ID, loadWorldRaw, saveWorldRaw, WORLD_READ_FAILED, stampHistoricLeague, loadWorldAuxRaw, loadWorldAuxStrict, saveWorldAuxRaw, saveSeasonArchive, loadSeasonArchive,
-  loadClubHistory, appendClubHistory, flushHistoryQueue,
+  loadClubHistory, appendClubHistory, replaceClubHistory, saveMigrationBackup, flushHistoryQueue,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   saveNationalLives, loadNationalLive, NATIONAL_LIVE_SLOTS,
   loadPlayerLinks, savePlayerLinks,

@@ -3116,6 +3116,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
 function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), multiSavePath = store.defaultMultiLeaguePath()) {
   const server = http.createServer(createHandler(savePath, Date.now, multiSavePath));
+  // IDs de joueurs à 10 chiffres (2026-10-06) : migration unique des joueurs
+  // existants, sous le verrou de sauvegarde (aucune requête ni simulation
+  // avant la fin). Voir server/playerIdMigration.js.
+  (async () => {
+    const release = await acquireSaveLock();
+    try { await require("./playerIdMigration.js").runIfNeeded(multiSavePath); } catch (e) { console.error("[ids joueurs] migration échouée :", e); } finally { release(); }
+  })();
   // Tâche de fond : les ligues du monde avancent même sans visite.
   const worldTimer = setInterval(async () => {
     const release = await acquireSaveLock();
