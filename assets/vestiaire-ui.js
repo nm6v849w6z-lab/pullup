@@ -10,22 +10,33 @@
 (function () {
   "use strict";
   var state = { tab: "overview" };
+  // Contexte d'affichage : null = club du manager (teamA). Le mode
+  // Sélectionneur passe sa propre équipe (même vue, même calcul, voir
+  // assets/national-coach.js:vestiaireMount) : { holder, team, recent,
+  // link(p), playerAttrs(p) }.
+  var ctx = null;
   function g(name) { return typeof window[name] === "function" ? window[name] : null; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function myTeam() { try { return typeof teamA !== "undefined" ? teamA : null; } catch (e) { return null; } }
+  function myTeam() { if (ctx) return ctx.team || null; try { return typeof teamA !== "undefined" ? teamA : null; } catch (e) { return null; } }
   function myLeague() { try { return typeof league !== "undefined" ? league : null; } catch (e) { return null; } }
   function teamIdx() {
     try { if (typeof myTeamIndex === "number" && myTeamIndex >= 0) return myTeamIndex; } catch (e) { /* hors jeu */ }
     var l = myLeague(), t = myTeam(); return l && t && Array.isArray(l.teams) ? l.teams.indexOf(t) : -1;
   }
   function recent() {
+    if (ctx) return ctx.recent || null;
     var f = g("recentFormForTeam"); var i = teamIdx();
     if (!f || i < 0) return null;
     try { return f(i, 5); } catch (e) { return null; }
   }
   function link(p) {
+    if (ctx && ctx.link) return ctx.link(p);
     var f = g("playerLinkHtml"); var i = teamIdx();
     return f && i >= 0 ? f(i, p.id, p.name) : esc(p.name);
+  }
+  function playerAttrs(p) {
+    if (ctx && ctx.playerAttrs) return ctx.playerAttrs(p);
+    return 'data-player-team="' + teamIdx() + '" data-player-id="' + p.id + '"';
   }
   function flag(code) { var f = g("nationFlagHtml"); return f && code ? f(code) : ""; }
   function pos(position) { var f = g("effPosBadgeHtml"); return f ? f(position) : esc(position || ""); }
@@ -121,9 +132,9 @@
   function actionBtn(item, v) {
     var pid = item.player != null ? item.player : (item.players && item.players[0]);
     var p = pid != null ? v.players.find(function (x) { return String(x.id) === String(pid); }) : null;
-    if (item.action === "talk" && p) return '<button type="button" class="vs-btn" data-player-team="' + teamIdx() + '" data-player-id="' + p.id + '">Lui parler</button>';
-    if (item.action === "profile" && p) return '<button type="button" class="vs-btn" data-player-team="' + teamIdx() + '" data-player-id="' + p.id + '">Voir le joueur</button>';
-    if (item.action === "lineup") return '<button type="button" class="vs-btn" data-tab="tactiques">Revoir les rôles</button>';
+    if (item.action === "talk" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + '>' + (ctx && ctx.noTalk ? "Voir le joueur" : "Lui parler") + '</button>';
+    if (item.action === "profile" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + '>Voir le joueur</button>';
+    if (item.action === "lineup") return '<button type="button" class="vs-btn" ' + ((ctx && ctx.lineupAttrs) || 'data-tab="tactiques"') + '>Revoir les rôles</button>';
     return "";
   }
   // Infobulle : libellé du moral (« Mitigé »…), traduit par la page — jamais la clé interne.
@@ -213,7 +224,7 @@
       var anchor = Math.abs(Math.cos(o.a)) < 0.2 ? "middle" : Math.cos(o.a) > 0 ? "start" : "end";
       var name = String(p.name || "").split(" ").slice(-1)[0];
       var rr = 6 + p.influence / 14;
-      return '<g data-player-team="' + teamIdx() + '" data-player-id="' + p.id + '" style="cursor:pointer"><circle cx="' + o.x.toFixed(1) + '" cy="' + o.y.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="' + (MOOD_COLOR[p.mood] || "#888") + '" stroke="#0d1320" stroke-width="2"/>' +
+      return '<g ' + playerAttrs(p) + ' style="cursor:pointer"><circle cx="' + o.x.toFixed(1) + '" cy="' + o.y.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="' + (MOOD_COLOR[p.mood] || "#888") + '" stroke="#0d1320" stroke-width="2"/>' +
         '<text x="' + lx.toFixed(1) + '" y="' + (ly + 4).toFixed(1) + '" text-anchor="' + anchor + '">' + esc(name) + '</text></g>';
     }).join("");
     return '<svg class="vs-graph" viewBox="-40 0 ' + (W + 80) + ' ' + H + '" role="img" aria-label="Carte des relations">' + lines + nodes + '</svg>' +
@@ -255,8 +266,9 @@
   }
 
   var TABS = [["overview", "Vue générale"], ["hierarchy", "Hiérarchie"], ["groups", "Groupes"], ["relations", "Relations"], ["evolution", "Évolution"]];
-  function render() {
-    var holder = document.getElementById("vestiaireContent");
+  function render(opts) {
+    ctx = opts || null;
+    var holder = (ctx && ctx.holder) || document.getElementById("vestiaireContent");
     if (!holder) return null;
     ensureCss();
     var V = window.HM_VESTIAIRE; var t = myTeam();
@@ -270,11 +282,12 @@
     }).join("") + '</div>';
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
     holder.innerHTML = tabs + body;
+    holder.__vsCtx = ctx;
     if (!holder.__vsBound) {
       holder.__vsBound = true;
       holder.addEventListener("click", function (e) {
         var tb = e.target.closest("[data-vs-tab]");
-        if (tb) { state.tab = tb.getAttribute("data-vs-tab"); render(); return; }
+        if (tb) { state.tab = tb.getAttribute("data-vs-tab"); render(holder.__vsCtx || null); return; }
       });
     }
     return view;

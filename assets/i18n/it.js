@@ -41,6 +41,8 @@
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Nessun giocatore in nazionale per ora: convoca dei giocatori per vedere le dinamiche del gruppo.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Playmaker penetratore",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Playmaker che attacca il ferro palla in mano e scarica sull'aiuto.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Lo Stretch 4 libera l'area per lo Slasher.",

@@ -45,7 +45,6 @@
     ".nc-club{color:var(--ink-dim);font-size:12px}",
     ".nc-gen{display:inline-block;min-width:30px;padding:2px 6px;border-radius:6px;background:rgba(79,209,139,.14);color:#4FD18B;font-weight:800}",
     ".nc-bar{width:54px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);display:inline-block;vertical-align:middle;overflow:hidden}.nc-bar i{display:block;height:100%}",
-    ".nc-form{white-space:nowrap}.nc-form span{display:inline-block;width:7px;height:16px;margin:0 1px;border-radius:2px;vertical-align:middle;background:rgba(255,255,255,.08)}",
     ".nc-ic{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);display:inline-grid;place-items:center;color:var(--ink-dim);cursor:pointer;padding:0;margin:0 1px}",
     ".nc-ic.on-watch{color:var(--amber);border-color:rgba(240,162,60,.5)}.nc-ic.on-pre{color:#4FD18B;border-color:rgba(79,209,139,.5)}.nc-ic.on-conv{color:#6FB6FF;border-color:rgba(111,182,255,.55)}",
     ".nc-ic:disabled{opacity:.4;cursor:default}",
@@ -171,19 +170,6 @@
   // Même rendu que l'Effectif (en-têtes triables, cases colorées des
   // caractéristiques, badges de poste) ; un clic sur un en-tête trie, un
   // second inverse.
-  function formBars(x) {
-    var l = x.last5 || [];
-    var out = "";
-    for (var i = 0; i < 5; i++) {
-      var e = l[l.length - 5 + i];
-      out += e ? '<span style="background:' + effColor(e.eff) + '" title="' + esc((e.opp ? "vs " + e.opp + " : " : "") + e.pts + " pts, " + e.reb + " reb, " + e.ast + " pd, éval. " + e.eff) + '"></span>' : "<span></span>";
-    }
-    return out;
-  }
-  function recentForm(x) {
-    var l = (x.last5 || []).slice(-5);
-    return l.length ? l.reduce(function (s, e) { return s + (e.eff || 0); }, 0) / l.length : -1;
-  }
   function columns() {
     var cols = [
       { key: "name", label: "Nom", cls: "eff-th-name", dir: 1, sort: function (x) { return String(x.name || "").toLowerCase(); } },
@@ -192,25 +178,12 @@
       { key: "height", label: "Taille", sort: function (x) { return x.height || 0; } },
       { key: "gen", label: "GEN", title: "Note du meilleur poste", sort: genOf },
     ];
-    // Comme l'Effectif d'un club (retour utilisateur 2026-10-06) : les
-    // caractéristiques d'un côté, les stats de la saison en club dans un
-    // onglet « Statistiques » à part.
-    if (ui.pview !== "stats") {
-      attrGroups().forEach(function (gr, gi) {
-        gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
-      });
-      cols.push({ key: "condition", label: "État", title: "État physique", gstart: true, sort: function (x) { return x.injuryUntil ? -1 : (x.condition || 0); } });
-      return cols;
-    }
-    cols.push(
-      { key: "gp", label: "MJ", title: "Matchs joués en club cette saison", gstart: true, sort: function (x) { return x.season.gp; } },
-      { key: "min", label: "Min", title: "Minutes par match", sort: function (x) { return x.season.min; } },
-      { key: "pts", label: "Pts", title: "Points par match", sort: function (x) { return x.season.pts; } },
-      { key: "reb", label: "Reb", title: "Rebonds par match", sort: function (x) { return x.season.reb; } },
-      { key: "ast", label: "Pd", title: "Passes décisives par match", sort: function (x) { return x.season.ast; } },
-      { key: "eff", label: "Éval.", title: "Évaluation moyenne par match", sort: function (x) { return x.season.eff; } },
-      { key: "form", label: "Forme récente", title: "Évaluation des 5 derniers matchs en club", sort: recentForm }
-    );
+    // Caractéristiques uniquement : onglet « Statistiques » et « Forme
+    // récente » retirés (demande utilisateur du 2026-10-06).
+    attrGroups().forEach(function (gr, gi) {
+      gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
+    });
+    cols.push({ key: "condition", label: "État", title: "État physique", gstart: true, sort: function (x) { return x.injuryUntil ? -1 : (x.condition || 0); } });
     return cols;
   }
   function sortList(list) {
@@ -252,18 +225,13 @@
       '<div class="nc-club">' + esc(x.club.name) + (x.club.division ? " · " + esc(x.club.division) : "") + "</div></td>" +
       "<td>" + esc(x.age) + "</td><td>" + posBadge(x.position) + "</td><td>" + (x.height ? esc(x.height) + " cm" : "–") + "</td>" +
       '<td><span class="nc-gen">' + esc(genOf(x)) + "</span></td>";
-    if (ui.pview !== "stats") {
-      attrGroups().forEach(function (gr) {
-        gr.keys.forEach(function (k, ki) {
-          var val = attrVal(x, k);
-          h += '<td class="' + (ki === 0 ? "eff-gstart" : "") + '">' + (val == null ? "–" : '<span class="attr-cell eff-attr ' + tier(val) + '"><span class="attr-val">' + esc(Math.round(val)) + "</span></span>") + "</td>";
-        });
+    attrGroups().forEach(function (gr) {
+      gr.keys.forEach(function (k, ki) {
+        var val = attrVal(x, k);
+        h += '<td class="' + (ki === 0 ? "eff-gstart" : "") + '">' + (val == null ? "–" : '<span class="attr-cell eff-attr ' + tier(val) + '"><span class="attr-val">' + esc(Math.round(val)) + "</span></span>") + "</td>";
       });
-      h += '<td class="eff-gstart" title="État physique ' + esc(x.condition) + '/100">' + (x.injuryUntil ? '<span class="nc-tag bad">Blessé</span>' : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') + "</td>";
-    } else {
-      h += '<td class="eff-gstart">' + esc(x.season.gp) + "</td><td>" + esc(x.season.min) + "</td><td>" + esc(x.season.pts) + "</td><td>" + esc(x.season.reb) + "</td><td>" + esc(x.season.ast) + "</td><td>" + esc(x.season.eff) + "</td>" +
-        '<td class="nc-form">' + formBars(x) + "</td>";
-    }
+    });
+    h += '<td class="eff-gstart" title="État physique ' + esc(x.condition) + '/100">' + (x.injuryUntil ? '<span class="nc-tag bad">Blessé</span>' : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') + "</td>";
     h += (acts ? '<td class="nc-act" style="white-space:nowrap">' + acts + "</td>" : "") + "</tr>";
     return h;
   }
@@ -275,13 +243,9 @@
     list = sortList(list);
     if (opts.limit) list = list.slice(0, ui.shown);
     var groups = attrGroups();
-    var fam = '<tr class="eff-family-row"><td colspan="5"></td>' + (ui.pview !== "stats"
-      ? groups.map(function (gr) { return '<td colspan="' + gr.keys.length + '" class="eff-family"><span>' + esc(gr.label) + "</span></td>"; }).join("") + "<td></td>"
-      : '<td colspan="7" class="eff-family"><span>Saison en club</span></td>') + (withActs ? "<td></td>" : "") + "</tr>";
-    // Même menu que l'Effectif d'un club : Caractéristiques / Statistiques.
-    var tabs = '<div class="eff-toolbar"><div class="cal-toolbar eff-tabs" role="tablist">' +
-      [["caracs", "Caractéristiques"], ["stats", "Statistiques"]].map(function (t) { var on = (ui.pview || "caracs") === t[0]; return '<button type="button" role="tab" aria-selected="' + on + '" class="cal-filter' + (on ? " active" : "") + '" data-nc-pview="' + t[0] + '">' + esc(t[1]) + "</button>"; }).join("") + "</div></div>";
-    var h = tabs + '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players"><thead>' + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
+    var fam = '<tr class="eff-family-row"><td colspan="5"></td>' +
+      groups.map(function (gr) { return '<td colspan="' + gr.keys.length + '" class="eff-family"><span>' + esc(gr.label) + "</span></td>"; }).join("") + "<td></td>" + (withActs ? "<td></td>" : "") + "</tr>";
+    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players"><thead>' + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
       (list.length ? list.map(function (x) { return playerRow(x, v); }).join("") : '<tr><td colspan="40" class="l nc-club">' + esc(opts.empty || "Aucun joueur.") + "</td></tr>") + "</tbody></table></div>";
     if (opts.limit && total > list.length) h += '<div style="text-align:center;margin-top:10px"><button type="button" class="nc-btn2" data-nc-more="1">Afficher plus (' + (total - list.length) + " joueurs)</button></div>";
     return h;
@@ -413,7 +377,7 @@
   function tqPlayer(x, f) {
     var data = {
       id: x.nid, name: (f && f.name) || x.ref.n, position: (f && f.position) || "Meneur", age: f ? f.age : null, height: f ? f.height : null,
-      nationality: f ? f.nationality : null, attrs: f && f.attrs ? Object.assign({}, f.attrs) : {}, form: 70,
+      nationality: f ? f.nationality : null, attrs: f && f.attrs ? Object.assign({}, f.attrs) : {}, form: f && typeof f.form === "number" ? f.form : 70,
       condition: f && typeof f.condition === "number" ? f.condition : 100, conditionUpdatedAt: Date.now(),
       injuryUntil: f ? f.injuryUntil : null, injuryType: f ? f.injuryType : null, look: f ? f.look : null, matchLog: [],
     };
@@ -431,6 +395,12 @@
     return o;
   }
   function tqBuild(v, k) {
+    ui.tq = tqMake(v, k);
+    return ui.tq;
+  }
+  // Équipe de la sélection (joueurs de la feuille, ordres, cinq) sans
+  // toucher à l'état de l'écran Tactique : sert aussi au Vestiaire.
+  function tqMake(v, k) {
     var e = k === TQ_DEFAULT ? null : tqEntry(v, k);
     var orders = (e && v.plans && v.plans[e.id]) || v.tactics;
     var roster = e ? e.players : v.tacticsPlayers;
@@ -450,8 +420,25 @@
         if (c) { used[c.id] = 1; px.setStarter(pos, c.id); }
       });
     }
-    ui.tq = { key: k, proxy: px, fiches: fiches, dirty: false, saved: JSON.stringify(tqSnap(px)), feedback: "" };
-    return ui.tq;
+    return { key: k, proxy: px, fiches: fiches, dirty: false, saved: JSON.stringify(tqSnap(px)), feedback: "" };
+  }
+  // Vestiaire de la sélection (demande utilisateur du 2026-10-06) : la
+  // dynamique de groupe du club (assets/vestiaire.js:buildView, rendu
+  // assets/vestiaire-ui.js) appliquée aux joueurs de la sélection, avec le
+  // cinq des ordres. Aucun second système : mêmes calculs, même affichage.
+  function vestiaireMount() {
+    var holder = document.getElementById("ncVestiaire"), v = ui.view;
+    if (!holder || !v || !window.HM_VESTIAIRE_UI || !g("tqProxyFrom")) return;
+    var tq = ui.tq && ui.tq.key === TQ_DEFAULT ? ui.tq : tqMake(v, TQ_DEFAULT);
+    if (!tq.proxy.players.length) { holder.innerHTML = '<p class="vs-empty">Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.</p>'; return; }
+    var team = Object.assign(tq.proxy, { chemistry: 50 });
+    var prof = function (p) { var f = tq.fiches[p.id]; return f && f.club ? f.club.leagueId + "|" + f.club.idx + "|" + f.p : null; };
+    window.__lastVestiaire = window.HM_VESTIAIRE_UI.render({
+      holder: holder, team: team, recent: null, noTalk: true,
+      lineupAttrs: 'data-nc-nav="tactique"',
+      link: function (p) { var r = prof(p); return r ? '<button type="button" class="nc-nm player-link" data-nc-profile="' + esc(r) + '">' + esc(p.name) + "</button>" : esc(p.name); },
+      playerAttrs: function (p) { var r = prof(p); return r ? 'data-nc-profile="' + esc(r) + '"' : ""; },
+    });
   }
   // Adversaire pour la carte « Postes à surveiller » : nom et titulaires
   // pressentis (ordres de l'autre sélection), comme le titulaire adverse
@@ -838,7 +825,7 @@
     ["#", "Joueurs"],
     ["joueurs", "Joueurs sélectionnables", "view"], ["preselection", "Présélection", "watch"], ["convocations", "Convoqués", "convocView"],
     ["#", "Sélection"],
-    ["tactique", "Tactique", "tactics"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
+    ["tactique", "Tactique", "tactics"], ["vestiaire", "Vestiaire", "tactics"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
     ["amicaux", "Matchs amicaux", "friendlies"], ["analyse", "Analyse des adversaires", "analysis"], ["stats", "Statistiques", "stats"],
     ["#", "Suivi"],
     ["notifications", "Notifications", "feed"], ["staff", "Staff", "staff"], ["mandat", "Mandat", "mandate"], ["palmares", "Palmarès", "calendar"],
@@ -993,6 +980,7 @@
     if (nav === "preselection") return titleHtml(nav) + err + (v.pool ? preselectionHtml(v) : poolMissing);
     if (nav === "convocations") return titleHtml(nav) + err + convocationsHtml(v);
     if (nav === "tactique") return err + tactiqueHtml(v);
+    if (nav === "vestiaire") return titleHtml(nav) + err + '<div id="ncVestiaire"><p class="vs-empty">Chargement du vestiaire…</p></div>';
     if (nav === "amicaux") return titleHtml(nav) + err + amicauxHtml(v);
     if (nav === "staff") return titleHtml(nav) + err + staffHtml(v);
     if (nav === "analyse") return titleHtml(nav) + err + analyseHtml(v);
@@ -1094,6 +1082,7 @@
     if (!holder || !ui.mode) return;
     holder.innerHTML = modeHtml();
     if (ui.nav === "tactique") tqMount();
+    if (ui.nav === "vestiaire") vestiaireMount();
     syncModeChrome();
     // Rapport Scouting Pro : placement adaptatif des blocs (comme le club).
     var sp = document.getElementById("ncScoutingPanel");
@@ -1167,7 +1156,7 @@
   }
   function onClick(e) {
     if (!ui.mode) return;
-    var b = e.target.closest ? e.target.closest("button,input[type=checkbox],th[data-nc-sort]") : null;
+    var b = e.target.closest ? e.target.closest("button,input[type=checkbox],th[data-nc-sort],[data-nc-profile]") : null;
     if (!b) return;
     var d = b.dataset;
     if (d.ncSort) {
@@ -1176,7 +1165,6 @@
       paint(); return;
     }
     if (d.ncPos !== undefined) { ui.pos = d.ncPos; ui.shown = 50; paint(); return; }
-    if (d.ncPview) { ui.pview = d.ncPview; paint(); return; }
     if (d.ncMore) { ui.shown += 50; paint(); return; }
     if (d.ncFilter) { ui.filter = ui.filter === d.ncFilter ? "" : d.ncFilter; paint(); return; }
     if (d.ncGid) { ui.gid = d.ncGid; ui.replaceOut = null; paint(); return; }

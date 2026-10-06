@@ -3002,6 +3002,19 @@
   .ordres-coh-card{gap:12px;}
   .ordres-coh-card .coh-card{background:none; padding:0; margin:0; border-radius:0;}
   .ordres-coh-card .coh-head{display:none;}
+  .ordres-coh-card{container-type:inline-size;}
+  .coh-col--slots .coh-slot:first-child{margin-top:0;}
+  .coh-col--notes .coh-note:first-child{margin-top:0;}
+  .coh-col--notes:empty{display:none;}
+  @container (min-width:720px){
+    .ordres-coh-card .coh-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.2fr); gap:22px; align-items:start;}
+    .ordres-coh-card .coh-col + .coh-col{padding-left:22px; border-left:1px solid var(--line-soft, var(--line));}
+    .ordres-coh-card .coh-kpis{margin-bottom:12px;}
+  }
+  @container (min-width:480px) and (max-width:719px){
+    .ordres-coh-card .coh-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px 22px; align-items:start;}
+    .ordres-coh-card .coh-col--notes{grid-column:1 / -1;}
+  }
   .coh-kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;}
   .coh-kpi{background:var(--panel-2, rgba(255,255,255,.03)); border-radius:10px; padding:8px 10px;}
   .coh-kpi b{display:block; font-size:22px; font-weight:900;} .coh-kpi span{font-size:11.5px; color:var(--ink-dim);}
@@ -20254,17 +20267,22 @@ function compoCohesionHtml(team) {
   // rôles du cinq ; « Team Fit » = cohérence globale ajustée par la tactique.
   const tac = R.tacticalFit(slots, team.offensivePriorities || [], team.rhythm);
   const teamFit = tac ? Math.max(1, Math.min(99, Math.round(c.overall + (tac.score - 50) * 0.3))) : c.overall;
+  // Trois colonnes quand la brique est large (bilan | cinq | remarques),
+  // empilées sinon.
+  h += `<div class="coh-cols"><div class="coh-col coh-col--sum">`;
   h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [teamFit, "Team Fit"]]
     .map(([v, l]) => `<div class="coh-kpi"><b class="${cohTone(v)}">${v}%</b><span>${l}</span></div>`).join("") + `</div>`;
   if (tac && tac.parts.length) {
     h += `<div class="coh-tac">` + tac.parts.map(x => `<span class="coh-tac-chip ${x.score >= 65 ? "coh-good" : x.score <= 35 ? "coh-bad" : ""}" title="Adéquation de la tactique aux rôles du cinq"><span>${escapeHtml(x.key)}</span> · ${x.score}</span>`).join("") + `</div>`;
   }
+  h += `</div><div class="coh-col coh-col--slots">`;
   c.slots.forEach(sl => {
     h += `<div class="coh-slot">${sl.warn ? COH_WARN_SVG : COH_OK_SVG}<span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><span>${escapeHtml(sl.roleName)}</span> · ${sl.mastery}%</span></div>`;
   });
+  h += `</div><div class="coh-col coh-col--notes">`;
   c.notes.slice(0, 5).forEach(n => { h += cohesionNoteHtml(n); });
   (tac ? tac.notes : []).forEach(n => { h += `<div class="coh-note${n.tone === "warn" ? " warn" : ""}"><b>${escapeHtml(n.tactic)}</b> — <span>${escapeHtml(n.text)}</span></div>`; });
-  h += `</section>`;
+  h += `</div></div></section>`;
   return h;
 }
 
@@ -41037,14 +41055,15 @@ function buildTeamPanel(team, side, opts = {}) {
   defStack.className = "prep-def-stack";
   colRight.appendChild(defStack);
   defStack.appendChild(defense);
-  // Cohérence du cinq (rôles, tactique) : sous Défense, près des choix
-  // tactiques qu'elle évalue (rempli par renderLineupEditor).
-  const cohesionHost = makeCard(isMain ? "ordresCardCohesion" : null, "Cohérence du cinq");
+  // Cohérence du cinq (rôles, tactique) : brique pleine largeur sous
+  // Composition + Effectif (demande utilisateur du 2026-10-06 ; club et
+  // Sélectionneur), remplie par renderLineupEditor ; placée plus bas, après
+  // l'éditeur de feuille de match.
+  const cohesionHost = makeCard("ordresCardCohesion", "Cohérence du cinq");
   cohesionHost.classList.add("ordres-coh-card", "hidden");
   const cohBody = document.createElement("div");
   cohBody.className = "ordres-coh-body";
   cohesionHost.appendChild(cohBody);
-  defStack.appendChild(cohesionHost);
   const defenseGrid = document.createElement("div");
   defenseGrid.className = "ordres-settings-grid";
   defense.appendChild(defenseGrid);
@@ -41174,12 +41193,15 @@ function buildTeamPanel(team, side, opts = {}) {
   if (isMain) hint.id = "ordresLineupEditor"; // tutoriel d'accueil
   hint.className = "lineup-editor" + (editable ? "" : " readonly");
   panel.insertBefore(hint, columnsWrap);
+  panel.insertBefore(cohesionHost, columnsWrap);
   // Carte « Temps de jeu » : colonne de droite, sous le terrain.
   const minutesHost = document.createElement("div");
   minutesHost.className = "lineup-minutes-host";
   refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost, cohesionContainer: cohesionHost, roster: opts.roster });
   refreshLineupEditor();
-  if (editable) colLeft.appendChild(minutesHost);
+  // Temps de jeu sous Défense (2026-10-06) : la Cohérence du cinq a quitté
+  // cette colonne, Attaque | Défense + Temps de jeu s'équilibrent.
+  if (editable) colRight.appendChild(minutesHost);
   colRight.appendChild(adversaires);
 
   applyTierVisibility();

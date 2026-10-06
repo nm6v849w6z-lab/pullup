@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Δεν υπάρχουν ακόμα παίκτες στην εθνική: κάλεσε παίκτες για να δεις τη δυναμική της ομάδας.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Διεισδυτικός πλέι μέικερ",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Πλέι μέικερ που επιτίθεται στο καλάθι με την μπάλα και τη βγάζει έξω στη βοήθεια.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Ο Stretch 4 αδειάζει τη ρακέτα για τον Slasher.",

@@ -91,6 +91,8 @@ function coachPlayer(x, now) {
   return {
     p: p.id, n: p.name, name: p.name, age: p.age, position: p.position, height: p.height, look: p.look || null,
     ovr: Math.round(x.ovr), attrs: p.attrs ? { ...p.attrs } : null, condition, nationality: p.nationality || null,
+    // Moral en club (vestiaire de la sélection, 2026-10-06).
+    form: typeof p.form === "number" ? Math.round(p.form) : null,
     // GEN (note du meilleur poste, comme partout dans le jeu) et moyennes
     // physique / mentale (mêmes formules que l'Effectif).
     gen: genOf(p), physAvg: avgOf(p, Engine.PHYSICAL_ATTRS), mentAvg: avgOf(p, Engine.MENTAL_ATTRS),

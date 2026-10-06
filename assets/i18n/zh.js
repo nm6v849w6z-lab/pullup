@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "国家队暂无球员：征召球员后即可查看团队氛围。",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "突破型控卫",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "持球攻筐、遇到协防时分球的控卫。",
   "Le Stretch 4 vide la raquette pour le Slasher.": "空间型四号位为突破手清空禁区。",

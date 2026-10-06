@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Rinktinėje dar nėra žaidėjų: pakviesk žaidėjų, kad matytum grupės dinamiką.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Prasiveržiantis įžaidėjas",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Įžaidėjas, puolantis krepšį su kamuoliu ir atiduodantis jį, kai ateina pagalba.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 atlaisvina baudos aikštelę Slasheriui.",

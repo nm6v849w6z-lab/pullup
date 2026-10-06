@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Ainda não há jogadores na seleção: convoque jogadores para ver a dinâmica do grupo.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Armador infiltrador",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Armador que ataca o aro com a bola e passa para fora na ajuda.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "O Stretch 4 esvazia o garrafão para o Slasher.",

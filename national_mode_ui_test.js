@@ -37,7 +37,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   await wait(() => doc.body.classList.contains("nc-mode") && doc.getElementById("ncSidebar") && win.HM_NATIONAL_COACH.state.view, "entrée dans le mode");
   await flush(dom); await new Promise(r => setTimeout(r, 300));
   const side = doc.getElementById("ncSidebar").textContent;
-  assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Tactique", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
+  assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Tactique", "Vestiaire", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
   assert(!/Joueurs suivis|Convocations/.test(side), "plus de rubrique « Joueurs suivis » ni de doublon Convocations / Convoqués");
   assert(/Retour au mode Club/.test(doc.getElementById("ncModeBtn").textContent), "en mode : « Retour au mode Club » dans l'environnement Sélectionneur");
   assert(/France A/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : la sélection");
@@ -55,10 +55,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     assert(!content().querySelector(".nc-next") && !/CONVOQUÉS|Convoqués\s*0/i.test(content().textContent), "Sélectionnables : ni carte de rassemblement ni bloc des convoqués");
     const heads = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
     assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "État"].every(h => heads.includes(h)) && !heads.includes("MJ") && !heads.includes("Forme récente"), "Caractéristiques : identité, caractéristiques, état (stats de saison à part, comme l'Effectif)");
-    content().querySelector('[data-nc-pview="stats"]').click();
-    const heads2 = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
-    assert(["Nom", "MJ", "Pts", "Forme récente"].every(h => heads2.includes(h)) && !heads2.includes("Physique"), "onglet Statistiques : stats de la saison en club et forme récente");
-    content().querySelector('[data-nc-pview="caracs"]').click();
+    assert(!content().querySelector("[data-nc-pview]") && !/Forme récente/.test(content().textContent), "Sélectionnables : ni onglet Statistiques ni Forme récente (2026-10-06)");
     assert(!/\b(MEN|ARR|AIS|AIF|PIV)\b/.test(content().textContent) && content().querySelector(".eff-pos"), "postes aux abréviations du jeu (badges de l'Effectif)");
     const ageOf = () => [...content().querySelectorAll("tbody tr.eff-row")].map(tr => Number(tr.children[1].textContent));
     content().querySelector('th[data-nc-sort="age"]').click();
@@ -96,6 +93,28 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
       await win.__lastNationalCoach;
       check2(st.view.preselection.some(r => r.p === x.p && r.n === x.n) && /Retirer de la présélection/.test(box().textContent), "clic : joueur en présélection, bouton mis à jour");
     }
+  }
+  // Vestiaire (2026-10-06) : la dynamique de groupe du club, sur les joueurs
+  // de la sélection.
+  doc.querySelector('#ncSidebar [data-nc-nav="vestiaire"]').click();
+  await wait(() => doc.querySelector(".nc-side-link.on[data-nc-nav=vestiaire]") && doc.getElementById("ncVestiaire"), "rubrique vestiaire");
+  await wait(() => !/Chargement du vestiaire/.test(doc.getElementById("ncVestiaire").textContent), "vestiaire rendu");
+  const vsTeam = win.eval("HM_NATIONAL_COACH.state.view.tacticsPlayers.length");
+  if (vsTeam) {
+    assert(doc.querySelector("#ncVestiaire .vs-tabs") && win.__lastVestiaire && win.__lastVestiaire.players.length === vsTeam, `vestiaire de la sélection : mêmes vues que le club, ${vsTeam} joueurs`);
+    doc.querySelector('#ncVestiaire [data-vs-tab="groups"]').click();
+    assert(doc.querySelector('#ncVestiaire [data-vs-tab="groups"].active'), "vestiaire : changement d'onglet (Groupes)");
+    assert(!doc.querySelector("#ncVestiaire [data-player-team]"), "vestiaire : liens vers les fiches de la sélection, pas du club");
+  } else assert(/Aucun joueur/.test(doc.getElementById("ncVestiaire").textContent), "vestiaire : message sans joueurs");
+  // Tactique : Cohérence du cinq en brique pleine largeur, sous Composition.
+  doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
+  await wait(() => doc.querySelector("#ncTqGrid .ordres-coh-card"), "tactique : brique cohérence");
+  {
+    const coh = doc.querySelector("#ncTqGrid .ordres-coh-card");
+    const panel = coh.parentElement;
+    const kids = [...panel.children];
+    assert(kids.indexOf(coh) === kids.indexOf(panel.querySelector(":scope > .lineup-editor")) + 1 && coh.nextElementSibling.classList.contains("prep-columns"), "tactique : Cohérence du cinq entre Composition et Attaque / Défense");
+    if (vsTeam >= 5) assert(!coh.classList.contains("hidden") && coh.querySelector(".coh-kpis"), "tactique : cohérence du cinq affichée");
   }
   doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
   check2(!doc.getElementById("selectionsSection").classList.contains("hidden") && doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.querySelector(".nc-side-link.on[data-nc-nav=tactique]"), "depuis la fiche joueur : clic dans le menu → rubrique affichée");

@@ -5,6 +5,8 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Brak zawodników w kadrze: powołaj zawodników, aby zobaczyć dynamikę grupy.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Penetrujący rozgrywający",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Rozgrywający, który atakuje kosz z piłką i oddaje ją przy pomocy obrońcy.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 opróżnia trumnę dla Slashera.",

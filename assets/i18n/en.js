@@ -3,6 +3,8 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "No players in the squad yet: call up players to see the group dynamics.",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Slashing point guard",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Point guard who attacks the rim with the ball and kicks it out when the help comes.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "The Stretch 4 clears the paint for the Slasher.",
