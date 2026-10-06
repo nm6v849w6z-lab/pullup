@@ -2939,12 +2939,31 @@
   .pdp-role-desc{font-size:13.5px; color:var(--ink-dim); margin:0 0 12px;}
   .pdp-role-sub{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:4px 0 6px;}
   .pdp-role-fit{display:grid; grid-template-columns:minmax(120px,170px) 1fr 42px; gap:10px; align-items:center; padding:5px 0; font-size:13.5px;}
-  .pdp-role-fit b{font-weight:700;} .pdp-role-fit .pct{text-align:right; font-weight:800;}
+  .pdp-role-fit b{font-weight:700;} .pdp-role-pref{color:var(--amber); font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; margin-left:4px;} .pdp-role-fit .pct{text-align:right; font-weight:800;}
   .pdp-role-track{height:8px; border-radius:99px; background:var(--line); overflow:hidden;} .pdp-role-track i{display:block; height:100%; border-radius:99px;}
   .pdp-role-sw{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .pdp-role-li{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13.5px;}
   .pdp-role-dot{width:10px; height:10px; border-radius:50%; flex:none;}
   .pdp-role-note{font-size:12.5px; color:var(--ink-dim); margin-top:10px;}
+  /* Cohérence du cinq (phase 2 des rôles). */
+  .coh-card{background:var(--compo-court-bg, var(--panel)); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
+  .coh-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .coh-head h3{margin:0; font-size:14px; letter-spacing:.06em; text-transform:uppercase;}
+  .coh-kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;}
+  .coh-kpi{background:var(--panel-2, rgba(255,255,255,.03)); border-radius:10px; padding:8px 10px;}
+  .coh-kpi b{display:block; font-size:22px; font-weight:900;} .coh-kpi span{font-size:11.5px; color:var(--ink-dim);}
+  .coh-slot{display:grid; grid-template-columns:18px 34px minmax(0,1fr) auto; gap:8px; align-items:center; padding:5px 0; border-top:1px solid var(--line-soft, var(--line)); font-size:13px;}
+  .coh-slot:first-of-type{border-top:0;}
+  .coh-slot .pos{font-weight:900; color:var(--amber); font-size:11.5px;}
+  .coh-slot .nm{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .coh-slot .rl{font-size:12px; color:var(--ink-dim); white-space:nowrap;}
+  .coh-note{font-size:12.5px; padding:7px 9px; border-radius:6px; margin-top:6px; background:var(--panel-2, rgba(255,255,255,.03)); border-left:3px solid var(--ok, #33b4a1);}
+  .coh-note.warn{border-left-color:#e8a33a;}
+  .coh-note b{font-weight:700;}
+  .coh-good{color:var(--ok, #33b4a1);} .coh-mid{color:#e8a33a;} .coh-bad{color:var(--bad, #E2694F);}
+  .pdp-compat{display:flex; align-items:center; gap:14px; margin-top:16px;}
+  .pdp-compat-ring{width:78px; height:78px; border-radius:50%; display:grid; place-items:center; flex:none;}
+  .pdp-compat-ring > div{width:62px; height:62px; border-radius:50%; background:var(--panel); display:grid; place-items:center; font-weight:900; font-size:19px;}
   .pdp2-row--profile{grid-template-columns:360px minmax(0,1fr);}
   .pdp2-rank-scope{padding:8px 0; border-top:1px solid var(--line);}
   .pdp2-rank-scope:first-of-type{border-top:0; padding-top:0;}
@@ -9381,6 +9400,7 @@
           <select class="mk-sel" id="marketSort" aria-label="Trier les annonces">
             <option value="ends">Trier par fin d'enchère</option>
             <option value="ovr">Trier par note</option>
+            <option value="fit">Trier par compatibilité</option>
             <option value="pot">Trier par potentiel</option>
             <option value="price">Trier par prix croissant</option>
             <option value="age">Trier par âge</option>
@@ -20150,6 +20170,38 @@ function positionRating(player, pos) {
 }
 
 // Les 5 notes d'un joueur, { poste: note }.
+// Cinq majeur d'une équipe au format de HM_ROLES.lineupCohesion.
+function roleSlotsOf(team) {
+  if (!team || !team.lineup || !team.lineup.starters) return null;
+  const slots = POSITIONS.map(pos => {
+    const p = (team.players || []).find(x => x.id === team.lineup.starters[pos]);
+    return p && p.attrs ? { pos, attrs: p.attrs, positionRatings: positionRatings(p), name: p.name, id: p.id, position: p.position } : null;
+  });
+  return slots.every(Boolean) ? slots : null;
+}
+const cohTone = v => (v >= 75 ? "coh-good" : v >= 60 ? "coh-mid" : "coh-bad");
+const COH_OK_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#33b4a1" stroke-width="2"/><path d="M5 8.2l2 2 4-4" fill="none" stroke="#33b4a1" stroke-width="2" stroke-linecap="round"/></svg>`;
+const COH_WARN_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="#e8a33a" stroke-width="2"/><path d="M8 4v5M8 11.5v.5" stroke="#e8a33a" stroke-width="2" stroke-linecap="round"/></svg>`;
+function cohesionNoteHtml(n) {
+  return `<div class="coh-note${n.tone === "warn" ? " warn" : ""}">${n.who ? `<b>${n.who.map(escapeHtml).join(" · ")}</b> — ` : ""}<span>${escapeHtml(n.text)}</span></div>`;
+}
+// Panneau « Cohérence du cinq » (composition), phase 2 des rôles de jeu.
+function compoCohesionHtml(team) {
+  const R = typeof window !== "undefined" ? window.HM_ROLES : null;
+  const slots = R ? roleSlotsOf(team) : null;
+  const c = slots ? R.lineupCohesion(slots) : null;
+  if (!c) return "";
+  let h = `<section class="coh-card" id="compoCohesion"><div class="coh-head"><h3>Cohérence du cinq</h3></div>`;
+  h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [c.overall, "Globale"]]
+    .map(([v, l]) => `<div class="coh-kpi"><b class="${cohTone(v)}">${v}%</b><span>${l}</span></div>`).join("") + `</div>`;
+  c.slots.forEach(sl => {
+    h += `<div class="coh-slot">${sl.warn ? COH_WARN_SVG : COH_OK_SVG}<span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><span>${escapeHtml(sl.roleName)}</span> · ${sl.mastery}%</span></div>`;
+  });
+  c.notes.slice(0, 5).forEach(n => { h += cohesionNoteHtml(n); });
+  h += `</section>`;
+  return h;
+}
+
 // Bloc « Rôle » de la fiche joueur (assets/roles.js, phase 1 des rôles de
 // jeu, maquette validée le 2026-10-06) : postes, rôle principal, maîtrise
 // des rôles, forces et faiblesses. Seulement si toutes les
@@ -20170,14 +20222,31 @@ function pdpRoleRowHtml(player, fullyVisible) {
   h += `<div class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span> <small style="font-size:14px;color:var(--ink-dim);font-weight:700">· ${escapeHtml(POS_SHORT[prof.primary.position] || prof.primary.position)}</small></div>`;
   h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
   h += `<div class="pdp-role-sub">Maîtrise des rôles</div>`;
+  // Rôle préféré (phase 4) : « ce joueur AIME jouer ce rôle ».
+  const pref = R.preferredRole(player.attrs, ratings, player.position, player.id);
   prof.fits.forEach(f => {
-    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
+    const isPref = pref && pref.role === f.role && pref.position === f.position;
+    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}${isPref ? ` <span class="pdp-role-pref" title="Le rôle qu'il aime jouer">Préféré</span>` : ""}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
   });
   h += `<p class="pdp-role-note">Calculée à partir des caractéristiques ; évolue avec elles.</p></section>`;
   h += `<section class="pdp2-card"><div class="pdp-role-sw"><div><div class="pdp-role-sub">Forces</div>` +
     (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
     `</div><div><div class="pdp-role-sub">Faiblesses</div>` +
     (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
+  // Compatibilité avec le cinq majeur du manager (phase 2).
+  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
+  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
+  if (comp) {
+    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
+    h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
+      `<div style="font-weight:800">Compatibilité avec votre cinq majeur</div>` +
+      (comp.starter ? `<div class="pdp-role-note" style="margin-top:2px">Titulaire : cohérence actuelle du cinq.</div>`
+        : `<div class="pdp-role-note" style="margin-top:2px"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
+      `</div></div>`;
+    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
+    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
+    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
+  }
   h += `</section></div>`;
   return h;
 }
@@ -41373,6 +41442,10 @@ function renderLineupEditor(team, container, opts = {}) {
     const summary = el("div", "compo-summary");
     summary.appendChild(el("p", "cs-sentence", "Il manque un titulaire : sans cinq complet, le match est perdu par forfait."));
     side.appendChild(summary);
+  } else {
+    // Cohérence du cinq (rôles de jeu, phase 2).
+    const coh = compoCohesionHtml(team);
+    if (coh) { const box = el("div", "compo-coh-wrap"); box.innerHTML = coh; side.appendChild(box); }
   }
 
   // --- Effectif (convocation) : liste compacte à côté du terrain, ou
@@ -49714,7 +49787,10 @@ function mkFilteredListings() {
     pot: (a, b) => potentialTierIndex(b.player.potential) - potentialTierIndex(a.player.potential) || a.l.closesAt - b.l.closesAt,
     price: (a, b) => minNextBidFor(a.l) - minNextBidFor(b.l),
     age: (a, b) => a.player.age - b.player.age,
+    // Rôles de jeu, phase 4 : compatibilité avec le cinq majeur du manager.
+    fit: (a, b) => (mkRoleFit(b.player) ? mkRoleFit(b.player).fit.value : -1) - (mkRoleFit(a.player) ? mkRoleFit(a.player).fit.value : -1),
   };
+  mkRoleFitCache = new Map();
   return rows.sort(by[u.sort] || by.ends);
 }
 // Recherche insensible à la casse ET aux accents, comme la barre du haut.
@@ -49808,6 +49884,28 @@ document.addEventListener("click", e => {
   mkNegotiate(b.dataset.mkNegotiate);
 });
 
+// Rôle et compatibilité avec le cinq majeur (rôles de jeu, phase 4),
+// recalculés à chaque affichage du marché (cache vidé par mkFilteredListings).
+let mkRoleFitCache = new Map();
+function mkRoleFit(player) {
+  const R = typeof window !== "undefined" ? window.HM_ROLES : null;
+  if (!R || !player || !player.attrs || player.attrsHidden || player.fog) return null;
+  if (mkRoleFitCache.has(player.id)) return mkRoleFitCache.get(player.id);
+  const ratings = positionRatings(player);
+  const prof = R.profileOf(player.attrs, ratings, 1, player.position);
+  const five = roleSlotsOf(teamA);
+  const fit = five && prof ? R.compatibilityWith(five, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
+  const out = prof && fit ? { prof, fit } : null;
+  mkRoleFitCache.set(player.id, out);
+  return out;
+}
+function mkRoleChipHtml(player) {
+  const rf = mkRoleFit(player);
+  if (!rf) return "";
+  const v = rf.fit.value, d = rf.fit.after - rf.fit.before;
+  return `<span class="mk-chip mk-chip-role" title="Compatibilité avec votre cinq majeur (cohérence du cinq s'il joue ${escapeHtml(POS_SHORT[rf.fit.pos] || rf.fit.pos)})"><span>${escapeHtml(rf.prof.primary.name)}</span> · <b class="${cohTone(v)}">${v}%</b>${rf.fit.starter ? "" : ` <small class="${d > 0 ? "coh-good" : d < 0 ? "coh-bad" : ""}">(${d > 0 ? "+" : ""}${d})</small>`}</span>`;
+}
+
 function mkListingCardHtml(l, player, now) {
   // Agent libre (demande du 2026-10-01) : pas de club vendeur, la mise est
   // une prime de signature ; l'ancien club n'a pas le droit d'enchérir.
@@ -49878,7 +49976,7 @@ function mkListingCardHtml(l, player, now) {
   const compact = `<div class="mk-cmp">` +
     `<div class="mk-cmp-hd"><div class="mk-cmp-av">${playerAvatarHtml(player, seller, 44)}</div><div class="mk-cmp-id">` +
       `<div class="mk-cmp-nm">${nationFlagHtml(player.nationality, "nat-flag--name")}${fa && !l.foreign ? `<span data-no-i18n>${escapeHtml(player.name)}</span>` : playerLinkHtml(l.sellerIdx, player.id, player.name)}</div>` +
-      `<div class="mk-cmp-sub">${cmpWho}</div>${cmpTag}${badge}</div>` +
+      `<div class="mk-cmp-sub">${cmpWho}</div>${cmpTag}${badge}${mkRoleChipHtml(player)}</div>` +
       `<div class="mk-cmp-gen"><b>${overall}</b><small>GEN</small></div></div>` +
     `<div class="mk-cmp-facts">${cmpFact("Poste", escapeHtml(POS_SHORT[player.position] || player.position), "pos")}${cmpFact("Âge", `${player.age} ans`)}${cmpFact("Taille", player.height ? `${player.height} cm` : "–")}${cmpFact("Potentiel", potentialCell)}</div>` +
     `<div class="mk-cmp-sal"><span>Salaire demandé</span><b>${formatMoney(asked)} / sem.</b></div>` +
@@ -49911,7 +50009,7 @@ function mkListingCardHtml(l, player, now) {
               ? `<span class="mk-chip">Ancien club : <span data-no-i18n>${escapeHtml(l.formerTeamName || "?")}</span></span>`
               : `<span class="mk-chip">Vendeur : ${isMine ? "<b>Vous</b>" : teamLinkHtml(l.sellerIdx, seller.name)}</span>`) +
             (l.foreign ? `<span class="mk-chip mk-chip-origin" title="Marché mondial : club d'un autre championnat">${nationFlagHtml(l.foreign.country)} ${escapeHtml(l.foreign.label)}</span>` : "") +
-            critChips +
+            critChips + mkRoleChipHtml(player) +
           `</div>` +
         `</div>` +
       `</div>` +

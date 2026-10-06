@@ -77,7 +77,7 @@ const ID_VALUE_KEYS = new Set(["playerId", "shooterId", "assisterId", "rebounder
   "youngId", "veteranId", "transferRequestPlayerId", "playerOutId", "playerInId", "outId", "inId", "fouledId", "mvpId", "scorerId"]);
 const ID_ARRAY_KEYS = new Set(["playerIds", "player_ids", "bench", "convoked", "pendingYouthDecisions", "bookmarked", "allStarHG"]);
 // Objets indexés par ID de joueur (clé = ID).
-const ID_KEYED_MAPS = new Set(["allTimePlayers", "trainingStalls", "backupPositions", "p"]);
+const ID_KEYED_MAPS = new Set(["allTimePlayers", "trainingStalls", "backupPositions", "p", "roleMismatchWeek"]);
 const FEED_KEY_RE = /^((?:poschange|injury|retiring|contract_signed|contract_left|contract_ext|contract_raise)_)(\d+)$/;
 
 function rewriter(index) {

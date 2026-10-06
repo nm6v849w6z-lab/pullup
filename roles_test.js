@@ -46,6 +46,42 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   check(E.POSITIONS.every(pos => by[pos] && by[pos].size >= 4), "au moins 4 rôles différents à chaque poste");
   check(natural / ps.length > 0.97, `rôle principal à un poste naturel (${Math.round(100 * natural / ps.length)} %)`);
 
+  // Phase 2 : cohérence d'un cinq (exemples de la spécification).
+  const mk = (role, pos, lvl, hi) => { const a = {}; E.ATTRS.forEach(k => { a[k] = lvl; }); Object.keys(R.ROLES[role].weights).forEach(k => { a[k] = hi; }); const pr = {}; E.POSITIONS.forEach(x => { pr[x] = x === pos ? 70 : 60; }); return { pos, attrs: a, positionRatings: pr, name: role, id: role + pos }; };
+  const teamA5 = [mk("scorer_guard", "Meneur", 55, 88), mk("scorer_guard", "Arrière", 55, 88), mk("shot_creator", "Ailier shooteur", 55, 88), mk("interior_scorer", "Ailier fort", 55, 88), mk("interior_scorer", "Pivot", 55, 88)];
+  const teamB5 = [mk("pass_first", "Meneur", 52, 82), mk("sharpshooter", "Arrière", 52, 82), mk("three_and_d", "Ailier shooteur", 52, 82), mk("stretch_four", "Ailier fort", 52, 82), mk("rim_protector", "Pivot", 52, 82)];
+  const cA = R.lineupCohesion(teamA5), cB = R.lineupCohesion(teamB5);
+  check(cB.overall - cA.overall >= 20 && cA.offense < 60 && cB.offense > 75, `cinq de créateurs ${cA.overall}% (attaque ${cA.offense}%) < cinq complémentaire ${cB.overall}% (attaque ${cB.offense}%)`);
+  check(cA.notes.some(x => /besoin du ballon/.test(x.text)) && cA.slots.some(x => x.warn), "cinq de créateurs : « trop de joueurs ont besoin du ballon », titulaires signalés");
+  check(cB.notes.some(x => x.tone === "ok" && /Gâchette/.test(x.text)), "cinq complémentaire : le meneur alimente la Gâchette");
+  // Compatibilité dynamique : un Pass-first à la place du Scoreur.
+  const comp = R.compatibilityWith(teamA5, { ...mk("pass_first", "Meneur", 52, 82), position: "Meneur", id: "nouveau" });
+  check(comp && comp.after > comp.before, `recrue Pass-first : cohérence ${comp.before}% → ${comp.after}%`);
+
+  // Phase 4 : rôle préféré stable, motivation et message hebdomadaire.
+  const somePlayer = ps[0];
+  const pr0 = E.positionRatings(somePlayer);
+  const pref1 = R.preferredRole(somePlayer.attrs, pr0, somePlayer.position, somePlayer.id);
+  check(pref1 && JSON.stringify(pref1) === JSON.stringify(R.preferredRole(somePlayer.attrs, pr0, somePlayer.position, somePlayer.id)), `rôle préféré stable (${pref1.name})`);
+  let prefOther = 0;
+  ps.forEach(p => { const a = R.preferredRole(p.attrs, E.positionRatings(p), p.position, p.id), b = R.profileOf(p.attrs, E.positionRatings(p), 4, p.position).primary; if (a.role !== b.role) prefOther++; });
+  check(prefOther > 0 && prefOther < ps.length * 0.45, `préféré ≠ rôle principal pour ${Math.round(100 * prefOther / ps.length)} % des joueurs`);
+  let team = null, mm = null;
+  for (let i = 0; i < 200 && !mm; i++) {
+    const t = E.generateTeam("P" + i, 0.9);
+    t.isHuman = true; t.feed = { entries: [] };
+    const res = t.applyRolePreferences(Date.now());
+    if (res.length) { team = t; mm = res[0]; }
+  }
+  check(!!mm, "un titulaire hors de son rôle préféré est détecté");
+  const victim = team.players.find(p => p.id === mm.playerId);
+  const formBefore = victim.form;
+  check(team.feed.entries.some(e => e.key === `role_${victim.id}` && /ne correspond pas à son profil/.test(e.title)), `fil d'actualité : « ${team.feed.entries.find(e => e.key === "role_" + victim.id).text.slice(0, 70)}… »`);
+  check(!team.applyRolePreferences(Date.now()).some(x => x.playerId === victim.id) && victim.form === formBefore, "au plus une fois toutes les 2 semaines");
+  team.week += 2;
+  team.applyRolePreferences(Date.now());
+  check(victim.form < formBefore, `motivation en baisse (${formBefore} → ${victim.form})`);
+
   // Fiche joueur : bloc « Rôle ».
   const { server, baseUrl } = await startTestServer();
   const dom = await openGame(html, baseUrl);
@@ -57,6 +93,18 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   const card = doc.querySelector("#playerDetailSection [data-pdp-role]");
   check(!!card && /Maîtrise des rôles/.test(card.textContent) && card.querySelectorAll(".pdp-role-fit").length >= 2, `fiche joueur : rôle « ${card && card.querySelector(".pdp-role-name").textContent.trim()} » et maîtrise des rôles`);
   check(/Forces/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "forces et faiblesses affichées");
+  check(!!doc.querySelector("#playerDetailSection [data-pdp-compat]") && /Compatibilité avec votre cinq majeur/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "fiche joueur : compatibilité avec le cinq majeur");
+  // Marché : rôle et compatibilité avec le cinq majeur.
+  // (Joueurs d'autres clubs : caractéristiques masquées côté navigateur,
+  // donc pas de compatibilité ; un remplaçant du club pour le calcul.)
+  const chip = win.eval("(() => { const ids = new Set(Object.values(teamA.lineup.starters)); return mkRoleChipHtml(teamA.players.find(p => !ids.has(p.id))); })()");
+  check(/mk-chip-role/.test(chip) && /\d+%/.test(chip) && /\([+-]?\d+\)/.test(chip), `marché : rôle, compatibilité et effet sur le cinq (${chip.replace(/<[^>]+>/g, "")})`);
+  const hiddenChip = win.eval("(() => { const p = league.teams.flatMap(t => t.players).find(x => x.attrsHidden || x.fog); return p ? mkRoleChipHtml(p) : null; })()");
+  check(hiddenChip === null || hiddenChip === "", "joueur aux caractéristiques masquées ou estimées : pas de compatibilité affichée");
+  win.eval("renderLineupEditor && TAB_HANDLERS.ordres && TAB_HANDLERS.ordres()");
+  await new Promise(r => setTimeout(r, 200));
+  const coh = doc.getElementById("compoCohesion");
+  check(!!coh && coh.querySelectorAll(".coh-slot").length === 5 && /Offensive/.test(coh.textContent), "composition : cohérence du cinq (5 titulaires, offensive / défensive / globale)");
   dom.window.close(); server.close();
   console.log("\n🏁 roles_test.js : tout est vert");
   process.exit(0);

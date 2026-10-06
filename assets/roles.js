@@ -396,13 +396,145 @@
     if (hit) return hit;
     const ta = ROLES[a] && ROLES[a].tendencies, tb = ROLES[b] && ROLES[b].tendencies;
     if (!ta || !tb) return { score: 0, reason: null };
-    let s = 0;
-    s -= Math.max(0, ta.usage + tb.usage - 1.3) * 3;
-    s -= Math.max(0, ta.paint + tb.paint - 1.4) * 3;
+    let s = 0, reason = null;
+    const ball = Math.max(0, ta.usage + tb.usage - 1.5) * 4;
+    const paint = Math.max(0, ta.paint + tb.paint - 1.6) * 4;
+    s -= ball + paint;
     s += (ta.create * tb.spacing + tb.create * ta.spacing) * 1.5;
     s += (ta.spacing + tb.spacing > 1.3 ? 0.5 : 0);
-    return { score: clamp(Math.round(s), -3, 3), reason: null };
+    const score = clamp(Math.round(s), -3, 3);
+    if (score < 0) reason = ball >= paint ? "Deux joueurs qui ont besoin du ballon." : "Deux joueurs dans la raquette : congestion.";
+    return { score, reason };
   }
 
-  return { POSITIONS, CONFIG, ROLES, PAIRS, roleFits, identityScore, positionsOf, profileOf, strengthsOf, pairScore, keyAverage };
+  // ---------------------------------------------------------------------
+  // Phase 2 : cohérence d'un cinq (titulaires à leurs postes).
+  // `slots` : [{ pos, attrs, positionRatings, name, id }] (5 joueurs). Le
+  // rôle d'un joueur dans le cinq = son rôle le mieux maîtrisé AU POSTE qu'il
+  // occupe. Renvoie { slots, offense, defense, overall, notes, pairs }.
+  const COHESION = {
+    // Seuils calés sur les cinq majeurs de clubs générés (2026-10-06) : une
+    // alerte concerne environ un cinq sur dix.
+    offenseBase: 70, pairWeight: 4.5,
+    usageMax: 2.65, usageMin: 1.8, usagePenalty: 14,
+    creatorMin: 0.3, noCreatorPenalty: 8,
+    spacingMin: 1.15, spacingPenalty: 14, spacingGood: 1.7, spacingBonus: 4,
+    paintMax: 2, paintPenalty: 8,
+    defenseBase: 66, rimWeight: 26, perimWeight: 60, rebWeight: 5,
+    rimLow: 0.38, rimGood: 0.75, perimLow: 0.25, perimGood: 0.34,
+    offenseShare: 0.55,
+  };
+  const NOTES = {
+    usageHigh: "Trop de joueurs ont besoin du ballon : moins de tirs pour chacun.",
+    usageLow: "Personne ne prend l'attaque à son compte.",
+    noCreator: "Personne ne crée des tirs pour les autres.",
+    lowSpacing: "Manque d'écartement : la défense resserre la raquette.",
+    goodSpacing: "Bon écartement : plusieurs tireurs extérieurs.",
+    crowdedPaint: "Raquette encombrée : trop de joueurs jouent près du cercle.",
+    noRim: "Pas de protection du cercle.",
+    goodRim: "Cercle bien protégé.",
+    weakPerim: "Défense extérieure fragile.",
+    goodPerim: "Bonne défense sur les extérieurs.",
+  };
+  function slotRole(slot) {
+    const fits = roleFits(slot.attrs, slot.positionRatings).filter(f => f.position === slot.pos);
+    return fits.length ? fits[0] : null;
+  }
+  function lineupCohesion(slots) {
+    const rows = (slots || []).filter(s => s && s.attrs).map(s => ({ ...s, fit: slotRole(s) })).filter(s => s.fit);
+    if (rows.length < 2) return null;
+    const tOf = r => ROLES[r.fit.role].tendencies;
+    const w = r => clamp(r.fit.mastery / 100, 0.3, 1);
+    const notes = [];
+    const flagged = new Set();
+    // Paires.
+    const pairs = [];
+    let pairSum = 0;
+    for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i], b = rows[j];
+      const ps = pairScore(a.fit.role, b.fit.role);
+      const val = ps.score * (w(a) + w(b)) / 2;
+      pairSum += val;
+      pairs.push({ a: a.pos, b: b.pos, score: ps.score });
+      if (ps.score <= -1 && ps.reason) { flagged.add(a.pos); flagged.add(b.pos); notes.push({ tone: "warn", who: [a.name, b.name], text: ps.reason }); }
+      else if (ps.score >= 3 && ps.reason) notes.push({ tone: "ok", who: [a.name, b.name], text: ps.reason });
+    }
+    const sum = k => rows.reduce((s2, r) => s2 + tOf(r)[k] * w(r), 0);
+    const C = COHESION;
+    let offense = C.offenseBase + C.pairWeight * pairSum / Math.max(1, rows.length - 1);
+    const usage = sum("usage");
+    if (usage > C.usageMax) { offense -= C.usagePenalty * (usage - C.usageMax); notes.push({ tone: "warn", text: NOTES.usageHigh }); rows.filter(r => tOf(r).usage >= 0.7).forEach(r => flagged.add(r.pos)); }
+    const creator = Math.max(...rows.map(r => tOf(r).create * w(r)));
+    if (usage < C.usageMin && creator < 0.6) { offense -= C.usagePenalty * (C.usageMin - usage); notes.push({ tone: "warn", text: NOTES.usageLow }); }
+    if (creator < C.creatorMin) { offense -= C.noCreatorPenalty; notes.push({ tone: "warn", text: NOTES.noCreator }); }
+    const spacing = sum("spacing");
+    if (spacing < C.spacingMin) { offense -= C.spacingPenalty * (C.spacingMin - spacing); notes.push({ tone: "warn", text: NOTES.lowSpacing }); }
+    else if (spacing >= C.spacingGood) { offense += C.spacingBonus; notes.push({ tone: "ok", text: NOTES.goodSpacing }); }
+    const paint = rows.filter(r => tOf(r).paint >= 0.8).length;
+    if (paint > C.paintMax) { offense -= C.paintPenalty * (paint - C.paintMax); notes.push({ tone: "warn", text: NOTES.crowdedPaint }); rows.filter(r => tOf(r).paint >= 0.8).forEach(r => flagged.add(r.pos)); }
+    // Défense.
+    const rim = Math.max(...rows.map(r => tOf(r).rimD * w(r)));
+    const perim = rows.reduce((s2, r) => s2 + tOf(r).perimD * w(r), 0) / rows.length;
+    const reb = sum("reb");
+    let defense = C.defenseBase + C.rimWeight * (rim - 0.5) + C.perimWeight * (perim - 0.29) + C.rebWeight * (reb - 2);
+    if (rim < C.rimLow) notes.push({ tone: "warn", text: NOTES.noRim }); else if (rim >= C.rimGood) notes.push({ tone: "ok", text: NOTES.goodRim });
+    if (perim < C.perimLow) notes.push({ tone: "warn", text: NOTES.weakPerim }); else if (perim >= C.perimGood) notes.push({ tone: "ok", text: NOTES.goodPerim });
+    offense = clamp(Math.round(offense), 20, 99);
+    defense = clamp(Math.round(defense), 20, 99);
+    const overall = Math.round(C.offenseShare * offense + (1 - C.offenseShare) * defense);
+    notes.sort((a, b) => (a.tone === "warn" ? 0 : 1) - (b.tone === "warn" ? 0 : 1));
+    return {
+      offense, defense, overall, notes, pairs,
+      slots: rows.map(r => ({ pos: r.pos, id: r.id, name: r.name, role: r.fit.role, roleName: r.fit.name, mastery: r.fit.mastery, warn: flagged.has(r.pos) })),
+    };
+  }
+  // Compatibilité d'un joueur avec un cinq : cohérence du cinq s'il prend la
+  // place du titulaire au poste où il s'intègre le mieux (parmi ses postes).
+  // `five` : slots du cinq actuel ; `cand` : { attrs, positionRatings, name,
+  // id, position }. Renvoie { value, pos, before, after, replaced } ou null.
+  function compatibilityWith(five, cand) {
+    if (!five || !cand || !cand.attrs) return null;
+    const before = lineupCohesion(five);
+    if (!before) return null;
+    const mine = five.find(s => s && s.id != null && s.id === cand.id);
+    if (mine) return { value: before.overall, pos: mine.pos, before: before.overall, after: before.overall, replaced: null, starter: true };
+    let best = null;
+    (positionsOf(cand.positionRatings, cand.position) || [cand.position]).forEach(pos => {
+      const slots = five.map(s => (s.pos === pos ? { ...cand, pos } : s));
+      const c = lineupCohesion(slots);
+      if (c && (!best || c.overall > best.after)) best = { value: c.overall, pos, before: before.overall, after: c.overall, replaced: (five.find(s => s.pos === pos) || {}).name || null, starter: false, cohesion: c };
+    });
+    return best;
+  }
+
+  // ---------------------------------------------------------------------
+  // Phase 4 : rôle PRÉFÉRÉ (« ce joueur aime jouer ce rôle »), distinct du
+  // rôle qu'il maîtrise le mieux. Stable pour un joueur (tirage déterminé par
+  // son ID) : son rôle principal 2 fois sur 3, sinon son deuxième rôle le
+  // mieux maîtrisé à ses postes s'il est à moins de 15 points.
+  function stableUnit(id) {
+    let h = 2166136261;
+    const str = String(id);
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) / 4294967296;
+  }
+  function preferredRole(attrs, positionRatings, cardPosition, id) {
+    const prof = profileOf(attrs, positionRatings, 6, cardPosition);
+    if (!prof) return null;
+    const second = prof.fits.find(f => f !== prof.primary && f.role !== prof.primary.role && prof.primary.mastery - f.mastery <= CONFIG.secondaryGap);
+    return second && stableUnit(id) >= 2 / 3 ? second : prof.primary;
+  }
+  // Rôle joué à un poste du cinq comparé au rôle préféré : null si tout va
+  // bien, sinon { kind: "usage" (moins de ballons qu'il ne voudrait) |
+  // "role", preferred, played }.
+  function roleMismatch(attrs, positionRatings, cardPosition, id, slotPos) {
+    const pref = preferredRole(attrs, positionRatings, cardPosition, id);
+    const played = roleFits(attrs, positionRatings).filter(f => f.position === slotPos)[0];
+    if (!pref || !played || pref.role === played.role) return null;
+    const tp = ROLES[pref.role].tendencies, tq = ROLES[played.role].tendencies;
+    if (pref.mastery - played.mastery < 8 && tp.usage - tq.usage < 0.25) return null;
+    return { kind: tp.usage - tq.usage >= 0.25 ? "usage" : "role", preferred: pref, played };
+  }
+
+  return { POSITIONS, CONFIG, COHESION, NOTES, ROLES, PAIRS, stableUnit, preferredRole, roleMismatch, roleFits, identityScore, positionsOf, profileOf, strengthsOf, pairScore, keyAverage, lineupCohesion, compatibilityWith, slotRole };
 });

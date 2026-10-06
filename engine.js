@@ -19,6 +19,8 @@
   // Mémoire historique des franchises (2026-10-06) : journal d'événements
   // rangé à part (server/store.js), rivalités, légendes, voir assets/history.js.
   const History = require("./assets/history.js");
+  // Rôles de jeu et compatibilité (2026-10-06) : voir assets/roles.js.
+  const Roles = require("./assets/roles.js");
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
@@ -7362,6 +7364,39 @@ class Team {
     this.applyChemistryDelta(gain);
   }
 
+  // Rôles de jeu, phase 4 (2026-10-06, voir assets/roles.js) : chaque
+  // semaine, un titulaire dont le rôle joué à son poste ne correspond pas à
+  // son rôle préféré perd un peu de motivation et le dit (au plus une fois
+  // toutes les ROLE_MISMATCH_COOLDOWN_WEEKS semaines). Le manager peut
+  // changer le joueur de poste, revoir son cinq ou accepter.
+  applyRolePreferences(now = Date.now()) {
+    const starters = (this.lineup && this.lineup.starters) || {};
+    this.roleMismatchWeek = this.roleMismatchWeek && typeof this.roleMismatchWeek === "object" ? this.roleMismatchWeek : {};
+    const out = [];
+    POSITIONS.forEach(pos => {
+      const p = this.players.find(x => x.id === starters[pos]);
+      if (!p) return;
+      const last = this.roleMismatchWeek[p.id];
+      if (typeof last === "number" && this.week - last < ROLE_MISMATCH_COOLDOWN_WEEKS) return;
+      let mm = null;
+      try { mm = Roles.roleMismatch(p.attrs, positionRatings(p), p.position, p.id, pos); } catch (e) { mm = null; }
+      if (!mm) return;
+      this.roleMismatchWeek[p.id] = this.week;
+      p.form = clamp(Math.round((p.form || 0) - ROLE_MISMATCH_FORM_MALUS), 1, 100);
+      const quote = mm.kind === "usage" ? "Je pense que je ne suis pas suffisamment utilisé offensivement." : `Je me sens plus à l'aise comme ${mm.preferred.name}.`;
+      if (this.feed) {
+        pushEntry(this.feed, {
+          key: `role_${p.id}`, category: "club", week: this.week, createdAt: now,
+          title: `Le rôle de ${p.name} dans l'équipe ne correspond pas à son profil`,
+          text: `« ${quote} » Il joue ${mm.played.name} au poste ${pos} ; il préfère ${mm.preferred.name}.`,
+          action: { label: "Fiche joueur", href: `/joueur/${p.id}` },
+        });
+      }
+      out.push({ playerId: p.id, ...mm });
+    });
+    return out;
+  }
+
   // Résultat d'un match officiel (voir CHEMISTRY_WIN_GAIN plus haut) : `pf`
   // points marqués, `pa` encaissés. Égalité impossible au basket (ignorée).
   applyChemistryResult(pf, pa) {
@@ -9360,6 +9395,8 @@ class Team {
     // de toutes les lignes de la semaine qui se termine (billetterie,
     // salaires, droits TV, boutique…), voir recordTransaction.
     if (this.isHuman) {
+      // Rôles de jeu, phase 4 : un titulaire placé loin du rôle qu'il aime.
+      this.applyRolePreferences(now);
       if (slotReport.length) achAdd(this, "trainings", slotReport.length, now);
       const ledgerRow = (this.financeLedger || {})[`${(this.seasonHistory || []).length + 1}:${this.week}`];
       const net = ledgerRow ? Object.values(ledgerRow).reduce((a, v) => a + (Number(v) || 0), 0) : 0;
@@ -10733,6 +10770,21 @@ function attrsForCardPosition(position, makeAttrs) {
 // finition au contact) : fautes provoquées près du cercle et finition
 // malgré le contact. Recalés le 2026-10-06 (+20 de Puissance : +0,0 pt
 // mesuré avant).
+// Rôles de jeu, phase 3 (2026-10-06, voir assets/roles.js et
+// MatchEngine.roleState) : la compatibilité du cinq en jeu est un
+// MODIFICATEUR (un gros talent compense en partie), jamais une règle.
+// Cohérence 65 % = neutre.
+const ROLE_COHESION_PIVOT = 65;
+const ROLE_MISMATCH_FORM_MALUS = 2;      // motivation perdue par un titulaire hors de son rôle préféré
+const ROLE_MISMATCH_COOLDOWN_WEEKS = 2;  // au plus une fois toutes les 2 semaines par joueur
+const ROLE_OFF_OPENNESS = 0.12;      // ouverture des tirs par point de cohérence offensive
+const ROLE_OFF_TOV = 0.0003;         // pertes de balle en moins par point de cohérence offensive
+const ROLE_DEF_BOOST = 0.0015;       // contest défensif par point de cohérence défensive
+const ROLE_USAGE_BASE = 0.7;         // part des tirs : ×0,7 (rôle qui ne demande pas le ballon) …
+const ROLE_USAGE_SLOPE = 0.6;        // … à ×1,3 (rôle qui monopolise le ballon)
+const ROLE_CREATE_BASE = 0.7;        // choix du passeur : ×0,7 à ×1,3 selon la création du rôle
+const ROLE_CREATE_SLOPE = 0.6;
+const ROLE_SPACING_THREE = 0.6;      // volume de tirs à 3 pts selon l'écartement du cinq
 const POWER_FOUL_PER_POINT = 0.003;
 // Audit des attributs (2026-10-06) : un rôle propre par attribut.
 // Interceptions — pari défensif (MatchEngine.playPossession).
@@ -17564,6 +17616,7 @@ function serializeTeam(team) {
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
     // Mémoire historique (assets/history.js).
     rivalryScores: team.rivalryScores && typeof team.rivalryScores === "object" ? team.rivalryScores : {},
+    roleMismatchWeek: team.roleMismatchWeek && typeof team.roleMismatchWeek === "object" ? team.roleMismatchWeek : {},
     franchiseBests: team.franchiseBests || null,
     managerHistory: Array.isArray(team.managerHistory) ? team.managerHistory : [],
     // Succès du manager (voir achEvaluate, assets/achievements.js) :
@@ -18224,6 +18277,7 @@ function teamFromSave(data) {
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   team.rivalryScores = data.rivalryScores && typeof data.rivalryScores === "object" ? data.rivalryScores : {};
+  team.roleMismatchWeek = data.roleMismatchWeek && typeof data.roleMismatchWeek === "object" ? data.roleMismatchWeek : {};
   team.franchiseBests = data.franchiseBests && typeof data.franchiseBests === "object" ? data.franchiseBests : null;
   team.managerHistory = Array.isArray(data.managerHistory) ? data.managerHistory : [];
   // Succès retirés depuis (ex. « Fidèle au poste », 2026-10-04) : oubliés.
@@ -18932,6 +18986,35 @@ class MatchEngine {
   // un cinq "moyen", jusqu'à ~28% pour un cinq de sprinteurs (90+), jamais
   // nul (même un cinq très lent garde une petite chance) ni écrasant
   // (jamais garanti).
+  // Rôles de jeu (phase 3) : cohérence du cinq en jeu et tendances de
+  // chaque joueur à son poste, calculées une fois par combinaison.
+  roleState(team) {
+    const five = team.onCourtPlayers();
+    if (five.length < 2) return null;
+    const key = five.map(p => `${p.id}:${p.matchPosition || p.position}`).join(",");
+    this._roleStates = this._roleStates || new Map();
+    if (this._roleStates.has(key)) return this._roleStates.get(key);
+    this._prCache = this._prCache || new Map();
+    const prOf = p => { if (!this._prCache.has(p.id)) this._prCache.set(p.id, positionRatings(p)); return this._prCache.get(p.id); };
+    let st = null;
+    try {
+      const coh = Roles.lineupCohesion(five.map(p => ({ pos: p.matchPosition || p.position, attrs: p.attrs, positionRatings: prOf(p), name: p.name, id: p.id })));
+      if (coh) {
+        const byId = new Map();
+        let spacing = 0;
+        coh.slots.forEach(sl => {
+          const t = Roles.ROLES[sl.role].tendencies, m = clamp(sl.mastery / 100, 0.3, 1);
+          const eff = k => 0.5 + (t[k] - 0.5) * m;
+          byId.set(sl.id, { usage: eff("usage"), create: eff("create") });
+          spacing += t.spacing * m;
+        });
+        st = { off: coh.offense, def: coh.defense, byId, spacing: spacing / five.length };
+      }
+    } catch (e) { st = null; }
+    this._roleStates.set(key, st);
+    return st;
+  }
+
   transitionChanceFromSpeed(team) {
     const onCourt = team.onCourtPlayers();
     if (!onCourt.length) return 0;
@@ -19422,6 +19505,9 @@ class MatchEngine {
     // ±1-2 pour les autres). Repère réel : les meilleures et pires équipes
     // au soin du ballon s'écartent d'environ ±20 %.
     let tovChance = 0.135 + offense.tov + defense.pressure + (pressure - ballHandler.eff("dribble")) / 650;
+    // Rôles (phase 3) : un cinq cohérent perd moins de ballons.
+    const roleOff = this.roleState(offTeam), roleDef = this.roleState(defTeam);
+    if (roleOff) tovChance -= (roleOff.off - ROLE_COHESION_PIVOT) * ROLE_OFF_TOV;
     tovChance *= rhythmOff.tovMult;
     // Décision (retour utilisateur, 2026-09 : "Décision/Vision → pertes de
     // balle et passes décisives") : un porteur qui lit bien le jeu perd moins
@@ -19615,6 +19701,8 @@ class MatchEngine {
     const wIn = Math.max(0.05, offense.inside * (1 + (zi - zMean) / 150) * (1 + (zp - zMean) / PENETRATION_VOLUME_DIV));
     const wMid = Math.max(0.05, offense.mid * (1 + (zm - zMean) / 150));
     let wThree = Math.max(0.05, offense.three * (1 + (zt - zMean) / 150));
+    // Rôles (phase 3) : un cinq qui écarte (tireurs, Stretch 4/5) tire plus de loin.
+    if (roleOff) wThree *= clamp(1 + (roleOff.spacing - 0.3) * ROLE_SPACING_THREE, 0.8, 1.25);
     // Fin de match : menée de 3 dans les 40 dernières secondes, l'équipe
     // cherche presque toujours le tir à 3 pts pour égaliser ; menée de 4 à 9
     // dans les 90 dernières, un peu plus souvent (audit 2026-09-29 : trop
@@ -19670,8 +19758,11 @@ class MatchEngine {
     // à 55 de GEN entouré de joueurs à 35-45) : la part de tirs d'un seul
     // joueur au-delà de ISOLATED_SHARE_CAP est comprimée de moitié — il
     // reste le premier tireur, mais ses coéquipiers touchent le ballon.
+    // Rôles (phase 3) : un rôle qui monopolise le ballon prend plus de tirs,
+    // un rôle sans ballon (3&D, Rim Protector) en prend moins.
+    const usageMult = p => { const r = roleOff && roleOff.byId.get(p.id); return r ? ROLE_USAGE_BASE + ROLE_USAGE_SLOPE * r.usage : 1; };
     const shotWeights = onCourtOff.map(p =>
-      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult * boxDeny : 1)
+      Math.pow(p.eff(statForZone), 2.1) * penetrationBonus(p) * usageMult(p) * (star && p.id === star.id ? heroMult * blowoutHeroMult * boxDeny : 1)
     );
     const shotWeightSum = shotWeights.reduce((s, w) => s + w, 0);
     if (shotWeightSum > 0) {
@@ -19712,7 +19803,8 @@ class MatchEngine {
     // donné par l'utilisateur (Euroleague saison dernière, top 5 entre 7,4
     // et 5,7 pd/match) — même ordre de grandeur, meilleur passeur mesuré
     // quasi identique au repère réel (7.32 vs 7.4).
-    const creator = creators.length ? weightedPick(creators, p => Math.pow(Math.max(p.eff("pass") + p.eff("vision") * 0.6, 1), 4.6)) : null;
+    const createMult = p => { const r = roleOff && roleOff.byId.get(p.id); return r ? ROLE_CREATE_BASE + ROLE_CREATE_SLOPE * r.create : 1; };
+    const creator = creators.length ? weightedPick(creators, p => Math.pow(Math.max(p.eff("pass") + p.eff("vision") * 0.6, 1), 4.6) * createMult(p)) : null;
 
     // Création de tir (retour utilisateur, 2026-09) : cette formule
     // s'appelait déjà `creation` et alimentait la qualité du tir, mais ne
@@ -19734,6 +19826,8 @@ class MatchEngine {
 
     const defStat = zone === "inside" ? defender.eff("defInside") : defender.eff("defOutside");
     let defBoost = zone === "inside" ? defense.insideDef : defense.perimDef;
+    // Rôles (phase 3) : rotations, aide et protection du cercle d'un cinq cohérent.
+    if (roleDef) defBoost += (roleDef.def - ROLE_COHESION_PIVOT) * ROLE_DEF_BOOST;
     // Box and one : défenseur dédié sur la star (voir aussi boxDeny, moins
     // de ballons, et boxStarMalus, sur la réussite même du tir).
     if (defense.shutdownStar && star && shooter.id === star.id) defBoost += 0.10;
@@ -19848,7 +19942,8 @@ class MatchEngine {
     const mates = onCourtOff.filter(p => p.id !== shooter.id);
     const matesAvg = mates.length ? mates.reduce((s, p) => s + p.eff(statForZone), 0) / mates.length : shooter.eff(statForZone);
     const isolatedPenalty = Math.max(0, shooter.eff(statForZone) - matesAvg - ISOLATED_GAP_FREE) * ISOLATED_GAP_PENALTY;
-    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus - isolatedPenalty + gambleOpenness + rand(-12, 12);
+    const roleOpenness = roleOff ? (roleOff.off - ROLE_COHESION_PIVOT) * ROLE_OFF_OPENNESS : 0;
+    const openness = (creation - defStat * (1 + defBoost)) / 2 + mismatch + transitionOpenness + screenOpennessBonus - isolatedPenalty + gambleOpenness + roleOpenness + rand(-12, 12);
 
     let quality, qualityMod;
     if (openness > 8) { quality = "ouvert"; qualityMod = 0.08; }
