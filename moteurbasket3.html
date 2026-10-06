@@ -2802,6 +2802,8 @@
   .fog-kpi{background:var(--panel-2); border-radius:10px; padding:9px 10px; display:flex; flex-direction:column; gap:3px;}
   .fog-kpi span{font-size:11.5px; color:var(--ink-dim);} .fog-kpi > b{font-size:17px;}
   .stf-fog{margin-top:14px;}
+  .fog-panel{margin-bottom:14px;} .fog-panel .scouting-actions{margin:0 0 4px;}
+  #teamDetailSection .eff-caracs th.fog-th, #teamDetailSection .eff-caracs td.fog-td{text-align:center !important;}
   .stf-fog .fog-go{padding:5px 12px; min-height:0; font-size:12.5px;}
   .stf-fog .fog-table td{vertical-align:middle;}
   .pdp2 .fog-row .pdp2-bar{flex-basis:44px;}
@@ -35332,7 +35334,7 @@ function teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) {
     html += `<div class="eff-kpi-sep"></div><div class="eff-kpi tde-kpi-scout">` +
       `<span class="eff-kpi-label">Caractéristiques estimées</span>` +
       `<span class="eff-kpi-line"><span class="eff-kpi-num">${count}</span><span class="eff-kpi-unit">/ ${ATTRS.length}</span>` +
-      `<button type="button" class="tde-kpi-link" data-team-detail-subview="analyse">Séance vidéo →</button></span>` +
+      `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button></span>` +
       `<span class="eff-meter eff-meter-lg"><span class="eff-meter-fill" style="width:${pct}%"></span></span></div>`;
   }
   return html + `</div>`;
@@ -35399,7 +35401,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     return `<div class="tde-locked-card"><div class="tde-locked-ico">${TDE_LOCK_ICON}</div>` +
       `<div class="tde-locked-text"><h3>Aucune caractéristique estimée</h3>` +
       `<p>Une séance vidéo estime une partie des caractéristiques de TOUT l'effectif de ${escapeHtml(team.name)}, une fois par saison. Plus votre analyste vidéo est bon, plus elle en estime, et plus les fourchettes sont étroites.</p></div>` +
-      `<button type="button" class="tde-locked-btn" data-team-detail-subview="analyse">Aller à l'Analyse d'équipe</button></div>`;
+      `<button type="button" class="tde-locked-btn" data-fog-scroll>Voir l'analyse vidéo</button></div>`;
   }
   const keys = families.flatMap(f => f.keys);
   const value = (p, k) => (k === "physicalAvg" || k === "mentalAvg") ? teamDetailSortValue(p, k, team) : p.attrs[k];
@@ -35412,14 +35414,14 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
   let html = `<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs tde-caracs"><thead>` +
     `<tr class="eff-family-row"><td colspan="${isOwnTeam ? 2 : 3}"></td>` +
     families.map(f => `<td colspan="${f.keys.length}" class="eff-family"><span>${escapeHtml(f.label)}</span></td>`).join("") + (isOwnTeam ? "" : `<td></td>`) + `</tr><tr>` +
-    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") + (isOwnTeam ? "" : `<th class="eff-th" title="Note estimée">Note</th>`) +
+    H("name", "Nom", { cls: "eff-th-name" }) + H("position", "Poste") + (isOwnTeam ? "" : `<th class="eff-th fog-th" title="Note estimée">Note</th>`) +
     families.map((f, fi) => f.keys.map((k, ki) => H(k, EFF_AVG_LABELS[k] || ATTR_SHORT[k], {
       cls: `eff-th-attr${ki === 0 && fi > 0 ? " eff-gstart" : ""}`,
       title: EFF_AVG_LABELS[k] ? `Moyenne ${EFF_AVG_LABELS[k].toLowerCase()}` : TRAINING_LABELS[k],
-    })).join("")).join("") + (isOwnTeam ? "" : `<th class="eff-th">Fiabilité</th>`) + `</tr></thead><tbody>`;
+    })).join("")).join("") + (isOwnTeam ? "" : `<th class="eff-th fog-th">Fiabilité</th>`) + `</tr></thead><tbody>`;
   sorted.forEach(p => {
     html += `<tr class="eff-row"><td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}</span></td><td>${effPosBadgeHtml(p.position)}</td>`;
-    if (!isOwnTeam) html += `<td class="eff-num fog-cell">${p.fog ? fogRangeText(p.fog.o) : "?"}</td>`;
+    if (!isOwnTeam) html += `<td class="fog-td"><span class="fog-cell">${p.fog ? fogRangeText(p.fog.o) : "?"}</span></td>`;
     families.forEach((f, fi) => f.keys.forEach((k, ki) => {
       if (!isOwnTeam) {
         // Brouillard de guerre : fourchette estimée, cadenas si jamais analysée.
@@ -35432,7 +35434,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
       const isBest = v === best[k];
       html += `<td class="${ki === 0 && fi > 0 ? "eff-gstart" : ""}"><span class="attr-cell eff-attr ${attrColorTier(v)}${isBest ? " eff-best" : ""}"${isBest ? ` title="Meilleur de l'équipe"` : ""}><span class="attr-val">${v}</span></span></td>`;
     }));
-    if (!isOwnTeam) html += `<td>${fogConfHtml(p.fog ? p.fog.conf : 0, true)}</td>`;
+    if (!isOwnTeam) html += `<td class="fog-td">${fogConfHtml(p.fog ? p.fog.conf : 0, true)}</td>`;
     html += `</tr>`;
   });
   html += `</tbody></table></div>`;
@@ -35440,7 +35442,7 @@ function teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet) {
     const hidden = ATTRS.filter(a => !revealedSet.has(a));
     if (hidden.length) {
       html += `<div class="tde-hidden-attrs"><div class="tde-hidden-head">${TDE_LOCK_ICON}<span>Encore cachées · ${hidden.length}</span>` +
-        `<button type="button" class="tde-kpi-link" data-team-detail-subview="analyse">Séance vidéo →</button></div>` +
+        `<button type="button" class="tde-kpi-link" data-fog-scroll>Séance vidéo →</button></div>` +
         `<div class="tde-hidden-chips">${hidden.map(a => `<span class="tde-chip">${escapeHtml(TRAINING_LABELS[a])}</span>`).join("")}</div></div>`;
     }
   }
@@ -35496,7 +35498,7 @@ function teamDetailEffectifHtml(teamIdx) {
   const isOwnTeam = teamIdx === myTeamIndex;
   // Brouillard de guerre : caractéristiques estimées par l'analyste vidéo.
   const revealedSet = isOwnTeam ? new Set() : fogTeamKeys(team);
-  let html = `<div class="tde-effectif">` + teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) +
+  let html = `<div class="tde-effectif">` + (isOwnTeam || teamDetailForeign ? "" : fogAnalysisPanelHtml(teamIdx)) + teamDetailEffectifKpisHtml(team, isOwnTeam, revealedSet) +
     teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet);
   if (teamDetailEffectifView === "caracs") html += teamDetailEffectifCaracsHtml(teamIdx, team, isOwnTeam, revealedSet);
   else if (teamDetailEffectifView === "stats") html += teamDetailEffectifStatsHtml(teamIdx, team, isOwnTeam, revealedSet);
@@ -35789,23 +35791,12 @@ function teamCalendarTableHtml(teamIdx) {
 // (tacticalReportHtml, jamais verrouillé — calculé depuis Player.matchLog,
 // pas depuis les caractéristiques cachées). Pour sa PROPRE équipe, "scouter"
 // n'a pas de sens (déjà tout visible) : seul le rapport tactique reste utile.
-function teamDetailAnalyseHtml(teamIdx) {
+// Brouillard de guerre (maquette validée le 2026-10-06) : rapport de
+// l'analyste pour ce club et bouton de séance vidéo, en tête de la page
+// Effectif du club analysé (retour utilisateur 2026-10-06 : « ça devrait
+// être directement sur la page effectif du club qu'on analyse »).
+function fogAnalysisPanelHtml(teamIdx) {
   const team = league.teams[teamIdx];
-  const isOwnTeam = teamIdx === myTeamIndex;
-  // Analyse de sa propre équipe : avantage Premium (retour utilisateur,
-  // 2026-09-27 : "pour l'analyse de sa propre équipe c'est aussi un avantage
-  // premium").
-  if (isOwnTeam) {
-    // Premium : même rapport complet (Scouting Pro) que pour un adversaire
-    // (retour utilisateur 2026-09-30 : « il faut le rapport complet ici pour
-    // les premium, comme si on analysait une autre équipe »), chargé par
-    // refreshScoutingProPanel ; le rapport tactique reste dessous.
-    if (teamIsPremium(teamA)) return `<div id="scoutingProPanel" class="section scouting-pro-panel"><p class="sub">Chargement…</p></div>` + tacticalReportHtml(team);
-    return `<div class="section"><div class="prm-lock"><h3 style="margin:0">Comment vos adversaires vous voient</h3>` +
-      `<p class="sub" style="margin:0">Vos tendances de jeu (tirs dans la raquette, à 3 points, rebonds offensifs, joueurs clés) et la défense qu'on vous conseillerait : réservé au Premium.</p>` +
-      premiumLinkHtml() + `</div></div>`;
-  }
-
   // Brouillard de guerre (maquette validée le 2026-10-06) : rapport de
   // l'analyste pour ce club (une analyse par saison), puis le bouton.
   const Fog = fogApi();
@@ -35859,8 +35850,27 @@ function teamDetailAnalyseHtml(teamIdx) {
     card += `<p class="sub">Aucune caractéristique de cet effectif n'a encore été estimée. Une séance vidéo estime des caractéristiques de TOUS ses joueurs, une fois par saison : plus votre analyste est bon, plus elle en estime et plus les fourchettes sont étroites. Une estimation n'est jamais certaine.</p>`;
   }
   card += `</div>`;
-  let html = card + `<div class="scouting-actions">${buttonHtml}</div>`;
-  html += `<div id="scoutingFeedback"></div>`;
+  return `<div class="fog-panel">${card}<div class="scouting-actions">${buttonHtml}</div><div id="scoutingFeedback"></div></div>`;
+}
+
+function teamDetailAnalyseHtml(teamIdx) {
+  const team = league.teams[teamIdx];
+  const isOwnTeam = teamIdx === myTeamIndex;
+  // Analyse de sa propre équipe : avantage Premium (retour utilisateur,
+  // 2026-09-27 : "pour l'analyse de sa propre équipe c'est aussi un avantage
+  // premium").
+  if (isOwnTeam) {
+    // Premium : même rapport complet (Scouting Pro) que pour un adversaire
+    // (retour utilisateur 2026-09-30 : « il faut le rapport complet ici pour
+    // les premium, comme si on analysait une autre équipe »), chargé par
+    // refreshScoutingProPanel ; le rapport tactique reste dessous.
+    if (teamIsPremium(teamA)) return `<div id="scoutingProPanel" class="section scouting-pro-panel"><p class="sub">Chargement…</p></div>` + tacticalReportHtml(team);
+    return `<div class="section"><div class="prm-lock"><h3 style="margin:0">Comment vos adversaires vous voient</h3>` +
+      `<p class="sub" style="margin:0">Vos tendances de jeu (tirs dans la raquette, à 3 points, rebonds offensifs, joueurs clés) et la défense qu'on vous conseillerait : réservé au Premium.</p>` +
+      premiumLinkHtml() + `</div></div>`;
+  }
+
+  let html = "";
   // Scouting Pro (retour utilisateur, 2026-09 : "analyse des équipes
   // adverses (« Scouting Pro ») [...]") : rapport SUPPLÉMENTAIRE, gagné par
   // pub (factice) ou Premium — voir refreshScoutingProPanel plus bas, qui
@@ -45292,8 +45302,13 @@ document.addEventListener("click", (e) => {
   if (!b) return;
   const idx = Number(b.dataset.fogAnalyse);
   showTeamDetail(idx);
-  teamDetailSubView = "analyse";
+  teamDetailSubView = "effectif";
   renderTeamDetail(idx);
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("[data-fog-scroll]")) return;
+  const panel = document.querySelector("#teamDetailContent .fog-panel");
+  if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // Carte d'un poste : en poste / enchère en cours / à pourvoir.

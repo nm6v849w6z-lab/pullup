@@ -160,7 +160,7 @@ const caracsTableBefore = doc.querySelector("#teamDetailContent table.tde-caracs
 console.log("Encart 'Aucune caractéristique révélée' :", !!lockedCard, "| tableau de caracs :", !!caracsTableBefore);
 if (!lockedCard || caracsTableBefore) throw new Error("❌ Sans séance vidéo, la vue Caractéristiques devrait afficher l'encart (et aucun tableau).");
 if (doc.querySelectorAll("#teamDetailContent .attr-cell").length) throw new Error("❌ Aucune valeur de caractéristique ne devrait apparaître sans séance vidéo.");
-if (!lockedCard.querySelector('[data-team-detail-subview="analyse"]')) throw new Error("❌ L'encart devrait proposer d'aller à l'Analyse d'équipe.");
+if (!lockedCard.querySelector('[data-fog-scroll]')) throw new Error("❌ L'encart devrait renvoyer vers l'analyse vidéo de la même page.");
 console.log("✅ La fiche adverse affiche toujours les infos publiques, et aucune caractéristique tant que rien n'est révélé (encart vers l'Analyse).");
 
 // Retour utilisateur (2026-09) : "il faudrait ajouter des boutons sur la
@@ -168,7 +168,7 @@ console.log("✅ La fiche adverse affiche toujours les infos publiques, et aucun
 // séance vidéo vit désormais sous le sous-onglet "Analyse d'équipe" de la
 // fiche équipe (voir teamDetailAnalyseHtml), plus sous "Effectif" (par
 // défaut à l'ouverture, voir showTeamDetail).
-doc.querySelector('[data-team-detail-subview="analyse"]').click();
+// Depuis le 2026-10-06 : bouton en tête de la page Effectif du club analysé.
 const sessionBtn = doc.getElementById("runVideoSessionBtn");
 console.log("\nBouton 'Faire une séance vidéo' présent et actif :", !!sessionBtn && !sessionBtn.disabled);
 if (!sessionBtn || sessionBtn.disabled) throw new Error("❌ Avec un analyste sous contrat et aucune séance utilisée aujourd'hui, le bouton devrait être actif.");
@@ -203,8 +203,8 @@ if (!attrHeaders.every(th => th.hasAttribute("data-team-sort") && revealed.inclu
   throw new Error("❌ Chaque colonne affichée doit correspondre à une caractéristique révélée, et être triable.");
 }
 // Brouillard de guerre : fourchettes estimées (jamais de valeur exacte).
-const valueCells = caracsTable.querySelectorAll("tbody span.fog-cell:not(.fog-lock)").length;
-if (![...caracsTable.querySelectorAll("tbody span.fog-cell:not(.fog-lock)")].every(e => /^\d+ – \d+$/.test(e.textContent.trim()))) throw new Error("❌ Chaque valeur adverse devrait être une fourchette « min – max ».");
+const valueCells = caracsTable.querySelectorAll("tbody td:not(.fog-td) > span.fog-cell:not(.fog-lock)").length;
+if (![...caracsTable.querySelectorAll("tbody td:not(.fog-td) > span.fog-cell:not(.fog-lock)")].every(e => /^\d+ – \d+$/.test(e.textContent.trim()))) throw new Error("❌ Chaque valeur adverse devrait être une fourchette « min – max ».");
 if (valueCells !== opponentRosterSize * revealed.length) throw new Error(`❌ Attendu ${opponentRosterSize * revealed.length} valeurs, obtenu ${valueCells}.`);
 const hiddenChips = doc.querySelectorAll("#teamDetailContent .tde-hidden-attrs .tde-chip").length;
 if (hiddenChips !== ATTRS_COUNT - revealed.length) throw new Error(`❌ ${ATTRS_COUNT - revealed.length} caractéristiques devraient être listées comme encore cachées, obtenu ${hiddenChips}.`);
@@ -217,7 +217,7 @@ console.log("✅ Une séance vidéo réussie révèle bien le bon nombre de cara
 // clairement distincte du message de cooldown quotidien ci-dessous.
 // Le bouton/message de scoutisme vit sous "Analyse d'équipe" (voir plus
 // haut) : rebascule dessus avant de le relire.
-win.eval("teamDetailSubView = 'analyse';");
+win.eval("teamDetailSubView = 'effectif';");
 win.renderTeamDetail(opponentIdx);
 const sessionBtnAfter = doc.getElementById("runVideoSessionBtn");
 console.log("\nBouton de séance vidéo après scoutage de cet adversaire :", sessionBtnAfter);
