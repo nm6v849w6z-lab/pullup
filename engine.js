@@ -7082,6 +7082,8 @@ class Team {
     // période de la saison, jamais sur le seul match qui l'a déclenchée.
     this.players.forEach(p => { p.form = clamp(Math.round(p.form + formDelta), 1, 100); });
     this.applyChemistryDelta(chemistryDelta);
+    // Dynamique de groupe : intervention du coach journalisée (assets/vestiaire.js).
+    if (vestiaireApi()) vestiaireApi().pushLog(this, { t: chemistryDelta > 0 ? "interview-up" : chemistryDelta < 0 ? "interview-down" : "interview", x: chemistryDelta });
     this.pendingInterviews.splice(idx, 1);
     // Fil d'actualité (voir applyMoraleForResult ci-dessus, qui a créé
     // l'entrée `interview_<id>` correspondante) : retirée, l'interview est

@@ -8357,6 +8357,7 @@
 <script src="assets/achievements.js" defer></script>
 <!-- Dynamique de groupe (partagé avec engine.js). -->
 <script src="assets/vestiaire.js" defer></script>
+<script src="assets/vestiaire-ui.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
@@ -8431,6 +8432,8 @@
     <div class="sidebar-section sidebar-group" data-sidebar-group="equipe">
       <button type="button" class="sidebar-section-label sidebar-group-toggle" aria-expanded="true"><span class="sidebar-group-name">Équipe</span><span class="sidebar-group-badge hidden" aria-hidden="true"></span><svg class="sidebar-group-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <button class="tab-btn sidebar-link" data-tab="effectif"><span class="sidebar-label">Effectif</span></button>
+      <!-- Dynamique de groupe (2026-10-06, voir assets/vestiaire-ui.js). -->
+      <button class="tab-btn sidebar-link" data-tab="vestiaire"><span class="sidebar-label">Vestiaire</span></button>
       <!-- Plus d'onglet « Ordres » (retour utilisateur 2026-10-04 : doublon
            source de bugs) : prochain match = « Donnez / Modifier vos
            ordres » de la barre du haut ; un match précis = son bouton dans
@@ -9492,6 +9495,12 @@
     <div class="section">
       <h2 class="page-title">Sélections nationales</h2>
       <div id="nationalContent"></div>
+    </div>
+  </div>
+  <div id="vestiaireSection" class="hidden">
+    <div class="section">
+      <h2 class="page-title">Dynamique de groupe</h2>
+      <div id="vestiaireContent"></div>
     </div>
   </div>
   <div id="signetsSection" class="hidden">
@@ -17256,6 +17265,8 @@ class Team {
     // période de la saison, jamais sur le seul match qui l'a déclenchée.
     this.players.forEach(p => { p.form = clamp(Math.round(p.form + formDelta), 1, 100); });
     this.applyChemistryDelta(chemistryDelta);
+    // Dynamique de groupe : intervention du coach journalisée (assets/vestiaire.js).
+    if (vestiaireApi()) vestiaireApi().pushLog(this, { t: chemistryDelta > 0 ? "interview-up" : chemistryDelta < 0 ? "interview-down" : "interview", x: chemistryDelta });
     this.pendingInterviews.splice(idx, 1);
     // Fil d'actualité (voir MIROIR EXACT engine.js).
     if (this.feed) handleGameEvent(this.feed, { type: "interview_done", interviewId: entry.id }, { clubName: this.name });
@@ -28216,7 +28227,7 @@ const PAGE_IDS = [
   "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
-  "guideSection", "premiumSection", "planeteSection", "signetsSection", "selectionsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
+  "guideSection", "premiumSection", "planeteSection", "signetsSection", "vestiaireSection", "selectionsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
   // Profil du manager (2026-09-30) : page à part, hors barre latérale (voir
   // showManagerProfile).
   "managerProfileSection",
@@ -46526,6 +46537,7 @@ const DASH_ROUTE_TO_TAB = {
   "/": "club", "/club": "club",
   "/ordres": "ordres", "/staff": "staff", "/economie": "economie",
   "/effectif": "effectif", "/salle": "salle", "/humeur": "humeur",
+  "/vestiaire": "vestiaire",
   "/marche": "marche", "/ligue": "ligue", "/coupe": "coupe",
   "/calendrier": "calendrier", "/entrainement": "entrainement",
   "/ligues-privees": "lp",
@@ -57794,6 +57806,7 @@ const TAB_HANDLERS = {
   planete: () => { showPage("planeteSection"); setActiveTab("planete"); renderPlaneteSection(); },
   selections: () => { showPage("selectionsSection"); setActiveTab("selections"); if (window.HM_NATIONAL) window.__lastNational = window.HM_NATIONAL.render(); },
   signets: () => { showPage("signetsSection"); setActiveTab("signets"); window.__lastSignets = renderSignetsSection(); },
+  vestiaire: () => { showPage("vestiaireSection"); setActiveTab("vestiaire"); if (window.HM_VESTIAIRE_UI) window.__lastVestiaire = window.HM_VESTIAIRE_UI.render(); },
   club: () => { renderClubSection(); showPage("clubSection"); setActiveTab("club"); },
   ligue: showStandings,
   coupe: () => { renderCoupeSection(); showPage("coupeSection"); setActiveTab("coupe"); },

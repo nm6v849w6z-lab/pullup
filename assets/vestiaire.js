@@ -168,12 +168,14 @@
     const natCount = {};
     players.forEach(p => { if (p.nationality) natCount[p.nationality] = (natCount[p.nationality] || 0) + 1; });
     const mainNat = Object.entries(natCount).sort((a, b) => b[1] - a[1])[0];
+    const maxLead = Math.max(1, ...players.map(p => attr(p, "leadership")));
     return {
-      team, now, season, players, rank, minutes, maxMin, club, mentors, mentees,
+      team, now, season, players, rank, minutes, maxMin, maxLead, club, mentors, mentees,
       mainNat: mainNat ? mainNat[0] : null,
       byId: new Map(players.map(p => [sid(p.id), p])),
       role: new Map(players.map(p => [sid(p.id), roleOf(team, p)])),
       relations: ((team.locker && team.locker.relations) || {}),
+      nationName: opts.nationName || null,
     };
   }
   function tenureOf(ctx, p) {
@@ -191,7 +193,8 @@
     const id = sid(p.id);
     const rank = ctx.rank.get(id) || ctx.players.length;
     const parts = {
-      leadership: attr(p, "leadership") / 100 * 30,
+      // Relatif à l'effectif : le plus fort leadership du groupe vaut 30.
+      leadership: attr(p, "leadership") / ctx.maxLead * 30,
       minutes: (ctx.minutes.get(id) || { avg: 0 }).avg / ctx.maxMin * 20,
       tenure: Math.min(4, tenureOf(ctx, p)) / 4 * 15,
       age: clamp((num(p.age, 25) - 20) / 12, 0, 1) * 10,
@@ -234,15 +237,18 @@
   function hierarchy(ctx) {
     const rows = ctx.players.map(p => ({ p, inf: influenceOf(ctx, p), sat: satisfactionOf(ctx, p) }));
     rows.sort((a, b) => b.inf.value - a.inf.value || (ctx.rank.get(sid(a.p.id)) - ctx.rank.get(sid(b.p.id))));
-    let leaders = 0, cadres = 0;
+    // Hiérarchie RELATIVE au groupe : il y a toujours un leader s'il existe
+    // un joueur éligible (ni marginalisé, ni jeune/nouveau) ; un second
+    // seulement s'il pèse presque autant ; puis 3 cadres au plus.
+    let leaders = 0, cadres = 0, top = 0;
     rows.forEach(r => {
       const p = r.p;
       const id = sid(p.id);
       const young = num(p.age, 25) <= 21 || (typeof p.clubSinceSeason === "number" && p.clubSinceSeason === ctx.season && tenureOf(ctx, p) === 0 && r.sat.role !== "starter");
       const marginal = p.transferRequestActive || (num(p.form, 50) < 30 && r.sat.role !== "starter") || (r.sat.role === "reserve" && r.sat.minutes < 3 && num(p.form, 50) < 45 && !young);
       let level;
-      if (!marginal && !young && leaders < 2 && r.inf.value >= (leaders ? 60 : 52)) { level = "leader"; leaders++; }
-      else if (!marginal && cadres < 4 && r.inf.value >= 42 && num(p.age, 25) >= 23) { level = "cadre"; cadres++; }
+      if (!marginal && !young && r.inf.value > 0 && (leaders === 0 || (leaders === 1 && r.inf.value >= top * 0.92))) { level = "leader"; leaders++; top = top || r.inf.value; }
+      else if (!marginal && !young && cadres < 3 && top && r.inf.value >= top * 0.7 && num(p.age, 25) >= 23) { level = "cadre"; cadres++; }
       else if (marginal) level = "marginal";
       else if (r.sat.role === "starter" || (ctx.rank.get(id) || 99) <= 7) level = "important";
       else if (young) level = "young";
@@ -338,7 +344,11 @@
     const avgAge = members.reduce((s, p) => s + num(p.age, 25), 0) / n;
     const allNat = members.every(p => p.nationality && p.nationality === members[0].nationality);
     const cands = [];
-    if (allNat && members[0].nationality !== ctx.mainNat) cands.push({ name: `Le clan ${members[0].nationality}`, nat: members[0].nationality });
+    if (allNat && members[0].nationality !== ctx.mainNat) {
+      const nat = members[0].nationality;
+      const label = typeof ctx.nationName === "function" ? (ctx.nationName(nat) || nat.toUpperCase()) : nat.toUpperCase();
+      cands.push({ name: `Le clan ${label}` });
+    }
     if (share("mentor") > 0 && n === 2) cands.push({ name: "Le duo mentor-élève" });
     if (members.every(p => isHomegrown(ctx, p))) cands.push({ name: "Les enfants du club" });
     if (share("starters") >= 1 && members.every(p => ctx.role.get(sid(p.id)) === "starter")) cands.push({ name: "Le cinq majeur" });
@@ -604,6 +614,9 @@
       case "loss-streak": return `${ev.x} défaites de suite`;
       case "big-win": return `Large victoire (+${ev.x})`;
       case "big-loss": return `Lourde défaite (−${ev.x})`;
+      case "interview-up": return "Le discours du coach en conférence de presse soude le groupe";
+      case "interview-down": return "Le discours du coach en conférence de presse passe mal dans le vestiaire";
+      case "interview": return "Le coach s'exprime en conférence de presse";
       case "talk-ok": return `Discussion réussie avec ${n}`;
       case "talk-ko": return `Discussion sans effet avec ${n}`;
       default: return n;
@@ -612,7 +625,7 @@
   const EVENT_TONE = {
     arrival: 0, youth: 1, departure: 0, starter: 1, benched: -1, request: -1, "request-end": 1, unhappy: -1,
     "happy-again": 1, injury: -1, "injury-return": 1, extension: 1, mentor: 1, conflict: -1, bond: 1,
-    "win-streak": 1, "loss-streak": -1, "big-win": 1, "big-loss": -1, "talk-ok": 1, "talk-ko": -1,
+    "win-streak": 1, "loss-streak": -1, "big-win": 1, "big-loss": -1, "talk-ok": 1, "talk-ko": -1, "interview-up": 1, "interview-down": -1, interview: 0,
   };
 
   const api = {
