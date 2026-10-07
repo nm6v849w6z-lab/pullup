@@ -3,6 +3,20 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "Squad notes",
+  "visibles du staff seulement": "visible to the staff only",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Your comment on this player (level, attitude, availability…)",
+  "Ajouter la note": "Add note",
+  "Aucune note pour l'instant.": "No notes yet.",
+  "Note ajoutée.": "Note added.",
+  "Note supprimée.": "Note deleted.",
+  "Note vide.": "Empty note.",
+  "Note introuvable.": "Note not found.",
+  "Pas de notes sur les joueurs de votre club.": "No notes on your own club's players.",
+  "Vous ne pouvez supprimer que vos notes.": "You can only delete your own notes.",
+  "{0} notes par joueur au maximum.": "{0} notes per player at most.",
+  "Aucun joueur suivi.": "No watched players.",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "Search a player, club or position",
   "Attribuer à un scout": "Assign to a scout",
   "Retirer l'attribution": "Remove assignment",
@@ -10,7 +24,7 @@ window.HM_I18N_EN = {
   "Attribution retirée.": "Assignment removed.",
   "Joueur attribué et présélectionné.": "Player assigned and shortlisted.",
   "Aucun scout en poste : nommez-en un dans Staff": "No scout in post: appoint one in Staff",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "Scout",
   "Scouts": "Scouts",
   "Personne aidante": "Helper",
@@ -59,16 +73,16 @@ window.HM_I18N_EN = {
   "Scout introuvable (ou invitation pas encore acceptée).": "Scout not found (or invitation not yet accepted).",
   "{0} joueurs par scout au maximum.": "{0} players per scout at most.",
   "Ce joueur ne vous est pas attribué.": "This player isn't assigned to you.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "No players in the squad yet: call up players to see the group dynamics.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Slashing point guard",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Point guard who attacks the rim with the ball and kicks it out when the help comes.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "The Stretch 4 clears the paint for the Slasher.",
   "Le meneur pénètre et ressort pour la Gâchette.": "The point guard drives and kicks out to the Sharpshooter.",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "The point guard drives and kicks out to the 3&D in the corner.",
   "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: the point guard attacks, the big finishes.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Scoring point guard",
   "Scoreur arrière": "Scoring shooting guard",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Point guard who brings the ball up, starts the offence and creates for himself.",
@@ -185,7 +199,7 @@ window.HM_I18N_EN = {
   "Lob Threat": "Lob Threat",
   "Jeu sans ballon": "Off-ball play",
   "Athlétisme": "Athleticism",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "Add to followed players",
   "Liste complète": "List full",
   "Ajouté à la présélection.": "Added to the shortlist.",
@@ -195,11 +209,11 @@ window.HM_I18N_EN = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "Stamina, Free throw, Power, Concentration, Anticipation and Leadership each feed a dedicated in-game mechanic. Stamina slows down the player's fatigue DURING THE GAME. Free throw directly determines free throw success; Concentration improves it a little further and keeps the player sharp as fatigue builds. Power, against the defender's Strength, draws more fouls near the basket and helps score through contact. Anticipation boosts the whole team's defensive pressure on the perimeter. The Leadership of the BEST player in the five on court eases, for the whole team, the penalty from a bad streak of missed shots.",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "Penetration, Shot creation, Block, Steals, Speed, Acceleration, Strength, Vertical, Decision, Composure, Determination, Discipline and Vision also have their own mechanics. Penetration makes a player attack the rim more often and helps him beat his defender there. Shot creation is the main factor in how open a shot is. Block isn't just for blocking shots: a good rim protector also makes opponents miss more shots near the basket. Steals measure a player's appetite for gambling in the passing lanes: a player whose Steals clearly exceed his Perimeter defense gambles more often and steals more balls, but gives up an open shot when he misses. Speed triggers fast breaks; Acceleration helps beat a defender off the first step. Strength and Vertical boost rebounding and blocking; Strength also helps absorb contact. Decision makes a player pass up a heavily contested shot to look for a better option; Vision improves the passer's choice. Composure limits turnovers under pressure, lifts shooting in the money time and helps snap out of a bad streak. Determination speeds up progress in training and gets the player going again after a defeat. Discipline reduces fouls on defense; an undisciplined defender risks an unsportsmanlike foul, a defender lacking composure risks a technical foul: two technicals, two unsportsmanlikes, or one of each in the same match mean ejection.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "the qualifying game",
   "rencontre amicale internationale": "the international friendly",
   "Qualifications.": "Qualifiers.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "My national team · {0}",
   "Analyse de ma sélection": "My national team analysis",
   "Chargement de l'analyse…": "Loading analysis…",
@@ -230,7 +244,7 @@ window.HM_I18N_EN = {
   "Le direct commence au coup d'envoi.": "The live broadcast starts at tip-off.",
   "Qualifications · {0}": "Qualifiers · {0}",
   "GEN {0}": "OVR {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "First title",
   "Titre": "Title",
   "Finale perdue": "Lost final",
@@ -385,8 +399,8 @@ window.HM_I18N_EN = {
   "Recruteurs": "Recruiters",
   "Moyenne physique": "Physical average",
   "Moyenne mentale": "Mental average",
-  "Mode Sélectionneur": "Head coach mode",
-  "Mode Sélectionneur indisponible pour l'instant.": "Head coach mode is unavailable for now.",
+  "Mode Sélection": "Selection mode",
+  "Mode Sélection indisponible pour l'instant.": "Selection mode is unavailable for now.",
   "Retour au mode Club": "Back to Club mode",
   "Revenir à la gestion de votre club": "Go back to managing your club",
   "Gérer {0}": "Manage {0}",

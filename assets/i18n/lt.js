@@ -5,6 +5,20 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "Rinktinės pastabos",
+  "visibles du staff seulement": "matomos tik štabui",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Jūsų komentaras apie žaidėją (lygis, elgesys, prieinamumas…)",
+  "Ajouter la note": "Pridėti pastabą",
+  "Aucune note pour l'instant.": "Pastabų kol kas nėra.",
+  "Note ajoutée.": "Pastaba pridėta.",
+  "Note supprimée.": "Pastaba ištrinta.",
+  "Note vide.": "Tuščia pastaba.",
+  "Note introuvable.": "Pastaba nerasta.",
+  "Pas de notes sur les joueurs de votre club.": "Pastabų apie savo klubo žaidėjus nėra.",
+  "Vous ne pouvez supprimer que vos notes.": "Galite ištrinti tik savo pastabas.",
+  "{0} notes par joueur au maximum.": "Daugiausia {0} pastabų vienam žaidėjui.",
+  "Aucun joueur suivi.": "Nėra stebimų žaidėjų.",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "Ieškoti žaidėjo, klubo, pozicijos",
   "Attribuer à un scout": "Priskirti skautui",
   "Retirer l'attribution": "Pašalinti priskyrimą",
@@ -12,7 +26,7 @@ window.HM_I18N_LT = {
   "Attribution retirée.": "Priskyrimas pašalintas.",
   "Joueur attribué et présélectionné.": "Žaidėjas priskirtas ir įtrauktas į preliminarų sąrašą.",
   "Aucun scout en poste : nommez-en un dans Staff": "Nėra skauto: paskirkite jį skiltyje Štabas",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "Skautas",
   "Scouts": "Skautai",
   "Personne aidante": "Pagalbininkas",
@@ -61,16 +75,16 @@ window.HM_I18N_LT = {
   "Scout introuvable (ou invitation pas encore acceptée).": "Skautas nerastas (arba kvietimas dar nepriimtas).",
   "{0} joueurs par scout au maximum.": "Daugiausia {0} žaidėjų vienam skautui.",
   "Ce joueur ne vous est pas attribué.": "Šis žaidėjas jums nepriskirtas.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Rinktinėje dar nėra žaidėjų: pakviesk žaidėjų, kad matytum grupės dinamiką.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Prasiveržiantis įžaidėjas",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Įžaidėjas, puolantis krepšį su kamuoliu ir atiduodantis jį, kai ateina pagalba.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 atlaisvina baudos aikštelę Slasheriui.",
   "Le meneur pénètre et ressort pour la Gâchette.": "Įžaidėjas prasiveržia ir atiduoda Snaiperiui.",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Įžaidėjas prasiveržia ir atiduoda 3&D žaidėjui kampe.",
   "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: įžaidėjas puola, centras užbaigia.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Taškus renkantis įžaidėjas",
   "Scoreur arrière": "Taškus renkantis atakuojantis gynėjas",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Įžaidėjas, kuris atneša kamuolį, pradeda ataką ir kuria sau.",
@@ -187,7 +201,7 @@ window.HM_I18N_LT = {
   "Lob Threat": "Lob Threat",
   "Jeu sans ballon": "Žaidimas be kamuolio",
   "Athlétisme": "Atletiškumas",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "Pridėti prie stebimų žaidėjų",
   "Liste complète": "Sąrašas pilnas",
   "Ajouté à la présélection.": "Įtrauktas į išplėstinį sąrašą.",
@@ -197,11 +211,11 @@ window.HM_I18N_LT = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "Ištvermė, Baudos metimas, Galia, Koncentracija, Nuspėjimas ir Lyderystė kiekviena valdo atskirą rungtynių mechanizmą. Ištvermė lėtina žaidėjo nuovargį RUNGTYNIŲ METU. Baudos metimas tiesiogiai lemia baudų taiklumą, o Koncentracija jį dar šiek tiek pagerina ir padeda žaidėjui išlikti blaivaus proto, kai didėja nuovargis. Galia, prieš gynėjo Jėgą, išprovokuoja daugiau pražangų po krepšiu ir padeda pelnyti taškus nepaisant kontakto. Nuspėjimas sustiprina visos komandos gynybinį spaudimą perimetre. GERIAUSIO aikštėje esančio penketo žaidėjo Lyderystė visai komandai sumažina nepataikytų metimų serijos baudą.",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "Prasiveržimas, Metimo susikūrimas, Blokas, Perimti kamuoliai, Greitis, Įsibėgėjimas, Jėga, Šuolis, Sprendimų priėmimas, Šaltakraujiškumas, Ryžtas, Drausmė ir Aikštės matymas taip pat turi savo mechaniką. Prasiveržimas skatina dažniau atakuoti krepšį ir padeda ten įveikti savo gynėją. Metimo susikūrimas yra pagrindinis veiksnys, lemiantis metimo laisvumą. Blokas skirtas ne vien blokuoti: geras krepšio saugotojas taip pat priverčia varžovus dažniau prašauti po krepšiu. Perimti kamuoliai matuoja polinkį rizikuoti perdavimų linijose: žaidėjas, kurio Perimti kamuoliai aiškiai viršija Išorės gynybą, dažniau bando laimę ir perima daugiau kamuolių, bet nepavykus palieka laisvą metimą. Greitis sukelia greitąsias atakas; Įsibėgėjimas padeda įveikti gynėją pirmu žingsniu. Jėga ir Šuolis sustiprina kovą dėl atšokusių kamuolių ir blokus; Jėga taip pat padeda atlaikyti kontaktą. Sprendimų priėmimas leidžia atsisakyti per daug trukdomo metimo ir ieškoti geresnio varianto; Aikštės matymas pagerina perduodančiojo pasirinkimą. Šaltakraujiškumas mažina klaidų skaičių esant spaudimui, gerina taiklumą lemiamomis minutėmis ir padeda išsivaduoti iš nesėkmių serijos. Ryžtas spartina pažangą treniruotėse ir vėl įkvepia žaidėją po pralaimėjimo. Drausmė mažina pražangų skaičių gynyboje; nedrausmingas gynėjas rizikuoja gauti nesportinę pražangą, nesusivaldantis gynėjas, techninę pražangą: dvi techninės, dvi nesportinės arba po vieną kiekvienos tose pačiose rungtynėse reiškia pašalinimą.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "atrankos rungtynes",
   "rencontre amicale internationale": "tarptautines draugiškas rungtynes",
   "Qualifications.": "Atranka.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "Mano rinktinė · {0}",
   "Analyse de ma sélection": "Mano rinktinės analizė",
   "Chargement de l'analyse…": "Įkeliama analizė…",
@@ -232,7 +246,7 @@ window.HM_I18N_LT = {
   "Le direct commence au coup d'envoi.": "Tiesioginė transliacija prasideda nuo pradinio metimo.",
   "Qualifications · {0}": "Atranka · {0}",
   "GEN {0}": "BEND {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "Pirmasis titulas",
   "Titre": "Titulas",
   "Finale perdue": "Pralaimėtas finalas",
@@ -387,8 +401,8 @@ window.HM_I18N_LT = {
   "Recruteurs": "Verbuotojai",
   "Moyenne physique": "Fizinių vidurkis",
   "Moyenne mentale": "Psichologinių vidurkis",
-  "Mode Sélectionneur": "Rinktinės trenerio režimas",
-  "Mode Sélectionneur indisponible pour l'instant.": "Rinktinės trenerio režimas šiuo metu nepasiekiamas.",
+  "Mode Sélection": "Rinktinės režimas",
+  "Mode Sélection indisponible pour l'instant.": "Rinktinės režimas šiuo metu nepasiekiamas.",
   "Retour au mode Club": "Grįžti į klubo režimą",
   "Revenir à la gestion de votre club": "Grįžti prie savo klubo valdymo",
   "Gérer {0}": "Valdyti: {0}",

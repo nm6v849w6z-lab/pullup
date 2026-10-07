@@ -749,7 +749,13 @@ points réellement ouverts.
   `migrateStaff` (`m.staffV = 2`), appelé par `accessOf` / `staffOf`.
   Client (`assets/national-coach.js`) : menu filtré par `v.perms`, page
   Staff unique filtrée par `v.appoint` / perm `assign`. Test :
-  `server/national_staff_test.js`.
+  `server/national_staff_test.js`. Attribuer un joueur à un scout le met
+  aussi en présélection (s'il reste de la place) ; plus de bouton Suivre
+  (tableaux, fiche joueur). Notes privées sur un joueur (perm `notes`,
+  `m.notes[refKey]`, route `/api/national/coach/note`) : `notesFor` ne les
+  envoie qu'au staff, jamais pour les joueurs du club du lecteur, scout =
+  ses joueurs ; bloc en bas de la fiche (`pdpNotesHtml`). Le mode s'affiche
+  « Mode Sélection » (anciennement « Mode Sélectionneur »).
 
 - **Analyse d'équipe (Scouting Pro, sa propre équipe en Premium) — mise en
   page dense (2026-10-05)** : seuils en requêtes de CONTENEUR sur

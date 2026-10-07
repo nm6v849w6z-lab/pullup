@@ -5,6 +5,20 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "国家队备注",
+  "visibles du staff seulement": "仅团队可见",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "你对该球员的评论（水平、态度、可用性…）",
+  "Ajouter la note": "添加备注",
+  "Aucune note pour l'instant.": "暂无备注。",
+  "Note ajoutée.": "备注已添加。",
+  "Note supprimée.": "备注已删除。",
+  "Note vide.": "备注为空。",
+  "Note introuvable.": "未找到备注。",
+  "Pas de notes sur les joueurs de votre club.": "不能为本俱乐部球员添加备注。",
+  "Vous ne pouvez supprimer que vos notes.": "你只能删除自己的备注。",
+  "{0} notes par joueur au maximum.": "每名球员最多 {0} 条备注。",
+  "Aucun joueur suivi.": "暂无关注的球员。",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "搜索球员、俱乐部或位置",
   "Attribuer à un scout": "分配给球探",
   "Retirer l'attribution": "取消分配",
@@ -12,7 +26,7 @@ window.HM_I18N_ZH = {
   "Attribution retirée.": "已取消分配。",
   "Joueur attribué et présélectionné.": "球员已分配并加入预选名单。",
   "Aucun scout en poste : nommez-en un dans Staff": "暂无在任球探：请在团队中任命",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "球探",
   "Scouts": "球探",
   "Personne aidante": "协助人员",
@@ -61,16 +75,16 @@ window.HM_I18N_ZH = {
   "Scout introuvable (ou invitation pas encore acceptée).": "未找到该球探（或尚未接受邀请）。",
   "{0} joueurs par scout au maximum.": "每名球探最多 {0} 名球员。",
   "Ce joueur ne vous est pas attribué.": "该球员未分配给你。",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "国家队暂无球员：征召球员后即可查看团队氛围。",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "突破型控卫",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "持球攻筐、遇到协防时分球的控卫。",
   "Le Stretch 4 vide la raquette pour le Slasher.": "空间型四号位为突破手清空禁区。",
   "Le meneur pénètre et ressort pour la Gâchette.": "控卫突破后分给神射手。",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "控卫突破后分给底角的3D球员。",
   "Pick & roll : le meneur attaque, le pivot finit.": "挡拆：控卫进攻，内线终结。",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "得分型控卫",
   "Scoreur arrière": "得分型分卫",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "控球推进、发动进攻并为自己创造机会的控卫。",
@@ -187,7 +201,7 @@ window.HM_I18N_ZH = {
   "Lob Threat": "空接威胁",
   "Jeu sans ballon": "无球跑动",
   "Athlétisme": "运动能力",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "加入关注球员",
   "Liste complète": "名单已满",
   "Ajouté à la présélection.": "已加入预选名单。",
@@ -197,11 +211,11 @@ window.HM_I18N_ZH = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "耐力、罚球、爆发力、专注力、预判和领导力各自对应一种专属的比赛机制。耐力能减缓球员在比赛中的疲劳。罚球直接决定罚球命中率，专注力还能再略微提高，并让球员在疲劳上升时保持清醒。爆发力在对抗防守者的力量时，能在篮下制造更多犯规，并在身体对抗中完成得分。预判能增强全队对外线的防守压迫。场上五人中最佳球员的领导力，能为全队减轻连续投篮不中带来的惩罚。",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "突破、投篮创造、盖帽、抢断、速度、加速、力量、弹跳、决断力、冷静、意志力、纪律性和视野也各有其机制。突破让球员更频繁地冲击篮筐，并帮助他在那里击败防守者。投篮创造是决定投篮空位质量的主要因素。盖帽不只用于封盖：优秀的护框者还能让对手在篮下更多地投丢。抢断衡量球员在传球路线上冒险赌博的倾向：抢断明显高于外线防守的球员会更频繁地尝试，断下更多球，但失手时会留下空位投篮。速度能发动快攻；加速帮助第一步过掉防守者。力量和弹跳增强篮板和盖帽；力量还有助于承受身体对抗。决断力让球员放弃干扰过大的投篮，去寻找更好的选择；视野改善传球选择。冷静能减少高压下的失误，提升关键时刻的命中率，并帮助走出低迷。意志力能加快训练中的成长，并在失利后让球员重新振作。纪律性减少防守犯规；纪律差的防守者可能吃到违体犯规，不够冷静的防守者可能吃到技术犯规：同一场比赛中两次技术犯规、两次违体犯规或各一次，都会被驱逐出场。",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "资格赛",
   "rencontre amicale internationale": "国际友谊赛",
   "Qualifications.": "资格赛。",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "我的国家队 · {0}",
   "Analyse de ma sélection": "我的国家队分析",
   "Chargement de l'analyse…": "正在加载分析…",
@@ -232,7 +246,7 @@ window.HM_I18N_ZH = {
   "Le direct commence au coup d'envoi.": "直播将在开赛时开始。",
   "Qualifications · {0}": "资格赛 · {0}",
   "GEN {0}": "总评 {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "首冠",
   "Titre": "冠军",
   "Finale perdue": "决赛失利",
@@ -387,8 +401,8 @@ window.HM_I18N_ZH = {
   "Recruteurs": "招募官",
   "Moyenne physique": "身体属性平均",
   "Moyenne mentale": "心理属性平均",
-  "Mode Sélectionneur": "国家队主教练模式",
-  "Mode Sélectionneur indisponible pour l'instant.": "国家队主教练模式暂不可用。",
+  "Mode Sélection": "国家队模式",
+  "Mode Sélection indisponible pour l'instant.": "国家队模式暂不可用。",
   "Retour au mode Club": "返回俱乐部模式",
   "Revenir à la gestion de votre club": "返回管理你的俱乐部",
   "Gérer {0}": "管理 {0}",

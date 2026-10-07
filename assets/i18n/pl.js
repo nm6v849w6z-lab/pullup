@@ -5,6 +5,20 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "Notatki reprezentacji",
+  "visibles du staff seulement": "widoczne tylko dla sztabu",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Twój komentarz o zawodniku (poziom, zachowanie, dostępność…)",
+  "Ajouter la note": "Dodaj notatkę",
+  "Aucune note pour l'instant.": "Brak notatek.",
+  "Note ajoutée.": "Notatka dodana.",
+  "Note supprimée.": "Notatka usunięta.",
+  "Note vide.": "Pusta notatka.",
+  "Note introuvable.": "Nie znaleziono notatki.",
+  "Pas de notes sur les joueurs de votre club.": "Brak notatek o zawodnikach twojego klubu.",
+  "Vous ne pouvez supprimer que vos notes.": "Możesz usuwać tylko swoje notatki.",
+  "{0} notes par joueur au maximum.": "Maksymalnie {0} notatek na zawodnika.",
+  "Aucun joueur suivi.": "Brak obserwowanych zawodników.",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "Szukaj zawodnika, klubu, pozycji",
   "Attribuer à un scout": "Przydziel skautowi",
   "Retirer l'attribution": "Usuń przydział",
@@ -12,7 +26,7 @@ window.HM_I18N_PL = {
   "Attribution retirée.": "Przydział usunięty.",
   "Joueur attribué et présélectionné.": "Zawodnik przydzielony i wpisany do preselekcji.",
   "Aucun scout en poste : nommez-en un dans Staff": "Brak skauta: mianuj go w zakładce Sztab",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "Skaut",
   "Scouts": "Skauci",
   "Personne aidante": "Pomocnik",
@@ -61,16 +75,16 @@ window.HM_I18N_PL = {
   "Scout introuvable (ou invitation pas encore acceptée).": "Nie znaleziono skauta (lub zaproszenie nie zostało jeszcze przyjęte).",
   "{0} joueurs par scout au maximum.": "Maksymalnie {0} zawodników na skauta.",
   "Ce joueur ne vous est pas attribué.": "Ten zawodnik nie jest ci przydzielony.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Brak zawodników w kadrze: powołaj zawodników, aby zobaczyć dynamikę grupy.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Penetrujący rozgrywający",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Rozgrywający, który atakuje kosz z piłką i oddaje ją przy pomocy obrońcy.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Stretch 4 opróżnia trumnę dla Slashera.",
   "Le meneur pénètre et ressort pour la Gâchette.": "Rozgrywający wchodzi pod kosz i oddaje do Snajpera.",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Rozgrywający wchodzi pod kosz i oddaje do 3&D w rogu.",
   "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: rozgrywający atakuje, środkowy kończy.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Punktujący rozgrywający",
   "Scoreur arrière": "Punktujący rzucający obrońca",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Rozgrywający, który prowadzi piłkę, rozpoczyna akcję i kreuje dla siebie.",
@@ -187,7 +201,7 @@ window.HM_I18N_PL = {
   "Lob Threat": "Lob Threat",
   "Jeu sans ballon": "Gra bez piłki",
   "Athlétisme": "Atletyzm",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "Dodaj do obserwowanych zawodników",
   "Liste complète": "Lista pełna",
   "Ajouté à la présélection.": "Dodano do szerokiej kadry.",
@@ -197,11 +211,11 @@ window.HM_I18N_PL = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "Wytrzymałość, Rzut wolny, Moc, Koncentracja, Antycypacja i Przywództwo zasilają każda osobny mechanizm meczowy. Wytrzymałość spowalnia zmęczenie zawodnika W TRAKCIE MECZU. Rzut wolny bezpośrednio decyduje o skuteczności rzutów wolnych, a Koncentracja jeszcze nieco ją poprawia i pozwala zawodnikowi zachować jasność umysłu, gdy narasta zmęczenie. Moc, w starciu z Siłą obrońcy, wymusza więcej fauli blisko kosza i pozwala zdobywać punkty mimo kontaktu. Antycypacja wzmacnia presję defensywną całej drużyny na obwodzie. Przywództwo NAJLEPSZEGO zawodnika z piątki na boisku łagodzi, dla całej drużyny, karę za złą serię niecelnych rzutów.",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "Penetracja, Kreowanie rzutów, Blok, Przechwyty, Szybkość, Przyspieszenie, Siła, Wyskok, Decyzja, Opanowanie, Determinacja, Dyscyplina i Wizja gry również mają swoje mechanizmy. Penetracja sprawia, że zawodnik częściej atakuje kosz, i pomaga mu tam minąć obrońcę. Kreowanie rzutów to główny czynnik decydujący o tym, jak czysta jest pozycja rzutowa. Blok służy nie tylko do blokowania: dobry obrońca obręczy sprawia też, że rywale częściej pudłują spod kosza. Przechwyty mierzą skłonność do ryzyka na liniach podań: zawodnik, którego Przechwyty wyraźnie przewyższają Obronę na obwodzie, częściej próbuje szczęścia i przechwytuje więcej piłek, ale gdy mu się nie uda, zostawia otwartą pozycję rzutową. Szybkość napędza kontrataki; Przyspieszenie pomaga minąć obrońcę pierwszym krokiem. Siła i Wyskok wzmacniają zbiórki i bloki; Siła pomaga też wytrzymać kontakt. Decyzja sprawia, że zawodnik rezygnuje ze zbyt mocno kontestowanego rzutu, by poszukać lepszej opcji; Wizja gry poprawia wybór podającego. Opanowanie ogranicza straty pod presją, podnosi skuteczność w końcówce meczu i pomaga przerwać złą serię. Determinacja przyspiesza postępy na treningach i ponownie mobilizuje zawodnika po porażce. Dyscyplina ogranicza faule w obronie; mało zdyscyplinowany obrońca ryzykuje faul niesportowy, a mało opanowany, faul techniczny: dwa techniczne, dwa niesportowe albo po jednym z każdego w tym samym meczu oznaczają wykluczenie.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "mecz eliminacyjny",
   "rencontre amicale internationale": "międzynarodowy mecz towarzyski",
   "Qualifications.": "Eliminacje.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "Moja reprezentacja · {0}",
   "Analyse de ma sélection": "Analiza mojej reprezentacji",
   "Chargement de l'analyse…": "Wczytywanie analizy…",
@@ -232,7 +246,7 @@ window.HM_I18N_PL = {
   "Le direct commence au coup d'envoi.": "Transmisja na żywo zaczyna się wraz z początkiem meczu.",
   "Qualifications · {0}": "Eliminacje · {0}",
   "GEN {0}": "OG {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "Pierwszy tytuł",
   "Titre": "Tytuł",
   "Finale perdue": "Przegrany finał",
@@ -387,8 +401,8 @@ window.HM_I18N_PL = {
   "Recruteurs": "Rekruterzy",
   "Moyenne physique": "Średnia fizyczna",
   "Moyenne mentale": "Średnia mentalna",
-  "Mode Sélectionneur": "Tryb selekcjonera",
-  "Mode Sélectionneur indisponible pour l'instant.": "Tryb selekcjonera jest chwilowo niedostępny.",
+  "Mode Sélection": "Tryb reprezentacji",
+  "Mode Sélection indisponible pour l'instant.": "Tryb reprezentacji jest chwilowo niedostępny.",
   "Retour au mode Club": "Powrót do trybu klubu",
   "Revenir à la gestion de votre club": "Wróć do zarządzania klubem",
   "Gérer {0}": "Zarządzaj: {0}",

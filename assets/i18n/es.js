@@ -5,6 +5,20 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "Notas de la selección",
+  "visibles du staff seulement": "visibles solo para el cuerpo técnico",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Tu comentario sobre este jugador (nivel, actitud, disponibilidad…)",
+  "Ajouter la note": "Añadir la nota",
+  "Aucune note pour l'instant.": "Aún no hay notas.",
+  "Note ajoutée.": "Nota añadida.",
+  "Note supprimée.": "Nota eliminada.",
+  "Note vide.": "Nota vacía.",
+  "Note introuvable.": "Nota no encontrada.",
+  "Pas de notes sur les joueurs de votre club.": "No hay notas sobre los jugadores de tu club.",
+  "Vous ne pouvez supprimer que vos notes.": "Solo puedes eliminar tus notas.",
+  "{0} notes par joueur au maximum.": "{0} notas por jugador como máximo.",
+  "Aucun joueur suivi.": "Ningún jugador seguido.",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "Buscar un jugador, un club, una posición",
   "Attribuer à un scout": "Asignar a un ojeador",
   "Retirer l'attribution": "Quitar la asignación",
@@ -12,7 +26,7 @@ window.HM_I18N_ES = {
   "Attribution retirée.": "Asignación quitada.",
   "Joueur attribué et présélectionné.": "Jugador asignado y preseleccionado.",
   "Aucun scout en poste : nommez-en un dans Staff": "Ningún ojeador en el cargo: nombra uno en Staff",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "Ojeador",
   "Scouts": "Ojeadores",
   "Personne aidante": "Colaborador",
@@ -61,16 +75,16 @@ window.HM_I18N_ES = {
   "Scout introuvable (ou invitation pas encore acceptée).": "Ojeador no encontrado (o invitación aún no aceptada).",
   "{0} joueurs par scout au maximum.": "{0} jugadores por ojeador como máximo.",
   "Ce joueur ne vous est pas attribué.": "Este jugador no te está asignado.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Todavía no hay jugadores en la selección: convoca jugadores para ver la dinámica del grupo.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Base penetrador",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Base que ataca el aro con el balón y la saca cuando llega la ayuda.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "El Stretch 4 vacía la zona para el Slasher.",
   "Le meneur pénètre et ressort pour la Gâchette.": "El base penetra y la saca para el Tirador.",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "El base penetra y la saca para el 3&D en la esquina.",
   "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: el base ataca, el pívot finaliza.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Base anotador",
   "Scoreur arrière": "Escolta anotador",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Base que sube el balón, inicia el ataque y crea para sí mismo.",
@@ -187,7 +201,7 @@ window.HM_I18N_ES = {
   "Lob Threat": "Lob Threat",
   "Jeu sans ballon": "Juego sin balón",
   "Athlétisme": "Atletismo",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "Añadir a jugadores seguidos",
   "Liste complète": "Lista completa",
   "Ajouté à la présélection.": "Añadido a la preselección.",
@@ -197,11 +211,11 @@ window.HM_I18N_ES = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "Resistencia, Tiro libre, Potencia, Concentración, Anticipación y Liderazgo alimentan cada una un mecanismo de partido propio. La Resistencia ralentiza el cansancio del jugador DURANTE EL PARTIDO. El Tiro libre determina directamente el acierto en los tiros libres; la Concentración lo mejora un poco más y mantiene la lucidez del jugador cuando aumenta el cansancio. La Potencia, frente a la Fuerza del defensor, provoca más faltas cerca del aro y permite anotar pese al contacto. La Anticipación refuerza la presión defensiva de todo el equipo sobre los exteriores. El Liderazgo del MEJOR jugador del quinteto en pista reduce, para todo el equipo, la penalización de una mala racha de tiros fallados.",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "Penetración, Creación de tiro, Tapón, Robos, Velocidad, Aceleración, Fuerza, Salto, Decisión, Sangre fría, Determinación, Disciplina y Visión también tienen su propio mecanismo. La Penetración hace atacar el aro con más frecuencia y ayuda a superar allí al defensor. La Creación de tiro es el factor principal de la calidad de liberación de un tiro. El Tapón no sirve solo para taponar: un buen protector del aro también hace fallar más tiros cerca de la canasta. Los Robos miden la afición a arriesgar en las líneas de pase: un jugador cuyos Robos superan claramente su Defensa exterior lo intenta más a menudo y roba más balones, pero deja un tiro liberado cuando falla. La Velocidad genera contraataques; la Aceleración ayuda a superar al defensor en el primer paso. La Fuerza y el Salto mejoran el rebote y el tapón; la Fuerza también ayuda a aguantar el contacto. La Decisión hace renunciar a un tiro demasiado disputado para buscar una opción mejor; la Visión mejora la elección del pasador. La Sangre fría limita las pérdidas de balón bajo presión, impulsa el acierto en los momentos decisivos y ayuda a salir de una mala racha. La Determinación acelera la progresión en los entrenamientos y vuelve a motivar al jugador tras una derrota. La Disciplina reduce las faltas en defensa; un defensor poco disciplinado se arriesga a una falta antideportiva, un defensor poco sereno a una falta técnica: dos técnicas, dos antideportivas o una de cada en el mismo partido suponen la expulsión.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "el partido de clasificación",
   "rencontre amicale internationale": "el amistoso internacional",
   "Qualifications.": "Clasificación.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "Mi selección · {0}",
   "Analyse de ma sélection": "Análisis de mi selección",
   "Chargement de l'analyse…": "Cargando análisis…",
@@ -232,7 +246,7 @@ window.HM_I18N_ES = {
   "Le direct commence au coup d'envoi.": "El directo empieza con el salto inicial.",
   "Qualifications · {0}": "Clasificatorios · {0}",
   "GEN {0}": "GEN {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "Primer título",
   "Titre": "Título",
   "Finale perdue": "Final perdida",
@@ -387,8 +401,8 @@ window.HM_I18N_ES = {
   "Recruteurs": "Reclutadores",
   "Moyenne physique": "Media física",
   "Moyenne mentale": "Media mental",
-  "Mode Sélectionneur": "Modo seleccionador",
-  "Mode Sélectionneur indisponible pour l'instant.": "Modo seleccionador no disponible por ahora.",
+  "Mode Sélection": "Modo Selección",
+  "Mode Sélection indisponible pour l'instant.": "El modo Selección no está disponible por ahora.",
   "Retour au mode Club": "Volver al modo Club",
   "Revenir à la gestion de votre club": "Volver a la gestión de tu club",
   "Gérer {0}": "Dirigir {0}",

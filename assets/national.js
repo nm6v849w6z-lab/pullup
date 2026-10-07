@@ -212,7 +212,7 @@
       (meInfo.staffRoles || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>" + esc(roleLab[s.role] || s.role) + " · " + esc(s.label) + "</b></div>" +
           '<p class="nt-small">Sélectionneur : ' + esc(s.coach) + "</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélectionneur</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '">Quitter le staff</button></div></div>';
+          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélection</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '">Quitter le staff</button></div></div>';
       });
       h += "</div>";
     }
@@ -657,7 +657,7 @@
   // Feuille d'un match international : la feuille de statistiques des
   // matchs de club (showNationalBoxscore → openMatchBoxscoreModal, 2026-10-06),
   // plus de tableau propre aux sélections. Match encore en direct : le direct.
-  // Aussi utilisée par le mode Sélectionneur (HM_NATIONAL.openMatch).
+  // Aussi utilisée par le mode Sélection (HM_NATIONAL.openMatch).
   function openMatch(id) {
     var p = api("/api/national/match?id=" + encodeURIComponent(id)).then(function (d) {
       var m = d.match;
@@ -687,8 +687,8 @@
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : ' + esc(honoursSummary(tv)) + "</span>" +
       (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +
       // Phase B : espace du sélectionneur (assets/national-coach.js).
-      // Mode Sélectionneur : sélectionneur et membres de son staff.
-      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélectionneur</button>' : "") + "</div></div>";
+      // Mode Sélection : sélectionneur et membres de son staff.
+      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") + "</div></div>";
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
     if (ui.teamTab === "groupe") h += '<div style="margin-top:14px">' + teamGroupeHtml(tv) + "</div>";
     else if (ui.teamTab === "calendrier") h += '<div style="margin-top:14px">' + teamCalendrierHtml(tv) + "</div>";
@@ -755,7 +755,7 @@
   // --- Rendu / données ------------------------------------------------------
   function paint() {
     var holder = document.getElementById("nationalContent");
-    // Mode Sélectionneur : le contenu appartient à assets/national-coach.js.
+    // Mode Sélection : le contenu appartient à assets/national-coach.js.
     if (!holder || document.body.classList.contains("nc-mode")) return;
     holder.innerHTML = ui.teamId ? teamHtml() : ui.electionId ? electionHtml() : overviewHtml();
   }
@@ -846,7 +846,7 @@
       if (d.ntStaffLeave && !window.confirm(t("Quitter le staff de cette sélection ?"))) return;
       var path = d.ntStaffLeave ? "/api/national/coach/staff/remove" : "/api/national/coach/staff/respond";
       act(path, { teamId: tid, accept: !!d.ntStaffAccept }, d.ntStaffAccept ? "Vous rejoignez le staff de la sélection." : d.ntStaffLeave ? "Vous avez quitté le staff." : "Invitation refusée.").then(function () {
-        // Bouton du mode Sélectionneur (tableau de bord) mis à jour.
+        // Bouton du mode Sélection (tableau de bord) mis à jour.
         if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.boot) window.HM_NATIONAL_COACH.boot();
         return loadOverview().then(paint);
       });
@@ -877,7 +877,7 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
 
-  // Écrans de la page d'une sélection, réutilisés par le mode Sélectionneur
+  // Écrans de la page d'une sélection, réutilisés par le mode Sélection
   // (assets/national-coach.js) : même rendu, mêmes règles.
   function sectionHtml(tv, tab) {
     ensureCss();

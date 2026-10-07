@@ -1,4 +1,4 @@
-// Mode Sélectionneur : page Tactique construite comme les Ordres d'un club
+// Mode Sélection : page Tactique construite comme les Ordres d'un club
 // (buildTeamPanel / renderLineupEditor sur un proxy des joueurs du match),
 // ordres PAR MATCH (sélecteur des matchs à venir, POST matchId, verrou
 // T − 5 min) et bouton « Donnez / Modifier vos ordres » de la barre du haut

@@ -5276,7 +5276,7 @@
   */
   /* Pleine largeur (retour utilisateur 2026-09-30 : « le rapport ne prend
      pas toute la largeur de la page »), ex-max-width:1120px. */
-  /* .sp2-host : même rapport dans le Mode Sélectionneur (analyse d'une
+  /* .sp2-host : même rapport dans le Mode Sélection (analyse d'une
      sélection, assets/national-coach.js). */
   #scoutingProPanel, .sp2-host{
     font-size:14px; line-height:1.45;
@@ -34217,7 +34217,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     html += `<div class="pdp2-ring pdp2-ring--locked"><div class="pdp2-ring-center"><span class="pdp2-ring-q">?</span><span class="pdp2-ring-lbl">Note</span></div></div>` +
       `<p class="pdp-locked-note pdp2-center">Pas encore assez scoutée pour une note globale.</p>`;
   }
-  // Mode Sélectionneur (retour utilisateur 2026-10-06) : présélection et
+  // Mode Sélection (retour utilisateur 2026-10-06) : présélection et
   // joueurs suivis, sous la note (voir assets/national-coach.js).
   try { if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.pdpActionsHtml) html += window.HM_NATIONAL_COACH.pdpActionsHtml(player); } catch (e) { /* mode indisponible */ }
   html += `<div class="pdp2-actions">` +
@@ -34475,7 +34475,11 @@ function renderPlayerDetail(teamIdx, playerId) {
   }
   // Personnalisation (Premium), Historique du joueur et Blessures côte à
   // côte (historique et blessures pour tout joueur, comme sur BuzzerBeater).
-  shareBottom = `<div class="pdp2-bottom-actions">${isOwnTeam && !playerDetailForeign ? pdpShareHtml(player) : ""}${pdpBookmarkBtnHtml(player)}</div>`;
+  // Mode Sélection : notes privées du staff de la sélection sur ce joueur
+  // (jamais pour son propriétaire, voir assets/national-coach.js).
+  let ncNotes = "";
+  try { if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.pdpNotesHtml) ncNotes = window.HM_NATIONAL_COACH.pdpNotesHtml(player); } catch (e) { /* mode indisponible */ }
+  shareBottom = `${ncNotes}<div class="pdp2-bottom-actions">${isOwnTeam && !playerDetailForeign ? pdpShareHtml(player) : ""}${pdpBookmarkBtnHtml(player)}</div>`;
   bottomCards = `<div class="pdp-contract-sale pdp2-bottom-cards">${bottomCards}${playerHistoryCardHtml(player)}${playerInjuryCardHtml(player, team)}</div>${shareBottom}`;
   html = html.replace("<!--PDP_SIDE_CARDS-->", sideCards).replace("<!--PDP_LEFT_CARDS-->", leftCards).replace("<!--PDP_BOTTOM_CARDS-->", bottomCards);
   // Le tableau "Match par match" vivait ici (voir git blame) — retiré
@@ -35827,7 +35831,7 @@ document.getElementById("teamDetailContent").addEventListener("click", (e) => {
 // "Scouting Pro v2" : tableau "Effectif complet" du nouveau design) pour que
 // les DEUX tableaux (l'ancien ci-dessous ET le nouveau sp2Roster*) partagent
 // la MÊME agrégation plutôt que de la dupliquer avec un risque de diverger.
-// `team` (optionnel) : équipe virtuelle d'une sélection (Mode Sélectionneur).
+// `team` (optionnel) : équipe virtuelle d'une sélection (Mode Sélection).
 function teamSeasonStatsRows(teamIdx, team = league.teams[teamIdx]) {
   return team.players
     .map(p => {
@@ -37769,7 +37773,7 @@ function computeScoutingTendencies(team) {
 //   streakFor (server/scouting.js) — "la Coupe ne tient pas ce même
 //   registre à plat, hors scope v1" (commentaire déjà existant), pas la
 //   peine de le refaire différemment ici en repartant de league.cup.rounds.
-// `source` (optionnel, Mode Sélectionneur 2026-10-06) : matchs hors
+// `source` (optionnel, Mode Sélection 2026-10-06) : matchs hors
 // championnat de club — { competition, contextFor(entry), recentRounds } ;
 // par défaut le championnat de la ligue (league.results), comme avant.
 function computeScoutingAdvancedStats(team, teamIdx, source = null) {
@@ -39307,7 +39311,7 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
   };
   // Sa propre équipe (Premium) : pas de bouton « Appliquer à mes ordres »
   // (le plan décrit comment battre CE club, donc le sien).
-  // Équipe virtuelle (Mode Sélectionneur) : `virtual.own` pour sa propre
+  // Équipe virtuelle (Mode Sélection) : `virtual.own` pour sa propre
   // sélection, `virtual.apply` = { attrs, label, sub } pour le bouton
   // équivalent (tactique de la sélection), absent = pas de bouton.
   const vr = report && report.virtual;
@@ -39333,7 +39337,7 @@ function sp2PlanHtml(report, teamIdx, setup, attackTips) {
 // dans Scouting Pro — le rapport gratuit, qui ne contenait plus que ça une
 // fois "Tendances observées" retiré, est masqué quand Pro est débloqué
 // (voir refreshScoutingProPanel), pour ne rien afficher deux fois.
-// `mine` (optionnel, Mode Sélectionneur) : { team, link(p), sub(p), intro, avg(p, k) }
+// `mine` (optionnel, Mode Sélection) : { team, link(p), sub(p), intro, avg(p, k) }
 // — l'effectif du sélectionneur (ses convoqués) à la place de teamA.
 function sp2SuggestedFiveHtml(setup, mine = null) {
   const now = Date.now();
@@ -39404,7 +39408,7 @@ function computeScoringOrigins(team) {
   keys.forEach(k => { totals[k] = 0; byPlayer[k] = new Map(); });
   let total = 0;
   (team.players || []).forEach(p => (p.matchLog || []).forEach(m => {
-    // "national" : équipe virtuelle d'une sélection (Mode Sélectionneur).
+    // "national" : équipe virtuelle d'une sélection (Mode Sélection).
     if (m.competition !== "championship" && m.competition !== "cup" && m.competition !== "national") return;
     if (m.ptsPaint === undefined) return; // match joué avant l'enregistrement de l'origine
     games.add(`${m.competition}|${m.round}`);
@@ -39732,7 +39736,7 @@ function sp2FormContextHtml(report, adv) {
 // sur les tentatives déjà agrégées.
 const SP2_LOW_ATTEMPTS_THRESHOLD = 10;
 // `link` (optionnel) : lien vers la fiche d'un joueur hors de la ligue
-// (Mode Sélectionneur), playerLinkHtml(teamIdx, …) sinon.
+// (Mode Sélection), playerLinkHtml(teamIdx, …) sinon.
 function sp2RosterTableHtml(teamIdx, rowsData, link = null) {
   const shotCell = (made, att) => {
     if (!att) return `<td class="sp2-na">–</td>`;
@@ -39766,7 +39770,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
   // Haut de l'effectif (refonte 2026-10-05) : joueurs clés + « qui marque »
   // à gauche, 5 majeur à droite (le terrain centré seul laissait de grands
   // vides de part et d'autre) ; empilés sur un rapport étroit.
-  // Équipe virtuelle (Mode Sélectionneur) : liens vers les fiches par
+  // Équipe virtuelle (Mode Sélection) : liens vers les fiches par
   // `virtual.playerLink`, stats calculées sur ses propres joueurs.
   const vlink = report.virtual && report.virtual.playerLink;
   const linkOf = p => (vlink ? vlink(p) : playerLinkHtml(teamIdx, p.id, p.name));
@@ -39900,7 +39904,7 @@ function scoutingProReportHtml(report) {
       `<p class="sub">Pas encore assez de matchs disputés cette saison par ${escapeHtml(report.opponentName)} pour ce rapport.</p>` +
       scoutingProDowngradeHtml();
   }
-  // `report.virtual` (Mode Sélectionneur, 2026-10-06) : MÊME rapport pour
+  // `report.virtual` (Mode Sélection, 2026-10-06) : MÊME rapport pour
   // une sélection nationale, dont l'« équipe virtuelle » est reconstruite
   // depuis ses matchs internationaux (voir assets/national-coach.js) :
   // { team, matchSource (computeScoutingAdvancedStats), crestHtml, heroSub,
@@ -41365,7 +41369,7 @@ function compositionModel(team) {
 // édition ou les ordres d'un amical. `opts.readonly` : compositions
 // verrouillées (même vue, rien de cliquable). `opts.minutesContainer` : où
 // poser la carte Temps de jeu (colonne de droite, voir buildTeamPanel).
-// `opts.roster` : effectif qui n'est pas celui du club (Mode Sélectionneur,
+// `opts.roster` : effectif qui n'est pas celui du club (Mode Sélection,
 // assets/national-coach.js), voir compoRosterRowsData.
 // Remplace les anciennes cartes "Cinq de départ" (terrain à menus) +
 // "Rotation" (tableau des remplaçants) + "Convocation" (2026-09-25/26) :

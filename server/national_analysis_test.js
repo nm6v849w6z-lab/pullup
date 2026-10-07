@@ -1,4 +1,4 @@
-// Sélections nationales — analyse Premium du Mode Sélectionneur
+// Sélections nationales — analyse Premium du Mode Sélection
 // (server/nationalCoach.js analysisData, route
 // /api/national/coach/analysis-data) : matchs internationaux joués (saison
 // en cours et précédente) d'une sélection transformés en « équipe
@@ -89,4 +89,4 @@ assert.strictEqual(own3.report.gamesPlayed, mine.length, "saison précédente in
 const own4 = C.analysisData(st, lyon, TID, null, now, { season: 4, pool: null });
 assert.strictEqual(own4.report.gamesPlayed, 0, "deux saisons plus tôt : ignorée");
 ok("saison en cours et précédente seulement");
-console.log("\n🏁 national_analysis_test.js : analyse Premium du Mode Sélectionneur conforme.");
+console.log("\n🏁 national_analysis_test.js : analyse Premium du Mode Sélection conforme.");

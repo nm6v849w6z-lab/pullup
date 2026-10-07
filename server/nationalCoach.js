@@ -43,7 +43,7 @@
 const Engine = require("../engine.js");
 
 const DAY = 24 * 3600 * 1000;
-const LIMITS = { convocation: 15, matchSquad: 12, preselection: 24, watchlist: 40, freezeDays: 3, poolMax: 220, assign: 50 };
+const LIMITS = { convocation: 15, matchSquad: 12, preselection: 24, watchlist: 40, freezeDays: 3, poolMax: 220, assign: 50, noteLength: 600, notesPerPlayer: 30 };
 
 function NT() { return require("./nationalTeams.js"); }
 
@@ -462,13 +462,13 @@ function fail(error, status = 400) { return { ok: false, status, error }; }
 //   scout (Scout) ne voit que les joueurs qui lui sont attribués.
 // Nominations : APPOINT[rôle de celui qui agit] = rôles qu'il peut nommer
 // ou retirer. Il n'y a pas de rôle « Entraîneur ».
-const FULL = ["dashboard", "view", "watch", "preselect", "preselectView", "convoke", "convocView", "tactics", "tacticsView", "friendlies", "staffView", "assign", "feed", "analysis", "mandate", "stats", "calendar"];
+const FULL = ["dashboard", "notes", "view", "watch", "preselect", "preselectView", "convoke", "convocView", "tactics", "tacticsView", "friendlies", "staffView", "assign", "feed", "analysis", "mandate", "stats", "calendar"];
 const PERMS = {
   coach: FULL,
   assistant: FULL,
-  helper: ["dashboard", "view", "watch", "preselectView", "convocView", "tacticsView", "feed", "analysis", "calendar"],
-  recruiter: ["view", "watch", "assign", "staffView"],
-  scout: ["view", "watch", "assigned"],
+  helper: ["dashboard", "notes", "view", "watch", "preselectView", "convocView", "tacticsView", "feed", "analysis", "calendar"],
+  recruiter: ["notes", "view", "watch", "assign", "staffView"],
+  scout: ["notes", "view", "watch", "assigned"],
 };
 const APPOINT = {
   coach: ["assistant", "helper", "recruiter", "scout"],
@@ -496,6 +496,54 @@ function canAppoint(a, role) { return !!(a && (APPOINT[a.role] || []).includes(r
 function coachMandate(store, me, teamId, perm) {
   const a = accessOf(store, me, teamId);
   return can(a, perm) ? a.m : null;
+}
+// --- Notes sur les joueurs (demande utilisateur du 2026-10-07) -------------
+// m.notes = { [refKey]: [{ id, at, by, byName, role, text }] } : visibles du
+// seul staff de la sélection (mandat en cours), jamais pour les joueurs du
+// club de celui qui lit (le propriétaire du joueur ne les voit pas, même
+// s'il est dans le staff) ; un scout ne voit que ses joueurs attribués.
+function ownClubOf(pool, me, r) {
+  const x = poolMap(pool).get(refKey(r));
+  return !!(x && x.club && me && me.ref && x.club.leagueId === me.ref.leagueId && x.club.idx === me.ref.idx);
+}
+function notesFor(m, a, me, pool) {
+  if (!can(a, "notes")) return {};
+  const mine = can(a, "assigned") ? new Set(assignedOf(m, a.mid).map(refKey)) : null;
+  const own = new Set((pool && pool.players || []).filter(x => x.club && me && me.ref && x.club.leagueId === me.ref.leagueId && x.club.idx === me.ref.idx).map(refKey));
+  const out = {};
+  Object.entries(m.notes || {}).forEach(([k, list]) => {
+    if ((mine && !mine.has(k)) || own.has(k) || !list.length) return;
+    out[k] = list.map(n => ({ id: n.id, at: n.at, byName: n.byName, role: n.role, text: n.text, mine: n.by === me.key }));
+  });
+  return out;
+}
+function setNote(store, me, body, now, ctx) {
+  const a = accessOf(store, me, body && body.teamId);
+  if (!can(a, "notes")) return fail("Réservé au staff de cette sélection.", 403);
+  const m = a.m;
+  const r = cleanRef(body.player);
+  if (!r) return fail("Joueur invalide.");
+  if (!poolMap(ctx && ctx.pool).has(refKey(r))) return fail("Ce joueur n'est pas sélectionnable pour cette sélection.");
+  if (ownClubOf(ctx.pool, me, r)) return fail("Pas de notes sur les joueurs de votre club.", 403);
+  if (can(a, "assigned") && !hasRef(assignedOf(m, a.mid), r)) return fail("Ce joueur ne vous est pas attribué.", 403);
+  m.notes = m.notes || {};
+  const k = refKey(r);
+  const list = m.notes[k] = m.notes[k] || [];
+  if (body.remove != null) {
+    const n = list.find(x => x.id === Number(body.remove));
+    if (!n) return fail("Note introuvable.", 404);
+    // Sa propre note, ou modération par le sélectionneur / un adjoint.
+    if (n.by !== me.key && a.role !== "coach" && a.role !== "assistant") return fail("Vous ne pouvez supprimer que vos notes.", 403);
+    m.notes[k] = list.filter(x => x !== n);
+    if (!m.notes[k].length) delete m.notes[k];
+    return { ok: true };
+  }
+  const text = String(body.text || "").replace(/\r/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, LIMITS.noteLength);
+  if (!text) return fail("Note vide.");
+  if (list.length >= LIMITS.notesPerPlayer) return fail(`${LIMITS.notesPerPlayer} notes par joueur au maximum.`);
+  m.noteSeq = (m.noteSeq || 0) + 1;
+  list.push({ id: m.noteSeq, at: now, by: me.key, byName: actorName(store, a, me), role: a.role, text });
+  return { ok: true };
 }
 // Joueurs attribués à un scout (refs).
 function assignedOf(m, mid) { return ((m.assign && m.assign[mid]) || []).slice(); }
@@ -750,6 +798,10 @@ function coachView(store, me, teamId, now, ctx) {
     appoint: APPOINT[role] || [],
     assign: can(access, "assign") ? Object.fromEntries(Object.entries(m.assign || {}).map(([k, v]) => [k, v.slice()])) : mine ? { [access.mid]: assignedOf(m, access.mid) } : {},
     assignMax: LIMITS.assign,
+    // Notes sur les joueurs : staff de la sélection seulement, jamais sur
+    // les joueurs du club du lecteur ; un scout ne voit que celles de ses
+    // joueurs (voir notesFor).
+    notes: notesFor(m, access, me, pool),
     // Annuaire des managers à inviter (si ce membre peut nommer) : déjà
     // sélectionneur ou déjà dans un staff = pas invitable.
     managers: (APPOINT[role] || []).length ? managersFor(store, m) : [],
@@ -1096,6 +1148,6 @@ module.exports = {
   gatheringsOf, currentGathering, convocationOf, statusOf, convocationNotice, step, freezeConvocation,
   setListMember, setConvocation, replaceConvoked, setTactics, coachView, defaultOrders, adminAppoint,
   coachFeed, watchAlerts, playerStatsOf, mandateReport, markSeen, applyNationalDuty,
-  PERMS, APPOINT, accessOf, can, canAppoint, coachMandate, staffOf, staffInvite, staffRespond, staffRemove, staffAssign, publicStaff, queueNotice, STAFF_MAX, migrateStaff,
+  PERMS, APPOINT, setNote, accessOf, can, canAppoint, coachMandate, staffOf, staffInvite, staffRespond, staffRemove, staffAssign, publicStaff, queueNotice, STAFF_MAX, migrateStaff,
   analysisOf, upcomingMatchesOf, ordersLocked, analysisData,
 };

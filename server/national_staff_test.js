@@ -120,6 +120,34 @@ assert.strictEqual(C.setListMember(st, brest, { teamId: "fr-A", list: "watchlist
 assert.strictEqual(C.analysisData(st, brest, "fr-A", null, now, { season: 2, pool }).status, 403, "scout : pas d'analyse des adversaires");
 ok("scout : accès limité aux joueurs qui lui sont attribués (vue et actions)");
 
+// 5 bis) Notes privées sur les joueurs : staff de la sélection seulement,
+// jamais pour le propriétaire du joueur ; un scout : ses joueurs seulement.
+{
+  const other = pool.players.find(x => x.club && !(x.club.leagueId === lille.ref.leagueId && x.club.idx === lille.ref.idx) && !(x.club.leagueId === lyon.ref.leagueId && x.club.idx === lyon.ref.idx));
+  const oref = { p: other.p, n: other.n };
+  assert.ok(C.setNote(st, lyon, { teamId: "fr-A", player: oref, text: "Très bon défenseur, à revoir en match." }, now, ctx).ok, "sélectionneur : ajoute une note");
+  assert.ok(C.setNote(st, lille, { teamId: "fr-A", player: oref, text: "D'accord, bon lecteur du jeu." }, now, ctx).ok, "personne aidante : ajoute une note");
+  const k = oref.p + "|" + oref.n;
+  const seen = C.coachView(st, nice, "fr-A", now, ctx).notes[k];
+  assert.ok(seen && seen.length === 2 && !seen.some(n => n.mine) && seen.every(n => !("by" in n)), "adjoint : voit les notes (sans clé d'auteur)");
+  assert.strictEqual(C.setNote(st, paris, { teamId: "fr-A", player: oref, text: "x" }, now, ctx).status, 403, "hors staff : pas de note");
+  assert.ok(!C.coachView(st, paris, "fr-A", now, ctx).ok, "hors staff : rien à lire");
+  // Joueur du club de la personne aidante : elle ne voit ni n'écrit de notes.
+  const own = pool.players.find(x => x.club && x.club.leagueId === lille.ref.leagueId && x.club.idx === lille.ref.idx);
+  if (own) {
+    const wref = { p: own.p, n: own.n };
+    assert.ok(C.setNote(st, lyon, { teamId: "fr-A", player: wref, text: "Note du sélectionneur." }, now, ctx).ok);
+    assert.ok(!C.coachView(st, lille, "fr-A", now, ctx).notes[wref.p + "|" + wref.n], "propriétaire du joueur : ne voit pas les notes");
+    assert.strictEqual(C.setNote(st, lille, { teamId: "fr-A", player: wref, text: "x" }, now, ctx).status, 403, "propriétaire du joueur : ne peut pas en écrire");
+  }
+  assert.ok(!C.coachView(st, brest, "fr-A", now, ctx).notes[k], "scout : pas les notes des joueurs qui ne lui sont pas attribués");
+  assert.strictEqual(C.setNote(st, brest, { teamId: "fr-A", player: oref, text: "x" }, now, ctx).status, 403, "scout : pas de note hors de ses joueurs");
+  const nid = M().notes[k].find(n => n.by === lille.key).id;
+  assert.strictEqual(C.setNote(st, nantes, { teamId: "fr-A", player: oref, remove: nid }, now, ctx).status, 403, "recruteur : ne supprime pas la note d'un autre");
+  assert.ok(C.setNote(st, nice, { teamId: "fr-A", player: oref, remove: nid }, now, ctx).ok, "adjoint : modère");
+  ok("notes privées : staff seulement, ni propriétaire du joueur, ni hors staff ; scout limité à ses joueurs");
+}
+
 // 6) Retraits : hiérarchie respectée, départ volontaire.
 assert.strictEqual(C.staffRemove(st, nice, { teamId: "fr-A", mid: mid(nice) }, now).ok, true, "l'adjoint peut quitter de lui-même");
 assert.ok(invite(lyon, nice, "assistant").ok); accept(nice);

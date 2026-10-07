@@ -1,11 +1,11 @@
-/* Sélections nationales — mode Sélectionneur (phases B et E, refonte du
+/* Sélections nationales — mode Sélection (phases B et E, refonte du
    2026-10-06). Fichier à part (limite de taille de la page, voir
    load_size_test.js). Côté serveur : server/nationalCoach.js (vue et droits
    par rôle), server/nationalFriendlies.js (amicaux internationaux), routes
    /api/national/coach*.
 
    Environnement séparé du mode Club, ouvert depuis le tableau de bord du
-   club (bouton « Mode Sélectionneur » à côté de « Analyse de mon équipe »,
+   club (bouton « Mode Sélection » à côté de « Analyse de mon équipe »,
    seulement avec un mandat ou un rôle de staff en cours) ; « Retour au mode
    Club » vit à l'intérieur du mode. Rubriques filtrées par rôle :
    - sélectionneur : tout (amicaux, staff, analyse, stats, mandat) ;
@@ -124,7 +124,7 @@
     var opts = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
     return f(path, opts).then(function (res) {
       return res.json().catch(function () { return null; }).then(function (data) {
-        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || "Mode Sélectionneur indisponible pour l'instant.");
+        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || "Mode Sélection indisponible pour l'instant.");
         return data;
       });
     });
@@ -206,11 +206,9 @@
     return '<th class="' + cls + '" data-nc-sort="' + c.key + '" aria-sort="' + (on ? (ui.sort.dir === 1 ? "ascending" : "descending") : "none") + '"' + (c.title ? ' title="' + esc(c.title) + '"' : "") + ">" + esc(c.label) + (on ? chev : "") + "</th>";
   }
   function actionsHtml(x, v) {
+    // Plus de bouton Suivre dans les tableaux (demande utilisateur du
+    // 2026-10-07) : présélection et convocation seulement.
     var r = { p: x.p, n: x.n }, cur = curGathering(), out = "";
-    if (can("watch")) {
-      var w = inList(v.watchlist, r);
-      out += '<button type="button" class="nc-ic' + (w ? " on-watch" : "") + '" data-nc-list="watchlist" data-nc-on="' + (w ? 0 : 1) + '" data-nc-p="' + esc(x.p) + '" data-nc-n="' + esc(x.n) + '" title="' + (w ? "Ne plus suivre" : "Suivre ce joueur") + '">' + icon("star", w) + "</button>";
-    }
     if (can("preselect")) {
       var p = inList(v.preselection, r);
       out += '<button type="button" class="nc-ic' + (p ? " on-pre" : "") + '" data-nc-list="preselection" data-nc-on="' + (p ? 0 : 1) + '" data-nc-p="' + esc(x.p) + '" data-nc-n="' + esc(x.n) + '" title="' + (p ? "Retirer de la présélection" : "Ajouter à la présélection") + '">' + icon("check") + "</button>";
@@ -241,7 +239,7 @@
   function playersTableHtml(list, v, opts) {
     opts = opts || {};
     var cols = columns();
-    var withActs = can("watch") || can("preselect") || can("convoke");
+    var withActs = can("preselect") || can("convoke");
     var total = list.length;
     list = sortList(list);
     if (opts.limit) list = list.slice(0, ui.shown);
@@ -286,7 +284,7 @@
         playersTableHtml(refsToPlayers(v.preselection), v, { empty: can("preselect") ? "Présélection vide : ajoutez des joueurs (coche) depuis Joueurs sélectionnables ou depuis vos joueurs suivis ci-dessous." : "Présélection vide pour l'instant." }) + missingNote(v.preselection) + "</div>";
     }
     h += '<div class="nc-card"><div class="nc-sec"><span>Joueurs suivis</span><span>' + v.watchlist.length + " / " + v.limits.watchlist + "</span></div>" +
-      playersTableHtml(refsToPlayers(v.watchlist), v, { empty: "Aucun joueur suivi : utilisez l'étoile dans Joueurs sélectionnables." }) + missingNote(v.watchlist) + "</div>";
+      playersTableHtml(refsToPlayers(v.watchlist), v, { empty: "Aucun joueur suivi." }) + missingNote(v.watchlist) + "</div>";
     return h + "</div>";
   }
 
@@ -858,7 +856,7 @@
     return h;
   }
 
-  // --- Mode Sélectionneur ------------------------------------------------------
+  // --- Mode Sélection ------------------------------------------------------
   var MODE_KEY = "hm-nat-mode";
   var mine = [];
   // [rubrique, libellé, droit requis]
@@ -898,6 +896,7 @@
     ".nc-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--line)}.nc-feed-item.unread .nc-feed-dot{background:var(--amber)}",
     ".nc-mode-title{font-size:24px;font-weight:900;margin:4px 0 14px}",
     "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}#ncModeBtn{padding:6px 11px;font-size:12px}}",
+    ".nc-notes{margin-top:18px}.nc-notes-form{display:flex;flex-direction:column;gap:8px;align-items:flex-end;margin-top:4px}.nc-notes-form textarea{width:100%;resize:vertical;min-height:70px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px}.nc-notes-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}.nc-note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.025)}.nc-note-head{display:flex;align-items:center;gap:8px}.nc-note-head .nc-club{flex:1}.nc-note-text{margin:6px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.45}",
     ".nc-chips{display:flex;flex-wrap:wrap;gap:6px}.nc-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:99px;border:1px solid var(--line);font-size:12.5px;font-weight:700}.nc-chip-x{border:0;background:none;color:var(--ink-dim);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}.nc-slot-wrap{border-top:1px solid var(--line);padding:6px 0}.nc-slot-wrap:first-of-type{border-top:0}.nc-assign{padding:2px 0 6px 2px}",
     ".nc-report{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-report{grid-template-columns:repeat(2,minmax(0,1fr))}}",
   ].join("\n");
@@ -914,7 +913,7 @@
     if (!mine.length || ui.mode) return "";
     var m = mine[0];
     return '<button type="button" class="hm-btn hm-btn--ghost hm-head__nc-btn" data-nc-enter="' + esc(m.teamId) + '" title="' + esc((m.role === "coach" ? "Gérer " : "Staff de ") + teamLab(m.teamId)) + '">' + flag(m.country) +
-      '<span class="nc-lbl">Mode Sélectionneur</span>' + (m.unread ? '<span class="nc-badge">' + m.unread + "</span>" : "") + "</button>";
+      '<span class="nc-lbl">Mode Sélection</span>' + (m.unread ? '<span class="nc-badge">' + m.unread + "</span>" : "") + "</button>";
   }
   function syncDashButton() {
     var slot = document.getElementById("ncDashSlot");
@@ -1193,10 +1192,9 @@
         }).join("") + "</select>" : "") +
           '<button type="button" class="pdp2-btn pdp2-btn--accent" data-nc-pdp-assign="' + esc(scouts[0].mid) + '" data-nc-on="1"' + attrs + ">Attribuer à un scout" + (scouts.length === 1 ? " (" + esc(scouts[0].pseudo || scouts[0].clubName) + ")" : "") + "</button>";
       }
-    } else if (can("watch")) {
-      var w = inList(v.watchlist, r);
-      out += btn("watchlist", w, w ? "Ne plus suivre" : "Ajouter aux joueurs suivis", (v.watchlist || []).length >= (lim.watchlist || Infinity));
     }
+    // Plus de bouton Suivre sur la fiche (personnes aidantes et scouts
+    // compris, demande utilisateur du 2026-10-07).
     return out ? '<div class="pdp2-actions nc-pdp-acts" style="flex-direction:column;margin-top:10px">' + out + "</div>" : "";
   }
   function onPdpListClick(b) {
@@ -1214,6 +1212,50 @@
       .then(function () {
         ui.busy = false;
         if (box && box.isConnected) { var tmp = document.createElement("div"); tmp.innerHTML = pdpActionsHtml(player); box.replaceWith(tmp.firstChild || document.createTextNode("")); }
+      });
+    window.__lastNationalCoach = p;
+    return p;
+  }
+  // --- Notes sur un joueur (bas de la fiche, demande du 2026-10-07) ---------
+  // Visibles du seul staff de la sélection ; jamais sur un joueur de son
+  // propre club (le serveur ne les envoie pas non plus, voir notesFor).
+  function ownClubPlayer(x) {
+    try { return !!(x && x.club && typeof league !== "undefined" && league && x.club.leagueId === league.leagueId && x.club.idx === myTeamIndex); } catch (e) { return false; }
+  }
+  function pdpNotesHtml(player) {
+    if (!ui.mode || !ui.view || !player || player.id == null || !can("notes")) return "";
+    var r = { p: Number(player.id), n: player.name }, x = poolByKey()[key(r)];
+    if (!x || ownClubPlayer(x)) return "";
+    var v = ui.view, list = ((v.notes || {})[key(r)] || []).slice().sort(function (a, b) { return b.at - a.at; });
+    var canMod = v.role === "coach" || v.role === "assistant";
+    var h = '<section class="pdp2-card nc-notes" data-nc-notes="' + esc(r.p + "|" + r.n) + '"><div class="pdp2-head"><h3>Notes de la sélection</h3><span class="pdp2-meta">' + esc(teamLab(v.team.id)) + " · visibles du staff seulement</span></div>";
+    h += '<div class="nc-notes-form"><textarea class="nc-in" data-nc-note-text="1" maxlength="600" rows="3" placeholder="Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)"></textarea>' +
+      '<button type="button" class="pdp2-btn pdp2-btn--accent" data-nc-note-add="1" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '">Ajouter la note</button></div>';
+    h += list.length ? '<div class="nc-notes-list">' + list.map(function (n) {
+      return '<div class="nc-note"><div class="nc-note-head"><b>' + esc(n.byName || "") + '</b><span class="nc-club">' + esc(ROLE_LABEL[n.role] || "") + " · " + esc(when(n.at, true)) + "</span>" +
+        (n.mine || canMod ? '<button type="button" class="nc-chip-x" data-nc-note-del="' + esc(n.id) + '" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '" title="Supprimer" aria-label="Supprimer">×</button>' : "") + "</div>" +
+        '<p class="nc-note-text">' + esc(n.text) + "</p></div>";
+    }).join("") + "</div>" : '<p class="nc-club" style="margin:8px 0 0">Aucune note pour l\'instant.</p>';
+    return h + "</section>";
+  }
+  function onNoteClick(b) {
+    var d = b.dataset, box = b.closest(".nc-notes");
+    if (ui.busy || !box) return;
+    var body = { teamId: ui.teamId, player: { p: Number(d.ncP), n: d.ncN } };
+    if (d.ncNoteDel) body.remove = Number(d.ncNoteDel);
+    else {
+      var ta = box.querySelector("[data-nc-note-text]");
+      body.text = ta ? ta.value : "";
+      if (!body.text.trim()) { if (ta) ta.focus(); return; }
+    }
+    ui.busy = true; b.disabled = true;
+    var player = { id: Number(d.ncP), name: d.ncN };
+    var p = api("/api/national/coach/note", body)
+      .then(function (data) { if (data.team) ui.view = data; toast(d.ncNoteDel ? "Note supprimée." : "Note ajoutée."); })
+      .catch(function (e) { toast(e.message); })
+      .then(function () {
+        ui.busy = false;
+        if (box.isConnected) { var tmp = document.createElement("div"); tmp.innerHTML = pdpNotesHtml(player); box.replaceWith(tmp.firstChild || document.createTextNode("")); }
       });
     window.__lastNationalCoach = p;
     return p;
@@ -1430,6 +1472,8 @@
       if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e);
       var pdpList = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-list]");
       if (pdpList) { e.preventDefault(); e.stopPropagation(); onPdpListClick(pdpList); }
+      var noteBtn = ui.mode && e.target.closest && e.target.closest("[data-nc-note-add],[data-nc-note-del]");
+      if (noteBtn) { e.preventDefault(); e.stopPropagation(); onNoteClick(noteBtn); return; }
       var pdpAssign = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-assign]");
       if (pdpAssign) { e.preventDefault(); e.stopPropagation(); onPdpAssignClick(pdpAssign); }
     }, true);
@@ -1446,7 +1490,7 @@
   })(0);
   window.HM_NATIONAL_COACH = {
     enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: function () { return bootMode(); },
-    dashButtonHtml: dashButtonHtml, state: ui, pdpActionsHtml: pdpActionsHtml,
+    dashButtonHtml: dashButtonHtml, state: ui, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
     // Ancien point d'entrée (« Gérer la sélection ») : ouvre le mode.
     open: function (id) { bind(); return enterMode(id); },
   };

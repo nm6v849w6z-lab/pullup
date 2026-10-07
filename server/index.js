@@ -2980,6 +2980,8 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
               "/api/national/coach/staff/respond": NationalCoach.staffRespond,
               "/api/national/coach/staff/remove": NationalCoach.staffRemove,
               "/api/national/coach/staff/assign": NationalCoach.staffAssign,
+              // Notes privées du staff sur un joueur (ajout, suppression).
+              "/api/national/coach/note": NationalCoach.setNote,
               // Matchs amicaux internationaux (sélectionneur et adjoints).
               "/api/national/coach/friendly/request": NationalFriendlies.request,
               "/api/national/coach/friendly/respond": NationalFriendlies.respond,

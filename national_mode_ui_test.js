@@ -1,4 +1,4 @@
-// Mode Sélectionneur (assets/national-coach.js) côté navigateur, refonte du
+// Mode Sélection (assets/national-coach.js) côté navigateur, refonte du
 // 2026-10-06 : entrée par le bouton du tableau de bord du club (à côté de
 // « Analyse de mon équipe ») seulement avec un mandat, rien dans la barre du
 // haut en mode Club ; environnement séparé (menu latéral propre filtré par
@@ -19,7 +19,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   await dom.window.__gameReady; await flush(dom);
   let win = dom.window, doc = win.document;
   await new Promise(r => setTimeout(r, 800));
-  assert(!doc.querySelector("[data-nc-enter]") && !doc.getElementById("ncModeBtn"), "sans mandat : aucun bouton Mode Sélectionneur");
+  assert(!doc.querySelector("[data-nc-enter]") && !doc.getElementById("ncModeBtn"), "sans mandat : aucun bouton Mode Sélection");
   const club = win.eval("teamA.name");
   const res = await fetch(baseUrl.replace(/\/?(\?.*)?$/, "/") + "api/admin/national", { method: "POST", headers: { "Content-Type": "application/json", "X-Admin-Token": process.env.BASKET_ADMIN_TOKEN }, body: JSON.stringify({ action: "appoint", teamId: "fr-A", club }) }).then(r => r.json());
   assert(res.ok, "nomination de test (admin)");
@@ -30,7 +30,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   win.eval("TAB_HANDLERS.club()");
   await wait(() => doc.querySelector("#ncDashSlot [data-nc-enter]"), "bouton du tableau de bord");
   const btn = doc.querySelector("#ncDashSlot [data-nc-enter]");
-  assert(/Mode Sélectionneur/.test(btn.textContent) && btn.querySelector(".nat-flag"), "tableau de bord : « Mode Sélectionneur » avec le drapeau, à côté de l'analyse");
+  assert(/Mode Sélection/.test(btn.textContent) && btn.querySelector(".nat-flag"), "tableau de bord : « Mode Sélection » avec le drapeau, à côté de l'analyse");
   assert(btn.closest(".hm-head") && btn.closest(".hm-head").querySelector(".hm-head__analyse-btn"), "même en-tête que « Analyse de mon équipe »");
   assert(!doc.getElementById("ncModeBtn"), "mode Club : rien dans la barre du haut");
   btn.click();
@@ -56,6 +56,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     const heads = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
     assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "État"].every(h => heads.includes(h)) && !heads.includes("MJ") && !heads.includes("Forme récente"), "Caractéristiques : identité, caractéristiques, état (stats de saison à part, comme l'Effectif)");
     assert(!content().querySelector("[data-nc-pview]") && !/Forme récente/.test(content().textContent), "Sélectionnables : ni onglet Statistiques ni Forme récente (2026-10-06)");
+    assert(!content().querySelector('[data-nc-list="watchlist"]'), "Sélectionnables : plus de bouton Suivre");
     assert(!/\b(MEN|ARR|AIS|AIF|PIV)\b/.test(content().textContent) && content().querySelector(".eff-pos"), "postes aux abréviations du jeu (badges de l'Effectif)");
     const ageOf = () => [...content().querySelectorAll("tbody tr.eff-row")].map(tr => Number(tr.children[1].textContent));
     content().querySelector('th[data-nc-sort="age"]').click();
@@ -87,6 +88,15 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     // de Suivre / Ne plus suivre (2026-10-07).
     check2(box() && /Ajouter à la présélection/.test(box().textContent) && /Attribuer à un scout/.test(box().textContent) && !box().querySelector('[data-nc-pdp-list="watchlist"]'), "fiche joueur : présélection et « Attribuer à un scout » (plus de Suivre)");
     check2(box().previousElementSibling && !box().closest(".pdp2-ring"), "boutons placés sous la note");
+    // Notes sur un joueur d'un autre club : bloc en bas de la fiche.
+    {
+      const other = (st.view.pool.players || []).find(p => !(p.club && p.club.leagueId === win.eval("league.leagueId") && p.club.idx === win.eval("myTeamIndex")));
+      if (other) {
+        win.HM_NATIONAL_COACH.state.view.notes = { [other.p + "|" + other.n]: [{ id: 1, at: Date.now(), byName: "Coach X", role: "assistant", text: "Bon défenseur.", mine: false }] };
+        const html = win.HM_NATIONAL_COACH.pdpNotesHtml({ id: other.p, name: other.n });
+        check2(/Notes de la sélection/.test(html) && /Bon défenseur/.test(html) && /data-nc-note-add/.test(html), "notes : bloc avec les notes du staff et le champ d'ajout");
+      }
+    }
     check2(box().querySelector("button[disabled]") && /Attribuer à un scout/.test(box().querySelector("button[disabled]").textContent), "aucun scout en poste : bouton d'attribution désactivé");
     const realStaff = st.view.staff;
     st.view.staff = [{ mid: "s1", pseudo: "Scout A", role: "scout", status: "active" }, { mid: "s2", pseudo: "Scout B", role: "scout", status: "active" }];
@@ -102,7 +112,10 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     const realPerms = st.view.perms;
     st.view.perms = require("./server/nationalCoach.js").PERMS.helper;
     win.eval(`showPlayerDetail(${x.club.idx}, ${x.p})`);
-    check2(box() && box().querySelector('[data-nc-pdp-list="watchlist"]') && !/Attribuer/.test(box().textContent), "personne aidante : bouton Suivre, pas d'attribution");
+    check2(!doc.querySelector('#playerDetailSection [data-nc-pdp-list="watchlist"]') && !/Attribuer/.test((box() || { textContent: "" }).textContent), "personne aidante : ni Suivre ni attribution sur la fiche");
+    // Notes de la sélection : jamais sur un joueur de son propre club.
+    const ownClub = win.eval(`teamA.players.some(p => p.id === ${x.p})`);
+    if (ownClub) check2(!doc.querySelector("#playerDetailSection .nc-notes"), "notes : pas sur un joueur de son propre club");
     st.view.perms = realPerms;
   }
   // Vestiaire (2026-10-06) : la dynamique de groupe du club, sur les joueurs

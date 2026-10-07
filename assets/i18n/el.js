@@ -5,6 +5,20 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Notes de la sélection": "Σημειώσεις εθνικής",
+  "visibles du staff seulement": "ορατές μόνο στο επιτελείο",
+  "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Το σχόλιό σου για τον παίκτη (επίπεδο, συμπεριφορά, διαθεσιμότητα…)",
+  "Ajouter la note": "Προσθήκη σημείωσης",
+  "Aucune note pour l'instant.": "Καμία σημείωση ακόμα.",
+  "Note ajoutée.": "Η σημείωση προστέθηκε.",
+  "Note supprimée.": "Η σημείωση διαγράφηκε.",
+  "Note vide.": "Κενή σημείωση.",
+  "Note introuvable.": "Η σημείωση δεν βρέθηκε.",
+  "Pas de notes sur les joueurs de votre club.": "Όχι σημειώσεις για παίκτες της ομάδας σου.",
+  "Vous ne pouvez supprimer que vos notes.": "Μπορείς να διαγράψεις μόνο τις δικές σου σημειώσεις.",
+  "{0} notes par joueur au maximum.": "Έως {0} σημειώσεις ανά παίκτη.",
+  "Aucun joueur suivi.": "Κανένας παρακολουθούμενος παίκτης.",
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Rechercher un joueur, un club, un poste": "Αναζήτηση παίκτη, ομάδας, θέσης",
   "Attribuer à un scout": "Ανάθεση σε σκάουτ",
   "Retirer l'attribution": "Αφαίρεση ανάθεσης",
@@ -12,7 +26,7 @@ window.HM_I18N_EL = {
   "Attribution retirée.": "Η ανάθεση αφαιρέθηκε.",
   "Joueur attribué et présélectionné.": "Ο παίκτης ανατέθηκε και μπήκε στην προεπιλογή.",
   "Aucun scout en poste : nommez-en un dans Staff": "Κανένας σκάουτ: διόρισε έναν στο Επιτελείο",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scout": "Σκάουτ",
   "Scouts": "Σκάουτ",
   "Personne aidante": "Βοηθός",
@@ -61,16 +75,16 @@ window.HM_I18N_EL = {
   "Scout introuvable (ou invitation pas encore acceptée).": "Ο σκάουτ δεν βρέθηκε (ή η πρόσκληση δεν έχει γίνει δεκτή).",
   "{0} joueurs par scout au maximum.": "Έως {0} παίκτες ανά σκάουτ.",
   "Ce joueur ne vous est pas attribué.": "Αυτός ο παίκτης δεν σου έχει ανατεθεί.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Aucun joueur dans la sélection pour le moment : convoquez des joueurs pour voir la dynamique du groupe.": "Δεν υπάρχουν ακόμα παίκτες στην εθνική: κάλεσε παίκτες για να δεις τη δυναμική της ομάδας.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Meneur slasher": "Διεισδυτικός πλέι μέικερ",
   "Meneur qui attaque le cercle balle en main et ressort le ballon sur l'aide.": "Πλέι μέικερ που επιτίθεται στο καλάθι με την μπάλα και τη βγάζει έξω στη βοήθεια.",
   "Le Stretch 4 vide la raquette pour le Slasher.": "Ο Stretch 4 αδειάζει τη ρακέτα για τον Slasher.",
   "Le meneur pénètre et ressort pour la Gâchette.": "Ο πλέι μέικερ διεισδύει και βγάζει την μπάλα στον Σουτέρ.",
   "Le meneur pénètre et ressort pour le 3&D dans le corner.": "Ο πλέι μέικερ διεισδύει και βγάζει την μπάλα στον 3&D στη γωνία.",
   "Pick & roll : le meneur attaque, le pivot finit.": "Pick & roll: ο πλέι μέικερ επιτίθεται, ο σέντερ τελειώνει.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Scoreur meneur": "Σκόρερ πλέι μέικερ",
   "Scoreur arrière": "Σκόρερ σούτινγκ γκαρντ",
   "Meneur qui porte la balle, lance l'attaque et crée pour lui-même.": "Πλέι μέικερ που ανεβάζει την μπάλα, ξεκινά την επίθεση και δημιουργεί για τον εαυτό του.",
@@ -187,7 +201,7 @@ window.HM_I18N_EL = {
   "Lob Threat": "Lob Threat",
   "Jeu sans ballon": "Παιχνίδι χωρίς μπάλα",
   "Athlétisme": "Αθλητικότητα",
-  // Fiche joueur en mode Sélectionneur : présélection / joueurs suivis (2026-10-06).
+  // Fiche joueur en mode Sélection : présélection / joueurs suivis (2026-10-06).
   "Ajouter aux joueurs suivis": "Προσθήκη στους παίκτες υπό παρακολούθηση",
   "Liste complète": "Η λίστα είναι πλήρης",
   "Ajouté à la présélection.": "Προστέθηκε στην προεπιλογή.",
@@ -197,11 +211,11 @@ window.HM_I18N_EL = {
   // Aide des caractéristiques : rôles de match (audit des attributs, 2026-10-06).
   "Endurance, Lancer franc, Puissance, Concentration, Anticipation et Leadership alimentent chacune un mécanisme de match dédié. L'Endurance ralentit la fatigue EN MATCH du joueur. Le Lancer franc détermine directement la réussite aux lancers francs, la Concentration l'améliore encore un peu et garde le joueur lucide quand la fatigue monte. La Puissance, face à la Force du défenseur, provoque plus de fautes près du panier et permet de marquer malgré le contact. L'Anticipation renforce la pression défensive de toute l'équipe sur les extérieurs. Le Leadership du MEILLEUR joueur du cinq en jeu allège, pour toute l'équipe, le malus d'une mauvaise série de tirs manqués.": "Αντοχή, Βολή, Ισχύς, Συγκέντρωση, Αντίληψη και Ηγετικότητα τροφοδοτούν η καθεμία έναν ειδικό μηχανισμό του αγώνα. Η Αντοχή επιβραδύνει την κούραση του παίκτη ΜΕΣΑ ΣΤΟΝ ΑΓΩΝΑ. Η Βολή καθορίζει άμεσα την ευστοχία στις βολές· η Συγκέντρωση τη βελτιώνει λίγο ακόμη και κρατά τον παίκτη διαυγή όταν ανεβαίνει η κούραση. Η Ισχύς, απέναντι στη Δύναμη του αμυντικού, κερδίζει περισσότερα φάουλ κοντά στο καλάθι και βοηθά να σκοράρει παρά την επαφή. Η Αντίληψη ενισχύει την αμυντική πίεση όλης της ομάδας στην περιφέρεια. Η Ηγετικότητα του ΚΑΛΥΤΕΡΟΥ παίκτη της πεντάδας στο παρκέ μειώνει, για όλη την ομάδα, την ποινή από ένα κακό σερί άστοχων σουτ.",
   "Pénétration, Création de tir, Contre, Interceptions, Vitesse, Accélération, Force, Détente, Décision, Sang-froid, Détermination, Discipline et Vision ont elles aussi leur mécanisme. La Pénétration fait attaquer le cercle plus souvent et aide à y battre son défenseur. La Création de tir est le facteur principal de la qualité d'ouverture d'un tir. Le Contre ne sert pas qu'à contrer : un bon protecteur de cercle fait aussi rater des tirs près du panier. Les Interceptions mesurent le goût du pari dans les lignes de passe : un joueur dont les Interceptions dépassent nettement la Défense extérieure tente plus souvent sa chance et vole plus de ballons, mais laisse un tir ouvert quand il rate. La Vitesse déclenche les contre-attaques ; l'Accélération aide à battre son défenseur au premier pas. La Force et la Détente renforcent le rebond et le contre ; la Force aide aussi à encaisser le contact. La Décision fait refuser un tir trop contesté pour chercher une meilleure option ; la Vision améliore le choix du passeur. Le Sang-froid limite les pertes de balle sous pression, porte la réussite dans le money time et aide à sortir d'une mauvaise série. La Détermination accélère la progression à l'entraînement et remobilise le joueur après une défaite. La Discipline réduit les fautes en défense ; un défenseur peu discipliné risque une faute antisportive, un défenseur peu serein une faute technique : deux techniques, deux antisportives, ou une de chaque dans le même match valent exclusion.": "Η Διείσδυση, η Δημιουργία σουτ, το Κόψιμο, τα Κλεψίματα, η Ταχύτητα, η Επιτάχυνση, η Δύναμη, το Άλμα, η Λήψη αποφάσεων, η Ψυχραιμία, η Αποφασιστικότητα, η Πειθαρχία και η Όραση έχουν κι αυτά τον δικό τους μηχανισμό. Η Διείσδυση κάνει τον παίκτη να επιτίθεται πιο συχνά στο καλάθι και τον βοηθά να περνά εκεί τον αμυντικό του. Η Δημιουργία σουτ είναι ο κύριος παράγοντας για το πόσο ελεύθερο είναι ένα σουτ. Το Κόψιμο δεν χρησιμεύει μόνο για τάπες: ένας καλός προστάτης του καλαθιού κάνει επίσης τους αντιπάλους να αστοχούν συχνότερα κοντά στο καλάθι. Τα Κλεψίματα μετρούν τη διάθεση για ρίσκο στις γραμμές πάσας: ένας παίκτης του οποίου τα Κλεψίματα ξεπερνούν αισθητά την Περιφερειακή άμυνα επιχειρεί πιο συχνά και κλέβει περισσότερες μπάλες, αλλά αφήνει ελεύθερο σουτ όταν αποτυγχάνει. Η Ταχύτητα πυροδοτεί αιφνιδιασμούς· η Επιτάχυνση βοηθά να περάσεις τον αμυντικό σου με το πρώτο βήμα. Η Δύναμη και το Άλμα ενισχύουν το ριμπάουντ και το κόψιμο· η Δύναμη βοηθά επίσης να αντέχεις την επαφή. Η Λήψη αποφάσεων κάνει τον παίκτη να αποφεύγει ένα πολύ πιεσμένο σουτ για να αναζητήσει καλύτερη επιλογή· η Όραση βελτιώνει την επιλογή του πασέρ. Η Ψυχραιμία περιορίζει τα λάθη υπό πίεση, ανεβάζει την ευστοχία στο money time και βοηθά τον παίκτη να βγει από ένα κακό σερί. Η Αποφασιστικότητα επιταχύνει την πρόοδο στην προπόνηση και ξανακινητοποιεί τον παίκτη μετά από μια ήττα. Η Πειθαρχία μειώνει τα φάουλ στην άμυνα· ένας απειθάρχητος αμυντικός κινδυνεύει με αντιαθλητικό φάουλ, ένας αμυντικός χωρίς ψυχραιμία με τεχνικό φάουλ: δύο τεχνικά, δύο αντιαθλητικά ή ένα από το καθένα στον ίδιο αγώνα σημαίνουν αποβολή.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "rencontre de qualifications": "τον αγώνα των προκριματικών",
   "rencontre amicale internationale": "τον διεθνή φιλικό αγώνα",
   "Qualifications.": "Προκριματικά.",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Ma sélection · {0}": "Η εθνική μου · {0}",
   "Analyse de ma sélection": "Ανάλυση της εθνικής μου",
   "Chargement de l'analyse…": "Φόρτωση ανάλυσης…",
@@ -232,7 +246,7 @@ window.HM_I18N_EL = {
   "Le direct commence au coup d'envoi.": "Η ζωντανή μετάδοση ξεκινά με το τζάμπολ.",
   "Qualifications · {0}": "Προκριματικά · {0}",
   "GEN {0}": "ΓΕΝ {0}",
-  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  // Sélections nationales : mode Sélection, pages, messages du serveur (2026-10-06).
   "Premier titre": "Πρώτος τίτλος",
   "Titre": "Τίτλος",
   "Finale perdue": "Χαμένος τελικός",
@@ -387,8 +401,8 @@ window.HM_I18N_EL = {
   "Recruteurs": "Υπεύθυνοι στελέχωσης",
   "Moyenne physique": "Μέσος όρος σωματικών",
   "Moyenne mentale": "Μέσος όρος πνευματικών",
-  "Mode Sélectionneur": "Λειτουργία ομοσπονδιακού",
-  "Mode Sélectionneur indisponible pour l'instant.": "Η λειτουργία ομοσπονδιακού δεν είναι διαθέσιμη προς το παρόν.",
+  "Mode Sélection": "Λειτουργία Εθνικής",
+  "Mode Sélection indisponible pour l'instant.": "Η λειτουργία Εθνικής δεν είναι διαθέσιμη προς το παρόν.",
   "Retour au mode Club": "Επιστροφή στη λειτουργία συλλόγου",
   "Revenir à la gestion de votre club": "Επιστροφή στη διαχείριση του συλλόγου σου",
   "Gérer {0}": "Διαχείριση {0}",

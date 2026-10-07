@@ -1,4 +1,4 @@
-// Mode Sélectionneur — rubrique Analyse (assets/national-coach.js), retour
+// Mode Sélection — rubrique Analyse (assets/national-coach.js), retour
 // utilisateur 2026-10-06 : MÊME rapport que l'analyse Premium (Scouting
 // Pro) du Mode Club, rendu par les fonctions du club (scoutingProReportHtml,
 // blocs sp2*) sur l'« équipe virtuelle » d'une sélection
@@ -107,6 +107,6 @@ function fixture() {
   const own = doc.getElementById("ncScoutingPanel");
   assert(/Comment vos adversaires peuvent vous battre/.test(own.textContent) && !own.querySelector("[data-nc-apply-plan]"), "ma sélection : « Comment vos adversaires peuvent vous battre », pas d'application");
   dom.window.close(); server.close();
-  console.log("\n🏁 national_analysis_ui_test.js : analyse du Mode Sélectionneur conforme.");
+  console.log("\n🏁 national_analysis_ui_test.js : analyse du Mode Sélection conforme.");
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
