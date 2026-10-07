@@ -592,8 +592,8 @@
     if (!btn) {
       btn = document.createElement("button");
       btn.type = "button"; btn.id = "ncOrdersBtn"; btn.className = "topbar-cta";
-      var mb = document.getElementById("ncModeBtn");
-      right.insertBefore(btn, mb ? mb.nextSibling : right.firstChild);
+      var meta = document.getElementById("ncNextMeta");
+      right.insertBefore(btn, meta ? meta.nextSibling : right.firstChild);
       btn.addEventListener("click", openNextOrders);
     }
     var locked = tqLocked(nx);
@@ -873,12 +873,11 @@
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
     "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
-    "body.nc-mode .topbar-right > :not(#ncModeBtn):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
-    "body.nc-mode .topbar-search, body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
+    "body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
     "body.nc-mode #selectionsSection .page-title{display:none}",
     "#ncTopTitle{display:flex;align-items:center;gap:10px}#ncTopTitle .nat-flag{width:28px;height:19px;border-radius:3px;object-fit:cover}#ncTopTitle b{font-size:15px}#ncTopTitle span{display:block;font-size:12px;color:var(--ink-dim)}",
-    "#ncModeBtn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);white-space:nowrap}",
     ".hm-head__nc{display:inline-flex}.hm-head__nc:empty{display:none}",
     ".hm-head__nc-btn{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}.hm-head__nc-btn .nat-flag{width:22px;height:15px;border-radius:2px;object-fit:cover}",
     ".nc-badge{min-width:18px;height:18px;border-radius:9px;background:#E2694F;color:#fff;font-size:11px;display:inline-grid;place-items:center;padding:0 5px}",
@@ -895,7 +894,7 @@
     ".nc-feed-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.nc-feed-item:first-child{border-top:0}.nc-feed-item b{display:block;font-size:13.5px}.nc-feed-item span{font-size:12.5px;color:var(--ink-dim)}.nc-feed-item.unread b{color:var(--amber)}",
     ".nc-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--line)}.nc-feed-item.unread .nc-feed-dot{background:var(--amber)}",
     ".nc-mode-title{font-size:24px;font-weight:900;margin:4px 0 14px}",
-    "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}#ncModeBtn{padding:6px 11px;font-size:12px}}",
+    "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}}",
     ".nc-notes{margin-top:18px}.nc-notes-form{display:flex;flex-direction:column;gap:8px;align-items:flex-end;margin-top:4px}.nc-notes-form textarea{width:100%;resize:vertical;min-height:70px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px}.nc-notes-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}.nc-note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.025)}.nc-note-head{display:flex;align-items:center;gap:8px}.nc-note-head .nc-club{flex:1}.nc-note-text{margin:6px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.45}",
     ".nc-chips{display:flex;flex-wrap:wrap;gap:6px}.nc-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:99px;border:1px solid var(--line);font-size:12.5px;font-weight:700}.nc-chip-x{border:0;background:none;color:var(--ink-dim);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}.nc-slot-wrap{border-top:1px solid var(--line);padding:6px 0}.nc-slot-wrap:first-of-type{border-top:0}.nc-assign{padding:2px 0 6px 2px}",
     ".nc-report{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-report{grid-template-columns:repeat(2,minmax(0,1fr))}}",
@@ -919,22 +918,58 @@
     var slot = document.getElementById("ncDashSlot");
     if (slot) slot.innerHTML = dashButtonHtml();
   }
-  // « Retour au mode Club » : dans l'environnement Sélectionneur seulement
-  // (barre du haut et menu latéral du mode).
+  // Barre du haut du Mode Sélection (2026-10-07) : plus de « Retour au mode
+  // Club » (il est dans le menu de gauche) ; prochain adversaire et type de
+  // match à côté de « Donnez / Modifier vos ordres », même composant que le
+  // club (.topbar-meta / .topbar-next-opp).
   function syncModeButton() {
-    var right = document.querySelector(".topbar-right");
-    var btn = document.getElementById("ncModeBtn");
-    if (!ui.mode || !right) { if (btn) btn.remove(); syncOrdersButton(); syncDashButton(); return; }
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.type = "button"; btn.id = "ncModeBtn";
-      right.insertBefore(btn, right.firstChild);
-      btn.addEventListener("click", function () { exitMode(); });
-    }
-    btn.innerHTML = icon("back") + " Retour au mode Club";
-    btn.title = "Revenir à la gestion de votre club";
+    var old = document.getElementById("ncModeBtn");
+    if (old) old.remove();
+    syncNextMeta();
     syncOrdersButton();
     syncDashButton();
+  }
+  function matchKindLabel(m) { return m.label || (m.w ? "Qualification" : "Match international"); }
+  function syncNextMeta() {
+    var right = document.querySelector(".topbar-right");
+    var el = document.getElementById("ncNextMeta");
+    var nx = ui.mode && ui.view ? nextMatch() : null;
+    if (!nx || !right) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "ncNextMeta"; el.className = "topbar-meta";
+      var ob = document.getElementById("ncOrdersBtn");
+      right.insertBefore(el, ob || null);
+    }
+    var me = ui.view.team.id, home = nx.home === me, opp = home ? nx.away : nx.home;
+    el.innerHTML = '<span class="topbar-next-opp">' + (home ? "vs " : "@ ") + flag(String(opp).split("-")[0]) + " " + esc(teamLab(opp)) + "</span>" +
+      "<span>" + esc(t(matchKindLabel(nx))) + (nx.status === "live" ? " · " + esc(t("en direct")) : " · " + esc(when(nx.at, true))) + "</span>";
+    el.title = t("Prochain adversaire") + " : " + teamLab(opp) + " · " + t(matchKindLabel(nx));
+  }
+  // Recherche de la barre du haut en Mode Sélection : même champ et même
+  // rendu que le club (.topbar-search-result), sur les joueurs du vivier
+  // accessibles (le scout ne reçoit que les siens) et les sélections.
+  function normQ(x) { return String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+  function topSearchHtml(raw) {
+    var q = normQ(raw), v = ui.view;
+    if (!q || !v) return "";
+    var pl = ((v.pool && v.pool.players) || []).filter(function (x) { return normQ(x.name).indexOf(q) >= 0 || normQ(x.club && x.club.name).indexOf(q) >= 0; });
+    var h = '<div class="topbar-search-group-label">' + esc(t("Joueurs")) + (pl.length ? " (" + pl.length + ")" : "") + "</div>";
+    h += pl.length ? pl.slice(0, 8).map(function (x) {
+      return '<button type="button" class="topbar-search-result" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '"><span class="tsr-name"> ' + esc(x.name) + '</span><span class="tsr-meta">' + esc((x.position || "") + " · " + ((x.club && x.club.name) || "") + " · " + genOf(x)) + "</span></button>";
+    }).join("") + (pl.length > 8 ? '<div class="topbar-search-more">+ ' + (pl.length - 8) + " " + esc(t("autre(s), affinez la recherche")) + "</div>" : "")
+      : '<div class="topbar-search-empty">' + esc(t("Aucun joueur ne correspond.")) + "</div>";
+    if (window.HM_NATIONAL && window.HM_NATIONAL.searchHtml) h += window.HM_NATIONAL.searchHtml(raw);
+    return h;
+  }
+  function onTopSearch(e) {
+    if (!ui.mode || !e.target || e.target.id !== "topbarSearchInput") return;
+    e.stopImmediatePropagation();
+    var box = document.getElementById("topbarSearchResults");
+    if (!box) return;
+    var h = topSearchHtml(e.target.value);
+    box.innerHTML = h;
+    box.classList.toggle("hidden", !h);
   }
   function syncModeChrome() {
     syncModeButton();
@@ -1470,6 +1505,18 @@
       var enter = e.target.closest && e.target.closest("[data-nc-enter]");
       if (enter) { e.preventDefault(); e.stopPropagation(); ensureModeCss(); enterMode(enter.dataset.ncEnter); return; }
       if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e);
+      var res = ui.mode && e.target.closest && e.target.closest(".topbar-search-result[data-nc-profile]");
+      if (res) {
+        e.preventDefault(); e.stopPropagation();
+        var box = document.getElementById("topbarSearchResults"), inp = document.getElementById("topbarSearchInput");
+        if (box) { box.classList.add("hidden"); box.innerHTML = ""; }
+        if (inp) inp.value = "";
+        var q = res.dataset.ncProfile.split("|"), lg = null;
+        try { lg = typeof league !== "undefined" ? league : null; } catch (err) { lg = null; }
+        if (lg && lg.leagueId === q[0] && g("showPlayerDetail")) window.showPlayerDetail(Number(q[1]), Number(q[2]));
+        else if (g("showForeignPlayerDetail")) window.showForeignPlayerDetail(q[0], Number(q[1]), Number(q[2]));
+        return;
+      }
       var pdpList = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-list]");
       if (pdpList) { e.preventDefault(); e.stopPropagation(); onPdpListClick(pdpList); }
       var noteBtn = ui.mode && e.target.closest && e.target.closest("[data-nc-note-add],[data-nc-note-del]");
@@ -1477,6 +1524,8 @@
       var pdpAssign = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-assign]");
       if (pdpAssign) { e.preventDefault(); e.stopPropagation(); onPdpAssignClick(pdpAssign); }
     }, true);
+    document.addEventListener("input", onTopSearch, true);
+    document.addEventListener("focus", function (e) { if (e.target && e.target.id === "topbarSearchInput" && e.target.value) onTopSearch(e); }, true);
     holder.addEventListener("click", onClick);
     holder.addEventListener("change", onChange);
     holder.addEventListener("input", onInput);

@@ -5,6 +5,10 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Qualification": "Clasificación",
+  "Match international": "Partido internacional",
+  "autre(s), affinez la recherche": "más, afina la búsqueda",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Notes de la sélection": "Notas de la selección",
   "visibles du staff seulement": "visibles solo para el cuerpo técnico",
   "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Tu comentario sobre este jugador (nivel, actitud, disponibilidad…)",

@@ -5,6 +5,10 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Qualification": "Atranka",
+  "Match international": "Tarptautinės rungtynės",
+  "autre(s), affinez la recherche": "daugiau, patikslinkite paiešką",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Notes de la sélection": "Rinktinės pastabos",
   "visibles du staff seulement": "matomos tik štabui",
   "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Jūsų komentaras apie žaidėją (lygis, elgesys, prieinamumas…)",

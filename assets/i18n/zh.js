@@ -5,6 +5,10 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Qualification": "预选赛",
+  "Match international": "国际比赛",
+  "autre(s), affinez la recherche": "个，请缩小搜索范围",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Notes de la sélection": "国家队备注",
   "visibles du staff seulement": "仅团队可见",
   "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "你对该球员的评论（水平、态度、可用性…）",

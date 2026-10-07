@@ -39,7 +39,24 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   const side = doc.getElementById("ncSidebar").textContent;
   assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Tactique", "Vestiaire", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
   assert(!/Joueurs suivis|Convocations/.test(side), "plus de rubrique « Joueurs suivis » ni de doublon Convocations / Convoqués");
-  assert(/Retour au mode Club/.test(doc.getElementById("ncModeBtn").textContent), "en mode : « Retour au mode Club » dans l'environnement Sélectionneur");
+  // Barre du haut (2026-10-07) : plus de « Retour au mode Club » (menu de
+  // gauche), recherche du club, prochain adversaire et type de match.
+  assert(!doc.getElementById("ncModeBtn") && /Retour au mode Club/.test(doc.getElementById("ncSidebar").textContent), "barre du haut : plus de « Retour au mode Club » (il reste dans le menu de gauche)");
+  assert(doc.getElementById("topbarSearchInput") && win.getComputedStyle(doc.getElementById("topbarSearchWrap")).display !== "none", "barre du haut : recherche présente");
+  {
+    const v = win.HM_NATIONAL_COACH.state.view;
+    const pl = v.pool && v.pool.players[0];
+    if (pl) {
+      const inp = doc.getElementById("topbarSearchInput");
+      inp.value = pl.name.slice(0, 4);
+      inp.dispatchEvent(new win.Event("input", { bubbles: true }));
+      const res = doc.querySelector('#topbarSearchResults .topbar-search-result[data-nc-profile]');
+      assert(res && !doc.getElementById("topbarSearchResults").classList.contains("hidden"), "recherche : joueurs du vivier de la sélection (même rendu que le club)");
+      inp.value = ""; inp.dispatchEvent(new win.Event("input", { bubbles: true }));
+    }
+    const meta = doc.getElementById("ncNextMeta");
+    if (win.eval("HM_NATIONAL_COACH.state.tv") && meta) assert(/(vs|@)/.test(meta.textContent) && /Qualification|amical|Match international|Coupe|Phase/.test(meta.textContent), "barre du haut : prochain adversaire et type de match (" + meta.textContent.trim() + ")");
+  }
   assert(/France A/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : la sélection");
   const content = () => doc.getElementById("nationalContent");
   assert(/Prochain match/.test(content().textContent) && !/Budget|Donnez vos ordres/.test(content().textContent), "tableau de bord de la sélection, rien du club");

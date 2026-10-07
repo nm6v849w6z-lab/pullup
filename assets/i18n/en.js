@@ -3,6 +3,10 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Qualification": "Qualifier",
+  "Match international": "International match",
+  "autre(s), affinez la recherche": "more, refine your search",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Notes de la sélection": "Squad notes",
   "visibles du staff seulement": "visible to the staff only",
   "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Your comment on this player (level, attitude, availability…)",

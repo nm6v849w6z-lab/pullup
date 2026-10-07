@@ -41,6 +41,10 @@
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Qualification": "Qualificazione",
+  "Match international": "Partita internazionale",
+  "autre(s), affinez la recherche": "altri, affina la ricerca",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Notes de la sélection": "Note della nazionale",
   "visibles du staff seulement": "visibili solo allo staff",
   "Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)": "Il tuo commento su questo giocatore (livello, comportamento, disponibilità…)",
