@@ -79,11 +79,13 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (await c
   const pick = v => { doc.querySelector("[data-mk-origin-btn]").click(); doc.querySelector(`[data-mk-origin="${v}"]`).click(); };
   pick("league");
   assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), "masquée avec « Mon championnat »");
-  pick("us");
-  assert.ok(doc.getElementById(`marketCard_${-en.gid}`) && [...doc.querySelectorAll("#marketListings .mk-lst")].every(c => /Division/.test((c.querySelector(".mk-chip-origin") || {}).textContent || "")), "pays « us » : seules les annonces américaines");
-  assert.ok(/États-Unis/.test(doc.querySelector("[data-mk-origin-btn]").textContent), "le bouton affiche le pays choisi");
-  pick("fr");
-  assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), "pays « fr » : l'annonce américaine est masquée");
+  // Pays = nationalité du joueur (correctif 2026-10-07).
+  const nat = win.eval(`league.listingPlayer(league.transferListings.find(l => l.id === ${-en.gid})).nationality`);
+  pick(nat);
+  assert.ok(doc.getElementById(`marketCard_${-en.gid}`) && win.eval(`mkFilteredListings().every(r => r.player.nationality === "${nat}")`), `nationalité « ${nat} » : le joueur de l'annonce américaine, et seulement cette nationalité`);
+  const other = ["fr", "us", "it", "es"].find(c => c !== nat);
+  pick(other);
+  assert.ok(!doc.getElementById(`marketCard_${-en.gid}`), `nationalité « ${other} » : l'annonce est masquée`);
   pick("all");
   const minBid = Engine.minNextBidFor(listing);
   // Règle du 2026-10-03 : accord de contrat (au salaire demandé) avant

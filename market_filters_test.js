@@ -74,7 +74,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "marche").click();
     await flush(dom);
     const cards = () => [...doc.querySelectorAll("#marketListings .mk-lst")];
-    const shown = () => win.eval("mkFilteredListings().map(r => ({ id: r.l.id, age: r.player.age, tier: potentialTierIndex(r.player.potential), next: minNextBidFor(r.l), country: mkListingCountry(r.l) }))");
+    const shown = () => win.eval("mkFilteredListings().map(r => ({ id: r.l.id, age: r.player.age, tier: potentialTierIndex(r.player.potential), next: minNextBidFor(r.l), country: r.player.nationality, league: mkListingCountry(r.l) }))");
     const total = win.eval("mkOpenListings().length");
     check(cards().length === total && total >= 6, `${total} annonces affichées au départ`);
     check(!doc.getElementById("marketOrigin") && !doc.getElementById("marketAge") && !doc.getElementById("marketPot") && !doc.getElementById("marketPrice"), "anciennes listes déroulantes retirées");
@@ -98,13 +98,14 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     filter.value = "ital"; filter.dispatchEvent(new win.Event("input", { bubbles: true }));
     filter.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     check(menu().classList.contains("hidden") && /Italie/.test(btn().textContent), "Entrée : l'Italie est choisie, la liste se ferme");
-    const byCountry = c => win.eval(`mkOpenListings().filter(l => mkListingCountry(l) === "${c}").length`);
-    check(shown().length === byCountry("it") && shown().length >= 2 && shown().every(r => r.country === "it"), "pays « Italie » : seules les annonces italiennes");
+    // Pays = NATIONALITÉ du joueur (correctif 2026-10-07), pas le championnat du vendeur.
+    const byCountry = c => win.eval(`mkOpenListings().filter(l => mkListingNation(l) === "${c}").length`);
+    check(shown().length === byCountry("it") && shown().every(r => r.country === "it"), `pays « Italie » : seuls les joueurs italiens (${byCountry("it")})`);
     btn().click(); doc.querySelector('[data-mk-origin="league"]').click();
     const nLocal = win.eval("mkOpenListings().filter(l => !l.foreign).length");
-    check(shown().length === nLocal && nLocal >= 2 && shown().every(r => r.country === win.eval("mkHomeCountry()")), "« Mon championnat » : les annonces des autres championnats disparaissent");
+    check(shown().length === nLocal && nLocal >= 2 && shown().every(r => r.league === win.eval("mkHomeCountry()")), "« Mon championnat » : les annonces des autres championnats disparaissent");
     btn().click(); doc.querySelector(`[data-mk-origin="${win.eval("mkHomeCountry()")}"]`).click();
-    check(shown().length === byCountry(win.eval("mkHomeCountry()")) && shown().length >= nLocal, "votre pays : les annonces des championnats de votre pays");
+    check(shown().length === byCountry(win.eval("mkHomeCountry()")) && shown().every(r => r.country === win.eval("mkHomeCountry()")), "votre pays : les joueurs de votre nationalité, où qu'ils jouent");
     // Annonces mondiales tirées au hasard : on prend n'importe quel pays sans annonce.
     const empty = win.eval("MK_WORLD_COUNTRIES").find(c => !byCountry(c) && doc.querySelector(`[data-mk-origin="${c}"]`));
     if (empty) {

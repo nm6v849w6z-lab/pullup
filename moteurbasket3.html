@@ -49399,20 +49399,25 @@ const MK_WORLD_COUNTRIES = ["fr", "us", "it", "es", "de", "gr", "lt", "pl", "pt"
 const MK_GLOBE = `<svg class="mk-globe" viewBox="0 0 24 18" width="24" height="18" aria-hidden="true"><circle cx="12" cy="9" r="7.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.8 9h14.4M12 1.7c2.3 2 3.4 4.4 3.4 7.3s-1.1 5.3-3.4 7.3c-2.3-2-3.4-4.4-3.4-7.3s1.1-5.3 3.4-7.3z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
 function mkHomeCountry() { return (league && league.country) || "fr"; }
 function mkListingCountry(l) { return l.foreign && l.foreign.country ? l.foreign.country : mkHomeCountry(); }
+// Filtre par pays = NATIONALITÉ du joueur (correctif 2026-10-07, retour
+// utilisateur : « on dirait que ça prend le pays du club et non la
+// nationalité du joueur ») ; « Mon championnat » reste le filtre sur le
+// championnat du vendeur.
+function mkListingNation(l) { const p = league.listingPlayer(l); return (p && p.nationality) || null; }
 // Ancienne valeur « Mon pays » ("country") : le pays de son championnat.
 function mkOriginValue() { return marketUi.origin === "country" ? mkHomeCountry() : (marketUi.origin || "all"); }
 function mkTr(s) { return window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(s) : s; }
 function mkOriginPickerHtml() {
   const open = mkOpenListings();
   const counts = {};
-  open.forEach(l => { const c = mkListingCountry(l); counts[c] = (counts[c] || 0) + 1; });
+  open.forEach(l => { const c = mkListingNation(l); if (c) counts[c] = (counts[c] || 0) + 1; });
   const home = mkHomeCountry();
   const loc = (window.hmI18n && window.hmI18n.locale) || "fr-FR";
   const others = [...new Set(MK_WORLD_COUNTRIES.concat(Object.keys(counts)))]
     .filter(c => c !== home && NATION_BY_CODE[c])
     .sort((a, b) => mkTr(nationName(a)).localeCompare(mkTr(nationName(b)), loc));
   const cur = mkOriginValue();
-  const sub = n => `${n} en vente`;
+  const sub = n => `${n} joueur${n > 1 ? "s" : ""} en vente`;
   const opt = (val, icon, name, small, names, em = "") =>
     `<button type="button" role="option" aria-selected="${cur === val}" class="pc-picker-opt${cur === val ? " active" : ""}" data-mk-origin="${escapeHtml(val)}" data-pc-code="${escapeHtml(val)}" data-pc-names="${escapeHtml(names)}">${icon}` +
     `<span><b>${escapeHtml(name)}</b><small>${escapeHtml(small)}</small></span>${em ? `<em>${escapeHtml(em)}</em>` : ""}</button>`;
@@ -49424,10 +49429,10 @@ function mkOriginPickerHtml() {
     [home, ...others].map(c => opt(c, nationFlagHtml(c), nationName(c), sub(counts[c] || 0), planeteCountryNames({ code: c, name: nationName(c) }), c === home ? "Votre pays" : "")).join("");
   const curIcon = cur === "all" ? MK_GLOBE : nationFlagHtml(cur === "league" ? home : cur);
   const curName = cur === "all" ? "Monde entier" : cur === "league" ? "Mon championnat" : (nationName(cur) || cur);
-  return `<button type="button" class="pc-picker-btn" data-mk-origin-btn aria-haspopup="listbox" aria-expanded="false" aria-label="Pays du vendeur : ${escapeHtml(curName)}">${curIcon}<span class="pc-picker-name">${escapeHtml(curName)}</span>${PLANETE_CHEVRON}</button>` +
+  return `<button type="button" class="pc-picker-btn" data-mk-origin-btn aria-haspopup="listbox" aria-expanded="false" aria-label="Nationalité : ${escapeHtml(curName)}">${curIcon}<span class="pc-picker-name">${escapeHtml(curName)}</span>${PLANETE_CHEVRON}</button>` +
     `<div class="pc-picker-menu hidden">` +
     `<div class="pc-picker-filter">${PLANETE_SEARCH_ICON}<input type="search" id="marketOriginFilter" placeholder="Rechercher un pays…" autocomplete="off" spellcheck="false" aria-label="Rechercher un pays" aria-controls="marketOriginList"></div>` +
-    `<div class="pc-picker-list" id="marketOriginList" role="listbox" aria-label="Pays du vendeur">${opts}</div>` +
+    `<div class="pc-picker-list" id="marketOriginList" role="listbox" aria-label="Nationalité">${opts}</div>` +
     `<p class="pc-picker-empty" hidden>Aucun pays trouvé.</p></div>`;
 }
 function mkRenderOriginPicker() {
@@ -49920,7 +49925,7 @@ function mkFilteredListings() {
     // Marché mondial : annonces d'un autre championnat (l.foreign) ; pays au
     // choix (retour utilisateur 2026-10-01).
     if (origin === "league" && l.foreign) return false;
-    if (origin !== "all" && origin !== "league" && mkListingCountry(l) !== origin) return false;
+    if (origin !== "all" && origin !== "league" && player.nationality !== origin) return false;
     if (u.pos !== "all" && player.position !== u.pos) return false;
     if (q) {
       const seller = league.teams[l.sellerIdx];
