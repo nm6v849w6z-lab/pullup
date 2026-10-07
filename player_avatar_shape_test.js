@@ -7,7 +7,8 @@
 //  2. Navigateur réel (Chromium, ordinateur et téléphone 390 px) : toutes les
 //     pages et leurs sous-onglets ; pour CHAQUE avatar joueur affiché, la
 //     forme visible (intersection des conteneurs qui le recadrent) doit être
-//     un carré arrondi à 16-20 % de sa largeur.
+//     un carré arrondi à 16-20 % de sa largeur, sans contour (bordure,
+//     anneau ou ombre en anneau) ni sur l'avatar ni sur son cadre.
 const fs = require("fs");
 const WT = __dirname;
 const { startTestServer } = require("./test_helpers.js");
@@ -27,7 +28,9 @@ for (const f of files) {
 }
 const html = fs.readFileSync("moteurbasket3.html", "utf8");
 if (!/AVATAR JOUEUR : FORMAT UNIQUE/.test(html) || !/--player-av-radius:18% \/ 16\.6%/.test(html)) fail("règle globale d'avatar joueur absente de moteurbasket3.html");
-console.log("✅ Statique : aucun cadre d'avatar joueur en cercle, règle commune présente.");
+if (/class: "c2d-frame"/.test(fs.readFileSync("assets/live/court2d.js", "utf8"))) fail("terrain 2D : cadre coloré autour des avatars");
+if (/box-shadow:0 0 0 2px ' \+ ring/.test(fs.readFileSync("assets/vestiaire-ui.js", "utf8"))) fail("Vestiaire : anneau coloré autour des avatars");
+console.log("✅ Statique : aucun cadre d'avatar joueur en cercle ni contour coloré, règle commune présente.");
 
 let chromium;
 try { chromium = require(require("child_process").execSync("npm root -g").toString().trim() + "/playwright").chromium; } catch (e) { /* rien */ }
@@ -72,7 +75,23 @@ for (const [name, js] of steps) {
           const ratio = rad / Math.min(rr.width, rr.height);
           if (ratio > best) { best = ratio; clipper = e; shape = ratio >= 0.35 ? "CERCLE" : `carré r=${(rad/rr.width*100).toFixed(0)}% ${Math.round(rr.width)}x${Math.round(rr.height)}`; }
         }
-        out.push({ shape, sig: clipper ? sig(clipper) : sig(svg.parentElement), vis: !!svg.closest("[class]") && r.width>0 && svg.getClientRects().length>0 });
+        // Contour autour de l'avatar : bordure, anneau (box-shadow) ou outline,
+        // sur l'avatar ou un conteneur de sa taille.
+        let ring = null; e = svg.parentElement;
+        for (let i=0;i<5 && e && e!==document.body;i++, e=e.parentElement) {
+          const cs = getComputedStyle(e); const rr = e.getBoundingClientRect();
+          if (rr.width > r.width * 1.8 || rr.height > r.height * 1.8) break;
+          const bw = parseFloat(cs.borderTopWidth)||0, bc = cs.borderTopColor;
+          const hasB = bw > 0 && cs.borderTopStyle !== "none" && !/rgba\(.*, 0\)|transparent/.test(bc);
+          const hasS = cs.boxShadow && cs.boxShadow !== "none";
+          const hasO = (parseFloat(cs.outlineWidth)||0) > 0 && cs.outlineStyle !== "none";
+          if (hasB || hasS || hasO) { ring = (hasB ? "bordure " + bw + "px " + bc : hasS ? "ombre/anneau " + cs.boxShadow.slice(0, 40) : "outline") + " sur " + sig(e); break; }
+        }
+        // terrain 2D : cadre SVG coloré autour de l'avatar
+        const g = svg.closest("g.c2d-p"); if (g && g.querySelector(".c2d-frame")) ring = "cadre SVG c2d-frame";
+        const vis = !!svg.closest("[class]") && r.width>0 && svg.getClientRects().length>0;
+        out.push({ shape, sig: clipper ? sig(clipper) : sig(svg.parentElement), vis });
+        if (ring) out.push({ shape: "CONTOUR " + ring, sig: "", vis });
       });
       return out;
     });
@@ -85,5 +104,5 @@ const bad = lines.filter(l => !/^carré r=(1[6-9]|20)% /.test(l));
 console.log(lines.join("\n"));
 if (lines.length < 10) fail("trop peu d'avatars trouvés (" + lines.length + " formes) : l'audit ne voit plus les pages");
 if (bad.length) fail("avatars joueurs hors format :\n" + bad.join("\n"));
-console.log(`\n✅ player_avatar_shape_test.js : ${lines.length} emplacements d'avatar joueur, tous en carré arrondi à 18 % (ordinateur et téléphone).`);
+console.log(`\n✅ player_avatar_shape_test.js : ${lines.length} emplacements d'avatar joueur, tous en carré arrondi à 18 %, sans contour (ordinateur et téléphone).`);
 await b.close();server.close();process.exit(0);})().catch(e=>{console.error(e);process.exit(1);});

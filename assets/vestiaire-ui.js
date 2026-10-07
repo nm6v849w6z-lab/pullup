@@ -199,7 +199,8 @@
   // Avatar du joueur (même visage que partout dans le jeu), initiales à défaut.
   function avatar(p, ring, size) {
     var f = g("playerAvatarHtml"), real = teamPlayer(p);
-    var st = ring ? ' style="box-shadow:0 0 0 2px ' + ring + '"' : "";
+    // Plus de contour coloré autour de l'avatar (règle du jeu, 2026-10-07).
+    var st = "";
     if (f && real) { try { return '<span class="vs-av"' + st + ">" + f(real, myTeam(), size || 30) + "</span>"; } catch (e) { /* initiales */ } }
     return '<span class="vs-av vs-av-ini"' + st + ">" + esc(initials(p.name)) + "</span>";
   }

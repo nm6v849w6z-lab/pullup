@@ -782,7 +782,8 @@ points réellement ouverts.
 
 - **Avatar joueur : format unique (2026-10-07, règle permanente)** : carré
   aux coins arrondis à 18 % de la largeur (référence fiche Joueur /
-  Effectif, `playerAvatarHtml`), JAMAIS de cercle. Bloc « AVATAR JOUEUR :
+  Effectif, `playerAvatarHtml`), JAMAIS de cercle, ni de contour (bordure,
+  anneau coloré, ombre en anneau, cadre SVG du terrain 2D). Bloc « AVATAR JOUEUR :
   FORMAT UNIQUE » à la fin du grand `<style>` de moteurbasket3.html :
   `.player-avatar` seul porte la forme ; dans un cadre (liste `:is(...)`,
   ou classe `.player-av-frame` pour tout nouveau composant) c'est le cadre

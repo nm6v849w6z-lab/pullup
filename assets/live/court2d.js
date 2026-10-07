@@ -223,7 +223,8 @@ export function createCourt2D(host, opts = {}) {
         wrap.innerHTML = "";
         el("image", { href: url, x: "-19", y: "-30", width: "38", height: "41", class: "c2d-av", preserveAspectRatio: "xMidYMid slice" }, wrap);
       });
-      el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "6.8", fill: "none", stroke: colors[t], "stroke-width": "2.5", class: "c2d-frame" }, g);
+      // Pas de cadre coloré autour de l'avatar (règle du jeu, 2026-10-07) :
+      // l'équipe se lit sur l'étiquette du nom, à ses couleurs.
     } else {
       el("circle", { r: "12", cy: "-8", fill: colors[t], stroke: "#0b1220", "stroke-width": "2" }, g);
       el("text", { y: "-4", "text-anchor": "middle", class: "c2d-ini" }, g).textContent = initials(p.name);
