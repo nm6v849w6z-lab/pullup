@@ -1,0 +1,169 @@
+// Terrain 2D animé du direct (assets/live/court2d.js — retour utilisateur,
+// 2026-09-29 : « transformer le live actuel en ce format de live avec les
+// joueurs qui bougent », « rendu parquet », « le vrai visage des joueurs »,
+// « il manque les remises en jeu »). Niveau 1 : mise en scène par-dessus le
+// moteur (rien n'est simulé ici). Vérifie, sur un état au contrat de
+// live-view.js (README.md) : dix sprites (les joueurs sur le terrain), le
+// vrai avatar de chaque joueur dans son sprite, le ballon dans les mains
+// d'un joueur, la chorégraphie d'un panier (le tireur va à l'endroit du
+// tir, +2 affiché, remise en jeu par l'équipe qui encaisse), le
+// remplacement (le sortant quitte le terrain, l'entrant apparaît) et le
+// commentaire de l'action sous le terrain.
+const fs = require("fs");
+const path = require("path");
+const { JSDOM } = require("jsdom");
+
+function fail(msg) { throw new Error("❌ " + msg); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const dom = new JSDOM(`<!doctype html><div id="host"></div>`, { pretendToBeVisual: true, runScripts: "outside-only" });
+const { window } = dom;
+// Modules ES chargés « à la main » (JSDOM ne charge pas les modules) : les
+// import/export sont retirés, format.js d'abord.
+const strip = src => src.replace(/^import .*$/mg, "").replace(/^export\s+(function|const|let|class)/mg, "$1").replace(/^export\s*\{[^}]*\};?/mg, "");
+window.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/format.js"), "utf8")));
+window.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/court2d.js"), "utf8")));
+// SVGElement.getComputedTextLength n'existe pas dans JSDOM : le module ne doit
+// pas en dépendre (largeur d'étiquette estimée).
+
+const avatar = (id) => `<span class="player-avatar"><svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" data-avatar="${id}"><circle cx="60" cy="60" r="40"/></svg></span>`;
+const mkTeam = (key, names, poss) => ({
+  name: key, short: key.slice(0, 3).toUpperCase(), score: 0, color: key === "Gotham" ? "#F26B1D" : "#3B8FE0",
+  players: names.map((n, i) => ({ id: key + ":" + n, name: n, pos: poss[i % 5], onCourt: i < 5, avatar: avatar(key + i), pts: 0, reb: 0, ast: 0 })),
+});
+const POS = ["M", "AS", "A", "AF", "P"];
+const S = {
+  status: "live", quarter: 1, clock: 600, possession: 0,
+  teams: [mkTeam("Gotham", ["Ali Kane", "Ben Moro", "Cal Ito", "Dan Vidal", "Eli Nakamura", "Fab Roux", "Gus Lee"], POS),
+          mkTeam("Rennes", ["Hal Novak", "Ian Brooks", "Jo Wright", "Kai Ferreira", "Leo Ramos", "Max Silva", "Ned Diallo"], POS)],
+  shots: [], events: [],
+};
+
+(async () => {
+  const host = window.document.getElementById("host");
+  const court = window.createCourt2D(host, { colors: ["#F26B1D", "#3B8FE0"], raster: false });   // pas de canvas sous JSDOM
+  court.update(S, []);
+  await sleep(120);
+
+  const sprites = () => [...host.querySelectorAll(".c2d-p")];
+  if (sprites().length !== 10) fail(`10 joueurs attendus sur le terrain (les onCourt), obtenu ${sprites().length}.`);
+  if (sprites().filter(g => g.classList.contains("t0")).length !== 5) fail("5 sprites par équipe attendus.");
+  console.log("✅ Dix sprites, cinq par équipe (players[].onCourt).");
+
+  const g0 = host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"]');
+  if (!g0 || !g0.querySelector('svg[data-avatar="Gotham0"]')) fail("le sprite doit embarquer le vrai avatar SVG du joueur (players[].avatar).");
+  if (!/KANE/.test(g0.textContent)) fail("l'étiquette du sprite doit porter le nom de famille en capitales.");
+  console.log("✅ Chaque sprite embarque l'avatar du joueur et son nom.");
+
+  if (!host.querySelector(".c2d-p.has-ball")) fail("après le premier update en direct, un joueur doit avoir le ballon (meneur de l'équipe en possession).");
+  const holder = host.querySelector(".c2d-p.has-ball").dataset.id;
+  if (!holder.startsWith("Gotham:")) fail(`le ballon doit être à l'équipe en possession (0 = Gotham), obtenu ${holder}.`);
+  console.log("✅ Ballon dans les mains du meneur de l'équipe en possession.");
+
+  // Panier de Gotham (attaque le panier de droite) : passe de Kane, tir de
+  // Moro à l'endroit indiqué, +2, puis remise en jeu par Rennes.
+  S.events.push({ id: 1, team: 0, type: "made", kind: "shot", quarter: 1, clock: 585, made: true, zone: "mid",
+    text: "Ben Moro ajuste son tir à mi-distance.", score: [2, 0], shot: { x: 78, y: 18 },
+    actors: { shooter: "Gotham:Ben Moro", assister: "Gotham:Ali Kane" } });
+  S.teams[0].score = 2; S.possession = 1; S.teams[0].players[1].pts = 2;
+  court.update(S, [1]);
+  await sleep(150);
+  if (!/Ben Moro/.test(host.querySelector(".c2d-caption").textContent)) fail("le commentaire de l'action doit s'afficher sous le terrain.");
+  const moro = host.querySelector('.c2d-p[data-id="Gotham:Ben Moro"]');
+  // JSDOM ne cadence pas requestAnimationFrame comme un navigateur : on
+  // vérifie que le tireur se RAPPROCHE de l'endroit du tir, pas qu'il y
+  // arrive à la milliseconde.
+  const pos = () => { const m = /translate\(([\d.-]+) ([\d.-]+)\)/.exec(moro.getAttribute("transform") || ""); return m ? [+m[1], +m[2]] : null; };
+  const d = p => Math.hypot(p[0] - 780, p[1] - 180);
+  const p0 = pos();
+  await sleep(1100);
+  const p1 = pos();
+  if (!p0 || !p1) fail("le sprite du tireur doit être positionné par un transform translate(x y).");
+  if (!(d(p1) < d(p0) - 20)) fail(`le tireur doit se déplacer vers l'endroit du tir (≈780,180) : ${p0} → ${p1}.`);
+  await sleep(1200);
+  const stat = moro.querySelector(".c2d-stat");
+  if (stat.textContent !== "+2") fail(`« +2 » attendu au-dessus du tireur après le panier, obtenu « ${stat.textContent} ».`);
+  console.log("✅ Panier : le tireur va à l'endroit du tir et le +2 s'affiche.");
+
+  await sleep(2200);
+  const holder2 = host.querySelector(".c2d-p.has-ball");
+  if (!holder2 || !holder2.dataset.id.startsWith("Rennes:")) fail(`après un panier encaissé, Rennes doit remettre en jeu et avoir le ballon, obtenu ${holder2 && holder2.dataset.id}.`);
+  console.log("✅ Remise en jeu : le ballon passe à l'équipe qui a encaissé.");
+
+  // v2 (2026-09-30, style BuzzerBeater) : bande des médaillons (les cinq en
+  // jeu avec pts/rb/pd) et chrono des 24 s.
+  const medals = host.querySelectorAll(".c2d-medal");
+  if (medals.length !== 10) fail(`10 médaillons attendus (5 par équipe), obtenu ${medals.length}.`);
+  if (!/MORO/.test(host.querySelector(".c2d-medals.t0").textContent) || !/2 pts/.test(host.querySelector(".c2d-medals.t0").textContent)) fail("le médaillon du tireur doit afficher ses points.");
+  const clock = host.querySelector(".c2d-clock-val").textContent;
+  if (!/^\d+(\.\d)?$/.test(clock) || +clock > 24) fail(`chrono des 24 s attendu, obtenu « ${clock} ».`);
+  console.log("✅ Médaillons des cinq en jeu (points à jour) et chrono des 24 s.");
+
+  // Possession jouée À L'AVANCE (state.nextAction) : Rennes attaque à
+  // gauche, Wright tire à 3 pts ; le ballon doit être en l'air avant que
+  // l'événement n'arrive, et le résultat (+3) s'afficher dès son arrivée.
+  const airAt = Date.now() + 2800;
+  S.nextAction = { kind: "shot", team: 1, zone: "three", airAt, shot: { x: 20, y: 40 }, actors: { shooter: "Rennes:Jo Wright" } };
+  court.update(S, []);
+  await sleep(2600);
+  if (host.querySelector(".c2d-p.has-ball")) fail("pendant le tir planifié, le ballon doit être en l'air (aucun porteur).");
+  S.events.push({ id: 2, team: 1, type: "made", kind: "shot", quarter: 1, clock: 560, made: true, zone: "three", airAt,
+    text: "Jo Wright de loin !", score: [2, 3], shot: { x: 20, y: 40 }, actors: { shooter: "Rennes:Jo Wright" } });
+  S.teams[1].score = 3; S.nextAction = null;
+  await sleep(250);
+  court.update(S, [2]);
+  await sleep(120);
+  const wright = host.querySelector('.c2d-p[data-id="Rennes:Jo Wright"] .c2d-stat');
+  if (!wright || wright.textContent !== "+3") fail(`tir joué à l'avance : « +3 » attendu dès l'arrivée de l'événement, obtenu « ${wright && wright.textContent} ».`);
+  console.log("✅ Possession jouée à l'avance : tir parti avant l'événement, résultat révélé à son arrivée.");
+
+  // Tir manqué : une croix à l'endroit du tir, un commentaire du présentateur ignoré par le terrain.
+  await sleep(2800);
+  S.events.push({ id: 3, team: 0, type: "miss", kind: "rebound", quarter: 1, clock: 540, made: false, zone: "mid", offensive: false, text: "Cal Ito manque, Hal Novak prend le rebond.", shot: { x: 70, y: 30 }, actors: { shooter: "Gotham:Cal Ito", rebounder: "Rennes:Hal Novak" } });
+  S.shots.push({ id: 3, team: 0, quarter: 1, made: false, zone: "mid", x: 70, y: 30 });
+  S.events.push({ id: 4, type: "quote", kind: "quote", team: null, quarter: 1, clock: 540, text: "Quel début de match !", speaker: "Nicolas Cosset" });
+  court.update(S, [3, 4]);
+  await sleep(200);
+  if (host.querySelectorAll(".c2d-miss").length !== 1) fail("un tir manqué doit laisser une croix sur le terrain.");
+  if (/Quel début/.test(host.querySelector(".c2d-caption").textContent)) fail("un commentaire du présentateur ne doit pas remplacer la légende de l'action.");
+  console.log("✅ Croix du tir manqué ; commentaire du présentateur réservé au fil.");
+  await sleep(2600);
+
+  // Lancer franc marqué joué à l'avance (plan calé sur airAt) : la remise en
+  // jeu de l'équipe qui encaisse doit suivre, même si la possession suivante
+  // est déjà annoncée (retour 2026-10-01).
+  const ftAt = Date.now() + 2600;
+  S.nextAction = { kind: "freeThrow", team: 0, airAt: ftAt, actors: { shooter: "Gotham:Cal Ito" } };
+  court.update(S, []);
+  await sleep(2700);
+  S.events.push({ id: 6, team: 0, type: "ft", kind: "freeThrow", quarter: 1, clock: 530, made: 1, attempts: 1, airAt: ftAt, text: "Cal Ito 1/1 aux lancers francs.", score: [3, 3], actors: { shooter: "Gotham:Cal Ito" } });
+  S.teams[0].score = 3;
+  S.nextAction = { kind: "shot", team: 1, zone: "mid", airAt: Date.now() + 9000, shot: { x: 20, y: 20 }, actors: { shooter: "Rennes:Leo Ramos" } };
+  court.update(S, [6]);
+  await sleep(1700);
+  const inb = [...host.querySelectorAll(".c2d-p.t1")].map(g => /translate\(([\d.-]+)/.exec(g.getAttribute("transform"))).filter(Boolean).map(m => +m[1]);
+  if (!inb.some(x => x > 940)) fail(`le remiseur doit être sorti derrière la ligne de fond (x > 94 pieds), positions ${inb.map(x => x.toFixed(0))}.`);
+  await sleep(1900);
+  const h3 = host.querySelector(".c2d-p.has-ball");
+  if (!h3 || !h3.dataset.id.startsWith("Rennes:")) fail(`après un lancer franc marqué, Rennes doit remettre en jeu, obtenu ${h3 && h3.dataset.id}.`);
+  console.log("✅ Lancer franc marqué (joué à l'avance) : remise en jeu derrière la ligne de fond par l'équipe qui encaisse.");
+  S.nextAction = null;
+  await sleep(2500);
+
+  // Remplacement : Kane sort, Roux entre.
+  S.teams[0].players.find(p => p.name === "Ali Kane").onCourt = false;
+  S.teams[0].players.find(p => p.name === "Fab Roux").onCourt = true;
+  S.events.push({ id: 5, team: 0, type: "sub", kind: "substitution", quarter: 1, clock: 560, text: "Fab Roux remplace Ali Kane.", actors: { player: "Gotham:Ali Kane", replacement: "Gotham:Fab Roux" } });
+  court.update(S, [5]);
+  await sleep(1900);
+  if (host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"]')) fail("le joueur sorti doit avoir quitté le terrain.");
+  if (!host.querySelector('.c2d-p[data-id="Gotham:Fab Roux"]')) fail("le remplaçant doit être entré.");
+  if (sprites().length !== 10) fail(`toujours 10 sprites après un remplacement, obtenu ${sprites().length}.`);
+  console.log("✅ Remplacement : le sortant disparaît, l'entrant apparaît, toujours dix joueurs.");
+
+  court.destroy();
+  if (host.innerHTML !== "") fail("destroy() doit vider le conteneur.");
+  console.log("✅ Tous les tests du terrain 2D sont passés.");
+  window.close();
+  process.exit(0);
+})().catch(e => { console.error(e.message); process.exit(1); });

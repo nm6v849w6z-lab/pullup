@@ -20,6 +20,38 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 POUSSÉ main + prod (2026-10-07, 79b1fce) — live 2D v2 en BÊTA,
+  à activer pour Gotham Knights seulement** : tout est en prod mais
+  INVISIBLE tant que le drapeau n'est pas posé (sans bêta : carte des tirs,
+  comportement inchangé). RESTE :
+  1. Activer en prod (jeton côté utilisateur) :
+     `curl -X POST https://hoop-manager.com/api/admin/beta-feature -H "X-Admin-Token: …" -H "Content-Type: application/json" -d '{"teamName":"Gotham Knights","feature":"live2d","enabled":true}'`
+     (`"enabled":false` pour retirer ; réponse `betaFeatures:["live2d"]`).
+  2. Revue en conditions réelles (match de club ; un match de sélection ou
+     d'un autre club via le mode spectateur affiche la même vue).
+  3. Après validation : ouvrir à tous (poser le drapeau club par club, ou
+     retirer le `court2d:` conditionnel dans hmLiveReset/spectateMountLiveView).
+  Détails livrés : `liveState` centralisé ; contexte de possession + delta
+  de stats sur chaque événement moteur (`MatchEngine.statsDelta`) ; feuille
+  en direct par deltas ; chrono des 24 s source unique ; court2d guidé par
+  les faits (passes réelles, type de tir, défenseur, rebond, faute,
+  célébration) ; `assets/live/adapter.js` + mode spectateur / sélections sur
+  la même vue. Non fait (secondaire) : pause / vitesse en rediffusion,
+  navigation par événement, sons, mesure Safari / iPhone, migration du
+  direct de son propre club (hmLive*) vers l'adaptateur partagé. Suite
+  complète : 291 / 312 verts ; les 21 autres échouent aussi sur origin/main
+  (préexistants : attr_color_scheme, club_history, cup_ordres_planning,
+  engine_balance (statistique), personnalisation_tab, premium_features,
+  private_league_ui, server/actions, italy, national_cup, world_season,
+  staff_v2_ui, super_cup, world_market) ou passent seuls (délais sous
+  charge).
+- **🟠 À FAIRE — Économie, masse salariale en 3 lignes** (retour
+  2026-09-30 : « joueurs, staff, centre de formation, ça fait trop de lignes
+  sinon ») : agréger le staff (entraîneur, analyste, recruteur, médecin,
+  kiné, adjoint) en une ligne « Staff » dans `renderEconomieSection`
+  (moteurbasket3.html, `payroll`) ; détail par poste dans l'onglet Staff.
+  Code prêt côté sandbox (mis de côté le 2026-10-07 à la demande de
+  l'utilisateur : livrer le live seul).
 - **🔵 Audit des attributs (2026-10-06) — FAIT ET POUSSÉ ; reste à suivre.**
   Rôles distincts (engine.js, en-tête « Audit des attributs ») : pari
   d'Interception, Pénétration = volume d'attaques du cercle, dissuasion du
@@ -350,7 +382,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   live_court_view / live_court_shot_position_stability /
   live_court_home_logo (vérifient hmLive.shots / hmLiveDress().courtLogo).
   i18n : 4 nouvelles chaînes dans les 9 dictionnaires.
-
 - **🟡 POUSSÉ SUR claude/kind-shannon-8nx9sq (2026-09-30), à passer en
   prod — Salle, vide sous « Construire »** : au-delà de 1100 px, la colonne
   de droite (chiffres clés + Affluence) ne fixe plus la hauteur de la grille

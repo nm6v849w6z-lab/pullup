@@ -38,6 +38,8 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 const store = require("./store.js");
+// Fonctionnalités activables club par club via /api/admin/beta-feature.
+const BETA_FEATURES = ["live2d"];
 const World = require("./world.js");
 const AutoSim = require("./autoSim.js");
 const Calendar = require("./calendar.js");
@@ -1653,6 +1655,34 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         team.recordTransaction(label, body.amount);
         await store.saveMultiLeague(hostLeague, multiSavePath);
         sendJson(res, 200, { ok: true, teamName: team.name, leagueId: hostLeague.leagueId || null, amount: body.amount, budget: team.budget });
+        return;
+      }
+
+      // Bêta par club (2026-10-07) : active ou retire une fonctionnalité pour
+      // UN club de la ligue partagée (toutes divisions, tous pays), pour la
+      // faire tester à un seul manager avant le passage en prod complet.
+      // Body : { teamName, feature: "live2d", enabled: true|false }.
+      // Fonctionnalités connues : live2d (terrain animé du direct).
+      if (route.pathname === "/api/admin/beta-feature" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        if (!body || typeof body.teamName !== "string" || !body.teamName.trim()) { sendJson(res, 400, { ok: false, error: "'teamName' (chaîne non vide) requis." }); return; }
+        if (!BETA_FEATURES.includes(body.feature)) { sendJson(res, 400, { ok: false, error: `'feature' doit être l'une de : ${BETA_FEATURES.join(", ")}.` }); return; }
+        const enabled = body.enabled !== false;
+        const world = await World.loadWorld(multiSavePath, now);
+        if (!world) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée n'existe encore." }); return; }
+        const wanted = body.teamName.trim();
+        for (const entry of world.leagues) {
+          const lg = await World.loadLeague(world, entry.id, multiSavePath);
+          const team = lg && lg.teams.find(t => t.name === wanted);
+          if (!team) continue;
+          const list = team.setBetaFeature(body.feature, enabled);
+          await store.saveMultiLeague(lg, multiSavePath);
+          sendJson(res, 200, { ok: true, teamName: team.name, leagueId: entry.id, feature: body.feature, enabled, betaFeatures: list });
+          return;
+        }
+        sendJson(res, 404, { ok: false, error: `Aucune équipe nommée "${wanted}" dans la ligue partagée.` });
         return;
       }
 

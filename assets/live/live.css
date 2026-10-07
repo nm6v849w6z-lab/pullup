@@ -181,6 +181,10 @@
 
 /* ---------- Panneaux ---------- */
 .hm-live .grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:18px;margin-top:18px}
+/* Terrain 2D affiché : pleine largeur, fil du match en dessous (court2d.js). */
+.hm-live .grid.view-2d{grid-template-columns:1fr}
+.hm-live .grid.view-2d .feed-panel{contain:none;height:420px}
+.hm-live .court-panel [hidden]{display:none!important}
 .hm-live .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;min-width:0}
 .hm-live .panel h2{font-weight:700;font-size:19px;margin:0;text-transform:uppercase;letter-spacing:.5px}
 .hm-live .phead{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -433,3 +437,40 @@ html[data-theme="light"] .hm-live dialog::backdrop{background:rgba(20,32,51,.45)
 html[data-theme="light"] .hm-live .tac-off b,html[data-theme="light"] .hm-live .tac-pill{background:rgba(20,32,51,.05)}
 html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 @media (max-width:700px){.hm-live .tac-grid{grid-template-columns:minmax(0,1fr)}}
+/* ---- Terrain 2D animé (court2d.js, 2026-09-29 : « les joueurs qui
+   bougent », « rendu parquet », « le vrai visage des joueurs ») ---- */
+.c2d{position:relative}
+.c2d-svg{width:100%;height:auto;display:block;border-radius:14px}
+.c2d-ad{fill:rgba(60,30,5,.32);font:900 24px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:3px}
+.c2d-p{will-change:transform}
+.c2d-p .c2d-lab text{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:2px;font:700 9.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px}
+.c2d-p .c2d-ini{fill:#fff;font:800 10px/1 system-ui,sans-serif}
+.c2d-p.has-ball .c2d-sh{fill:rgba(245,161,58,.55)}
+.c2d-stat{font:900 12px/1 system-ui,-apple-system,'Segoe UI',sans-serif;fill:#fff;paint-order:stroke;stroke:#0b1220;stroke-width:3px;transition:opacity .3s}
+.c2d-stat.good{fill:#5fd6ae}.c2d-stat.bad{fill:#FF7A7F}
+.c2d-wave{animation:c2dWave .9s ease-out forwards}
+@keyframes c2dWave{to{r:34px;opacity:0}}
+.c2d-caption{margin-top:10px;min-height:20px;font-size:14px;color:var(--text)}
+.c2d-caption:empty{display:none}
+/* v2 (2026-09-30, style BuzzerBeater) : bande des médaillons, chrono des
+   24 s, porteur de balle en pointillés, croix des tirs manqués. */
+.c2d-medal-name{fill:#fff;font:800 10px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.4px}
+.c2d-medal-stats{font:600 8px/1 system-ui,-apple-system,'Segoe UI',sans-serif}
+.c2d-ms-v{fill:#fff;font-weight:800}
+.c2d-ms-l{fill:rgba(255,255,255,.55)}
+.c2d-clock-lbl{fill:rgba(255,255,255,.55);font:700 8.5px/1 system-ui,sans-serif;letter-spacing:1.5px}
+.c2d-clock-val{fill:#fff;font:900 20px/1 system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+.c2d-clock.low .c2d-clock-val{fill:#FF7A7F;animation:c2dBlink .5s steps(2,start) infinite}
+@keyframes c2dBlink{to{opacity:.35}}
+.c2d-carrier{transition:opacity .2s}
+.c2d-miss,.c2d-light{pointer-events:none}
+/* Commentaires du présentateur dans le fil (2026-09-30). */
+.hm-live .feed li.quote{grid-template-columns:auto 1fr;align-items:center;gap:10px;background:rgba(245,161,58,.06);border-left:3px solid var(--accent,#F5A13A)}
+.hm-live .feed li.quote .qav{width:30px;height:32px;border-radius:8px;overflow:hidden;background:#1F2A40;flex:none}
+.hm-live .feed li.quote .qav svg{width:100%;height:100%;display:block}
+.hm-live .feed li.quote .qtx{font-style:italic;color:var(--text)}
+.hm-live .feed li.quote .qtx b{display:block;font-style:normal;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted,#8A97AD);margin-bottom:2px}
+.hm-live .view-seg[hidden]{display:none}
+/* Réaction du banc : les médaillons de l'équipe qui marque s'éclairent (pas de transform : il porte la position). */
+.c2d-medals.c2d-cheer .c2d-medal rect:first-child{animation:c2dCheer .6s ease-out}
+@keyframes c2dCheer{0%{stroke-opacity:.7}35%{stroke-opacity:1;stroke-width:3px}100%{stroke-opacity:.7}}

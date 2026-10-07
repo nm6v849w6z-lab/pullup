@@ -7507,6 +7507,11 @@ class Team {
     // lit le lecteur d'émission (showPlayer `premium`) pour sauter la page de
     // pub. `null` = aucun Premium temporaire en cours.
     this.premiumUntil = null;
+    // Fonctionnalités en bêta ouvertes à CE club seulement (2026-10-07,
+    // « ajouter ce mode à un seul joueur pour qu'il teste avant la prod ») :
+    // noms de fonctionnalités, posés par POST /api/admin/beta-feature.
+    // Exemple : ["live2d"] = terrain animé du direct.
+    this.betaFeatures = [];
     this.customLogoDataUrl = null;
     this.jerseyShape = JERSEY_SHAPES[0];
     this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
@@ -8783,6 +8788,15 @@ class Team {
   // constructeur). Seul point de lecture pour "ce club est-il Premium ?" côté
   // Hoop Shows (server/shows.js) : jamais `isPaying`/`premiumUntil` lus
   // séparément ailleurs, pour ne pas dupliquer cette règle.
+  hasBetaFeature(name) {
+    return Array.isArray(this.betaFeatures) && this.betaFeatures.includes(name);
+  }
+  setBetaFeature(name, enabled) {
+    const list = Array.isArray(this.betaFeatures) ? this.betaFeatures.filter(f => f !== name) : [];
+    if (enabled) list.push(name);
+    this.betaFeatures = list;
+    return list;
+  }
   hasActivePremium(now = Date.now()) {
     return !!this.isPaying || (typeof this.premiumUntil === "number" && now < this.premiumUntil);
   }
@@ -18277,6 +18291,7 @@ function serializeTeam(team) {
     // au rechargement comme isPaying ci-dessus, sinon le lot de fin de saison
     // des pronostics se perdrait au premier redémarrage du serveur.
     premiumUntil: typeof team.premiumUntil === "number" ? team.premiumUntil : null,
+    betaFeatures: Array.isArray(team.betaFeatures) && team.betaFeatures.length ? [...team.betaFeatures] : undefined,
     customLogoDataUrl: team.customLogoDataUrl || null,
     jerseyShape: team.jerseyShape,
     jerseyColor: team.jerseyColor,
@@ -18991,6 +19006,7 @@ function teamFromSave(data) {
   team.managerPseudoChangedAt = typeof data.managerPseudoChangedAt === "number" ? data.managerPseudoChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
+  team.betaFeatures = Array.isArray(data.betaFeatures) ? data.betaFeatures.filter(f => typeof f === "string") : [];
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
   if (normalizeJerseyColor(data.jerseyColor)) team.jerseyColor = normalizeJerseyColor(data.jerseyColor);
@@ -19511,7 +19527,39 @@ class MatchEngine {
   log(events, quarter, clock, text, meta) {
     const A = this.teamA.players.reduce((s, p) => s + p.stats.pts, 0);
     const B = this.teamB.players.reduce((s, p) => s + p.stats.pts, 0);
-    events.push({ quarter, clock: this.fmtClock(clock), text, score: { A, B }, ...(meta || null) });
+    // Live 2D (2026-10-07) : chaque événement emporte le contexte de SA
+    // possession (`possStart`/`possLen` en secondes de chrono, porteur,
+    // créateur, qualité du tir, situation, type de tir — voir _possCtx dans
+    // simulate/playPossession) et le DELTA de statistiques qu'il produit
+    // (`delta`, voir statsDelta) : le client affiche sans recalculer, et
+    // le terrain met en scène des faits du moteur plutôt que des inventions.
+    const ctx = this._possCtx || null;
+    const delta = this.statsDelta();
+    events.push({ quarter, clock: this.fmtClock(clock), text, score: { A, B }, ...(ctx || null), ...(delta ? { delta } : null), ...(meta || null) });
+  }
+
+  // Delta des statistiques individuelles depuis le dernier événement
+  // journalisé : { A: { "<playerId>": { pts: 2, fgm2: 1 } }, B: {…} }, ou
+  // null si rien n'a bougé. Seuls les champs numériques comptent ; les
+  // minutes (secondsPlayed) restent au client, qui connaît l'heure réelle.
+  statsDelta() {
+    if (!this._statSnap) this._statSnap = new Map();
+    const out = {}; let any = false;
+    for (const [key, team] of [["A", this.teamA], ["B", this.teamB]]) {
+      for (const p of team.players) {
+        const prev = this._statSnap.get(p.id) || {};
+        let d = null;
+        for (const k in p.stats) {
+          const v = p.stats[k];
+          if (typeof v !== "number") continue;
+          const before = prev[k] || 0;
+          if (v !== before) { (d || (d = {}))[k] = v - before; prev[k] = v; }
+        }
+        this._statSnap.set(p.id, prev);
+        if (d) { (out[key] || (out[key] = {}))[p.id] = d; any = true; }
+      }
+    }
+    return any ? out : null;
   }
 
   // "A" si `team` est this.teamA, "B" sinon — repère utilisé par les
@@ -20041,13 +20089,17 @@ class MatchEngine {
       // On évite si possible de faire fauter un joueur déjà proche de l'exclusion.
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
-      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", foulType: "intentional", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, player: ballHandler.name, playerId: ballHandler.id, possession: this.teamKey(offTeam) });
       this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
       return { possessionOffense: false, scored: true, intentionalFoul: true, clockUsed };
     }
 
     // --- Perte de balle ---
     const ballHandler = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass"));
+    if (this._possCtx) {
+      this._possCtx.handler = ballHandler.name; this._possCtx.handlerId = ballHandler.id;
+      this._possCtx.situation = secondChance ? "secondChance" : transitionBoost ? "transition" : setPlay ? "setPlay" : null;
+    }
     // Interception (retour utilisateur, 2026-09 : "il faut travailler sur
     // l'impact des caractéristiques [...] interception [...] si pas encore
     // fait") : jusqu'ici Interception ne comptait nulle part dans la
@@ -20155,7 +20207,7 @@ class MatchEngine {
       );
       if (rand01() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", tovType: "steal", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -20169,7 +20221,7 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", tovType: "lost", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -20179,7 +20231,7 @@ class MatchEngine {
         ballHandler.stats.tov++;
         ballHandler.consecutiveMisses++;
         g.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: g.name, ballHandler: ballHandler.name }), { type: "turnover", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: g.name, ballHandler: ballHandler.name }), { type: "turnover", tovType: "steal", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, possession: this.teamKey(offTeam) });
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
         return { possessionOffense: false };
       }
@@ -20232,7 +20284,7 @@ class MatchEngine {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
       const commonFoulDefender = weightedPick(onCourtDef, p => foulProneness(p));
       commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, possession: this.teamKey(offTeam) });
+      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", foulType: "common", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, player: foulTarget.name, playerId: foulTarget.id, possession: this.teamKey(offTeam) });
       this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
       // Bonus (audit moteur 2026-09-29) : la page du direct affichait déjà
@@ -20373,6 +20425,7 @@ class MatchEngine {
     // quasi identique au repère réel (7.32 vs 7.4).
     const createMult = p => { const r = roleOff && roleOff.byId.get(p.id); return r ? ROLE_CREATE_BASE + ROLE_CREATE_SLOPE * r.create : 1; };
     const creator = creators.length ? weightedPick(creators, p => Math.pow(Math.max(p.eff("pass") + p.eff("vision") * 0.6, 1), 4.6) * createMult(p)) : null;
+    if (this._possCtx) { this._possCtx.creator = creator ? creator.name : null; this._possCtx.creatorId = creator ? creator.id : null; }
 
     // Création de tir (retour utilisateur, 2026-09) : cette formule
     // s'appelait déjà `creation` et alimentait la qualité du tir, mais ne
@@ -20743,6 +20796,12 @@ class MatchEngine {
     // Emplacement précis (voir shotSpotFor) : sans effet sur le tir.
     const spot = shotSpotFor(zone, shooter, `${shooter.id}|${quarter}|${clock}|${events.length}`);
     recordShotSpot(shooter.stats, spot, made);
+    // Type de tir DÉDUIT des faits du moteur (jamais inventé) : zone,
+    // emplacement, poste du tireur, contre-attaque.
+    const shotType = zone === "three" ? "three" : zone === "mid" ? "jumper"
+      : spot === "ra" ? (transitionBoost ? "fastbreak" : "layup")
+      : (shooter.position === "Pivot" || shooter.position === "Ailier fort") ? "post" : "floater";
+    if (this._possCtx) { this._possCtx.quality = quality; this._possCtx.shotType = shotType; this._possCtx.defender = defender.name; this._possCtx.defenderId = defender.id; }
 
     const shotLabel = zone === "three" ? "three" : zone === "mid" ? "mid" : "inside";
 
@@ -20812,6 +20871,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(PHRASES.madeShot[shotLabel], { shooter: shooter.name, quality, team: offTeam.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: true, shooter: shooter.name, shooterId: shooter.id, assister: assistedBy, assisterId: assistedBy ? assistCandidate.id : null, possession: this.teamKey(offTeam) });
 
       if (shootingFoul) {
+        if (this._possCtx) this._possCtx.foulType = "andOne";
         defender.stats.pf++; defender.fouls++;
         this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
@@ -20835,6 +20895,7 @@ class MatchEngine {
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
+        if (this._possCtx) this._possCtx.foulType = "shooting";
         this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
@@ -21269,7 +21330,17 @@ class MatchEngine {
         clock = Math.max(clock, 0);
 
         this.currentPossessionLength = possessionLength;
+        // Contexte de possession pour les événements (voir log) : chrono de
+        // début et durée réelle. Complété dans playPossession.
+        this._possCtx = { possStart: Math.round((clock + possessionLength) * 10) / 10, possLen: Math.round(possessionLength * 10) / 10 };
         const result = this.playPossession(offTeam, defTeam, q, clock, events, scoreDiff);
+        if (typeof result.clockUsed === "number" && result.clockUsed < possessionLength) {
+          // Possession écourtée : les événements déjà journalisés gardent la
+          // durée réellement consommée.
+          const ctx = this._possCtx;
+          for (let i = events.length - 1; i >= 0 && events[i].possLen === ctx.possLen && events[i].possStart === ctx.possStart; i--) events[i].possLen = Math.round(result.clockUsed * 10) / 10;
+        }
+        this._possCtx = null;
 
         // Possession écourtée (faute intentionnelle de fin de match, voir
         // playPossession, qui journalise ses événements au chrono réel) : on
