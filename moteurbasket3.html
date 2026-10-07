@@ -21145,7 +21145,9 @@ function pdpRoleRowHtml(player, fullyVisible) {
     `<span class="pdp-role-track"><i style="width:${Math.max(0, Math.min(100, f.mastery))}%"></i></span><span class="pct">${f.mastery}%</span></div>`).join("") : `<p class="pdp-role-note">Spécialiste d'un seul rôle.</p>`;
   const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
   const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
-  if (comp) {
+  // Titulaire : pas de bloc « Compatibilité » (demande du 2026-10-07 : il ne
+  // faisait que répéter la cohérence actuelle du cinq).
+  if (comp && !comp.starter) {
     const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
     h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
       `<div class="pdp-compat-t">Compatibilité avec votre cinq majeur</div>` +
