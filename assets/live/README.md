@@ -11,6 +11,8 @@ dans n'importe quelle page : un conteneur vide, une feuille de style, un appel
 | `live-view.js` | Rendu complet de la page live | oui |
 | `live.css` | Styles, tous scopés sous `.hm-live`, thème sombre uniquement | oui |
 | `format.js` | Helpers (chrono, pourcentages, évaluation, élision `de()`) | oui |
+| `court2d.js` | Terrain 2D animé (sprites, ballon, possession jouée à l'avance) | oui |
+| `adapter.js` | Adaptateur générique payload serveur → état de la vue | oui |
 | `demo-sim.js` | Simulateur de match pour tester la vue | non |
 | `demo.html` | Page de démo (servir le dossier en HTTP, les modules ES ne marchent pas en `file://`) | non |
 
@@ -115,6 +117,53 @@ vue retombe sur des initiales et des couleurs par défaut.
   }]
 }
 ```
+
+### Terrain animé (court2d.js, 2026-09-30 → 2026-10-07)
+
+La vue ouvre par défaut sur le terrain animé (`createLiveView(root, { court2d:
+false })` pour le désactiver : carte des tirs seule, sélecteur masqué — c'est
+le réglage hors bêta). Le terrain met en scène les FAITS du moteur ; rien
+n'est inventé au-delà des trajectoires.
+
+```js
+{
+  shotClock: 17.4 | null,     // chrono des 24 s, SOURCE UNIQUE (bandeau + terrain) ; null hors jeu / pause
+  courtStyle: { floor, grain, line, paint } | null,   // parquet du club qui reçoit (Premium), sinon parquet par défaut
+  arenaSponsor: "GOTHAM ARENA",
+
+  events: [{
+    airAt,                    // heure réelle de diffusion (ms epoch) — le terrain reconnaît l'action qu'il a jouée à l'avance
+    kind: "shot" | "rebound" | "freeThrow" | "turnover" | "foul" | "substitution" | "timeout" | "tipoff" | "quarterStart" | …,   // type brut du moteur
+    made, offensive, zone,    // zone : "paint" | "mid" | "three"
+    shot: { x, y },           // même point que shots[] (sous-secteur du moteur : ev.spot)
+    actors: {                 // ids « clé:#id », identiques à players[].id
+      shooter, assister, rebounder, defender, blocker, stealer, player, replacement, handler, creator
+    },
+    passes: ["A:#12", "A:#7", "A:#3"],   // chaîne réelle porteur → créateur → tireur (2 ou 3 joueurs)
+    shotType: "three" | "jumper" | "layup" | "fastbreak" | "post" | "floater",   // déduit par le moteur (zone, emplacement, poste, contre-attaque)
+    quality: "ouvert" | "contesté" | "très contesté",   // ouverture réelle du tir
+    situation: "transition" | "secondChance" | "setPlay" | null,
+    possLen: 14.4,            // durée de la possession (s)
+    tovType: "steal" | "lost", foulType: "common" | "shooting" | "andOne" | "intentional",
+    durationMs,               // temps mort : durée de la pause
+    type: "quote", speaker, avatar   // commentaire du présentateur (fil seulement)
+  }],
+
+  nextAction: {               // PROCHAINE action de la timeline, SANS résultat (ni made, ni text, ni score)
+    kind, team, zone, shot, actors, passes, shotType, quality, situation, possLen, airAt
+  }                           // le terrain joue la possession pour que le ballon touche le cercle à airAt
+}
+```
+
+### Adaptateur générique (adapter.js)
+
+`createLiveAdapter({ live, teams: { A, B }, mine, dress, presenter })` produit
+cet état à partir du payload serveur (`events` avec `airAt`, `pauses`,
+`boxScoreA/B` pour les cinq de départ, `isHome`), pour n'importe quel match
+(club, sélection nationale, spectateur, rediffusion) : `applyEvent`,
+`applyPause`, `finish`, `tick(now)`, `buildState(now)`, `reset`. La feuille
+de match est alimentée par les deltas du moteur (`ev.delta`). Utilisé par le
+mode spectateur de `moteurbasket3.html` (`spectateMountLiveView`).
 
 La courbe d'écart, la série en cours (« Série 8-0 pour CBT ») et les totaux
 d'équipe sont **calculés par la vue** à partir de `events[].score` et des

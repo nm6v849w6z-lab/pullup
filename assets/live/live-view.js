@@ -16,6 +16,7 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de } from "./format.js";
+import { createCourt2D } from "./court2d.js?v=20261007-1";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -94,23 +95,25 @@ const TEMPLATE = `
   <form method="dialog" style="text-align:right"><button class="ghost">Retour au match</button></form>
 </dialog>
 
-<div class="grid">
-  <section class="panel">
+<div class="grid" data-ref="grid">
+  <section class="panel court-panel" data-ref="courtPanel">
     <div class="phead">
-      <h2>Carte des tirs</h2>
-      <div class="filters">
+      <h2 data-ref="courtTitle">Terrain</h2>
+      <div class="seg view-seg" data-seg="view"><button data-v="2d" aria-pressed="true">Terrain</button><button data-v="chart">Carte des tirs</button></div>
+      <div class="filters" data-ref="chartFilters" hidden>
         <div class="seg" data-seg="team"><button data-v="all" aria-pressed="true">Les deux</button><button data-v="0" data-ref="fT0"></button><button data-v="1" data-ref="fT1"></button></div>
         <div class="seg" data-seg="q"><button data-v="all" aria-pressed="true">Match</button><button data-v="1">Q1</button><button data-v="2">Q2</button><button data-v="3">Q3</button><button data-v="4">Q4</button></div>
         <div class="seg" data-seg="res"><button data-v="all" aria-pressed="true">Tous</button><button data-v="made">Réussis</button><button data-v="miss">Manqués</button></div>
       </div>
     </div>
-    <div class="court-wrap"><svg class="court" data-ref="court" viewBox="0 0 940 500" role="img" aria-label="Terrain avec les tirs"></svg><div class="shot-tip" data-ref="shotTip" role="tooltip"></div></div>
-    <div class="legend">
+    <div class="court2d" data-ref="court2d"></div>
+    <div class="court-wrap" data-ref="courtWrap" hidden><svg class="court" data-ref="court" viewBox="0 0 940 500" role="img" aria-label="Terrain avec les tirs"></svg><div class="shot-tip" data-ref="shotTip" role="tooltip"></div></div>
+    <div class="legend" data-ref="chartLegend" hidden>
       <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="#93A1B8"/></svg>Réussi</span>
       <span><svg width="14" height="14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="#93A1B8" stroke-width="2.5" stroke-linecap="round"/></svg>Manqué</span>
       <span data-ref="sides"></span>
     </div>
-    <div class="zones" data-ref="zones"></div>
+    <div class="zones" data-ref="zones" hidden></div>
   </section>
 
   <section class="panel feed-panel">
@@ -202,7 +205,13 @@ export function createLiveView(root, opts = {}) {
   root.innerHTML = TEMPLATE;
   const $ = r => root.querySelector(`[data-ref="${r}"]`);
 
-  const ui = { team: "all", q: "all", res: "all", feed: "all", box: null };
+  // `view` : "2d" = terrain animé (court2d.js, 2026-09-29 : « les joueurs qui
+  // bougent »), "chart" = l'ancienne carte des tirs avec ses filtres.
+  // `opts.court2d === false` : terrain animé indisponible (pas dans la bêta
+  // du club) → carte des tirs seule, sans le sélecteur Terrain / Carte.
+  const court2dAllowed = opts.court2d !== false;
+  const ui = { team: "all", q: "all", res: "all", feed: "all", box: null, view: court2dAllowed ? "2d" : "chart" };
+  let court2d = null;
   let S = null;                 // dernier état reçu
   let seenEvents = null;        // Set des id d'événements déjà affichés
   let seenShots = null;
@@ -216,6 +225,7 @@ export function createLiveView(root, opts = {}) {
       const b = e.target.closest("button"); if (!b) return;
       seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
       ui[seg.dataset.seg] = b.dataset.v;
+      if (seg.dataset.seg === "view") applyView();
       if (S) render(new Set(), new Set());
     });
   });
@@ -230,6 +240,33 @@ export function createLiveView(root, opts = {}) {
   }, { passive: true });
   $("newpill").addEventListener("click", () => { feed.scrollTop = 0; });
   $("showBtn").addEventListener("click", () => (opts.onShowHalftime ? opts.onShowHalftime(S) : openRecap()));
+
+  // Terrain animé ou carte des tirs (retour utilisateur, 2026-09-29 : « il
+  // faudrait remplacer la carte des tirs actuelle mais laisser la
+  // possibilité de l'afficher »). Le terrain prend toute la largeur (le fil
+  // du match passe en dessous), la carte garde la disposition à deux
+  // colonnes avec ses filtres.
+  function applyView() {
+    if (!court2dAllowed) ui.view = "chart";
+    const is2d = ui.view === "2d";
+    const seg = root.querySelector("[data-seg=view]");
+    if (seg) seg.toggleAttribute("hidden", !court2dAllowed);
+    $("courtTitle").textContent = is2d ? "Terrain" : "Carte des tirs";
+    // toggleAttribute plutôt que `.hidden` : un <svg> n'a pas la propriété
+    // `hidden` (elle n'existe que sur HTMLElement), l'attribut resterait posé.
+    $("court2d").toggleAttribute("hidden", !is2d);
+    ["courtWrap", "chartFilters", "chartLegend", "zones"].forEach(r => $(r).toggleAttribute("hidden", is2d));
+    $("grid").classList.toggle("view-2d", is2d);
+    if (is2d && !court2d) {
+      try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined }); if (S) court2d.update(S, []); }
+      catch (e) { court2d = null; ui.view = "chart"; applyView(); }
+    } else if (is2d && court2d && S) {
+      // Retour depuis la carte des tirs : remet le terrain à jour (joueurs
+      // sur le terrain, possession) sans rejouer les actions manquées.
+      try { court2d.update(S, []); } catch (e) { /* rien */ }
+    }
+  }
+  applyView();
 
   // Mini-tableau : visible quand le bas du grand bandeau (hors quarts-temps)
   // passe sous le topbar collant du jeu (--topbar-h). Écoute en capture pour
@@ -252,6 +289,7 @@ export function createLiveView(root, opts = {}) {
   }
 
   // ---------- API ----------
+  let lightKey = null, lightTicks = 0, lastClock = null, lastHalf = null;
   function update(state) {
     S = state;
     const first = seenEvents === null;
@@ -267,12 +305,34 @@ export function createLiveView(root, opts = {}) {
       for (const e of S.events) if (!seenEvents.has(e.id)) newEv.add(e.id);
       for (const s of S.shots) if (!seenShots.has(s.id)) newShots.add(s.id);
     }
-    render(newEv, newShots);
+    // Rendu allégé (2026-10-01, « ça semble laguer ») : le client redessine
+    // chaque seconde pour l'horloge ; si rien d'autre n'a changé (pas de
+    // nouvelle action, même statut, mêmes cinq, mêmes scores), on ne refait
+    // que le bandeau — reconstruire fil + feuille de match (24 avatars SVG)
+    // chaque seconde saccadait l'animation du terrain. La feuille (minutes
+    // jouées) est rafraîchie toutes les 5 s.
+    const key = [S.status, S.quarter, S.events.length, S.shots.length, S.teams.map(t => t.score + ":" + t.teamFouls + ":" + t.timeoutsLeft + ":" + t.players.filter(p => p.onCourt).map(p => p.id).join(",")).join("|"), ui.box, ui.team, ui.q, ui.res, ui.feed].join("#");
+    if (!first && key === lightKey && !newEv.size && !newShots.size) {
+      if (S.clock === lastClock && S.halftimeResumeIn === lastHalf) {
+        // Seul le chrono des 24 s a bougé (dixièmes) : juste lui.
+        renderShotClock();
+      } else {
+        lightTicks++;
+        withStableScroll(() => { renderBoard(); renderHalf(); if (lightTicks % 5 === 0) { renderLeaders(); renderBox(); } });
+      }
+    } else {
+      lightKey = key; lightTicks = 0;
+      render(newEv, newShots);
+    }
+    if (court2d && ui.view === "2d") {
+      try { court2d.update(S, [...newEv]); } catch (e) { /* le terrain ne doit jamais casser la page */ }
+    }
     if (!first) {
       S.events.filter(e => newEv.has(e.id) && (e.type === "timeout" || e.type === "period" || e.highlight))
         .slice(-1).forEach(e => toast(e.toast || e.text));
       [0, 1].forEach(t => { if (lastScore && S.teams[t].score > lastScore[t]) bump(t); });
     }
+    lastClock = S.clock; lastHalf = S.halftimeResumeIn;
     seenEvents = new Set(S.events.map(e => e.id));
     seenShots = new Set(S.shots.map(s => s.id));
     lastScore = S.teams.map(t => t.score);
@@ -308,6 +368,7 @@ export function createLiveView(root, opts = {}) {
       window.removeEventListener("resize", onScroll);
     }
     if (miniRaf) cancelAnimationFrame(miniRaf);
+    if (court2d) { try { court2d.destroy(); } catch (e) { /* rien */ } court2d = null; }
     root.innerHTML = ""; root.classList.remove("hm-live");
   }
 
@@ -390,6 +451,13 @@ export function createLiveView(root, opts = {}) {
     return { team, pts };
   }
 
+  function renderShotClock() {
+    const sc = S.status === "live" && typeof S.shotClock === "number" ? S.shotClock : null;
+    const txt = sc === null ? "" : String(Math.ceil(sc));
+    if ($("shotclock").textContent !== txt) $("shotclock").textContent = txt;
+    $("shotclock").classList.toggle("on", sc !== null);
+    $("shotclock").classList.toggle("low", sc !== null && sc <= 5);
+  }
   function renderBoard() {
     const [A, B] = S.teams;
     const M = S.meta || {};
@@ -431,10 +499,7 @@ export function createLiveView(root, opts = {}) {
     $("clock").classList.toggle("final", done);
     // Chrono des 24 secondes (retour utilisateur 2026-10-03), seulement
     // pendant le jeu.
-    const sc = S.status === "live" && typeof S.shotClock === "number" ? S.shotClock : null;
-    $("shotclock").textContent = sc === null ? "" : String(sc);
-    $("shotclock").classList.toggle("on", sc !== null);
-    $("shotclock").classList.toggle("low", sc !== null && sc <= 5);
+    renderShotClock();
     const diff = A.score - B.score;
     $("period").textContent = done ? (diff ? `Victoire ${de(S.teams[diff > 0 ? 0 : 1].name)}` : "Égalité")
       : pregame ? (S.kickoffIn > 0 ? `Coup d'envoi dans ${fmtClock(S.kickoffIn)}` : "Coup d'envoi imminent")
@@ -654,7 +719,7 @@ export function createLiveView(root, opts = {}) {
 
   function renderFeed(newEv) {
     const keep = e => ui.feed === "all" || e.type === "period" ||
-      (ui.feed === "score" ? !!e.score : e.type === "foul" || e.type === "turnover");
+      (ui.feed === "score" ? !!e.score : e.type === "quote" ? false : e.type === "foul" || e.type === "turnover");
     // Points rapportés par chaque action qui porte un score.
     const gained = new Map();
     let prev = [0, 0];
@@ -667,6 +732,8 @@ export function createLiveView(root, opts = {}) {
     const prevTop = feed.scrollTop, prevH = feed.scrollHeight;
     feed.innerHTML = list.length ? list.map(e => {
       if (e.type === "period") return `<li class="ev sep"><span>${esc(e.text)}</span></li>`;
+      // Commentaire du présentateur (Nicolas Cosset) : avatar + nom, sans chrono.
+      if (e.type === "quote") return `<li class="ev quote${newEv.has(e.id) ? " fresh" : ""}"><span class="qav">${e.avatar || ""}</span><span class="qtx"><b>${esc(e.speaker || "")}</b>${esc(e.text)}</span></li>`;
       const t = e.team;
       const cls = ["ev", t != null ? "t" + t : "", e.score ? "made" : "", e.highlight ? "big" : "", newEv.has(e.id) ? "fresh" : ""].join(" ");
       let sc = "";

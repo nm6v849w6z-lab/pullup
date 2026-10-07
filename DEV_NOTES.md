@@ -20,6 +20,58 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟠 CODE FAIT, TESTS EN COURS (2026-10-07) — live 2D v2 + améliorations
+  de l'audit, EN BÊTA pour Gotham Knights uniquement.** Audit : doc
+  « Audit du live 2D » (Claude Docs). Fichiers : `engine.js`,
+  `server/liveMatch.js`, `server/index.js`, `moteurbasket3.html`,
+  `assets/live/{court2d,live-view,adapter}.js`, `live.css`, `README.md` ;
+  tests `live_court2d_test`, `live_next_action_test`, `live_adapter_test`,
+  `admin_beta_feature_test`.
+  - Priorité 1 (état) : `liveState` (score, quart, chrono interpolé, chrono
+    des 24 s, possession, pause) alimenté par `applyEvent` + le tick ; le
+    DOM hérité n'est plus qu'une sortie ; `hmLiveBuildState` lit liveState ;
+    équipes/joueurs mis en cache entre deux ticks (`hmLive.teamsCache`).
+  - Priorité 2 (moteur → live) : chaque événement porte le contexte de SA
+    possession (`possStart`, `possLen`, `handler`, `creator`, `quality`,
+    `situation`, `shotType`, `defender`, `foulType`, `tovType`) et le
+    `delta` de stats qu'il produit (`MatchEngine.statsDelta`, `log()`) ;
+    `viewLiveMatchForTeam` échange aussi les clés du delta. Le tir porte
+    déjà `spot` (sous-secteur) : désormais utilisé pour la position.
+  - Chrono des 24 s : source unique `liveState.shotClock` (dixièmes),
+    passée à la vue et au terrain (`state.shotClock`, null en pause).
+  - Feuille en direct : `applyLiveStatsDelta` (deltas moteur) ; l'ancien
+    comptage ne sert plus que pour un direct calculé avant ce changement.
+  - court2d : passes = chaîne réelle porteur → créateur → tireur (passe et
+    va possible), type de tir (drive, floater, post, jumper, three :
+    trajectoire et hauteur), défenseur réel du tir qui conteste selon
+    `quality`, saut au tir / contre / rebond, rebond sur le cercle + lutte,
+    contact sur faute (fautif → victime), célébration + banc (médaillons),
+    temps mort tenu toute la pause, chrono 24 s depuis l'état.
+  - Adaptateur générique `assets/live/adapter.js` (payload serveur + deux
+    équipes → état de la vue, sans teamA/league/currentMatch) : utilisé par
+    le mode spectateur (`spectateMountLiveView`) → matchs des autres,
+    SÉLECTIONS NATIONALES (`/api/national/live`), rediffusions des autres
+    affichent la même vue live (+ terrain si le spectateur est en bêta).
+    RESTE : faire passer le direct de son propre club (hmLive*) par ce même
+    adaptateur (il produit déjà le même contrat ; migration à part).
+  - Bêta par club : `Team.betaFeatures`, `hasBetaFeature`, route
+    `POST /api/admin/beta-feature` `{ "teamName": "Gotham Knights",
+    "feature": "live2d", "enabled": true }` (X-Admin-Token ; toutes
+    divisions / pays ; `enabled: false` retire) ; miroir dans la Team
+    embarquée de moteurbasket3.html ; `opts.court2d` dans createLiveView.
+    Sans bêta : carte des tirs seule, sélecteur masqué (inchangé).
+  - RESTE : suite de tests complète verte → commit + push main + prod →
+    lancer l'appel admin pour Gotham Knights en prod (le jeton est côté
+    utilisateur) → revue en conditions réelles. Non fait (secondaire, voir
+    plan) : pause / vitesse en rediffusion, navigation par événement,
+    orientation des sprites, sons, mesure Safari / iPhone.
+- **🟠 À FAIRE — Économie, masse salariale en 3 lignes** (retour
+  2026-09-30 : « joueurs, staff, centre de formation, ça fait trop de lignes
+  sinon ») : agréger le staff (entraîneur, analyste, recruteur, médecin,
+  kiné, adjoint) en une ligne « Staff » dans `renderEconomieSection`
+  (moteurbasket3.html, `payroll`) ; détail par poste dans l'onglet Staff.
+  Code prêt côté sandbox (mis de côté le 2026-10-07 à la demande de
+  l'utilisateur : livrer le live seul).
 - **🔵 Audit des attributs (2026-10-06) — FAIT ET POUSSÉ ; reste à suivre.**
   Rôles distincts (engine.js, en-tête « Audit des attributs ») : pari
   d'Interception, Pénétration = volume d'attaques du cercle, dissuasion du
@@ -350,7 +402,6 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   live_court_view / live_court_shot_position_stability /
   live_court_home_logo (vérifient hmLive.shots / hmLiveDress().courtLogo).
   i18n : 4 nouvelles chaînes dans les 9 dictionnaires.
-
 - **🟡 POUSSÉ SUR claude/kind-shannon-8nx9sq (2026-09-30), à passer en
   prod — Salle, vide sous « Construire »** : au-delà de 1100 px, la colonne
   de droite (chiffres clés + Affluence) ne fixe plus la hauteur de la grille

@@ -4986,6 +4986,10 @@
     padding:7px 16px; font-weight:800; font-size:12px; cursor:pointer;
   }
   .spectate-box{max-width:640px; max-height:85vh; overflow-y:auto;}
+  /* Vue live complète en mode spectateur (adaptateur générique) : large, blocs texte hérités masqués. */
+  .spectate-box.rich{max-width:1240px; width:min(1240px, 96vw);}
+  .spectate-box.rich .spectate-legacy{display:none;}
+  .spectate-box.rich #spectateLiveRoot{margin:8px 0 12px;}
   .spectate-score-row{display:flex; align-items:baseline; gap:10px; margin-bottom:10px;}
   .spectate-score-row .spectate-score{font-size:28px; font-weight:800; color:var(--ink);}
   .spectate-actions{display:flex; gap:10px; margin-top:14px;}
@@ -17281,6 +17285,11 @@ class Team {
     // Premium temporaire (lot de fin de saison des pronostics — voir
     // engine.js, miroir identique, DEV_NOTES.md point 11).
     this.premiumUntil = null;
+    // Fonctionnalités en bêta ouvertes à CE club seulement (2026-10-07,
+    // « ajouter ce mode à un seul joueur pour qu'il teste avant la prod ») :
+    // noms de fonctionnalités, posés par POST /api/admin/beta-feature.
+    // Exemple : ["live2d"] = terrain animé du direct.
+    this.betaFeatures = [];
     this.customLogoDataUrl = null;
     this.jerseyShape = JERSEY_SHAPES[0];
     this.jerseyColor = Object.keys(JERSEY_COLORS)[0];
@@ -18226,6 +18235,15 @@ class Team {
   }
 
   // Voir engine.js, miroir identique.
+  hasBetaFeature(name) {
+    return Array.isArray(this.betaFeatures) && this.betaFeatures.includes(name);
+  }
+  setBetaFeature(name, enabled) {
+    const list = Array.isArray(this.betaFeatures) ? this.betaFeatures.filter(f => f !== name) : [];
+    if (enabled) list.push(name);
+    this.betaFeatures = list;
+    return list;
+  }
   hasActivePremium(now = Date.now()) {
     return !!this.isPaying || (typeof this.premiumUntil === "number" && now < this.premiumUntil);
   }
@@ -24991,6 +25009,7 @@ function serializeTeam(team) {
     managerPseudoChangedAt: typeof team.managerPseudoChangedAt === "number" ? team.managerPseudoChangedAt : null,
     arenaName: team.arenaName || null,
     premiumUntil: typeof team.premiumUntil === "number" ? team.premiumUntil : null,
+    betaFeatures: Array.isArray(team.betaFeatures) && team.betaFeatures.length ? [...team.betaFeatures] : undefined,
     customLogoDataUrl: team.customLogoDataUrl || null,
     jerseyShape: team.jerseyShape,
     jerseyColor: team.jerseyColor,
@@ -25612,6 +25631,7 @@ function teamFromSave(data) {
   team.managerPseudoChangedAt = typeof data.managerPseudoChangedAt === "number" ? data.managerPseudoChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
+  team.betaFeatures = Array.isArray(data.betaFeatures) ? data.betaFeatures.filter(f => typeof f === "string") : [];
   team.customLogoDataUrl = typeof data.customLogoDataUrl === "string" ? data.customLogoDataUrl : null;
   if (JERSEY_SHAPES.includes(data.jerseyShape)) team.jerseyShape = data.jerseyShape;
   if (normalizeJerseyColor(data.jerseyColor)) team.jerseyColor = normalizeJerseyColor(data.jerseyColor);
@@ -27571,6 +27591,17 @@ let liveTimers = [];
 // puisque ce prochain événement annonce justement le résultat de la
 // possession en cours. Purement un habillage visuel côté client : aucun
 // impact sur le résultat déjà déterminé au coup d'envoi.
+// État centralisé du direct (audit live 2D, 2026-10-07 : « Moteur →
+// événements → liveState → vues », plus de lecture du DOM comme source) :
+// alimenté par applyEvent (score, quart, chrono de l'événement, possession)
+// et par updateLiveClockTick (chrono interpolé, chrono des 24 s, possession
+// à venir). Le DOM hérité (#scoreA, #clockDisplay, #shotClockDisplay) n'est
+// plus qu'une SORTIE ; hmLiveBuildState lit ici.
+const liveState = {
+  scoreAB: { A: 0, B: 0 }, quarter: 1, eventClock: QUARTER_SECONDS, clock: QUARTER_SECONDS,
+  shotClock: null, possession: null, inPause: false, lastAirAt: 0,
+  reset(clock) { this.scoreAB = { A: 0, B: 0 }; this.quarter = 1; this.eventClock = this.clock = clock; this.shotClock = null; this.possession = null; this.inPause = false; this.lastAirAt = 0; },
+};
 let liveTickEvents = []; // [{ airAt, quarter, clockSec, possession }], trié par airAt, un par événement diffusé
 let liveTickPauses = [];  // [{ airAt, endAt }] — mi-temps/pauses de quart-temps/temps morts
 let liveClockTicker = null;
@@ -27632,7 +27663,8 @@ function updateLiveClockTick() {
   // En pause (mi-temps, entre quarts-temps, temps mort) : le jeu est arrêté,
   // le chrono de match ne bouge pas et le chrono des 24s n'a pas de sens.
   const inPause = liveTickPauses.some(p => now >= p.airAt && now < p.endAt);
-  if (inPause) { badge.classList.add("off"); return; }
+  liveState.inPause = inPause;
+  if (inPause) { liveState.shotClock = null; badge.classList.add("off"); return; }
 
   // Cherche les deux événements qui encadrent "maintenant" (déjà diffusé /
   // pas encore diffusé), dans le MÊME quart-temps (un changement de
@@ -27643,7 +27675,7 @@ function updateLiveClockTick() {
     if (liveTickEvents[i].airAt <= now) prevIdx = i;
     else { next = liveTickEvents[i]; break; }
   }
-  if (prevIdx === -1) { badge.classList.add("off"); return; } // avant le coup d'envoi
+  if (prevIdx === -1) { liveState.shotClock = null; badge.classList.add("off"); return; } // avant le coup d'envoi
   const prev = liveTickEvents[prevIdx];
 
   // Retour utilisateur : "quand l'entre-deux est remporté, [...] le chrono
@@ -27692,11 +27724,15 @@ function updateLiveClockTick() {
     // les deux chronos étaient décalés l'un par rapport à l'autre.
     const interpSecRounded = Math.max(0, Math.round(interpSec));
     clockEl.textContent = secondsToClockStr(interpSecRounded);
-    const elapsedSinceEvent = Math.max(0, prev.clockSec - interpSecRounded);
+    liveState.clock = interpSecRounded;
+    // Chrono des 24 s : SOURCE UNIQUE (le bandeau et le terrain 2D lisent
+    // liveState.shotClock), en dixièmes pour que le terrain soit fluide.
+    const elapsedSinceEvent = Math.max(0, prev.clockSec - interpSec);
     const shotSec = Math.max(0, Math.min(24, 24 - elapsedSinceEvent));
+    liveState.shotClock = shotSec;
     badge.classList.remove("off");
     badge.classList.toggle("low", shotSec <= 5);
-    badge.textContent = String(shotSec);
+    badge.textContent = String(Math.ceil(shotSec));
     // La possession pendant cet intervalle est celle de l'événement à venir
     // (`next`, littéralement adjacent — pas `nextDiff` : dès la toute
     // prochaine annonce, même à chrono identique, la balle peut déjà avoir
@@ -27712,7 +27748,9 @@ function updateLiveClockTick() {
       if (liveTickEvents[i].possession) { nextPoss = liveTickEvents[i].possession; break; }
     }
     setPossessionDot(nextPoss || prev.possession || null);
+    liveState.possession = nextPoss || prev.possession || liveState.possession;
   } else {
+    liveState.shotClock = null;
     // Dernier événement diffusé du quart (ou du match) : plus rien à
     // interpoler tant que l'événement suivant (autre quart, pause, fin de
     // diffusion) n'est pas encore arrivé — on laisse le chrono affiché tel
@@ -42282,6 +42320,7 @@ function enterLiveMatch(liveMatch, opts) {
   resetLiveBoxScore();
   document.getElementById("feed").innerHTML = "";
   resetQuarterBars();
+  liveState.reset(QUARTER_SECONDS);
   document.getElementById("scoreA").textContent = "0";
   document.getElementById("scoreB").textContent = "0";
   document.getElementById("clockDisplay").textContent = "10:00";
@@ -42295,6 +42334,7 @@ function enterLiveMatch(liveMatch, opts) {
 
   if (liveMatch.forfeit) {
     const scoreAB = liveMatchScoreAB(liveMatch);
+    liveState.scoreAB = { A: scoreAB.A, B: scoreAB.B };
     document.getElementById("scoreA").textContent = scoreAB.A;
     document.getElementById("scoreB").textContent = scoreAB.B;
     document.getElementById("quarterLabel").textContent = "Terminé";
@@ -42556,6 +42596,23 @@ function liveMinutesFor(teamKeyAB, key) {
 // l'équipe `teamKeyAB` ("A"/"B") — clé : voir liveRowKey ; la position vient
 // de teamA/teamB (objets globaux déjà à jour à l'entrée sur l'écran Live,
 // voir enterLiveMatch).
+// Champs du delta moteur → colonnes de la feuille en direct (mêmes noms
+// que `emptyStats` côté moteur, sauf ceux que la feuille ne montre pas).
+const LIVE_DELTA_FIELDS = ["pts", "reb", "oreb", "dreb", "ast", "stl", "blk", "tov", "pf", "fgm2", "fga2", "fgm3", "fga3", "ftm", "fta", "plusMinus"];
+function applyLiveStatsDelta(delta) {
+  for (const key of ["A", "B"]) {
+    const per = delta[key];
+    if (!per) continue;
+    const teamObj = key === "A" ? teamA : teamB;
+    for (const idStr in per) {
+      const id = Number(idStr);
+      const pObj = teamObj && teamObj.players && teamObj.players.find(p => p.id === id);
+      const row = liveBoxScoreRow(key, pObj ? pObj.name : ("#" + idStr), Number.isFinite(id) ? id : null);
+      const d = per[idStr];
+      for (const f of LIVE_DELTA_FIELDS) if (typeof d[f] === "number") row[f] = (row[f] || 0) + d[f];
+    }
+  }
+}
 function liveBoxScoreRow(teamKeyAB, name, id = null) {
   const map = liveBoxScore[teamKeyAB];
   const key = liveRowKey(teamKeyAB, name, id);
@@ -42703,7 +42760,17 @@ function applyLiveBoxScoreEvent(ev) {
   // même entre deux statistiques, pour les joueurs encore sur le terrain
   // (voir liveMinutesFor).
   if (ev.quarter != null && ev.clock != null) liveBoxScoreNowElapsed = elapsedSecondsAt(ev.quarter, ev.clock);
+  // Deltas du moteur (live 2D, 2026-10-07, voir MatchEngine.statsDelta) : la
+  // feuille en direct n'est plus recalculée ici, elle additionne ce que le
+  // moteur a réellement compté sur CET événement — une seule implémentation
+  // des statistiques, sans spoiler (chaque delta n'arrive qu'à son airAt).
+  // Les minutes et les changements restent gérés ci-dessous. Un direct
+  // calculé avant ce changement (sans `delta`) garde l'ancien calcul.
+  const hasDelta = ev.delta && typeof ev.delta === "object";
+  if (hasDelta) applyLiveStatsDelta(ev.delta);
   if (ev.team !== "A" && ev.team !== "B") { renderLiveBoxScore(); return; }
+  const STAT_TYPES = { shot: 1, rebound: 1, freeThrow: 1, turnover: 1, foul: 1, unsportsmanlikeFoul: 1, technicalFoul: 1 };
+  if (hasDelta && STAT_TYPES[ev.type]) { renderLiveBoxScore(); return; }
   switch (ev.type) {
     case "shot": {
       if (!ev.shooter) break;
@@ -43054,6 +43121,7 @@ function closeSpectateMatch() {
   const existing = document.getElementById("spectateOverlay");
   if (existing) existing.remove();
   if (spectateState && spectateState.timer) clearInterval(spectateState.timer);
+  if (spectateState && spectateState.rich) { try { spectateState.rich.view.destroy(); } catch (e) { /* rien */ } }
   spectateState = null;
 }
 
@@ -43068,6 +43136,7 @@ async function refreshSpectateMatch() {
     const data = await res.json();
     if (!res.ok || !data.ok) { closeSpectateMatch(); return; } // le match est probablement terminé entre-temps
     spectateState.live = data.live;
+    if (spectateState.rich) spectateSyncRich(spectateState);
     renderSpectateMatch();
   } catch (e) { /* pas de connexion : on garde le dernier affichage connu */ }
 }
@@ -43102,6 +43171,8 @@ async function showSpectateMatch(teamIdx, pre) {
     // Match international (route /api/national/live) : compétition.
     (data.live && data.live.intl ? `<p class="sub">Sélections nationales · ${escapeHtml(data.live.intl.label)}</p>` : "") +
     `<div id="spectateSeekHolder"></div>` +
+    `<div id="spectateLiveRoot" style="--topbar-h:0px"></div>` +
+    `<div class="spectate-legacy">` +
     `<div id="spectateStatusHolder"></div>` +
     `<div class="boxscore-toggle">` +
       `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
@@ -43110,6 +43181,7 @@ async function showSpectateMatch(teamIdx, pre) {
     `<div id="spectateBoxscoreHolder"></div>` +
     `<h4>Derniers événements</h4>` +
     `<div id="spectateFeedHolder"></div>` +
+    `</div>` +
     `<div class="spectate-actions">` +
       `<button type="button" id="spectateRefreshBtn">🔄 Actualiser</button>` +
       `<button type="button" class="upgrade-confirm-cancel-btn" id="spectateCloseBtn">Fermer</button>` +
@@ -43127,18 +43199,95 @@ async function showSpectateMatch(teamIdx, pre) {
     document.getElementById("spectateSeekHolder").appendChild(makeReplaySeekBar(st.live, t => {
       shiftReplayTimeline(st.live, t);
       st.lastAired = -1;
+      if (st.rich) { st.rich.adapter.reset(); st.rich.applied = 0; spectateSyncRich(st); }
       renderSpectateMatch();
     }));
   }
   // Le match avance tout seul (tous les événements sont déjà là, chacun
-  // avec son heure de diffusion) : nouveau rendu chaque seconde, plus
-  // besoin d'« Actualiser » pour suivre un direct ou un replay.
+  // avec son heure de diffusion). Vue live complète si les modules
+  // chargent (spectateMountLiveView), sinon le rendu texte chaque seconde.
   const state = spectateState;
+  if (!data.live.forfeit) spectateMountLiveView(state).catch(() => {});
   state.timer = setInterval(() => {
     if (spectateState !== state || !document.getElementById("spectateOverlay")) { clearInterval(state.timer); return; }
+    if (state.rich) { spectateSyncRich(state); return; }
     const n = state.live.forfeit ? 0 : state.live.events.filter(ev => ev.airAt <= Date.now()).length;
     if (n !== state.lastAired) { state.lastAired = n; renderSpectateMatch(); }
-  }, 1000);
+  }, 200);
+}
+
+// Vue live complète en mode spectateur (matchs des autres clubs, sélections
+// nationales, rediffusions des autres — audit live 2D 2026-10-07) : même
+// live-view.js et même terrain que son propre direct, alimentés par
+// l'adaptateur générique (assets/live/adapter.js) à partir du payload
+// serveur et des deux objets équipe, sans `teamA`/`currentMatch`. Le terrain
+// animé suit la bêta du club du SPECTATEUR (opts.court2d).
+let hmLiveAdapterPromise = null;
+function hmLiveLoadAdapterModule() {
+  if (!hmLiveAdapterPromise) hmLiveAdapterPromise = import("./assets/live/adapter.js?v=" + HM_LIVE_ASSET_VERSION).catch(() => null);
+  return hmLiveAdapterPromise;
+}
+function spectateTeamData(obj, colorIdx, colors, leagueIdx) {
+  const players = ((obj && obj.players) || []).map(p => {
+    let avatar = ""; try { avatar = playerAvatarHtml(p, obj, 40); } catch (e) { avatar = ""; }
+    return { id: p.id, name: p.name, pos: POS_SHORT[p.matchPosition || p.position] || "", avatar, link: leagueIdx != null && leagueIdx >= 0 ? { team: leagueIdx, id: p.id } : null };
+  });
+  let logo = ""; try { logo = obj ? teamLogoHtml(obj, 76) : ""; } catch (e) { logo = ""; }
+  let sponsor = null; try { sponsor = obj ? sponsorNameForSlot(obj, "maillot") : null; } catch (e) { sponsor = null; }
+  return { name: obj ? obj.name : "?", short: obj ? teamTrigram(obj) : "?", color: colors[colorIdx], logo, sponsor, players };
+}
+async function spectateMountLiveView(state) {
+  const [mod, adMod] = await Promise.all([hmLiveLoadModule(), hmLiveLoadAdapterModule()]);
+  if (!mod || !adMod || spectateState !== state) return false;
+  const root = document.getElementById("spectateLiveRoot");
+  if (!root) return false;
+  const live = state.live;
+  const homeObj = live.isHome ? state.teamObj : state.opponentObj;
+  const awayObj = live.isHome ? state.opponentObj : state.teamObj;
+  const colors = hmLiveColors(homeObj, awayObj);
+  const teams = {
+    A: spectateTeamData(state.teamObj, live.isHome ? 0 : 1, colors, state.teamIdx),
+    B: spectateTeamData(state.opponentObj, live.isHome ? 1 : 0, colors, state.opponentIdx),
+  };
+  if (live.tacticsUsed) { teams[live.isHome ? "A" : "B"].tactics = live.tacticsUsed.home || null; teams[live.isHome ? "B" : "A"].tactics = live.tacticsUsed.away || null; }
+  const dress = { meta: null, courtLogo: "", arenaSponsor: null, courtStyle: null };
+  try { dress.courtLogo = homeObj ? liveCourtHomeLogoSvg(homeObj, 470, 250, 52).replace(/liveCourtLogoClip/g, "spectateCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
+  try { dress.arenaSponsor = homeObj ? sponsorNameForSlot(homeObj, "salle") : null; } catch (e) { /* rien */ }
+  // Parquet Premium du club qui reçoit ; une sélection nationale n'en a pas (repli neutre).
+  try { dress.courtStyle = homeObj && !live.intl ? courtStyleFor(homeObj) : null; } catch (e) { dress.courtStyle = null; }
+  const competition = live.intl ? `Sélections nationales · ${live.intl.label || ""}`.trim() : live.privateLeague ? `Ligue privée · ${live.privateLeague.name}` : live.competition === "cup" ? "Coupe" : live.competition === "friendly" ? "Match amical" : "Championnat";
+  const round = live.privateLeague ? `Journée ${live.privateLeague.round + 1}` : (live.round != null && !live.intl ? `Journée ${live.round + 1}` : "");
+  let venue = live.isHome ? `${state.teamName} reçoit` : `${state.opponentName} reçoit`;
+  try { const cap = homeObj && (homeObj.arenaCapacity ? homeObj.arenaCapacity() : arenaInfo(homeObj.arenaLevel).capacity); if (cap) venue += ` · ${cap.toLocaleString("fr-FR")} places`; } catch (e) { /* salle inconnue */ }
+  dress.meta = { competition: [live.replay ? "Rediffusion" : null, competition].filter(Boolean).join(" · "), round, venue };
+  let presenter = null;
+  try { presenter = { name: HOOP_SHOW_PRESENTER_NAME, avatar: hoopShowPresenterAvatar() || "" }; } catch (e) { presenter = null; }
+  const adapter = adMod.createLiveAdapter({ live, teams, mine: null, quarterLength: QUARTER_SECONDS, overtimeLength: OVERTIME_SECONDS, dress, presenter });
+  let view;
+  try {
+    view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")) });
+  } catch (e) { return false; }
+  state.rich = { adapter, view, applied: 0 };
+  const box = root.closest(".spectate-box");
+  if (box) box.classList.add("rich");
+  spectateSyncRich(state);
+  return true;
+}
+function spectateSyncRich(state) {
+  const r = state.rich;
+  if (!r) return;
+  const live = state.live, now = Date.now();
+  if (r.live !== live) { r.live = live; r.adapter.reset(); r.applied = 0; r.items = null; }
+  if (!r.items) {
+    r.items = [...(live.events || []).map(ev => ({ at: ev.airAt, ev })), ...(live.pauses || []).filter(p => p.kind === "timeout").map(p => ({ at: p.airAt, pause: p }))].sort((a, b) => a.at - b.at);
+  }
+  while (r.applied < r.items.length && r.items[r.applied].at <= now) {
+    const it = r.items[r.applied++];
+    try { if (it.ev) r.adapter.applyEvent(it.ev); else r.adapter.applyPause(it.pause); } catch (e) { /* un événement inattendu ne doit pas casser la vue */ }
+  }
+  if (!live.forfeit && now >= live.kickoffAt + (live.totalDurationMs || 0)) r.adapter.finish();
+  r.adapter.tick(now);
+  try { r.view.update(r.adapter.buildState(now)); } catch (e) { /* le terrain ne doit jamais casser la page */ }
 }
 
 // Câblage des onglets Domicile/Extérieur du box score en direct — UNE SEULE
@@ -43176,6 +43325,11 @@ function applyEvent(ev) {
     // partirait d'un mauvais repère.
     updateLiveQuarterBar(ev.quarter, ev.score);
   }
+  liveState.scoreAB = { A: ev.score.A, B: ev.score.B };
+  liveState.quarter = ev.quarter;
+  liveState.eventClock = liveState.clock = clockSecondsFromStr(ev.clock);
+  if (ev.possession === "A" || ev.possession === "B") liveState.possession = ev.possession;
+  if (ev.airAt) liveState.lastAirAt = Math.max(liveState.lastAirAt, ev.airAt);
   document.getElementById("scoreA").textContent = ev.score.A;
   document.getElementById("scoreB").textContent = ev.score.B;
   document.getElementById("clockDisplay").textContent = ev.clock;
@@ -43322,7 +43476,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261003-6";
+const HM_LIVE_ASSET_VERSION = "20261007-1";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -43375,7 +43529,28 @@ function hmLiveShort(name) {
 // Position (en pieds) d'un tir sur le terrain : le moteur ne donne que la
 // zone, on tire donc un point plausible dans cette zone, graine = airAt de
 // l'événement (même point à chaque reconnexion, comme randomPointForZone).
-function hmLiveShotSpot(zone, teamIdx, seed) {
+// Emplacement précis du moteur (`ev.spot`, voir SHOT_SPOTS côté moteur :
+// ra / paint, mbl mwl mtop mwr mbr, c3l w3l t3 w3r c3r) → point dans ce
+// sous-secteur, léger aléa déterministe (graine = airAt). « l » = côté haut
+// de l'écran (y petit) pour les deux équipes.
+const HM_LIVE_SPOT_GEOM = {
+  ra: { d: [0.5, 4], a: [-80, 80] }, paint: { d: [4.5, 9.5], a: [-60, 60] },
+  mbl: { d: [10, 18], a: [-88, -62] }, mwl: { d: [12, 20], a: [-58, -22] }, mtop: { d: [14, 21], a: [-20, 20] }, mwr: { d: [12, 20], a: [22, 58] }, mbr: { d: [10, 18], a: [62, 88] },
+  c3l: { corner: -1 }, w3l: { d: [24, 26.5], a: [-58, -24] }, t3: { d: [24.5, 27], a: [-22, 22] }, w3r: { d: [24, 26.5], a: [24, 58] }, c3r: { corner: 1 },
+};
+function hmLiveSpotPos(spot, teamIdx, seed) {
+  const g = HM_LIVE_SPOT_GEOM[spot];
+  if (!g) return null;
+  const rnd = seededRandom(seed);
+  const r = (a, b) => a + rnd() * (b - a);
+  let x, y;
+  if (g.corner) { x = r(1, 11); y = g.corner < 0 ? r(1, 3) : 50 - r(1, 3); }
+  else { const d = r(g.d[0], g.d[1]), a = r(g.a[0], g.a[1]) * Math.PI / 180; x = Math.max(1, 5.25 + d * Math.cos(a)); y = 25 + d * Math.sin(a); }
+  return { x: teamIdx === 0 ? 94 - x : x, y: Math.max(0.8, Math.min(49.2, y)) };
+}
+function hmLiveShotSpot(zone, teamIdx, seed, spot) {
+  const precise = spot ? hmLiveSpotPos(spot, teamIdx, seed) : null;
+  if (precise) return precise;
   const rnd = seededRandom(seed);
   const r = (a, b) => a + rnd() * (b - a);
   let x, y, d, a;
@@ -43436,6 +43611,9 @@ function hmLiveReset(liveMatch) {
           quarterLength: QUARTER_SECONDS,
           onShowHalftime: () => openHoopShow("halftime"),
           halftimeShowSeen: hoopShowHalftimeSeen,
+          // Terrain animé (court2d) : bêta par club tant qu'il n'est pas
+          // ouvert à tous (2026-10-07, POST /api/admin/beta-feature live2d).
+          court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")),
         });
         hmLiveRender();
       } catch (e) {
@@ -43459,6 +43637,19 @@ function hmLiveOnEvent(ev) {
     hmLive.raw.push({ quarter, score: sc });
 
     const out = { id: ++hmLive.seq, team: t, quarter, clock, text: ev.text || "", score: null, highlight: false };
+    // Terrain 2D animé (assets/live/court2d.js, 2026-09-29) : type brut du
+    // moteur, zone, réussite et ACTEURS de l'action (ids « clé:nom », comme
+    // players[].id de hmLiveBuildState) — c'est avec ça que le terrain sait
+    // qui passe, qui tire, qui prend le rebond ou qui intercepte.
+    out.kind = ev.type; out.made = ev.made; out.offensive = ev.offensive;
+    out.zone = ev.zone === "inside" ? "paint" : ev.zone || null;
+    if (hasTeam) { out.actors = hmLiveActors(ev); Object.assign(out, hmLivePossessionFacts(ev)); }
+    // Heure de diffusion et équipe en possession : le terrain 2D (v2,
+    // 2026-09-30) joue la possession À L'AVANCE (state.nextAction) et cale
+    // le tir sur airAt ; il reconnaît ainsi l'événement quand il arrive.
+    out.airAt = ev.airAt || null;
+    out.possessionTeam = ev.possession === "A" || ev.possession === "B" ? hmLiveIdx(ev.possession) : null;
+    hmLive.lastAirAt = ev.airAt || hmLive.lastAirAt || 0;
     switch (ev.type) {
       case "shot": out.type = ev.made ? "made" : "miss"; if (ev.made) out.score = sc; break;
       case "rebound": out.type = "miss"; break;
@@ -43488,22 +43679,136 @@ function hmLiveOnEvent(ev) {
       else if (ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) shooterIdx = t;
       else if (ev.type === "rebound") shooterIdx = ev.offensive ? t : 1 - t;
       if (shooterIdx !== null) {
-        const p = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt || hmLive.seq));
+        const p = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt || hmLive.seq), ev.spot);
         // Tireur (survol de la carte des tirs, retour utilisateur 2026-10-03).
         hmLive.shots.push({ id: hmLive.seq, team: shooterIdx, quarter, clock, made, zone, x: p.x, y: p.y, shooter: ev.shooter || null });
+        out.shot = { x: p.x, y: p.y };   // même endroit pour le terrain 2D
       }
     }
+    hmLivePresenter(ev, out);
     hmLiveSchedule();
   } catch (e) { console.warn("hmLiveOnEvent", e); }
+}
+
+// Acteurs d'un événement pour le terrain 2D : ids « clé:#id » identiques à
+// players[].id de hmLiveBuildState (clé de ligne du box score, voir
+// liveRowKeyFor — les événements portent shooterId, playerId…).
+function hmLiveActors(ev) {
+  const other = ev.team === "A" ? "B" : "A";
+  const pid = (key, name, id) => (name ? key + ":" + liveRowKey(key, name, id) : null);
+  // Équipe en attaque sur cette action : le tireur sur un rebond, la
+  // victime sur une faute (ev.team = équipe qui commet la faute), sinon
+  // ev.team. Tous les défenseurs (défenseur du tir, contreur, voleur,
+  // fautif) sont dans l'autre camp.
+  const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul";
+  const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : other) : foul ? other : ev.team;
+  const defKey = offKey === "A" ? "B" : "A";
+  return {
+    shooter: pid(offKey, ev.shooter, ev.shooterId), assister: pid(offKey, ev.assister, ev.assisterId), rebounder: pid(ev.team, ev.rebounder, ev.rebounderId),
+    defender: pid(defKey, ev.defender, ev.defenderId), blocker: pid(defKey, ev.blocker, ev.blockerId),
+    // `player` : victime sur une faute simple (attaque) ; sinon (technique,
+    // antisportive, perte, changement, blessure, exclusion) dans ev.team.
+    stealer: pid(defKey, ev.stealer, ev.stealerId), player: pid(ev.type === "foul" ? other : ev.team, ev.player, ev.playerId), replacement: pid(ev.team, ev.replacement, ev.replacementId),
+    handler: pid(offKey, ev.handler, ev.handlerId), creator: pid(offKey, ev.creator, ev.creatorId),
+  };
+}
+
+// Faits de la possession portés par l'événement (moteur, 2026-10-07) :
+// chaîne de passes réelle (porteur → créateur → tireur, ids « clé:#id »),
+// type de tir, qualité d'ouverture, situation, durée — JAMAIS le résultat.
+function hmLivePossessionFacts(ev) {
+  if (ev.team !== "A" && ev.team !== "B") return {};
+  const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : (ev.team === "A" ? "B" : "A"))
+    : (ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul") ? (ev.team === "A" ? "B" : "A") : ev.team;
+  const pid = (name, id) => (name ? offKey + ":" + liveRowKey(offKey, name, id) : null);
+  // Porteur → créateur → tireur ; seuls les doublons CONSÉCUTIFS tombent
+  // (porteur = tireur avec un créateur distinct = passe et va, réelle).
+  const passes = [];
+  for (const id of [pid(ev.handler, ev.handlerId), pid(ev.creator, ev.creatorId), pid(ev.shooter, ev.shooterId)]) if (id && passes[passes.length - 1] !== id) passes.push(id);
+  return {
+    passes: passes.length ? passes : undefined,
+    shotType: ev.shotType || undefined, quality: ev.quality || undefined, situation: ev.situation || undefined,
+    possLen: typeof ev.possLen === "number" ? ev.possLen : undefined, spot: ev.spot || undefined,
+    tovType: ev.tovType || undefined, foulType: ev.foulType || undefined,
+  };
+}
+
+// Prochaine action du fil (le client a toute la timeline, voir enterLiveMatch) :
+// le terrain 2D joue la remontée de balle, les passes et le tir pour que le
+// ballon touche le cercle à `airAt`. Le RÉSULTAT (réussi, texte, score) n'est
+// pas transmis : il n'est joué qu'à l'arrivée réelle de l'événement.
+function hmLiveNextAction() {
+  const m = hmLive && hmLive.match;
+  if (!m || !Array.isArray(m.events) || hmLive.final || m.pregame) return null;
+  const after = hmLive.lastAirAt || 0;
+  const ev = m.events.find(e => e.airAt > after && e.type !== "forfeit" && e.type !== "timeout");
+  if (!ev) return null;
+  const hasTeam = ev.team === "A" || ev.team === "B";
+  const t = hasTeam ? hmLiveIdx(ev.team) : null;
+  const zone = ev.zone === "inside" ? "paint" : ev.zone || null;
+  let shot = null;
+  if (hasTeam && zone && (zone === "paint" || zone === "mid" || zone === "three")) {
+    let shooterIdx = null;
+    if (ev.type === "shot" && ev.made) shooterIdx = t;
+    else if (ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) shooterIdx = t;
+    else if (ev.type === "rebound") shooterIdx = ev.offensive ? t : 1 - t;
+    if (shooterIdx !== null) shot = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt), ev.spot);
+  }
+  return {
+    kind: ev.type, team: t, zone, offensive: ev.offensive, airAt: ev.airAt, shot,
+    possessionTeam: ev.possession === "A" || ev.possession === "B" ? hmLiveIdx(ev.possession) : null,
+    actors: hasTeam ? hmLiveActors(ev) : {},
+    ...hmLivePossessionFacts(ev),
+  };
+}
+
+// Commentaires de Nicolas Cosset dans le fil (retour utilisateur 2026-09-30,
+// « répliques du coach → ok », par le présentateur de l'émission) : quelques
+// phrases aux moments clés — coup d'envoi, fin de quart, série de points,
+// money time, fin de match. Déterministe (graine = airAt) : même fil à
+// chaque reconnexion. Jamais avant l'événement, jamais de spoiler.
+function hmLivePresenter(ev, out) {
+  const m = hmLive.match;
+  const names = [0, 1].map(t => { const team = (t === 0) === !!m.isHome ? teamA : teamB; return team ? team.name : (t ? "les visiteurs" : "les locaux"); });
+  const sc = hmLiveScoreArr(ev.score);
+  const pick = arr => arr[Math.floor(seededRandom(Math.round(ev.airAt || hmLive.seq))() * arr.length)];
+  const say = text => {
+    hmLive.events.push({ id: ++hmLive.seq, type: "quote", kind: "quote", team: null, quarter: out.quarter, clock: out.clock, text, score: null, highlight: false, speaker: HOOP_SHOW_PRESENTER_NAME, avatar: hmLivePresenterAvatar() });
+  };
+  const lead = sc[0] === sc[1] ? null : sc[0] > sc[1] ? 0 : 1;
+  const gap = Math.abs(sc[0] - sc[1]);
+  // Série de points : on compte les points consécutifs d'une même équipe.
+  if (out.score) {
+    const r = hmLive.run || { team: null, pts: 0, said: false };
+    const prev = hmLive.prevScore || [0, 0];
+    const gained = [sc[0] - prev[0], sc[1] - prev[1]];
+    const t = gained[0] > 0 ? 0 : gained[1] > 0 ? 1 : null;
+    if (t !== null) {
+      if (r.team === t) r.pts += gained[t]; else { r.team = t; r.pts = gained[t]; r.said = false; }
+      if (r.pts >= 8 && !r.said) { r.said = true; say(pick([`${names[t]} sur un ${r.pts}-0, l'entraîneur adverse devrait vite réagir.`, `Série de ${r.pts} points sans réponse pour ${names[t]} : la salle s'enflamme !`, `${r.pts}-0 pour ${names[t]}, c'est le moment de tout changer en face.`])); }
+    }
+    hmLive.run = r;
+    hmLive.prevScore = sc;
+    // Money time : moins de 2 minutes, moins de 4 points d'écart, une fois par quart.
+    if (out.quarter >= 4 && out.clock <= 120 && gap <= 3 && hmLive.moneyQ !== out.quarter) { hmLive.moneyQ = out.quarter; say(pick(["Money time ! Chaque possession va peser lourd.", "Deux minutes, tout est encore possible : le banc est debout.", "On tient un vrai finish, les joueurs le savent."])); }
+  }
+  if (ev.type === "quarterStart" && ev.quarter === 1) say(pick([`C'est parti entre ${names[0]} et ${names[1]} ! On espère du spectacle.`, `Entre-deux, le match commence. ${names[0]} reçoit ${names[1]}.`]));
+  if (ev.type === "quarterEnd") {
+    if (ev.quarter === 2) say(lead === null ? "Mi-temps, tout reste à faire : égalité parfaite." : pick([`Mi-temps : ${names[lead]} mène de ${gap} point${gap > 1 ? "s" : ""}. Rendez-vous aux vestiaires.`, `${names[lead]} rentre aux vestiaires devant (${sc[0]}-${sc[1]}).`]));
+    else if (ev.quarter === 1 || ev.quarter === 3) say(lead === null ? "Fin de quart, et on est à égalité." : pick([`Fin du ${ev.quarter === 1 ? "premier" : "troisième"} quart : ${names[lead]} devant, ${sc[0]}-${sc[1]}.`, `${names[lead]} vire en tête (${sc[0]}-${sc[1]}) après ${ev.quarter === 1 ? "dix" : "trente"} minutes.`]));
+  }
+}
+function hmLivePresenterAvatar() {
+  if (hmLive.presenterAvatar == null) { try { hmLive.presenterAvatar = hoopShowPresenterAvatar() || ""; } catch (e) { hmLive.presenterAvatar = ""; } }
+  return hmLive.presenterAvatar;
 }
 
 function hmLiveOnPause(pause) {
   if (!hmLive || !pause || pause.kind !== "timeout") { hmLiveSchedule(); return; }
   try {
-    const clockEl = document.getElementById("clockDisplay");
     hmLive.events.push({
-      id: ++hmLive.seq, type: "timeout", team: pause.team === "home" ? 0 : pause.team === "away" ? 1 : null,
-      quarter: pause.quarter || hmLive.quarter, clock: clockEl ? clockSecondsFromStr(clockEl.textContent) : 0,
+      id: ++hmLive.seq, type: "timeout", kind: "timeout", team: pause.team === "home" ? 0 : pause.team === "away" ? 1 : null,
+      quarter: pause.quarter || hmLive.quarter, clock: liveState.clock, airAt: pause.airAt || null, durationMs: pause.durationMs || null,
       text: pause.label, score: null, highlight: true, toast: pause.label,
       // Temps morts restants sur la période (moteur, depuis le 2026-09-29).
       remaining: typeof pause.remaining === "number" ? pause.remaining : null,
@@ -43515,6 +43820,19 @@ function hmLiveOnPause(pause) {
 function hmLiveOnFinish() {
   if (!hmLive) return;
   hmLive.final = true;
+  try {
+    const sc = hmLiveScoreArr(liveMatchScoreAB(hmLive.match));
+    const m = hmLive.match;
+    const names = [0, 1].map(t => { const team = (t === 0) === !!m.isHome ? teamA : teamB; return team ? team.name : (t ? "les visiteurs" : "les locaux"); });
+    const w = sc[0] === sc[1] ? null : sc[0] > sc[1] ? 0 : 1;
+    const gap = Math.abs(sc[0] - sc[1]);
+    if (w !== null && !hmLive.finalSaid) {
+      hmLive.finalSaid = true;
+      const last = hmLive.events[hmLive.events.length - 1] || { quarter: hmLive.quarter, clock: 0 };
+      hmLive.events.push({ id: ++hmLive.seq, type: "quote", kind: "quote", team: null, quarter: last.quarter, clock: 0, score: null, highlight: false, speaker: HOOP_SHOW_PRESENTER_NAME, avatar: hmLivePresenterAvatar(),
+        text: gap <= 3 ? `C'est terminé ! ${names[w]} s'impose ${sc[0]}-${sc[1]} au bout du suspense.` : gap >= 20 ? `Fin du match : ${names[w]} a déroulé, ${sc[0]}-${sc[1]}.` : `Fin du match, victoire de ${names[w]} ${sc[0]}-${sc[1]}. Merci de nous avoir suivis !` });
+    }
+  } catch (e) { /* pas de commentaire final */ }
   hmLiveSchedule();
 }
 
@@ -43522,10 +43840,10 @@ function hmLiveOnFinish() {
 // l'horloge affichée ou le compte à rebours de mi-temps a changé.
 function hmLiveOnTick() {
   if (!hmLive || !hmLive.view) return;
-  const clockEl = document.getElementById("clockDisplay");
+  // Lu dans liveState (plus dans le DOM) ; le chrono des 24 s en dixièmes
+  // fait redessiner le terrain 10 fois par seconde (rendu allégé côté vue).
   const half = hmLiveHalftime();
-  const shotEl = document.getElementById("shotClockDisplay");
-  const key = (clockEl ? clockEl.textContent : "") + "|" + (half ? half.resumeIn : "") + "|" + (shotEl && !shotEl.classList.contains("off") ? shotEl.textContent : "");
+  const key = liveState.clock + "|" + (half ? half.resumeIn : "") + "|" + (liveState.shotClock === null ? "" : liveState.shotClock.toFixed(1)) + "|" + liveState.possession;
   if (key !== hmLive.tickKey) { hmLive.tickKey = key; hmLiveSchedule(); }
 }
 
@@ -43674,8 +43992,11 @@ function hmLiveBuildState() {
   }
 
   const half = hmLive.final ? null : hmLiveHalftime();
-  const clockEl = document.getElementById("clockDisplay");
-  const teams = keys.map((key, t) => {
+  // Équipes et joueurs (la partie coûteuse : 24 lignes, avatars, minutes)
+  // reconstruits au plus une fois par seconde ou par événement ; les ticks
+  // intermédiaires (chrono des 24 s en dixièmes) réutilisent le cache.
+  const teamsKey = [hmLive.seq, hmLive.final, hmLive.quarter, Math.floor(liveBoxScoreNowElapsed), hmLive.match.pregame].join("|");
+  const teams = hmLive.teamsCache && hmLive.teamsCache.key === teamsKey ? hmLive.teamsCache.teams : keys.map((key, t) => {
     const team = key === "A" ? teamA : teamB;
     const starterIds = new Set(liveStarters[key] && liveStarters[key].size ? liveStarters[key].keys() : Object.values((team && team.lineup && team.lineup.starters) || {}).filter(Boolean));
     const rows = liveBoxScore ? [...liveBoxScore[key].values()] : [];
@@ -43718,21 +44039,17 @@ function hmLiveBuildState() {
       players,
     };
   });
+  hmLive.teamsCache = { key: teamsKey, teams };
 
   return {
     status: hmLive.final ? "final" : hmLive.match.pregame ? "pregame" : half ? "halftime" : "live",
     kickoffIn: hmLive.match.pregame ? Math.max(0, Math.ceil((hmLive.match.kickoffAt - Date.now()) / 1000)) : null,
     quarter: hmLive.quarter,
-    clock: hmLive.final ? 0 : (clockEl ? clockSecondsFromStr(clockEl.textContent) : QUARTER_SECONDS),
-    // Chrono des 24 secondes : même valeur que l'ancien tableau de score
-    // (voir updateLiveClockTick), masqué hors jeu.
-    shotClock: (() => {
-      const b = document.getElementById("shotClockDisplay");
-      if (hmLive.final || !b || b.classList.contains("off")) return null;
-      const v = parseInt(b.textContent, 10);
-      return Number.isFinite(v) ? v : null;
-    })(),
-    possession: hmLive.final ? null : (hmLive.tickPossession !== undefined && hmLive.tickPossession !== null ? hmLive.tickPossession : hmLive.possession),
+    clock: hmLive.final ? 0 : liveState.clock,
+    // Chrono des 24 secondes : source unique liveState.shotClock (voir
+    // updateLiveClockTick), en dixièmes ; null hors jeu.
+    shotClock: hmLive.final || liveState.shotClock === null ? null : liveState.shotClock,
+    possession: hmLive.final ? null : (liveState.possession ? hmLiveIdx(liveState.possession) : hmLive.possession),
     halftimeResumeIn: half ? half.resumeIn : null,
     meta: dress.meta,
     courtLogo: dress.courtLogo,
@@ -43742,6 +44059,7 @@ function hmLiveBuildState() {
     teams,
     shots: hmLive.shots,
     events: hmLive.events,
+    nextAction: hmLiveNextAction(),
   };
 }
 
