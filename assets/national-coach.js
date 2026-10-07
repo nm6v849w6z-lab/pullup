@@ -78,6 +78,26 @@
     ".nc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:700px){.nc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}",
     ".nc-kpis>div{background:var(--panel-2);border-radius:10px;padding:10px 12px}.nc-kpis b{display:block;font-size:18px}.nc-kpis span{font-size:12px;color:var(--ink-dim)}",
     "#selectionsSection .nc-players th.eff-th{cursor:pointer}",
+    // Tableau des joueurs sans défilement horizontal (2026-10-07) : toutes
+    // les colonnes tiennent dès ~1200 px d'écran (cellules resserrées, nom
+    // et club tronqués, libellés courts).
+    "#selectionsSection table.nc-players{width:100%;table-layout:fixed;font-size:13px}",
+    "#selectionsSection table.nc-players th,#selectionsSection table.nc-players td{padding:0 2px!important;text-align:center}",
+    "#selectionsSection table.nc-players th.eff-th-attr{min-width:0!important;font-size:10.5px!important;padding:0 1px!important}",
+    "#selectionsSection table.nc-players .nc-c-name{width:168px;text-align:left!important;padding-left:10px!important}",
+    "#selectionsSection table.nc-players .nc-c-age{width:34px}#selectionsSection table.nc-players .nc-c-pos{width:40px}#selectionsSection table.nc-players .nc-c-h{width:40px}#selectionsSection table.nc-players .nc-c-gen{width:42px}",
+    "#selectionsSection table.nc-players .nc-c-attr{width:auto}#selectionsSection table.nc-players .nc-c-cond{width:52px}#selectionsSection table.nc-players .nc-c-act{width:64px}",
+    "#selectionsSection table.nc-players td.eff-td-name .eff-player,#selectionsSection table.nc-players td.eff-td-name .nc-club{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}",
+    "#selectionsSection table.nc-players td.eff-td-name .eff-player{display:flex;align-items:center;gap:6px}#selectionsSection table.nc-players .nc-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}",
+    "#selectionsSection table.nc-players .attr-cell{min-width:0}#selectionsSection table.nc-players .nc-gen{min-width:0;padding:2px 4px}",
+    "#selectionsSection table.nc-players .nc-bar{width:100%;max-width:44px}#selectionsSection table.nc-players .nc-ic{width:26px;height:26px}",
+    "#selectionsSection table.nc-players td.eff-td-name{text-align:left!important;padding-left:10px!important}",
+    "#selectionsSection table.nc-players td.nc-club{white-space:normal;text-align:left;padding:10px!important}",
+    "#selectionsSection table.nc-players.eff-caracs .eff-gstart{padding-left:2px!important}",
+    // Téléphone : 23 colonnes ne tiennent pas, défilement horizontal comme avant.
+    "@media(max-width:768px){#selectionsSection table.nc-players{width:auto;table-layout:auto}#selectionsSection table.nc-players .nc-c-attr{width:36px}}",
+    // Petit écran d'ordinateur : nom plus étroit, chiffres un peu plus petits.
+    "@media(max-width:1250px){#selectionsSection table.nc-players .nc-c-name{width:132px}#selectionsSection table.nc-players .nc-c-pos{width:34px}#selectionsSection table.nc-players .nc-c-gen{width:36px}#selectionsSection table.nc-players .nc-c-cond{width:40px}#selectionsSection table.nc-players .nc-c-act{width:58px}#selectionsSection table.nc-players{font-size:12px}#selectionsSection table.nc-players th.eff-th-attr{font-size:9.5px!important}#selectionsSection table.nc-players .nc-ic{width:24px;height:24px}#selectionsSection table.nc-players .eff-pos{padding:2px 4px;font-size:11px}}",
     // Rapport d'analyse : drapeau dans l'écusson rond du bandeau (sp2-crest).
     ".nc-ana-crest{display:block;width:100%;height:100%}.nc-ana-crest .nat-flag{width:100%;height:100%;object-fit:cover}",
   ].join("\n");
@@ -178,13 +198,13 @@
       { key: "name", label: "Nom", cls: "eff-th-name", dir: 1, sort: function (x) { return String(x.name || "").toLowerCase(); } },
       { key: "age", label: "Âge", dir: 1, sort: function (x) { return x.age; } },
       { key: "position", label: "Poste", dir: 1, sort: function (x) { return POS.indexOf(x.position); } },
-      { key: "height", label: "Taille", sort: function (x) { return x.height || 0; } },
+      { key: "height", label: "Taille", title: "Taille (cm)", sort: function (x) { return x.height || 0; } },
       { key: "gen", label: "GEN", title: "Note du meilleur poste", sort: genOf },
     ];
     // Caractéristiques uniquement : onglet « Statistiques » et « Forme
     // récente » retirés (demande utilisateur du 2026-10-06).
     attrGroups().forEach(function (gr, gi) {
-      gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
+      gr.keys.forEach(function (k, ki) { cols.push({ key: k, label: k === "physicalAvg" ? "PHY" : k === "mentalAvg" ? "MEN" : attrShort(k), title: attrTitle(k), attr: true, gstart: ki === 0, sort: function (x) { var v = attrVal(x, k); return v == null ? -1 : v; } }); });
     });
     cols.push({ key: "condition", label: "État", title: "État physique", gstart: true, sort: function (x) { return x.injuryUntil ? -1 : (x.condition || 0); } });
     return cols;
@@ -224,7 +244,7 @@
     var acts = actionsHtml(x, v);
     var h = '<tr class="eff-row"><td class="eff-td-name l"><span class="eff-player">' + flag(x.nationality) + '<button type="button" class="nc-nm player-link" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '">' + esc(x.name) + "</button></span>" +
       '<div class="nc-club">' + esc(x.club.name) + (x.club.division ? " · " + esc(x.club.division) : "") + "</div></td>" +
-      "<td>" + esc(x.age) + "</td><td>" + posBadge(x.position) + "</td><td>" + (x.height ? esc(x.height) + " cm" : "–") + "</td>" +
+      "<td>" + esc(x.age) + "</td><td>" + posBadge(x.position) + "</td><td title=\"cm\">" + (x.height ? esc(x.height) : "–") + "</td>" +
       '<td><span class="nc-gen">' + esc(genOf(x)) + "</span></td>";
     attrGroups().forEach(function (gr) {
       gr.keys.forEach(function (k, ki) {
@@ -246,7 +266,9 @@
     var groups = attrGroups();
     var fam = '<tr class="eff-family-row"><td colspan="5"></td>' +
       groups.map(function (gr) { return '<td colspan="' + gr.keys.length + '" class="eff-family"><span>' + esc(gr.label) + "</span></td>"; }).join("") + "<td></td>" + (withActs ? "<td></td>" : "") + "</tr>";
-    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players"><thead>' + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
+    var colCls = { name: "nc-c-name", age: "nc-c-age", position: "nc-c-pos", height: "nc-c-h", gen: "nc-c-gen", condition: "nc-c-cond" };
+    var cg = "<colgroup>" + cols.map(function (c) { return '<col class="' + (colCls[c.key] || "nc-c-attr") + '">'; }).join("") + (withActs ? '<col class="nc-c-act">' : "") + "</colgroup>";
+    var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players">' + cg + "<thead>" + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
       (list.length ? list.map(function (x) { return playerRow(x, v); }).join("") : '<tr><td colspan="40" class="l nc-club">' + esc(opts.empty || "Aucun joueur.") + "</td></tr>") + "</tbody></table></div>";
     if (opts.limit && total > list.length) h += '<div style="text-align:center;margin-top:10px"><button type="button" class="nc-btn2" data-nc-more="1">Afficher plus (' + (total - list.length) + " joueurs)</button></div>";
     return h;
