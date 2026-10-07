@@ -72,7 +72,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   if (st.view.pool && st.view.pool.players.length) {
     assert(!content().querySelector(".nc-next") && !/CONVOQUÉS|Convoqués\s*0/i.test(content().textContent), "Sélectionnables : ni carte de rassemblement ni bloc des convoqués");
     const heads = [...content().querySelectorAll("th[data-nc-sort]")].map(th => th.textContent.trim());
-    assert(["Nom", "Âge", "Poste", "Taille", "GEN", "Physique", "Mental", "État"].every(h => heads.includes(h)) && !heads.includes("MJ") && !heads.includes("Forme récente"), "Caractéristiques : identité, caractéristiques, état (stats de saison à part, comme l'Effectif)");
+    assert(["Nom", "Âge", "Poste", "Taille", "GEN", "PHY", "MEN", "État"].every(h => heads.includes(h)) && !heads.includes("MJ") && !heads.includes("Forme récente"), "Caractéristiques : identité, caractéristiques, état (stats de saison à part, comme l'Effectif)");
     assert(!content().querySelector("[data-nc-pview]") && !/Forme récente/.test(content().textContent), "Sélectionnables : ni onglet Statistiques ni Forme récente (2026-10-06)");
     assert(!content().querySelector('[data-nc-list="watchlist"]'), "Sélectionnables : plus de bouton Suivre");
     assert(!/\b(MEN|ARR|AIS|AIF|PIV)\b/.test(content().textContent) && content().querySelector(".eff-pos"), "postes aux abréviations du jeu (badges de l'Effectif)");
