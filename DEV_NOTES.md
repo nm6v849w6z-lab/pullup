@@ -780,6 +780,25 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Recherche de managers (2026-10-07)** : `topbarManagerSearchHtml`
+  (moteurbasket3.html) est LA section « Managers » de la barre du haut,
+  appelée par le mode Club (renderTopbarSearchResults) ET le mode Sélection
+  (national-coach.js:topSearchHtml). Son championnat en local (pseudo, sinon
+  « Manager de <club> », partie du nom, sans casse ni accents), les autres
+  via `/api/world/search` → `managers` (World.searchWorld, d'après
+  `summaries[].managers[].pseudo` ; résumé rafraîchi au changement de pseudo).
+- **Pastilles de fonctions nationales (2026-10-07)** : composant unique
+  `natRolesSlotHtml(clé "ligue:place")` + `loadNatRolesSlots()`
+  (source `/api/national/roles`, rendu `mpNatRolesHtml`, classe
+  `.mp-natrole`), utilisé par le profil du manager ET la page du club
+  (bandeau « Manager : » de l'aperçu, en-tête des autres onglets).
+- **Plein écran du Live + temps mort (2026-10-07)** : dans
+  `assets/live/live-view.js` (donc tous les directs) : bouton
+  `[data-ref=fsBtn]`, barre `.fsbar`, classe `.is-full` (Fullscreen API ou
+  repli CSS). `state.timeout` = `activeTimeout(pauses, now)`
+  (adapter.js ; copie `liveActiveTimeout` dans moteurbasket3.html pour le
+  direct de son club) : la pause « timeout » du moteur, aucun minuteur à part.
+
 - **Avatar joueur : format unique (2026-10-07, règle permanente)** : carré
   aux coins arrondis à 18 % de la largeur (référence fiche Joueur /
   Effectif, `playerAvatarHtml`), JAMAIS de cercle, ni de contour (bordure,

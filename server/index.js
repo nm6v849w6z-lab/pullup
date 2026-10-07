@@ -621,6 +621,12 @@ async function setManagerPseudo(ctx, body, now, multiSavePath) {
   if (taken) return { ok: false, status: 409, code: "pseudo-taken", error: "Ce pseudo est déjà pris par un autre manager." };
   team.managerPseudo = value;
   if (!sameKey) team.managerPseudoChangedAt = typeof changedAt === "number" ? now : 0;
+  // Recherche d'un manager (barre du haut) : le nouveau pseudo est trouvable
+  // tout de suite par les autres championnats (résumé du monde rafraîchi).
+  try {
+    const entry = ctx.world && ctx.world.leagues && ctx.world.leagues.find(e => e.id === ctx.leagueId);
+    if (entry && ctx.world.summaries) ctx.world.summaries[ctx.leagueId] = World.leagueSummary(entry, ctx.league);
+  } catch (e) { /* résumé rafraîchi au prochain passage du monde */ }
   return view();
 }
 

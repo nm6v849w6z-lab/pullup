@@ -4,6 +4,16 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Recherche de managers, plein écran du match, temps mort (2026-10-07).
+  "Plein écran": "全屏",
+  "Quitter le plein écran": "退出全屏",
+  "Quitter le plein écran (Échap)": "退出全屏（Esc）",
+  "Suivre le match en plein écran": "全屏观看比赛",
+  "TM {0}/{1}": "暂停 {0}/{1}",
+  "bonus": "罚球线",
+  "Aucun manager ne correspond.": "没有匹配的经理。",
+  "Rechercher une équipe, un joueur ou un manager…": "搜索球队、球员或经理…",
+  "Rechercher une équipe, un joueur ou un manager": "搜索球队、球员或经理",
   // Entraînement : refonte selon les maquettes (2026-10-07).
   "Points gagnés sur les plans": "个人计划提升点数",
   "Points gagnés": "提升点数",

@@ -1024,6 +1024,8 @@
       return '<button type="button" class="topbar-search-result" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '"><span class="tsr-name"> ' + esc(x.name) + '</span><span class="tsr-meta">' + esc((x.position || "") + " · " + ((x.club && x.club.name) || "") + " · " + genOf(x)) + "</span></button>";
     }).join("") + (pl.length > 8 ? '<div class="topbar-search-more">+ ' + (pl.length - 8) + " " + esc(t("autre(s), affinez la recherche")) + "</div>" : "")
       : '<div class="topbar-search-empty">' + esc(t("Aucun joueur ne correspond.")) + "</div>";
+    // Managers : même recherche que le mode Club (moteurbasket3.html:topbarManagerSearchHtml).
+    if (g("topbarManagerSearchHtml")) h += window.topbarManagerSearchHtml(raw);
     if (window.HM_NATIONAL && window.HM_NATIONAL.searchHtml) h += window.HM_NATIONAL.searchHtml(raw);
     return h;
   }
@@ -1035,6 +1037,7 @@
     var h = topSearchHtml(e.target.value);
     box.innerHTML = h;
     box.classList.toggle("hidden", !h);
+    if (h && g("scheduleTopbarWorldSearch")) window.scheduleTopbarWorldSearch(e.target.value);
   }
   function syncModeChrome() {
     syncModeButton();

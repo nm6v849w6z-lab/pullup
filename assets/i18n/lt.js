@@ -4,6 +4,16 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Recherche de managers, plein écran du match, temps mort (2026-10-07).
+  "Plein écran": "Visas ekranas",
+  "Quitter le plein écran": "Išeiti iš viso ekrano",
+  "Quitter le plein écran (Échap)": "Išeiti iš viso ekrano (Esc)",
+  "Suivre le match en plein écran": "Stebėti rungtynes visame ekrane",
+  "TM {0}/{1}": "Min. per. {0}/{1}",
+  "bonus": "baudos",
+  "Aucun manager ne correspond.": "Nerasta jokio vadybininko.",
+  "Rechercher une équipe, un joueur ou un manager…": "Ieškoti komandos, žaidėjo ar vadybininko…",
+  "Rechercher une équipe, un joueur ou un manager": "Ieškoti komandos, žaidėjo ar vadybininko",
   // Entraînement : refonte selon les maquettes (2026-10-07).
   "Points gagnés sur les plans": "Taškai iš planų",
   "Points gagnés": "Gauti taškai",

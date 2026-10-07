@@ -69,6 +69,15 @@ export function possessionAt(evs, prevIdx) {
   for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (evs[i].possession === "A" || evs[i].possession === "B") return evs[i].possession; }
   return possessionAfterOf(prev);
 }
+// Temps mort EN COURS (demande du 2026-10-07, timer du panneau supérieur) :
+// la pause « timeout » de la diffusion (moteur → schedulePlayback : airAt,
+// durationMs, équipe home/away) qui couvre `now`. Pas de second minuteur :
+// le temps restant se lit sur cette même pause. null hors temps mort.
+export function activeTimeout(pauses, now) {
+  const p = (pauses || []).find(x => x && x.kind === "timeout" && now >= x.airAt && now < x.airAt + x.durationMs);
+  if (!p) return null;
+  return { team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000), endsAt: p.airAt + p.durationMs };
+}
 export function clockSeconds(str) {
   if (typeof str === "number") return str;
   const m = /^(\d+):(\d+)$/.exec(String(str || ""));
@@ -306,6 +315,7 @@ export function createLiveAdapter(opts) {
       kickoffIn: live.pregame ? Math.max(0, Math.ceil((live.kickoffAt - now) / 1000)) : null,
       quarter: st.quarter, clock: st.final ? 0 : st.clock, shotClock: st.final ? null : st.shotClock,
       possession: st.final ? null : st.possession, halftimeResumeIn: half,
+      timeout: st.final ? null : activeTimeout(live.pauses, now),
       meta: dress.meta || null, courtLogo: dress.courtLogo || "", arenaSponsor: dress.arenaSponsor || null, courtStyle: dress.courtStyle || null,
       teams: teamsOut, shots: st.shots, events: st.events, nextAction: st.final ? null : nextAction(now),
     };

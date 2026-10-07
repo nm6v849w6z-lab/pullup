@@ -4,6 +4,16 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
+  // Recherche de managers, plein écran du match, temps mort (2026-10-07).
+  "Plein écran": "Pantalla completa",
+  "Quitter le plein écran": "Salir de pantalla completa",
+  "Quitter le plein écran (Échap)": "Salir de pantalla completa (Esc)",
+  "Suivre le match en plein écran": "Seguir el partido a pantalla completa",
+  "TM {0}/{1}": "TM {0}/{1}",
+  "bonus": "bonus",
+  "Aucun manager ne correspond.": "Ningún mánager coincide.",
+  "Rechercher une équipe, un joueur ou un manager…": "Buscar un equipo, un jugador o un mánager…",
+  "Rechercher une équipe, un joueur ou un manager": "Buscar un equipo, un jugador o un mánager",
   // Entraînement : refonte selon les maquettes (2026-10-07).
   "Points gagnés sur les plans": "Puntos ganados en los planes",
   "Points gagnés": "Puntos ganados",

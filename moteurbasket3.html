@@ -8314,6 +8314,10 @@
   .mp-natroles[hidden]{display:none;}
   .mp-natrole{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; border:1px solid rgba(245,161,58,.38); background:rgba(245,161,58,.10); color:var(--ink); font-size:12.5px; font-weight:700;}
   .mp-natrole .nat-flag{width:18px; height:12px;}
+  /* Page du club : mêmes pastilles à côté du pseudo (composant commun). */
+  .team-detail-manager .mp-natroles{margin-top:6px;}
+  .ov-chips > .mp-natroles{margin-top:0; display:contents;}
+  .ov-chips > .mp-natroles[hidden]{display:none;}
   .mp-meta .mp-dot{color:var(--ink-faint);}
   .mp-club{display:inline-flex; align-items:center; gap:8px; padding:0; border:0; background:none; font:inherit; font-weight:700; color:var(--ink); cursor:pointer;}
   .mp-club:hover span{color:var(--amber);}
@@ -9007,8 +9011,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261003-5">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261003-5">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261007-3">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261007-3">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -9189,7 +9193,7 @@
            par nom uniquement (pas de filtre), directement dans le topbar
            plutôt qu'un onglet séparé, voir renderTopbarSearchResults. -->
       <div class="topbar-search" id="topbarSearchWrap">
-        <input type="text" class="topbar-search-input" id="topbarSearchInput" placeholder="Rechercher une équipe ou un joueur…" autocomplete="off" aria-label="Rechercher une équipe ou un joueur">
+        <input type="text" class="topbar-search-input" id="topbarSearchInput" placeholder="Rechercher une équipe, un joueur ou un manager…" autocomplete="off" aria-label="Rechercher une équipe, un joueur ou un manager">
         <div class="topbar-search-results hidden" id="topbarSearchResults"></div>
       </div>
       <div class="topbar-right">
@@ -28751,6 +28755,13 @@ function livePossessionAfterOf(ev) {
   if (ev.possessionAfter === "A" || ev.possessionAfter === "B") return ev.possessionAfter;
   return ev.type !== "rebound" && (ev.possession === "A" || ev.possession === "B") ? ev.possession : (ev.type === "rebound" && (ev.team === "A" || ev.team === "B") ? ev.team : null);
 }
+// Temps mort en cours — copie exacte de assets/live/adapter.js:activeTimeout
+// (la pause « timeout » diffusée par le moteur qui couvre `now`).
+function liveActiveTimeout(pauses, now) {
+  const p = (pauses || []).find(x => x && x.kind === "timeout" && now >= x.airAt && now < x.airAt + x.durationMs);
+  if (!p) return null;
+  return { team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000), endsAt: p.airAt + p.durationMs };
+}
 function livePossessionAt(evs, prevIdx) {
   const prev = evs[prevIdx];
   if (!prev) return null;
@@ -33531,7 +33542,7 @@ function renderManagerProfile() {
       `<h2 class="mp-name">${managerNameInnerHtml(team)}${friendsPillHtml(team)}</h2>` + friendsTitleHtml(team) +
       `<div class="mp-meta">${clubBtn}<span class="mp-dot">·</span><span class="mp-country">${nationFlagHtml(d.country)} <span>${escapeHtml(nationName(d.country) || "")}</span></span>` +
       (division ? `<span class="mp-dot">·</span><span data-no-i18n>${escapeHtml(division)}</span>` : "") + `</div>` +
-      `<div class="mp-natroles" id="mpNatRoles"${mpNatRolesCache.has(mpNatRolesKey()) && mpNatRolesCache.get(mpNatRolesKey()).length ? "" : " hidden"}>${mpNatRolesHtml(mpNatRolesCache.get(mpNatRolesKey()) || [])}</div>` +
+      natRolesSlotHtml(mpNatRolesKey(), "div", `id="mpNatRoles"`) +
       (own ? `<p class="mp-own-note">${d.pseudo ? "Ton pseudo est visible des autres managers" : "Tu n'as pas encore choisi de pseudo"} : <button type="button" class="pz-inline-link" data-mp-edit-pseudo>${d.pseudo ? "le modifier" : "en choisir un"}</button>.</p>` : "") +
       `</div>` +
       (!own && msgUi.available ? `<button type="button" class="pz-btn pz-btn--ghost mp-msg" data-msg-open="${escapeHtml(foreign ? `${foreign.leagueId}:${idx}` : String(idx))}">Envoyer un message</button>` : "") +
@@ -33564,22 +33575,37 @@ function mpNatRolesKey() {
 function mpNatRolesHtml(roles) {
   return (roles || []).map(r => `<span class="mp-natrole" data-mp-natrole="${escapeHtml(r.role)}">${nationFlagHtml(r.country)}<span>${escapeHtml(MP_NAT_ROLE_LABELS[r.role] || r.role)}</span>${r.cat === "U21" ? `<span data-no-i18n>U21</span>` : ""}<span data-no-i18n>—</span><span>${escapeHtml(nationName(r.country) || r.country)}</span></span>`).join("");
 }
+// COMPOSANT COMMUN des pastilles de fonctions nationales (profil du manager
+// ET page du club, demande du 2026-10-07 : « mêmes pastilles à côté du
+// pseudo », une seule source) : un emplacement `[data-natroles-key]`
+// (clé « ligue:place du club ») rendu tout de suite depuis le cache, puis
+// rafraîchi depuis /api/national/roles — un rôle ajouté ou retiré se voit
+// donc à chaque affichage de la page.
+function natRolesSlotHtml(key, tag = "span", attrs = "") {
+  const roles = mpNatRolesCache.get(key) || [];
+  return `<${tag} class="mp-natroles" data-natroles-key="${escapeHtml(key)}"${attrs ? " " + attrs : ""}${roles.length ? "" : " hidden"}>${mpNatRolesHtml(roles)}</${tag}>`;
+}
+function loadNatRolesSlots() {
+  if (typeof fetchApi !== "function" || typeof managerToken === "undefined" || !managerToken) return Promise.resolve(null);
+  const keys = [...new Set([...document.querySelectorAll("[data-natroles-key]")].map(el => el.dataset.natrolesKey).filter(k => k && k.indexOf(":") > 0))];
+  return Promise.all(keys.map(key => {
+    const lid = key.slice(0, key.lastIndexOf(":")), idx = key.slice(key.lastIndexOf(":") + 1);
+    return fetchApi(`/api/national/roles?league=${encodeURIComponent(lid)}&idx=${encodeURIComponent(idx)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const roles = d && d.ok && Array.isArray(d.roles) ? d.roles : [];
+        mpNatRolesCache.set(key, roles);
+        document.querySelectorAll("[data-natroles-key]").forEach(el => {
+          if (el.dataset.natrolesKey !== key) return;
+          el.innerHTML = mpNatRolesHtml(roles);
+          el.hidden = !roles.length;
+        });
+      })
+      .catch(() => null);
+  }));
+}
 function mpLoadNationalRoles() {
-  const key = mpNatRolesKey();
-  if (!key || typeof fetchApi !== "function" || typeof managerToken === "undefined" || !managerToken) return null;
-  const [lid, idx] = [key.slice(0, key.lastIndexOf(":")), key.slice(key.lastIndexOf(":") + 1)];
-  if (!lid) return null;
-  const p = fetchApi(`/api/national/roles?league=${encodeURIComponent(lid)}&idx=${encodeURIComponent(idx)}`)
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      const roles = d && d.ok && Array.isArray(d.roles) ? d.roles : [];
-      mpNatRolesCache.set(key, roles);
-      const el = document.getElementById("mpNatRoles");
-      if (!el || mpNatRolesKey() !== key) return;
-      el.innerHTML = mpNatRolesHtml(roles);
-      el.hidden = !roles.length;
-    })
-    .catch(() => null);
+  const p = loadNatRolesSlots();
   window.__lastMpNatRoles = p;
   return p;
 }
@@ -38284,7 +38310,7 @@ function teamDetailApercuHtml(teamIdx) {
   html += `<div class="ov-id"><span class="ov-kicker">${nationFlagHtml(league.country || "fr")} ${escapeHtml(leagueCompetitionLabel())} · Fondé en ${team.foundedYear}</span>`;
   html += `<h2 class="team-apercu-name">${escapeHtml(team.name)}</h2>`;
   html += `<div class="ov-chips"><span class="ov-chip">Renommée ${reputationStarsHtml(stars)}</span>` +
-    (team.isHuman ? `<span class="ov-chip">Manager : ${managerLinkHtml(team, teamIdx, leagueId)}</span>` : "") +
+    (team.isHuman ? `<span class="ov-chip">Manager : ${managerLinkHtml(team, teamIdx, leagueId)}</span>${natRolesSlotHtml(`${leagueId || league.leagueId}:${teamIdx}`, "span", `data-natroles-chip`)}` : "") +
     (team.isHuman && (!isOwnTeam || foreign) && typeof team.lastSeenAt === "number"
       ? `<span class="ov-chip ov-lastseen" title="${escapeHtml(formatCalendarDayFr(team.lastSeenAt))}">Dernière connexion : <b>${escapeHtml(lastSeenLabel(team.lastSeenAt))}</b></span>` : "") +
     `<span class="ov-chip apercu-foot-trophies">Palmarès : ${trophyText}</span></div>`;
@@ -38400,7 +38426,10 @@ function teamDetailApercuHtml(teamIdx) {
 // entre quatre sous-onglets (voir teamDetailSubNavHtml/teamDetailSubView),
 // chacun sa propre fonction de rendu ci-dessus.
 function renderTeamDetail(teamIdx) {
-  return withTeamDetailLeague(() => renderTeamDetailContent(teamIdx));
+  const out = withTeamDetailLeague(() => renderTeamDetailContent(teamIdx));
+  // Pastilles des fonctions nationales du manager (composant commun avec son profil).
+  window.__lastTeamNatRoles = loadNatRolesSlots();
+  return out;
 }
 function renderTeamDetailContent(teamIdx) {
   const foreign = !!teamDetailForeign;
@@ -38416,7 +38445,7 @@ function renderTeamDetailContent(teamIdx) {
   nameHeader.innerHTML = escapeHtml(team.name) + robotBadgeHtml(team) + premiumBadgeHtml(team) +
     (foreign ? ` <span class="team-detail-foreign">${nationFlagHtml(league.country || "fr")} ${escapeHtml(teamDetailForeign.label)}</span>` : "") +
     // Manager du club (pseudo, 2026-09-30) : ouvre son profil. Club IA : rien.
-    (team.isHuman ? `<span class="team-detail-manager"><span>Manager :</span> ${managerLinkHtml(team, teamIdx, foreign ? teamDetailForeign.leagueId : null)}</span>` : "");
+    (team.isHuman ? `<span class="team-detail-manager"><span>Manager :</span> ${managerLinkHtml(team, teamIdx, foreign ? teamDetailForeign.leagueId : null)}${natRolesSlotHtml(`${foreign ? teamDetailForeign.leagueId : league.leagueId}:${teamIdx}`)}</span>` : "");
   // Aperçu : nom et manager déjà dans la grande carte du club juste en
   // dessous — en-tête masqué pour remonter la page (retour utilisateur
   // 2026-10-01). Gardé sur les autres onglets (pas de carte du club).
@@ -38525,6 +38554,32 @@ function normalizeSearchText(s) {
 // pour une recherche trop large (ex. une seule lettre).
 const TOPBAR_SEARCH_MAX_TEAMS = 10;
 const TOPBAR_SEARCH_MAX_PLAYERS = 8;
+const TOPBAR_SEARCH_MAX_MANAGERS = 6;
+
+// Recherche d'un MANAGER par son pseudo (demande du 2026-10-07), commune au
+// mode Club (renderTopbarSearchResults) et au mode Sélection
+// (assets/national-coach.js:topSearchHtml) : partie du pseudo, sans casse ni
+// accents ; sans pseudo, son nom affiché « Manager de <club> ». Son
+// championnat tout de suite (league), les autres via /api/world/search
+// (emplacement #topbarManagerWorld, voir scheduleTopbarWorldSearch). Un
+// résultat ouvre son profil (data-manager-profile, écouteur commun).
+function topbarManagerItemHtml(m) {
+  return `<button type="button" class="topbar-search-result tsr-manager" data-manager-profile="${m.idx}"${m.leagueId ? ` data-manager-league="${escapeHtml(m.leagueId)}"` : ""}>` +
+    `<span class="tsr-name">${nationFlagHtml(m.country || "fr")} <span data-no-i18n>${escapeHtml(m.name)}</span></span>` +
+    `<span class="tsr-meta"><span>Manager</span> · <span data-no-i18n>${escapeHtml(m.clubName)}</span>${m.label ? ` · <span data-no-i18n>${escapeHtml(m.label)}</span>` : ""}</span></button>`;
+}
+function topbarManagerSearchHtml(rawQuery) {
+  const query = normalizeSearchText((rawQuery || "").trim());
+  if (!query || !league || !league.teams) return "";
+  const label = typeof leagueCompetitionLabel === "function" ? leagueCompetitionLabel() : "";
+  const mine = league.teams.map((t, idx) => ({ t, idx })).filter(x => x.t && x.t.isHuman)
+    .map(x => ({ name: managerDisplayName(x.t), clubName: x.t.name, idx: x.idx, leagueId: null, country: x.t.country || league.country || "fr", label }))
+    .filter(m => normalizeSearchText(m.name).includes(query))
+    .sort((a, b) => (normalizeSearchText(a.name).startsWith(query) ? 0 : 1) - (normalizeSearchText(b.name).startsWith(query) ? 0 : 1) || a.name.localeCompare(b.name));
+  let html = `<div class="topbar-search-group-label">Managers${mine.length ? " (" + mine.length + ")" : ""}</div>`;
+  html += mine.length ? mine.slice(0, TOPBAR_SEARCH_MAX_MANAGERS).map(topbarManagerItemHtml).join("") : `<div class="topbar-search-empty" id="topbarManagerEmpty">Aucun manager ne correspond.</div>`;
+  return html + `<div id="topbarManagerWorld"></div>`;
+}
 
 function topbarSearchResultItemHtml(kind, teamIdx, displayName, meta, playerId) {
   const dataAttrs = kind === "team"
@@ -38585,6 +38640,7 @@ function renderTopbarSearchResults(rawQuery) {
     }
   }
 
+  html += topbarManagerSearchHtml(rawQuery);
   // Sélections nationales A et U21 (assets/national.js), par nom de pays.
   if (window.HM_NATIONAL && window.HM_NATIONAL.searchHtml) html += window.HM_NATIONAL.searchHtml(rawQuery);
   html += `<div id="topbarWorldResults"></div>`;
@@ -39008,14 +39064,23 @@ let topbarWorldSearchSeq = 0;
 function scheduleTopbarWorldSearch(rawQuery) {
   clearTimeout(topbarWorldSearchTimer);
   const q = (rawQuery || "").trim();
-  if (!managerToken || q.length < 2) return;
   const seq = ++topbarWorldSearchSeq;
+  if (!managerToken || q.length < 2) return;
   topbarWorldSearchTimer = setTimeout(async () => {
     let data = null;
     try { data = await planeteFetch(`/api/world/search?q=${encodeURIComponent(q)}`); } catch (e) { return; }
-    const slot = document.getElementById("topbarWorldResults");
-    if (!slot || seq !== topbarWorldSearchSeq) return;
+    if (seq !== topbarWorldSearchSeq) return;
     const myLeagueId = league && league.leagueId;
+    // Managers des autres championnats (le sien est déjà listé, à jour).
+    const mgrSlot = document.getElementById("topbarManagerWorld");
+    const mgrs = (data.managers || []).filter(m => m.leagueId !== myLeagueId);
+    if (mgrSlot && mgrs.length) {
+      mgrSlot.innerHTML = mgrs.slice(0, TOPBAR_SEARCH_MAX_MANAGERS).map(topbarManagerItemHtml).join("");
+      const empty = document.getElementById("topbarManagerEmpty");
+      if (empty) empty.remove();
+    }
+    const slot = document.getElementById("topbarWorldResults");
+    if (!slot) return;
     const clubs = (data.clubs || []).filter(c => c.leagueId !== myLeagueId);
     let html = "";
     if (data.leagues && data.leagues.length) {
@@ -44840,7 +44905,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261007-1";
+const HM_LIVE_ASSET_VERSION = "20261007-3";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45210,7 +45275,8 @@ function hmLiveOnTick() {
   // Lu dans liveState (plus dans le DOM) ; le chrono des 24 s en dixièmes
   // fait redessiner le terrain 10 fois par seconde (rendu allégé côté vue).
   const half = hmLiveHalftime();
-  const key = liveState.clock + "|" + (half ? half.resumeIn : "") + "|" + (liveState.shotClock === null ? "" : liveState.shotClock.toFixed(1)) + "|" + liveState.possession;
+  const tmo = hmLive && hmLive.match && !hmLive.final ? liveActiveTimeout(hmLive.match.pauses, Date.now()) : null;
+  const key = liveState.clock + "|" + (half ? half.resumeIn : "") + "|" + (liveState.shotClock === null ? "" : liveState.shotClock.toFixed(1)) + "|" + liveState.possession + "|" + (tmo ? tmo.remaining : "");
   if (key !== hmLive.tickKey) { hmLive.tickKey = key; hmLiveSchedule(); }
 }
 
@@ -45417,6 +45483,7 @@ function hmLiveBuildState() {
     // updateLiveClockTick), en dixièmes ; null hors jeu.
     shotClock: hmLive.final || liveState.shotClock === null ? null : liveState.shotClock,
     possession: hmLive.final ? null : (liveState.possession ? hmLiveIdx(liveState.possession) : hmLive.possession),
+    timeout: hmLive.final ? null : liveActiveTimeout(m.pauses, Date.now()),
     halftimeResumeIn: half ? half.resumeIn : null,
     meta: dress.meta,
     courtLogo: dress.courtLogo,

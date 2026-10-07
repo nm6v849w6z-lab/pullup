@@ -912,6 +912,8 @@ function leagueSummary(entry, league) {
     // mondial (managerRanking).
     managers: league.teams.map((t, idx) => (t && t.isHuman ? {
       idx, name: t.name, rating: Engine.managerRatingOf(t), games: t.managerRatedGames || 0,
+      // Pseudo (recherche d'un manager, barre du haut, 2026-10-07).
+      pseudo: Engine.managerPseudoOf(t),
     } : null)).filter(Boolean),
   };
 }
@@ -1288,7 +1290,7 @@ function parseDivisionQuery(needle) {
 
 function searchWorld(world, q, limit = 8) {
   const needle = normalizeSearch(q);
-  if (needle.length < 2) return { leagues: [], clubs: [] };
+  if (needle.length < 2) return { leagues: [], clubs: [], managers: [] };
   const summaries = Object.values(world.summaries || {});
   const countryName = code => (Engine.WORLD_COUNTRIES[code] || {}).name || code;
   const div = parseDivisionQuery(needle);
@@ -1303,7 +1305,15 @@ function searchWorld(world, q, limit = 8) {
     if (clubs.length < limit * 3 && normalizeSearch(r.name).includes(needle)) clubs.push({ name: r.name, isHuman: r.isHuman, idx: r.idx, leagueId: sm.id, country: sm.country, label: sm.label, rank: r.rank });
   }));
   clubs.sort((a, b) => (normalizeSearch(a.name).startsWith(needle) ? 0 : 1) - (normalizeSearch(b.name).startsWith(needle) ? 0 : 1) || a.name.localeCompare(b.name));
-  return { leagues, clubs: clubs.slice(0, limit) };
+  // Managers (2026-10-07) : par pseudo, en partie et sans casse ni accents ;
+  // sans pseudo, par « Manager de <club> » (nom affiché partout).
+  const managers = [];
+  summaries.forEach(sm => (sm.managers || []).forEach(m => {
+    const shown = m.pseudo || `Manager de ${m.name}`;
+    if (normalizeSearch(shown).includes(needle)) managers.push({ name: shown, pseudo: m.pseudo || null, clubName: m.name, idx: m.idx, leagueId: sm.id, country: sm.country, label: sm.label });
+  }));
+  managers.sort((a, b) => (normalizeSearch(a.name).startsWith(needle) ? 0 : 1) - (normalizeSearch(b.name).startsWith(needle) ? 0 : 1) || a.name.localeCompare(b.name));
+  return { leagues, clubs: clubs.slice(0, limit), managers: managers.slice(0, limit) };
 }
 
 // Effectif d'un club d'un autre championnat, en lecture seule (sans

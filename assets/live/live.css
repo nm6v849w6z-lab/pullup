@@ -474,3 +474,97 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 /* Réaction du banc : les médaillons de l'équipe qui marque s'éclairent (pas de transform : il porte la position). */
 .c2d-medals.c2d-cheer .c2d-medal rect:first-child{animation:c2dCheer .6s ease-out}
 @keyframes c2dCheer{0%{stroke-opacity:.7}35%{stroke-opacity:1;stroke-width:3px}100%{stroke-opacity:.7}}
+
+/* =====================================================================
+   Plein écran du match (2026-10-07) : barre du haut (équipes, score,
+   période, chrono, 24 s, temps mort), terrain au centre, fil du match à
+   droite. Vrai plein écran (Fullscreen API) ou, à défaut (iPhone), la vue
+   couvre la fenêtre.
+   ===================================================================== */
+.hm-live .fs-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel2);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;margin-left:auto}
+.hm-live .fs-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hm-live .fsbar{display:none}
+/* Timer du temps mort : pastille ambre, distincte du chrono de match. */
+.hm-live .tmo{display:inline-flex;align-items:center;gap:6px;margin:6px auto 0;padding:3px 11px;border-radius:999px;background:rgba(245,161,58,.16);border:1px solid rgba(245,161,58,.55);color:var(--accent);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hm-live .tmo::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);animation:hmPulse 1.4s infinite}
+.hm-live .tmo[hidden]{display:none}
+.hm-live .mcenter .tmo{margin:0;padding:1px 8px;font-size:11px}
+.hm-live.in-timeout .clock,.hm-live.in-timeout .fs-clock{opacity:.55}
+
+html.hm-live-full,html.hm-live-full body{overflow:hidden}
+.hm-live.is-full{position:fixed;inset:0;z-index:2147483000;max-width:none;width:100%;height:100%;margin:0;background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.hm-live.is-full > :not(.fsbar):not(.grid):not(.toast){display:none!important}
+.hm-live.is-full .fsbar{display:flex;align-items:center;gap:14px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,0px));background:#121B2E;border-bottom:1px solid #22304A;min-width:0}
+.hm-live .fs-team{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:44px}
+.hm-live.is-full .fs-score{flex:none}
+.hm-live.is-full .fs-center{flex:1 1 auto}
+.hm-live .fs-team.away{flex-direction:row-reverse;text-align:right}
+.hm-live .fs-crest{width:44px;height:44px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;background:#34425E}
+.hm-live .fs-crest.has-logo{background:none}
+.hm-live .fs-crest svg,.hm-live .fs-crest img{width:100%;height:100%;display:block;object-fit:cover}
+.hm-live .fs-crest .crest-txt{font-size:14px}
+.hm-live .fs-id{display:flex;flex-direction:column;min-width:0}
+.hm-live .fs-name{font-weight:800;font-size:20px;line-height:1.1;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-live .fs-name.mine{color:var(--accent)}
+.hm-live .fs-meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-live .fs-score{font-weight:900;font-size:46px;line-height:1;min-width:62px;text-align:center;font-variant-numeric:tabular-nums}
+.hm-live .fs-score.trail{color:var(--text2)}
+.hm-live .fs-center{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:118px}
+.hm-live .fs-period{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+.hm-live .fs-clock{font-weight:900;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.hm-live .fs-clock.final{font-size:22px}
+.hm-live .fs-shot{display:none;min-width:30px;padding:1px 6px;border-radius:6px;background:#1b0d0d;border:1px solid rgba(255,90,70,.35);color:#ff6a4d;font-weight:800;font-size:13px;line-height:1.2;text-align:center;font-variant-numeric:tabular-nums}
+.hm-live .fs-shot.on{display:block}
+.hm-live .fs-shot.low{color:#fff;background:#c0392b}
+.hm-live .fs-center .tmo{margin-top:3px}
+.hm-live .fs-exit{order:6;flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel2);color:var(--text);display:grid;place-items:center;cursor:pointer}
+.hm-live .fs-exit:hover{border-color:var(--accent);color:var(--accent)}
+.hm-live.is-full .grid,.hm-live.is-full .grid.view-2d{margin:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,24vw,420px);grid-template-rows:minmax(0,1fr);gap:12px;padding:12px}
+.hm-live.is-full .court-panel{display:flex;flex-direction:column;min-height:0;padding:10px 12px}
+.hm-live.is-full .court-panel .phead{margin-bottom:6px}
+.hm-live.is-full .court-panel .phead h2,.hm-live.is-full .fs-btn{display:none}
+.hm-live.is-full .court2d,.hm-live.is-full .court-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.hm-live.is-full .c2d-svg{flex:1;min-height:0;width:100%;height:100%}
+.hm-live.is-full .court-wrap .court{width:100%;height:100%}
+.hm-live.is-full .feed-panel,.hm-live.is-full .grid.view-2d .feed-panel{height:auto;min-height:0;contain:none;padding:12px 14px}
+.hm-live.is-full .feed-panel .feed{max-height:none}
+/* Écran étroit ou en portrait : terrain en haut (toute la largeur), fil
+   en dessous ; barre condensée. */
+@media (max-width:820px),(max-aspect-ratio:1/1){
+  .hm-live.is-full .grid,.hm-live.is-full .grid.view-2d{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);padding:8px;gap:8px}
+  .hm-live.is-full .court-panel{padding:8px}
+  .hm-live.is-full .court2d{flex:none}
+  .hm-live.is-full .c2d-svg{flex:none;height:auto}
+}
+@media (max-width:640px){
+  .hm-live.is-full .fsbar{gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top,0px))}
+  .hm-live .fs-team{flex:0 0 auto;min-width:0}
+  .hm-live .fs-crest{width:32px;height:32px}
+  .hm-live .fs-crest .crest-txt{font-size:10px}
+  .hm-live .fs-id{display:none}
+  .hm-live .fs-score{font-size:28px;min-width:38px}
+  .hm-live .fs-center{min-width:70px}
+  .hm-live .fs-clock{font-size:20px}
+  .hm-live .fs-period{font-size:10px}
+  .hm-live .fs-exit{width:34px;height:34px}
+}
+/* Téléphone en paysage (écran bas) : barre compacte, le terrain prend la hauteur. */
+@media (max-height:520px){
+  .hm-live.is-full .fsbar{gap:10px;padding:4px 12px;padding-top:max(4px,env(safe-area-inset-top,0px))}
+  .hm-live.is-full .fs-crest{width:28px;height:28px}
+  .hm-live.is-full .fs-crest .crest-txt{font-size:10px}
+  .hm-live.is-full .fs-name{font-size:14px}
+  .hm-live.is-full .fs-meta{display:none}
+  .hm-live.is-full .fs-score{font-size:26px;min-width:36px}
+  .hm-live.is-full .fs-clock{font-size:18px}
+  .hm-live.is-full .fs-period{font-size:10px}
+  .hm-live.is-full .fs-center{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:2px 8px}
+  .hm-live.is-full .fs-center .tmo{margin:0;padding:1px 8px;font-size:11px}
+  .hm-live.is-full .fs-exit{width:32px;height:32px}
+  .hm-live.is-full .grid,.hm-live.is-full .grid.view-2d{padding:6px;gap:6px}
+  .hm-live.is-full .court-panel{padding:4px 6px}
+  .hm-live.is-full .court-panel .phead,.hm-live.is-full .c2d-caption{display:none}
+  .hm-live.is-full .feed-panel{padding:8px 10px}
+  .hm-live.is-full .feed-panel .phead{margin-bottom:6px}
+  .hm-live.is-full .feed-panel h2{font-size:14px}
+}

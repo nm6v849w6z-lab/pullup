@@ -2,6 +2,16 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Recherche de managers, plein écran du match, temps mort (2026-10-07).
+  "Plein écran": "Full screen",
+  "Quitter le plein écran": "Exit full screen",
+  "Quitter le plein écran (Échap)": "Exit full screen (Esc)",
+  "Suivre le match en plein écran": "Follow the game in full screen",
+  "TM {0}/{1}": "TO {0}/{1}",
+  "bonus": "bonus",
+  "Aucun manager ne correspond.": "No manager matches.",
+  "Rechercher une équipe, un joueur ou un manager…": "Search for a team, player or manager…",
+  "Rechercher une équipe, un joueur ou un manager": "Search for a team, player or manager",
   // Entraînement : refonte selon les maquettes (2026-10-07).
   "Points gagnés sur les plans": "Points gained from plans",
   "Points gagnés": "Points gained",

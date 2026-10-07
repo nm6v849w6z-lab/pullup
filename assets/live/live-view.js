@@ -16,12 +16,32 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261007-1";
+import { createCourt2D } from "./court2d.js?v=20261007-3";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
 const TEMPLATE = `
 <div class="toast" data-ref="toast" role="status" aria-live="polite"></div>
+
+<!-- Plein écran (demande du 2026-10-07) : barre du haut (équipes, score,
+     période, chrono, temps mort), terrain au centre, fil du match à droite. -->
+<div class="fsbar" data-ref="fsbar" aria-hidden="true">
+  ${[0, 1].map(t => `
+  <div class="fs-team ${t ? "away" : "home"}" style="order:${t ? 5 : 1}">
+    <span class="fs-crest" data-ref="fscrest${t}"></span>
+    <span class="fs-id"><b class="fs-name" data-ref="fsname${t}"></b><small class="fs-meta" data-ref="fsmeta${t}"></small></span>
+  </div>
+  <div class="fs-score" data-ref="fsscore${t}" style="order:${t ? 4 : 2}">0</div>`).join("")}
+  <div class="fs-center" style="order:3">
+    <span class="fs-period" data-ref="fsperiod"></span>
+    <span class="fs-clock" data-ref="fsclock">10:00</span>
+    <span class="fs-shot" data-ref="fsshot" title="Chrono des 24 secondes"></span>
+    <span class="tmo fs-tmo" data-ref="fstmo" hidden></span>
+  </div>
+  <button type="button" class="fs-exit" data-ref="fsExit" aria-label="Quitter le plein écran" title="Quitter le plein écran (Échap)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+  </button>
+</div>
 
 <!-- Mini-tableau d'affichage collé sous le topbar dès que le grand bandeau
      sort de l'écran (retour utilisateur, 2026-09-26 : « même si on scrolle,
@@ -36,6 +56,7 @@ const TEMPLATE = `
     <div class="mcenter" style="order:3">
       <span class="mclock" data-ref="mclock">10:00</span>
       <span class="mperiod" data-ref="mperiod"></span>
+      <span class="tmo mtmo" data-ref="mtmo" hidden></span>
     </div>
   </div>
 </div>
@@ -65,6 +86,7 @@ const TEMPLATE = `
       <div class="clock" data-ref="clock">10:00</div>
       <div class="shotclock" data-ref="shotclock" title="Chrono des 24 secondes"></div>
       <div class="period" data-ref="period"></div>
+      <div class="tmo" data-ref="tmo" hidden></div>
     </div>
   </div>
   <div class="board-bottom">
@@ -99,6 +121,9 @@ const TEMPLATE = `
   <section class="panel court-panel" data-ref="courtPanel">
     <div class="phead">
       <h2 data-ref="courtTitle">Terrain</h2>
+      <button type="button" class="fs-btn" data-ref="fsBtn" aria-pressed="false" title="Suivre le match en plein écran">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Plein écran</span>
+      </button>
       <div class="seg view-seg" data-seg="view"><button data-v="2d" aria-pressed="true">Terrain</button><button data-v="chart">Carte des tirs</button></div>
       <div class="filters" data-ref="chartFilters" hidden>
         <div class="seg" data-seg="team"><button data-v="all" aria-pressed="true">Les deux</button><button data-v="0" data-ref="fT0"></button><button data-v="1" data-ref="fT1"></button></div>
@@ -288,8 +313,54 @@ export function createLiveView(root, opts = {}) {
     window.addEventListener("resize", onScroll, { passive: true });
   }
 
+  // ---------- Plein écran ----------
+  // Vrai plein écran (Fullscreen API) quand le navigateur le permet, sinon
+  // la vue couvre la fenêtre (iPhone). Le terrain 2D est imposé (s'il est
+  // disponible) ; le fil du match se cale sur les actions les plus récentes.
+  let full = false;
+  function setFull(on) {
+    on = !!on;
+    if (on === full) return;
+    full = on;
+    root.classList.toggle("is-full", on);
+    $("fsbar").setAttribute("aria-hidden", on ? "false" : "true");
+    $("fsBtn").setAttribute("aria-pressed", String(on));
+    if (typeof document !== "undefined") document.documentElement.classList.toggle("hm-live-full", on);
+    if (on && court2dAllowed && ui.view !== "2d") {
+      ui.view = "2d";
+      root.querySelectorAll("[data-seg=view] button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === "2d"));
+      applyView();
+    }
+    try {
+      if (on && root.requestFullscreen && !document.fullscreenElement) { const p = root.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+      else if (!on && document.fullscreenElement === root && document.exitFullscreen) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
+    } catch (e) { /* plein écran CSS seul */ }
+    if (on) { feed.scrollTop = 0; pending = 0; $("newpill").classList.remove("show"); }
+    if (S) { renderBoard(); }
+  }
+  $("fsBtn").addEventListener("click", () => setFull(!full));
+  $("fsExit").addEventListener("click", () => setFull(false));
+  if (typeof document !== "undefined") {
+    // Échap / geste système : le navigateur quitte le vrai plein écran.
+    document.addEventListener("fullscreenchange", () => { if (full && document.fullscreenElement !== root) setFull(false); });
+    document.addEventListener("keydown", e => { if (full && e.key === "Escape" && !document.fullscreenElement) setFull(false); });
+  }
+
+  // Temps mort en cours (state.timeout, calé sur la pause du moteur) :
+  // « TEMPS MORT · LYO 00:18 », distinct du chrono de match.
+  function renderTimeout() {
+    const tm = S && S.status === "live" && S.timeout && S.timeout.remaining > 0 ? S.timeout : null;
+    const txt = tm ? `Temps mort${tm.team === 0 || tm.team === 1 ? " · " + S.teams[tm.team].short : ""} ${fmtClock(tm.remaining)}` : "";
+    for (const r of ["tmo", "mtmo", "fstmo"]) {
+      const el = $(r);
+      if (el.textContent !== txt) el.textContent = txt;
+      el.hidden = !tm;
+    }
+    root.classList.toggle("in-timeout", !!tm);
+  }
+
   // ---------- API ----------
-  let lightKey = null, lightTicks = 0, lastClock = null, lastHalf = null;
+  let lightKey = null, lightTicks = 0, lastClock = null, lastHalf = null, lastTmo = null;
   function update(state) {
     S = state;
     const first = seenEvents === null;
@@ -313,7 +384,8 @@ export function createLiveView(root, opts = {}) {
     // jouées) est rafraîchie toutes les 5 s.
     const key = [S.status, S.quarter, S.events.length, S.shots.length, S.teams.map(t => t.score + ":" + t.teamFouls + ":" + t.timeoutsLeft + ":" + t.players.filter(p => p.onCourt).map(p => p.id).join(",")).join("|"), ui.box, ui.team, ui.q, ui.res, ui.feed].join("#");
     if (!first && key === lightKey && !newEv.size && !newShots.size) {
-      if (S.clock === lastClock && S.halftimeResumeIn === lastHalf) {
+      const tmoNow = S.timeout ? S.timeout.remaining : null;
+      if (S.clock === lastClock && S.halftimeResumeIn === lastHalf && tmoNow === lastTmo) {
         // Seul le chrono des 24 s a bougé (dixièmes) : juste lui.
         renderShotClock();
       } else {
@@ -332,7 +404,9 @@ export function createLiveView(root, opts = {}) {
         .slice(-1).forEach(e => toast(e.toast || e.text));
       [0, 1].forEach(t => { if (lastScore && S.teams[t].score > lastScore[t]) bump(t); });
     }
-    lastClock = S.clock; lastHalf = S.halftimeResumeIn;
+    lastClock = S.clock; lastHalf = S.halftimeResumeIn; lastTmo = S.timeout ? S.timeout.remaining : null;
+    // Plein écran : le fil reste sur les actions les plus récentes.
+    if (full && newEv.size) { feed.scrollTop = 0; pending = 0; $("newpill").classList.remove("show"); }
     seenEvents = new Set(S.events.map(e => e.id));
     seenShots = new Set(S.shots.map(s => s.id));
     lastScore = S.teams.map(t => t.score);
@@ -457,6 +531,10 @@ export function createLiveView(root, opts = {}) {
     if ($("shotclock").textContent !== txt) $("shotclock").textContent = txt;
     $("shotclock").classList.toggle("on", sc !== null);
     $("shotclock").classList.toggle("low", sc !== null && sc <= 5);
+    const fs = $("fsshot");
+    if (fs.textContent !== txt) fs.textContent = txt;
+    fs.classList.toggle("on", sc !== null);
+    fs.classList.toggle("low", sc !== null && sc <= 5);
   }
   function renderBoard() {
     const [A, B] = S.teams;
@@ -519,6 +597,21 @@ export function createLiveView(root, opts = {}) {
     $("mclock").textContent = $("clock").textContent;
     $("mclock").classList.toggle("final", done);
     $("mperiod").textContent = $("period").textContent;
+    // Barre du plein écran (même contenu que le bandeau).
+    [0, 1].forEach(t => {
+      const T = S.teams[t];
+      const fc = $("fscrest" + t);
+      if (fc.dataset.k !== logoKey[t]) { fc.dataset.k = logoKey[t]; fc.innerHTML = $("crest" + t).innerHTML; fc.classList.toggle("has-logo", !!T.logo); }
+      $("fsname" + t).textContent = T.name;
+      $("fsname" + t).classList.toggle("mine", !!T.mine);
+      $("fsmeta" + t).textContent = `Fautes ${T.teamFouls}${T.teamFouls >= BONUS ? " · bonus" : ""}${(T.timeoutsTotal ?? 0) ? ` · TM ${T.timeoutsLeft}/${T.timeoutsTotal}` : ""}`;
+      $("fsscore" + t).textContent = T.score;
+      $("fsscore" + t).classList.toggle("trail", S.teams[1 - t].score > T.score);
+    });
+    $("fsclock").textContent = $("clock").textContent;
+    $("fsclock").classList.toggle("final", done);
+    $("fsperiod").textContent = done ? "Final" : S.status === "halftime" ? "Mi-temps" : pregame ? "Avant-match" : S.quarter > 4 ? `P${S.quarter - 4}` : `Q${S.quarter}`;
+    renderTimeout();
     if (typeof window !== "undefined") onScroll();
 
     const nq = Math.max(4, A.quarterScores.length);

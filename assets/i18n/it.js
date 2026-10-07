@@ -40,6 +40,16 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Recherche de managers, plein écran du match, temps mort (2026-10-07).
+  "Plein écran": "Schermo intero",
+  "Quitter le plein écran": "Esci dallo schermo intero",
+  "Quitter le plein écran (Échap)": "Esci dallo schermo intero (Esc)",
+  "Suivre le match en plein écran": "Segui la partita a schermo intero",
+  "TM {0}/{1}": "TO {0}/{1}",
+  "bonus": "bonus",
+  "Aucun manager ne correspond.": "Nessun manager corrisponde.",
+  "Rechercher une équipe, un joueur ou un manager…": "Cerca una squadra, un giocatore o un manager…",
+  "Rechercher une équipe, un joueur ou un manager": "Cerca una squadra, un giocatore o un manager",
   // Entraînement : refonte selon les maquettes (2026-10-07).
   "Points gagnés sur les plans": "Punti guadagnati dai piani",
   "Points gagnés": "Punti guadagnati",
