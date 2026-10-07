@@ -2,6 +2,32 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Team · Health",
+  "Bilan physique de l'effectif avant le prochain match": "Squad fitness check before the next game",
+  "Risque élevé au prochain match": "High risk in the next game",
+  "Cumul depuis le début de saison": "Total since the start of the season",
+  "En forme": "Fit",
+  "Fatigue": "Fatigue",
+  "Aucun joueur disponible.": "No player available.",
+  "Répartition de la fatigue": "Fatigue breakdown",
+  "En pleine forme": "In top shape",
+  "Légèrement fatigués": "Slightly tired",
+  "Fatigués": "Tired",
+  "Très fatigués": "Very tired",
+  "Épuisés": "Exhausted",
+  "Aucun joueur à l'infirmerie": "No player in the infirmary",
+  "Joueurs à risque": "Players at risk",
+  "Historique des blessures": "Injury history",
+  "État de fatigue": "Fatigue level",
+  "Infirmerie vide": "Infirmary empty",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "No injured player. The whole squad is fit to play.",
+  "Aucun joueur à risque": "No player at risk",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Injury risk is low for the whole squad.",
+  "Saison sans blessure": "Injury-free season",
+  "Aucune blessure enregistrée depuis le début de la saison.": "No injury recorded since the start of the season.",
+  "Durée des blessures": "Injury duration",
+  "Tout l'effectif disponible est frais.": "The whole available squad is fresh.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Locker room atmosphere",
   "Levier prioritaire": "Priority lever",

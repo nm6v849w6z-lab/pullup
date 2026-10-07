@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_DE = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Team · Gesundheit",
+  "Bilan physique de l'effectif avant le prochain match": "Fitnessstand des Kaders vor dem nächsten Spiel",
+  "Risque élevé au prochain match": "Hohes Risiko im nächsten Spiel",
+  "Cumul depuis le début de saison": "Summe seit Saisonbeginn",
+  "En forme": "Fit",
+  "Fatigue": "Müdigkeit",
+  "Aucun joueur disponible.": "Kein Spieler verfügbar.",
+  "Répartition de la fatigue": "Verteilung der Müdigkeit",
+  "En pleine forme": "In Topform",
+  "Légèrement fatigués": "Leicht müde",
+  "Fatigués": "Müde",
+  "Très fatigués": "Sehr müde",
+  "Épuisés": "Erschöpft",
+  "Aucun joueur à l'infirmerie": "Kein Spieler auf der Krankenstation",
+  "Joueurs à risque": "Gefährdete Spieler",
+  "Historique des blessures": "Verletzungshistorie",
+  "État de fatigue": "Müdigkeitszustand",
+  "Infirmerie vide": "Krankenstation leer",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Kein verletzter Spieler. Der ganze Kader ist einsatzbereit.",
+  "Aucun joueur à risque": "Kein gefährdeter Spieler",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Das Verletzungsrisiko ist für den ganzen Kader gering.",
+  "Saison sans blessure": "Saison ohne Verletzung",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Seit Saisonbeginn keine Verletzung erfasst.",
+  "Durée des blessures": "Verletzungsdauer",
+  "Tout l'effectif disponible est frais.": "Der gesamte verfügbare Kader ist frisch.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Stimmung in der Kabine",
   "Levier prioritaire": "Wichtigster Hebel",

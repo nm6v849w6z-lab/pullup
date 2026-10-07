@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Drużyna · Zdrowie",
+  "Bilan physique de l'effectif avant le prochain match": "Stan fizyczny kadry przed następnym meczem",
+  "Risque élevé au prochain match": "Wysokie ryzyko w następnym meczu",
+  "Cumul depuis le début de saison": "Łącznie od początku sezonu",
+  "En forme": "W formie",
+  "Fatigue": "Zmęczenie",
+  "Aucun joueur disponible.": "Brak dostępnych zawodników.",
+  "Répartition de la fatigue": "Rozkład zmęczenia",
+  "En pleine forme": "W pełni sił",
+  "Légèrement fatigués": "Lekko zmęczeni",
+  "Fatigués": "Zmęczeni",
+  "Très fatigués": "Bardzo zmęczeni",
+  "Épuisés": "Wyczerpani",
+  "Aucun joueur à l'infirmerie": "Brak zawodników w ambulatorium",
+  "Joueurs à risque": "Zawodnicy zagrożeni",
+  "Historique des blessures": "Historia kontuzji",
+  "État de fatigue": "Poziom zmęczenia",
+  "Infirmerie vide": "Ambulatorium puste",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Brak kontuzjowanych. Cała kadra jest gotowa do gry.",
+  "Aucun joueur à risque": "Brak zagrożonych zawodników",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Ryzyko kontuzji jest niskie dla całej kadry.",
+  "Saison sans blessure": "Sezon bez kontuzji",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Brak kontuzji od początku sezonu.",
+  "Durée des blessures": "Czas trwania kontuzji",
+  "Tout l'effectif disponible est frais.": "Cała dostępna kadra jest wypoczęta.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Atmosfera w szatni",
   "Levier prioritaire": "Priorytetowa dźwignia",

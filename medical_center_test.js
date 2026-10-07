@@ -61,33 +61,41 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   assert(btns[idx].classList.contains("active"), "l'onglet est actif");
 
   const content = doc.getElementById("medicalContent");
-  assert(content.querySelector(".cal-layout .cal-main") && content.querySelector(".cal-side"), "même gabarit que le Calendrier (liste + colonne de droite)");
-  const injRows = content.querySelectorAll('tr[data-med-kind="injured"]');
+  // Refonte du 2026-10-07 (maquette « Centre médical ») : en-tête, onglets,
+  // bandeau de chiffres, liste groupée par fatigue, colonne de droite.
+  assert(content.querySelector(".md-head h1").textContent === "Centre médical" && content.querySelectorAll(".md-kpis .md-kpi").length === 4, "en-tête et bandeau de 4 chiffres (disponibles, blessés, à risque, saison)");
+  assert(content.querySelector(".md-panel") && content.querySelector(".md-side"), "liste principale + colonne de droite");
+  const injRows = content.querySelectorAll('[data-med-kind="injured"]');
   assert(injRows.length === 1 && injRows[0].textContent.includes(p0.name) && injRows[0].textContent.includes("Blessure musculaire"), "le blessé est en tête de liste avec sa blessure");
-  assert(/6 jours/.test(injRows[0].querySelector(".med-days").textContent) && injRows[0].textContent.includes("retour"), "jours restants et date de retour");
-  assert(doc.getElementById("medicalInjuredCount").textContent === "1", "Infirmerie : compteur de blessés");
-  assert(doc.getElementById("medicalSummary").textContent.includes("Prochain retour"), "Infirmerie : prochain retour");
+  assert(/6 jours/.test(injRows[0].querySelector(".md-days").textContent) && injRows[0].textContent.includes("retour"), "jours restants et date de retour");
+  assert(doc.getElementById("medicalInjuredCount").textContent === "1", "compteur de blessés");
+  assert(doc.getElementById("medicalSummary").textContent.includes("Prochain retour"), "prochain retour");
+  assert(/14\/15|\d+\/\d+/.test(content.querySelector(".md-ring").textContent), "disponibles / effectif");
 
-  assert(!content.querySelector(`tr[data-player-row="${p0.id}"][data-risk]`), "le blessé n'a pas de ligne de risque");
-  const r1 = content.querySelector(`tr[data-player-row="${p1.id}"][data-risk]`);
+  assert(!content.querySelector(`[data-player-row="${p0.id}"][data-risk]`), "le blessé n'a pas de ligne de risque");
+  const r1 = content.querySelector(`[data-player-row="${p1.id}"][data-risk]`);
   // Épuisé (×1,80) × kiné 3★ (×0,85) = ×1,53 → Très élevé, en tête.
   assert(r1 && r1.dataset.risk === "veryhigh" && r1.textContent.includes("Très élevé") && !r1.textContent.includes("×"), "joueur épuisé : risque Très élevé (×1,53 avec le kiné), sans facteur affiché");
-  assert(content.querySelector("tr[data-risk]") === r1, "les joueurs les plus exposés en tête");
+  assert(r1.textContent.includes("Épuisé") && r1.querySelectorAll(".md-segs span[style]").length === 5, "état de fatigue : Épuisé, 5 segments");
+  assert(content.querySelector("[data-risk]").closest(".md-row") === r1, "les joueurs les plus fatigués / exposés en tête");
   assert(doc.getElementById("medicalHighRiskCount").textContent === "1", "compteur de joueurs à risque");
+  assert(r1.querySelector(".player-link") && r1.querySelector(".player-avatar"), "nom cliquable et avatar du joueur");
 
   const staff = doc.getElementById("medicalStaffCard");
   assert(staff.querySelector('[data-med-staff="doctor"]').textContent.includes("À recruter"), "encadrement : médecin à recruter");
-  assert(staff.querySelector('[data-med-staff="physio"]').textContent.includes("−15 %"), "encadrement : effet du kiné chiffré");
+  assert(staff.querySelector('[data-med-staff="physio"]').textContent.includes("−15 %") && staff.querySelector('[data-med-staff="physio"]').textContent.includes("3 / 5"), "encadrement : effet et niveau du kiné");
+  assert(/Répartition de la fatigue/.test(content.textContent) && /Conseil/.test(content.textContent), "répartition de la fatigue et conseil");
 
-  const hist = [...content.querySelectorAll(".med-hist-row")];
-  assert(hist.length === 1 && hist.every(r => r.classList.contains("hidden")), "historique caché par défaut, seulement la saison en cours");
+  assert(!content.querySelector(".md-hist-row"), "historique pas affiché dans « Tous »");
   const click = k => content.querySelector(`[data-med-filter="${k}"]`).click();
   click("history");
-  assert(!hist[0].classList.contains("hidden") && hist[0].textContent.includes("Adversaire test") && r1.classList.contains("hidden"), "filtre Historique");
+  const hist = [...content.querySelectorAll(".md-hist-row")];
+  assert(hist.length === 1 && hist[0].textContent.includes("Adversaire test") && !content.querySelector("[data-risk]"), "onglet Historique : seulement la saison en cours");
   click("injured");
-  assert(!injRows[0].classList.contains("hidden") && r1.classList.contains("hidden"), "filtre Blessés : seulement le bloc Infirmerie");
+  assert(content.querySelectorAll('[data-med-kind="injured"]').length === 1 && !content.querySelector("[data-risk]"), "onglet Blessés : seulement l'infirmerie");
   click("risk");
-  assert(injRows[0].classList.contains("hidden") && !r1.classList.contains("hidden"), "filtre À risque");
+  assert(!content.querySelector('[data-med-kind="injured"]') && content.querySelector(`[data-player-row="${p1.id}"][data-risk]`), "onglet À risque");
+  assert(/Joueurs à risque/.test(content.querySelector(".md-h2").textContent), "titre du panneau selon l'onglet");
   click("all");
   assert(doc.getElementById("medicalSeasonCount").textContent === "1", "compteur de blessures de la saison");
 

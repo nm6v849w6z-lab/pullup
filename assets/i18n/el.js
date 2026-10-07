@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Ομάδα · Υγεία",
+  "Bilan physique de l'effectif avant le prochain match": "Φυσική κατάσταση του ρόστερ πριν τον επόμενο αγώνα",
+  "Risque élevé au prochain match": "Υψηλός κίνδυνος στον επόμενο αγώνα",
+  "Cumul depuis le début de saison": "Σύνολο από την αρχή της σεζόν",
+  "En forme": "Σε φόρμα",
+  "Fatigue": "Κούραση",
+  "Aucun joueur disponible.": "Κανένας διαθέσιμος παίκτης.",
+  "Répartition de la fatigue": "Κατανομή κούρασης",
+  "En pleine forme": "Σε άριστη φόρμα",
+  "Légèrement fatigués": "Ελαφρώς κουρασμένοι",
+  "Fatigués": "Κουρασμένοι",
+  "Très fatigués": "Πολύ κουρασμένοι",
+  "Épuisés": "Εξαντλημένοι",
+  "Aucun joueur à l'infirmerie": "Κανένας παίκτης στο ιατρείο",
+  "Joueurs à risque": "Παίκτες σε κίνδυνο",
+  "Historique des blessures": "Ιστορικό τραυματισμών",
+  "État de fatigue": "Επίπεδο κούρασης",
+  "Infirmerie vide": "Άδειο ιατρείο",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Κανένας τραυματίας. Όλο το ρόστερ είναι διαθέσιμο.",
+  "Aucun joueur à risque": "Κανένας παίκτης σε κίνδυνο",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Ο κίνδυνος τραυματισμού είναι χαμηλός για όλο το ρόστερ.",
+  "Saison sans blessure": "Σεζόν χωρίς τραυματισμούς",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Κανένας τραυματισμός από την αρχή της σεζόν.",
+  "Durée des blessures": "Διάρκεια τραυματισμών",
+  "Tout l'effectif disponible est frais.": "Όλο το διαθέσιμο ρόστερ είναι ξεκούραστο.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Κλίμα αποδυτηρίων",
   "Levier prioritaire": "Βασικός μοχλός",

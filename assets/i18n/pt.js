@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Equipa · Saúde",
+  "Bilan physique de l'effectif avant le prochain match": "Estado físico do plantel antes do próximo jogo",
+  "Risque élevé au prochain match": "Risco elevado no próximo jogo",
+  "Cumul depuis le début de saison": "Acumulado desde o início da época",
+  "En forme": "Em forma",
+  "Fatigue": "Fadiga",
+  "Aucun joueur disponible.": "Nenhum jogador disponível.",
+  "Répartition de la fatigue": "Distribuição da fadiga",
+  "En pleine forme": "Em plena forma",
+  "Légèrement fatigués": "Ligeiramente cansados",
+  "Fatigués": "Cansados",
+  "Très fatigués": "Muito cansados",
+  "Épuisés": "Esgotados",
+  "Aucun joueur à l'infirmerie": "Nenhum jogador na enfermaria",
+  "Joueurs à risque": "Jogadores em risco",
+  "Historique des blessures": "Histórico de lesões",
+  "État de fatigue": "Estado de fadiga",
+  "Infirmerie vide": "Enfermaria vazia",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Nenhum jogador lesionado. Todo o plantel está apto.",
+  "Aucun joueur à risque": "Nenhum jogador em risco",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "O risco de lesão é baixo para todo o plantel.",
+  "Saison sans blessure": "Época sem lesões",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Nenhuma lesão registada desde o início da época.",
+  "Durée des blessures": "Duração das lesões",
+  "Tout l'effectif disponible est frais.": "Todo o plantel disponível está fresco.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Ambiente do vestiário",
   "Levier prioritaire": "Alavanca prioritária",

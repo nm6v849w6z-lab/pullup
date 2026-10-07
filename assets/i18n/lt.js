@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Komanda · Sveikata",
+  "Bilan physique de l'effectif avant le prochain match": "Komandos fizinė būklė prieš kitas rungtynes",
+  "Risque élevé au prochain match": "Didelė rizika kitose rungtynėse",
+  "Cumul depuis le début de saison": "Iš viso nuo sezono pradžios",
+  "En forme": "Geros formos",
+  "Fatigue": "Nuovargis",
+  "Aucun joueur disponible.": "Nėra laisvų žaidėjų.",
+  "Répartition de la fatigue": "Nuovargio pasiskirstymas",
+  "En pleine forme": "Puikios formos",
+  "Légèrement fatigués": "Šiek tiek pavargę",
+  "Fatigués": "Pavargę",
+  "Très fatigués": "Labai pavargę",
+  "Épuisés": "Išsekę",
+  "Aucun joueur à l'infirmerie": "Lazarete nėra žaidėjų",
+  "Joueurs à risque": "Rizikos grupės žaidėjai",
+  "Historique des blessures": "Traumų istorija",
+  "État de fatigue": "Nuovargio būklė",
+  "Infirmerie vide": "Lazaretas tuščias",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Nėra traumuotų žaidėjų. Visa komanda gali žaisti.",
+  "Aucun joueur à risque": "Nėra rizikos grupės žaidėjų",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Traumų rizika visai komandai maža.",
+  "Saison sans blessure": "Sezonas be traumų",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Nuo sezono pradžios traumų neužfiksuota.",
+  "Durée des blessures": "Traumų trukmė",
+  "Tout l'effectif disponible est frais.": "Visi laisvi žaidėjai pailsėję.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Rūbinės atmosfera",
   "Levier prioritaire": "Svarbiausia svirtis",

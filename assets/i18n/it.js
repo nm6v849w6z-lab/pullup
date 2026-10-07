@@ -40,6 +40,32 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "Squadra · Salute",
+  "Bilan physique de l'effectif avant le prochain match": "Bilancio fisico della rosa prima della prossima partita",
+  "Risque élevé au prochain match": "Rischio elevato alla prossima partita",
+  "Cumul depuis le début de saison": "Totale dall'inizio della stagione",
+  "En forme": "In forma",
+  "Fatigue": "Fatica",
+  "Aucun joueur disponible.": "Nessun giocatore disponibile.",
+  "Répartition de la fatigue": "Ripartizione della fatica",
+  "En pleine forme": "In piena forma",
+  "Légèrement fatigués": "Leggermente stanchi",
+  "Fatigués": "Stanchi",
+  "Très fatigués": "Molto stanchi",
+  "Épuisés": "Esausti",
+  "Aucun joueur à l'infirmerie": "Nessun giocatore in infermeria",
+  "Joueurs à risque": "Giocatori a rischio",
+  "Historique des blessures": "Storico degli infortuni",
+  "État de fatigue": "Stato di fatica",
+  "Infirmerie vide": "Infermeria vuota",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "Nessun giocatore infortunato. Tutta la rosa è disponibile.",
+  "Aucun joueur à risque": "Nessun giocatore a rischio",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "Il rischio di infortunio è basso per tutta la rosa.",
+  "Saison sans blessure": "Stagione senza infortuni",
+  "Aucune blessure enregistrée depuis le début de la saison.": "Nessun infortunio registrato dall'inizio della stagione.",
+  "Durée des blessures": "Durata degli infortuni",
+  "Tout l'effectif disponible est frais.": "Tutta la rosa disponibile è fresca.",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "Clima dello spogliatoio",
   "Levier prioritaire": "Leva prioritaria",

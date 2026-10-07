@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Centre médical : refonte d'après la maquette (2026-10-07).
+  "Équipe · Santé": "球队 · 健康",
+  "Bilan physique de l'effectif avant le prochain match": "下一场比赛前的阵容身体状况",
+  "Risque élevé au prochain match": "下一场比赛风险高",
+  "Cumul depuis le début de saison": "本赛季累计",
+  "En forme": "状态良好",
+  "Fatigue": "疲劳",
+  "Aucun joueur disponible.": "没有可用球员。",
+  "Répartition de la fatigue": "疲劳分布",
+  "En pleine forme": "状态极佳",
+  "Légèrement fatigués": "略感疲劳",
+  "Fatigués": "疲劳",
+  "Très fatigués": "非常疲劳",
+  "Épuisés": "精疲力竭",
+  "Aucun joueur à l'infirmerie": "医务室没有球员",
+  "Joueurs à risque": "高风险球员",
+  "Historique des blessures": "伤病记录",
+  "État de fatigue": "疲劳状态",
+  "Infirmerie vide": "医务室空无一人",
+  "Aucun joueur blessé. Tout l'effectif est apte à jouer.": "没有伤员，全队均可出战。",
+  "Aucun joueur à risque": "没有高风险球员",
+  "Le risque de blessure est faible pour l'ensemble de l'effectif.": "全队受伤风险都很低。",
+  "Saison sans blessure": "本赛季无伤病",
+  "Aucune blessure enregistrée depuis le début de la saison.": "本赛季至今没有伤病记录。",
+  "Durée des blessures": "伤病时长",
+  "Tout l'effectif disponible est frais.": "所有可用球员状态都很好。",
   // Vestiaire : refonte d'après les maquettes (2026-10-07).
   "Ambiance du vestiaire": "更衣室氛围",
   "Levier prioritaire": "首要抓手",

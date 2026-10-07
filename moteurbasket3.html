@@ -3892,73 +3892,6 @@
   @media (max-width:1100px){
     .tq-grid, .tq-mastery{grid-template-columns:minmax(0,1fr);}
   }
-  /* ---- Centre médical (voir renderMedicalSection) ----
-     Refonte (retour utilisateur, 2026-09-27 : "ça ne ressemble pas au reste
-     du site", "un grand vide sous infirmerie", "si on a trop de monde, ça va
-     tout décaler") : gabarit du Calendrier (.cal-layout/.cal-card/
-     .calendar-table.cal-month/.cal-filter) ; les blessés sont des lignes de
-     la liste principale, la colonne de droite garde une hauteur fixe. */
-  .med-col-player{width:auto;} .med-col-state{width:200px;} .med-col-end{width:230px;}
-  .med-c-player{padding-left:16px !important;}
-  .med-player{display:flex; align-items:center; gap:10px; min-width:0;}
-  .med-player-text{display:flex; flex-direction:column; min-width:0;}
-  .med-player-text .player-link{font-weight:600; font-size:14px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .med-player-text .sub{font-size:12px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .med-injury-tag{display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; background:rgba(226,105,79,.15); color:var(--danger);}
-  /* Palier + jauge alignés à droite, sous « Risque pour le prochain match » :
-     libellé et jauge de largeurs fixes, jauges alignées d'une ligne à l'autre. */
-  .med-risk{display:flex; align-items:center; justify-content:flex-end; gap:12px;}
-  .med-risk-label{font-size:13px; font-weight:700; min-width:76px; text-align:right;}
-  .med-risk-track{flex:none; width:110px; height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden;}
-  .med-risk-fill{height:100%; border-radius:3px; background:currentColor;}
-  .med-risk-low{color:var(--ok);} .med-risk-normal{color:var(--ink-dim);} .med-risk-high{color:var(--amber);} .med-risk-veryhigh{color:var(--danger);}
-  .med-c-end{text-align:right; padding-right:16px !important; white-space:nowrap;}
-  .med-days{font-weight:800; color:var(--danger); font-variant-numeric:tabular-nums;}
-  .med-back{font-size:12px; color:var(--ink-dim);}
-  .calendar-table.cal-month tr.med-row-injured td{background:rgba(226,105,79,.05);}
-  .calendar-table.cal-month tr.med-row-injured td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
-  .med-month-count{float:right; font-size:12px; font-weight:600; color:var(--ink-dim); letter-spacing:0; text-transform:none;}
-  .med-hist-dur{font-weight:700; font-size:13px; font-variant-numeric:tabular-nums;}
-  .med-infirmary .cal-kpi-value.is-neg{color:var(--danger);}
-  .med-next-back{margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-dim); display:flex; justify-content:space-between; gap:10px;}
-  .med-next-back b{color:var(--ink); font-weight:600;}
-  .med-next-back{flex-direction:column; gap:2px;}
-  .med-staff-list{display:flex; flex-direction:column; margin-top:10px;}
-  .med-staff-row{padding:10px 0; border-bottom:1px solid var(--line-soft);}
-  .med-staff-row:last-child{border-bottom:0; padding-bottom:0;}
-  .med-staff-line{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:14px;}
-  .med-staff-line > span{display:flex; align-items:center; gap:8px; color:var(--ink);}
-  .med-staff-dot{width:8px; height:8px; border-radius:50%; background:var(--ink); flex:none;}
-  .med-staff-row.is-off .med-staff-dot{background:transparent; border:1.5px dashed var(--ink-faint); box-sizing:border-box;}
-  .med-staff-row.is-off .med-staff-line > span{color:var(--ink-dim);}
-  .med-staff-line .stf-stars{font-size:13px;}
-  .med-staff-missing{font-size:13px; font-weight:700; color:var(--danger);}
-  .med-staff-level{font-size:13px; font-weight:700; color:var(--ink-dim);}
-  .med-staff-effect{font-size:12px; color:var(--ink-dim); margin:3px 0 0 16px; line-height:1.4;}
-  .med-layout{grid-template-areas:"bar ." "main side"; row-gap:14px;}
-  .med-bar{grid-area:bar; margin-bottom:0;}
-  .med-main{grid-area:main;}
-  .med-layout > .cal-side{grid-area:side;}
-  .med-infirmary .cal-split{grid-template-columns:1fr;} .med-infirmary .cal-split > div{gap:12px;}
-  @media (max-width:1100px){
-    .med-layout{grid-template-areas:"side" "bar" "main";}
-  }
-  .med-side-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
-  .med-side-btns .calendar-order-btn{justify-content:center;}
-  @media (max-width:760px){
-    .med-col-state{width:0;} .med-col-end{width:104px;}
-    .calendar-table.cal-month td.med-c-state{padding:0; font-size:0;}
-    .med-c-state > *{display:none;}
-    .med-risk-track{display:none;}
-    /* Titre de la colonne gardé sur téléphone, sous le titre du tableau
-       (retour utilisateur 2026-09-30 : « il faudrait un titre à la colonne
-       Normal / Faible »). */
-    .med-month-count{display:block; float:none; margin-top:4px;}
-    .calendar-table.cal-month.med-table td.med-c-end{vertical-align:middle;}
-    .med-risk-label{min-width:0; font-size:12px;}
-    .med-c-end{white-space:normal;} .med-back{font-size:11px; line-height:1.3;}
-    .calendar-table.cal-month.med-table td{padding-left:8px; padding-right:8px;}
-  }
   /* ---- Humeur des supporters ---- */
   .morale-value{text-align:center; font-size:40px; font-weight:800; line-height:1; margin-top:6px;}
   .morale-label{text-align:center; font-size:14px; color:var(--ink-dim); margin:4px 0 14px;}
@@ -8774,6 +8707,7 @@
 <script src="assets/history.js" defer></script>
 <script src="assets/roles.js" defer></script>
 <script src="assets/vestiaire-ui.js" defer></script>
+<script src="assets/medical-ui.js" defer></script>
 <script src="assets/national-visuals.js" defer></script>
 <script src="assets/national.js" defer></script>
 <script src="assets/national-coach.js" defer></script>
@@ -9305,9 +9239,7 @@
   </div>
 
   <div id="medicalSection" class="hidden">
-    <!-- Centre médical (2026-09-27) : même gabarit que le Calendrier (filtres,
-         liste principale, colonne de résumé à droite). Voir
-         renderMedicalSection. -->
+    <!-- Centre médical : assets/medical-ui.js (refonte du 2026-10-07). -->
     <div class="section">
       <h2 class="page-title">Centre médical</h2>
       <div id="medicalContent"></div>
@@ -56719,212 +56651,12 @@ document.getElementById("ordresPresetsBar").addEventListener("keydown", (e) => {
   }
 });
 
-// ---------------------------------------------------------------------
-// CENTRE MÉDICAL (demande du 2026-09-27) : même gabarit que le Calendrier
-// (retour utilisateur : "ça ne ressemble pas au reste du site") — filtres,
-// liste principale (blessés en tête, puis tout l'effectif avec son risque ;
-// ou l'historique de la saison groupé par mois), colonne de droite de
-// hauteur fixe (Infirmerie, Encadrement médical).
-// Le risque reprend EXACTEMENT les multiplicateurs de
-// MatchEngine.applyFatigue qui dépendent du joueur avant le match (forme
-// physique × salle de musculation × kiné) ; la fatigue EN match touche tout
-// le monde pareil et n'est pas connue d'avance. 1,00 = joueur en pleine
-// forme dans un club sans kiné ni salle de musculation.
-// ---------------------------------------------------------------------
-const MEDICAL_RISK_TIERS = [
-  { max: 0.85, key: "low", label: "Faible" },
-  { max: 1.15, key: "normal", label: "Normal" },
-  { max: 1.5, key: "high", label: "Élevé" },
-  { max: Infinity, key: "veryhigh", label: "Très élevé" },
-];
-let medicalFilter = "all"; // "all" | "injured" | "risk" | "history"
-function medicalRiskFor(team, player, now = Date.now()) {
-  const recovery = team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY;
-  const condition = currentCondition(player, now, recovery);
-  const condMult = conditionStateFor(condition).injuryMult;
-  const gymMult = team.facilityInjuryRiskMult ? team.facilityInjuryRiskMult() : 1;
-  const physioMult = team.physioInjuryRiskMult ? team.physioInjuryRiskMult() : 1;
-  const mult = condMult * gymMult * physioMult;
-  const tier = MEDICAL_RISK_TIERS.find(t => mult < t.max) || MEDICAL_RISK_TIERS[MEDICAL_RISK_TIERS.length - 1];
-  return { mult, tier, condition, condMult, gymMult, physioMult };
-}
-function medicalPctLabel(delta) { return `${delta > 0 ? "+" : "−"}${Math.round(Math.abs(delta) * 100)} %`; }
-
-function medicalPlayerCellHtml(p, team, sub) {
-  return `<div class="med-player">${playerAvatarHtml(p, team, 26)}<div class="med-player-text">` +
-    `${playerLinkHtml(myTeamIndex, p.id, p.name)}<span class="sub">${sub}</span></div></div>`;
-}
-
+// CENTRE MÉDICAL : rendu dans assets/medical-ui.js (refonte du 2026-10-07,
+// fichier à part pour la limite de taille de la page).
 function renderMedicalSection() {
-  const team = teamA;
-  const now = Date.now();
-  const holder = document.getElementById("medicalContent");
-  if (!holder) return;
-  const players = team.players || [];
-  const recovery = p => (team.conditionRecoveryPerDay ? team.conditionRecoveryPerDay() : CONDITION_RECOVERY_PER_DAY);
-  const injuredPros = players.filter(p => isCurrentlyInjured(p, now));
-  // Jeunes du centre de formation blessés (retour utilisateur 2026-10-03 :
-  // « les jeunes n'apparaissent pas dans le centre médical ») : dans
-  // l'infirmerie et le compteur, pas dans « Disponibles » (pros seulement).
-  const injuredYouth = (team.youthPlayers || []).filter(p => isCurrentlyInjured(p, now));
-  const isYouth = p => injuredYouth.includes(p);
-  const injured = injuredPros.concat(injuredYouth).sort((a, b) => a.injuryUntil - b.injuryUntil);
-  const fit = players.filter(p => !isCurrentlyInjured(p, now))
-    .map(p => ({ p, r: medicalRiskFor(team, p, now) }))
-    .sort((a, b) => b.r.mult - a.r.mult || a.p.name.localeCompare(b.p.name));
-  const atRisk = fit.filter(x => x.r.tier.key === "high" || x.r.tier.key === "veryhigh");
-  const seasonNo = (team.seasonHistory || []).length + 1;
-  const seasonLog = (team.injuryLog || []).filter(e => e.seasonNo === seasonNo);
-  const daysLost = seasonLog.reduce((s, e) => s + (e.days || 0), 0);
-
-  const counts = { all: players.length, injured: injured.length, risk: atRisk.length, history: seasonLog.length };
-  const filterBtn = (key, label) =>
-    `<button type="button" class="cal-filter${medicalFilter === key ? " active" : ""}" data-med-filter="${key}" aria-pressed="${medicalFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
-  const pos = p => escapeHtml(POS_SHORT[p.position] || p.position || "");
-
-  // Filtres HORS de la colonne principale (zone "bar" de .med-layout) : la
-  // colonne de droite démarre ainsi à la hauteur de la liste, pas des
-  // filtres (retour utilisateur : "infirmerie ne doit pas monter au dessus
-  // de joueurs disponibles").
-  let html = `<div class="cal-layout med-layout"><div class="cal-toolbar med-bar" role="group" aria-label="Filtrer">` +
-    filterBtn("all", "Tous") + filterBtn("injured", "Blessés") + filterBtn("risk", "À risque") + filterBtn("history", "Historique") + `</div>`;
-  html += `<div class="cal-main med-main">`;
-
-  const tableOpen = (title, extra, view) =>
-    `<table class="calendar-table cal-month med-table" data-med-view="${view}"><colgroup><col class="med-col-player"><col class="med-col-state"><col class="med-col-end"></colgroup>` +
-    `<thead><tr class="cal-month-head"><th colspan="3"><span class="cal-month-title">${escapeHtml(title)}</span>${extra ? `<span class="med-month-count">${escapeHtml(extra)}</span>` : ""}</th></tr></thead><tbody>`;
-
-  // Blessés (en tête, toujours visibles dans « Tous »).
-  if (injured.length) {
-    html += tableOpen("Infirmerie", `${injured.length} blessé${injured.length > 1 ? "s" : ""}`, "roster");
-    injured.forEach(p => {
-      const days = injuryDaysRemaining(p, now);
-      const cell = isYouth(p)
-        ? `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(p.name)}</b><span class="sub">${pos(p)} <span>· centre de formation</span></span></div></div>`
-        : medicalPlayerCellHtml(p, team, pos(p));
-      html += `<tr class="cal-row med-row-injured" data-player-row="${p.id}" data-med-kind="injured">` +
-        `<td class="med-c-player">${cell}</td>` +
-        `<td class="med-c-state"><span class="med-injury-tag" title="${escapeHtml(p.injuryType || "Blessure")}">${escapeHtml(p.injuryType || "Blessure")}</span></td>` +
-        `<td class="med-c-end"><div class="med-days">${days} jour${days > 1 ? "s" : ""}</div><div class="med-back">retour ${escapeHtml(formatCalendarDayFr(p.injuryUntil))}</div></td></tr>`;
-    });
-    html += `</tbody></table>`;
-  }
-
-  // Joueurs disponibles, du plus exposé au moins exposé.
-  html += tableOpen("Joueurs disponibles", "Risque de blessure au prochain match", "roster");
-  if (!fit.length) html += `<tr><td colspan="3" class="training-empty">Aucun joueur disponible.</td></tr>`;
-  fit.forEach(({ p, r }) => {
-    const width = Math.max(6, Math.min(100, Math.round(r.mult / 2 * 100)));
-    const risky = r.tier.key === "high" || r.tier.key === "veryhigh";
-    html += `<tr class="cal-row" data-player-row="${p.id}" data-risk="${r.tier.key}" data-med-kind="${risky ? "risk" : "fit"}">` +
-      `<td class="med-c-player">${medicalPlayerCellHtml(p, team, pos(p))}</td>` +
-      `<td class="med-c-state">${conditionBadgeHtml(p, now, recovery(p))}</td>` +
-      `<td class="med-c-end"><div class="med-risk med-risk-${r.tier.key}"><span class="med-risk-label">${r.tier.label}</span>` +
-      `<div class="med-risk-track"><div class="med-risk-fill" style="width:${width}%"></div></div></div></td></tr>`;
-  });
-  html += `</tbody></table>`;
-
-  // Historique de la saison, groupé par mois comme le Calendrier.
-  const groups = [];
-  seasonLog.forEach(e => {
-    const key = e.at ? calendarMonthKey(e.at) : "saison";
-    let g = groups.find(x => x.key === key);
-    if (!g) { g = { key, title: e.at ? calendarMonthTitle(e.at) : "Saison", rows: [] }; groups.push(g); }
-    g.rows.push(e);
-  });
-  groups.forEach(g => {
-    html += tableOpen(g.title, `${g.rows.length} blessure${g.rows.length > 1 ? "s" : ""}`, "history");
-    g.rows.forEach(e => {
-      const p = players.find(x => x.id === e.playerId);
-      // Jeune de l'académie blessé en amical (retour utilisateur 2026-10-02 :
-      // noté « a quitté le club » alors qu'il est toujours au centre de
-      // formation) : cherché aussi parmi les jeunes.
-      const youth = !p ? (team.youthPlayers || []).find(x => String(x.id) === String(e.playerId)) : null;
-      const vs = e.opponentName ? ` · contre ${escapeHtml(e.opponentName)}` : "";
-      const who = p ? medicalPlayerCellHtml(p, team, `Semaine ${e.week}${vs}`)
-        : youth ? `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(youth.name)}</b><span class="sub">Semaine ${e.week}${vs} <span>· centre de formation</span></span></div></div>`
-        : `<div class="med-player"><div class="med-player-text"><b>${escapeHtml(e.playerName)}</b><span class="sub">Semaine ${e.week}${vs} · a quitté le club</span></div></div>`;
-      html += `<tr class="cal-row med-hist-row" data-med-kind="history">` +
-        `<td class="med-c-player">${who}</td>` +
-        `<td class="med-c-state"><span class="med-injury-tag">${escapeHtml(e.injuryType || "Blessure")}</span></td>` +
-        `<td class="med-c-end"><div class="med-hist-dur">${e.days} jour${e.days > 1 ? "s" : ""}</div>${e.at ? `<div class="med-back">${escapeHtml(formatCalendarDayFr(e.at))}</div>` : ""}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-  });
-  html += `<p class="training-empty med-filter-empty hidden"></p>`;
-  html += `</div><aside class="cal-side" aria-label="Résumé médical">`;
-
-  // Infirmerie (hauteur fixe, quel que soit le nombre de blessés).
-  const nextBack = injured[0];
-  html += `<div class="cal-card med-infirmary" id="medicalSummary"><div class="cal-card-kicker">Infirmerie</div>` +
-    `<div class="cal-kpis">` +
-      `<div class="cal-kpi"><div class="cal-kpi-label">Blessés</div><div class="cal-kpi-value${injured.length ? " is-neg" : " is-pos"}" id="medicalInjuredCount">${injured.length}</div></div>` +
-      `<div class="cal-kpi"><div class="cal-kpi-label">À risque</div><div class="cal-kpi-value${atRisk.length ? " is-neg" : ""}" id="medicalHighRiskCount">${atRisk.length}</div></div>` +
-      `<div class="cal-kpi"><div class="cal-kpi-label">Saison</div><div class="cal-kpi-value" id="medicalSeasonCount">${seasonLog.length}</div></div>` +
-    `</div>` +
-    `<div class="cal-split"><div><span>Jours d'indisponibilité</span><b>${daysLost}</b></div><div><span>Disponibles</span><b>${players.length - injuredPros.length}/${players.length}</b></div></div>` +
-    (nextBack ? `<div class="med-next-back"><span>Prochain retour</span><b>${escapeHtml(nextBack.name)} · ${escapeHtml(formatCalendarDayFr(nextBack.injuryUntil))}</b></div>`
-      : `<div class="med-next-back"><span>Tout l'effectif est disponible.</span></div>`) +
-    `</div>`;
-
-  // Encadrement médical.
-  const doctor = team.doctor, physio = team.physio;
-  const gymLevel = (team.facilityLevels && team.facilityLevels.gym) || 0;
-  const gym = facilityInfo("gym", gymLevel);
-  const staffRow = (key, on, label, right, effect) =>
-    `<div class="med-staff-row${on ? "" : " is-off"}" data-med-staff="${key}"><div class="med-staff-line"><span><i class="med-staff-dot"></i>${label}</span>${right}</div>` +
-    `<div class="med-staff-effect">${effect}</div></div>`;
-  html += `<div class="cal-card" id="medicalStaffCard"><div class="cal-card-kicker">Encadrement médical</div><div class="med-staff-list">` +
-    staffRow("doctor", !!doctor, "Médecin", doctor ? staffStarsHtml(doctor.level) : `<span class="med-staff-missing">À recruter</span>`,
-      doctor ? `Durée des blessures ${medicalPctLabel(-(DOCTOR_INJURY_DURATION_REDUCTION_BY_LEVEL[doctor.level] || 0))}` : "Raccourcit les blessures (jusqu'à −35 %)") +
-    staffRow("physio", !!physio, "Kiné", physio ? staffStarsHtml(physio.level) : `<span class="med-staff-missing">À recruter</span>`,
-      physio ? `Risque ${medicalPctLabel(team.physioInjuryRiskMult() - 1)} · +${team.physioRecoveryBonus()} forme/jour` : "Moins de blessures, meilleure récupération") +
-    staffRow("gym", !!gymLevel, "Musculation", gymLevel ? `<span class="med-staff-level">Niveau ${gymLevel}</span>` : `<span class="med-staff-missing">À construire</span>`,
-      gymLevel ? `${escapeHtml(gym.name)} · risque ${medicalPctLabel(gym.injuryRiskMult - 1)}` : "Moins de blessures en match (jusqu'à −35 %)") +
-    `</div><div class="med-side-btns"><button type="button" class="calendar-order-btn" id="medicalGoStaff">Staff</button><button type="button" class="calendar-order-btn" id="medicalGoSalle">Équipements</button></div></div>`;
-  html += `</aside></div>`;
-
-  holder.innerHTML = html;
-  medicalApplyFilter();
+  if (window.HM_MEDICAL_UI) window.HM_MEDICAL_UI.render();
+  else { const h = document.getElementById("medicalContent"); if (h) h.innerHTML = '<p class="training-empty">Chargement du centre médical…</p>'; }
 }
-
-function medicalApplyFilter() {
-  const holder = document.getElementById("medicalContent");
-  if (!holder) return;
-  const history = medicalFilter === "history";
-  let visibleTotal = 0;
-  holder.querySelectorAll("table.med-table").forEach(table => {
-    const isHistory = table.dataset.medView === "history";
-    let visible = 0;
-    table.querySelectorAll("tbody tr.cal-row").forEach(tr => {
-      const k = tr.dataset.medKind;
-      const show = history ? isHistory
-        : !isHistory && (medicalFilter === "all" || (medicalFilter === "injured" && k === "injured") || (medicalFilter === "risk" && k === "risk"));
-      tr.classList.toggle("hidden", !show);
-      if (show) visible++;
-    });
-    const emptyRow = table.querySelector("tbody td.training-empty");
-    table.classList.toggle("hidden", visible === 0 && !(emptyRow && !history && medicalFilter === "all"));
-    visibleTotal += visible;
-  });
-  holder.querySelectorAll("[data-med-filter]").forEach(b => {
-    const on = b.dataset.medFilter === medicalFilter;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-pressed", String(on));
-  });
-  const empty = holder.querySelector(".med-filter-empty");
-  if (empty) {
-    empty.textContent = { injured: "Aucun joueur blessé.", risk: "Aucun joueur à risque élevé.", history: "Aucune blessure cette saison." }[medicalFilter] || "";
-    empty.classList.toggle("hidden", visibleTotal > 0 || medicalFilter === "all");
-  }
-}
-
-document.getElementById("medicalContent").addEventListener("click", (e) => {
-  const f = e.target.closest("[data-med-filter]");
-  if (f) { medicalFilter = f.dataset.medFilter; medicalApplyFilter(); return; }
-  if (e.target.closest("#medicalGoStaff")) TAB_HANDLERS.staff();
-  else if (e.target.closest("#medicalGoSalle")) TAB_HANDLERS.salle();
-});
 
 function renderHumeurSection() {
   const morale = teamA.fanMorale;
