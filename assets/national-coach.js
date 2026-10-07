@@ -18,7 +18,10 @@
   var DAY = 24 * 3600 * 1000;
   var POS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
   var WATCH_LABELS = { denyPostUp: "Empêcher le post-up", denyDrive: "Coller sur les pénétrations", harassOutsideShot: "Harceler le tir extérieur", reboundPriority: "Priorité au rebond", denyEntry: "Couper du ballon" };
-  var ROLE_LABEL = { coach: "Sélectionneur", assistant: "Adjoint", scout: "Recruteur" };
+  // Rôles (refonte du 2026-10-07, mêmes clés que server/nationalCoach.js :
+  // PERMS / APPOINT) : staff NT (sélectionneur, adjoints, personnes
+  // aidantes) et DTN (recruteurs, scouts).
+  var ROLE_LABEL = { coach: "Sélectionneur", assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" };
   var ui = { teamId: null, view: null, tab: "joueurs", pos: "", filter: "", shown: 50, gid: null, error: "", busy: false, replaceOut: null, tq: null, tqMatch: null,
     sort: { key: "gen", dir: -1 }, nav: "dashboard", opp: null, frOpp: "", frAt: "", frVenue: "home", staffQ: "" };
 
@@ -261,8 +264,9 @@
     var list = ((v.pool && v.pool.players) || []).filter(function (x) {
       return (!ui.pos || x.position === ui.pos) && (ui.filter !== "dispo" || !x.injuryUntil) && (ui.filter !== "u23" || x.age <= 23) && (ui.filter !== "suivis" || inList(v.watchlist, x));
     });
-    return '<div class="nc-card">' + filtersHtml(v) + playersTableHtml(list, v, { limit: true }) +
-      '<p class="nc-small">Caractéristiques, état physique et stats : visibles du staff de la sélection seulement, jamais le salaire, le contrat ni le potentiel. Stats de la saison en club, mises à jour toutes les heures.</p></div>';
+    var empty = can("assigned") ? "Aucun joueur ne vous est attribué pour l'instant : le sélectionneur, un adjoint ou un recruteur vous en confiera." : "Aucun joueur.";
+    return '<div class="nc-card">' + filtersHtml(v) + playersTableHtml(list, v, { limit: true, empty: empty }) +
+      '<p class="nc-small">' + (can("assigned") ? "Vous ne voyez que les joueurs qui vous sont attribués." : "Caractéristiques et état physique : visibles du staff de la sélection seulement, jamais le salaire, le contrat ni le potentiel.") + "</p></div>";
   }
   function refsToPlayers(list) {
     var pm = poolByKey();
@@ -485,7 +489,7 @@
   function tactiqueHtml(v) {
     var k = tqKey(v), e = k === TQ_DEFAULT ? null : tqEntry(v, k), locked = tqLocked(e);
     var tq = ui.tq && ui.tq.key === k ? ui.tq : null;
-    var st = tqStatus(tq, e);
+    var st = tqStatus(tq, e), readOnly = !can("tactics");
     var h = '<div id="ncOrdres"><div class="ordres-actionbar"><div class="oab-left"><h1 class="oab-title">' + esc(t("Tactique")) + '</h1><nav class="oab-tabs" aria-label="' + esc(t("Sections des ordres")) + '">' +
       TQ_TABS.map(function (x) { return '<button type="button" class="oab-tab" data-nc-jump="' + x[0] + '">' + esc(t(x[1])) + "</button>"; }).join("") + "</nav></div>";
     var pill = "";
@@ -509,8 +513,10 @@
         return '<option value="' + esc(x.id) + '"' + (String(x.id) === k ? " selected" : "") + ">" + esc(tqMatchLabel(x)) + (tqLocked(x) ? " (" + esc(t("verrouillé")) + ")" : x.hasPlan ? " (" + esc(t("préparé")) + ") ●" : "") + "</option>";
       }).join("") + '<option value="' + TQ_DEFAULT + '"' + (k === TQ_DEFAULT ? " selected" : "") + ">" + esc(t("Tactique par défaut")) + "</option></select></div></div></section>";
     if (locked) h += '<p class="ordres-lock-note">' + esc(t("Compositions verrouillées : le coup d'envoi est imminent.")) + "</p>";
+    else if (readOnly) h += '<p class="ordres-lock-note">' + esc(t("Consultation : le sélectionneur et ses adjoints décident des ordres.")) + "</p>";
     var roster = e ? e.players : v.tacticsPlayers;
     h += roster.length ? '<div class="prep-grid" id="ncTqGrid"></div>' : '<div class="nc-card"><p class="nc-club">' + esc(t("Aucun joueur : convoquez (ou présélectionnez) des joueurs d'abord.")) + "</p></div>";
+    if (readOnly) return h + "</div>";
     h += '<div class="ordres-savebar' + (st[0] === "dirty" ? " is-dirty" : "") + '"><div class="osb-left"><span class="ordres-status ' + st[0] + '" id="ncTqStatus" role="status"><span class="ordres-status-dot" aria-hidden="true"></span><span>' + esc(t(st[1])) + "</span></span>" +
       '<p class="ordres-validate-feedback ok" role="status">' + esc(tq && tq.feedback ? t(tq.feedback) : "") + "</p></div>" +
       '<div class="osb-actions"><button type="button" class="osb-cancel" data-nc-tq-revert="1"' + (!tq || !tq.dirty || locked ? " disabled" : "") + ">" + esc(t("Annuler")) + "</button>" +
@@ -525,7 +531,7 @@
     var k = tqKey(v), e = k === TQ_DEFAULT ? null : tqEntry(v, k);
     var tq = ui.tq && ui.tq.key === k ? ui.tq : tqBuild(v, k);
     grid.appendChild(window.buildTeamPanel(tq.proxy, "b", {
-      editable: !tqLocked(e), opponent: tqOpponent(e), roster: tqRosterCtx(tq),
+      editable: !tqLocked(e) && can("tactics"), opponent: tqOpponent(e), roster: tqRosterCtx(tq),
       onDirty: function () { tq.dirty = JSON.stringify(tqSnap(tq.proxy)) !== tq.saved; tq.feedback = ""; tqPaintStatus(); },
     }));
     tqPaintTabs();
@@ -658,37 +664,71 @@
     return h + "</div>";
   }
 
-  // --- Staff (2 adjoints, 2 recruteurs, de vrais managers) -------------------
+  // --- Staff (refonte du 2026-10-07) ---------------------------------------
+  // Une seule page, adaptée au rôle : chacun ne voit que les sections et les
+  // actions qu'il peut exercer (v.appoint = rôles qu'il nomme / retire,
+  // perm « assign » = affecter des joueurs aux scouts). Mêmes règles côté
+  // serveur (nationalCoach.PERMS / APPOINT).
+  var STAFF_GROUPS = [
+    ["Staff NT", [["assistant", "Adjoints", "Mêmes accès que le sélectionneur (joueurs, convocations, ordres, amicaux, staff), sauf nommer ou retirer un adjoint."],
+      ["helper", "Personnes aidantes", "Aident aux décisions de roster et d'ordres : consultent les joueurs, la présélection, les convoqués et la tactique, et suivent des joueurs."]]],
+    ["DTN", [["recruiter", "Recruteurs", "Gèrent les joueurs suivis, nomment les scouts et leur attribuent des joueurs."],
+      ["scout", "Scouts", "Ne voient que les joueurs qui leur sont attribués : ils les suivent et les analysent."]]],
+  ];
+  var INVITE_LABEL = { assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" };
+  function assignHtml(v, s) {
+    var mine = (v.assign && v.assign[s.mid]) || [], max = v.assignMax || 15;
+    var h = '<div class="nc-assign"><div class="nc-small" style="margin:6px 0">Joueurs attribués · ' + mine.length + " / " + max + "</div>";
+    h += mine.length ? '<div class="nc-chips">' + mine.map(function (r) {
+      return '<span class="nc-chip">' + esc(r.n) + (can("assign") ? '<button type="button" class="nc-chip-x" data-nc-assign="' + esc(s.mid) + '" data-nc-on="0" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '" aria-label="Retirer">×</button>' : "") + "</span>";
+    }).join("") + "</div>" : '<p class="nc-club" style="margin:0">Aucun joueur attribué.</p>';
+    if (can("assign") && s.status === "active" && mine.length < max) {
+      var taken = {}; mine.forEach(function (r) { taken[key(r)] = 1; });
+      var opts = ((v.pool && v.pool.players) || []).filter(function (x) { return !taken[key(x)]; }).slice()
+        .sort(function (a, b) { return (inList(v.watchlist, b) - inList(v.watchlist, a)) || (genOf(b) - genOf(a)); });
+      h += '<div class="nc-row" style="margin-top:8px"><select class="nc-in" id="ncAssignSel-' + esc(s.mid) + '" style="max-width:320px">' +
+        opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + genOf(x)) + "</option>"; }).join("") +
+        '</select><button type="button" class="nc-btn2" data-nc-assign-add="' + esc(s.mid) + '">Attribuer</button></div>';
+    }
+    return h + "</div>";
+  }
   function staffHtml(v) {
-    var staff = v.staff || [], max = v.staffMax || { assistant: 2, scout: 2 };
-    var desc = { assistant: "Joueurs, présélection et convoqués en consultation, tactique, préparation des matchs, analyse des adversaires. Aucun pouvoir d'administration.", scout: "Joueurs (suivi) et analyse des adversaires seulement." };
-    var h = '<div class="nc-two">';
-    ["assistant", "scout"].forEach(function (role) {
-      var list = staff.filter(function (s) { return s.role === role; });
-      h += '<div class="nc-card"><div class="nc-sec"><span>' + (role === "assistant" ? "Adjoints" : "Recruteurs") + "</span><span>" + list.length + " / " + max[role] + "</span></div>" +
-        '<p class="nc-small" style="margin:0 0 10px">' + esc(desc[role]) + "</p>" +
-        (list.length ? list.map(function (s) {
-          return '<div class="nc-slot"><span class="nc-grow"><b>' + esc(s.pseudo || s.clubName) + '</b> <span class="nc-club">· ' + esc(s.clubName || "") + "</span></span>" +
-            (s.status === "active" ? '<span class="nc-tag ok">En poste</span>' : '<span class="nc-tag mid">Invitation envoyée</span>') +
-            (can("staff") ? '<button type="button" class="nc-btn2" data-nc-staff-remove="' + esc(s.mid) + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>";
-        }).join("") : '<p class="nc-club">Personne pour l\'instant.</p>') + "</div>";
+    var staff = v.staff || [], max = v.staffMax || {}, appoint = v.appoint || [];
+    var h = "";
+    STAFF_GROUPS.forEach(function (gr) {
+      // Un recruteur ne voit que la DTN ; le staff NT voit les deux.
+      var roles = gr[1].filter(function (r) { return gr[0] === "DTN" || appoint.indexOf(r[0]) >= 0; });
+      if (!roles.length) return;
+      h += '<h3 class="nc-sec" style="margin:18px 0 8px"><span>' + esc(gr[0]) + "</span></h3><div class=\"nc-two\">";
+      roles.forEach(function (r) {
+        var role = r[0], list = staff.filter(function (s) { return s.role === role; });
+        h += '<div class="nc-card"><div class="nc-sec"><span>' + esc(r[1]) + "</span><span>" + list.length + " / " + (max[role] || 0) + "</span></div>" +
+          '<p class="nc-small" style="margin:0 0 10px">' + esc(r[2]) + "</p>" +
+          (list.length ? list.map(function (s) {
+            return '<div class="nc-slot-wrap"><div class="nc-slot"><span class="nc-grow"><b>' + esc(s.pseudo || s.clubName) + '</b> <span class="nc-club">· ' + esc(s.clubName || "") + (s.byName ? " · nommé par " + esc(s.byName) : "") + "</span></span>" +
+              (s.status === "active" ? '<span class="nc-tag ok">En poste</span>' : '<span class="nc-tag mid">Invitation envoyée</span>') +
+              (appoint.indexOf(role) >= 0 ? '<button type="button" class="nc-btn2" data-nc-staff-remove="' + esc(s.mid) + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>" +
+              (role === "scout" && (can("assign") || s.status === "active") ? assignHtml(v, s) : "") + "</div>";
+          }).join("") : '<p class="nc-club">Personne pour l\'instant.</p>') + "</div>";
+      });
+      h += "</div>";
     });
-    h += "</div>";
-    if (!can("staff")) return h;
+    if (!appoint.length) return h;
     var q = ui.staffQ.trim().toLowerCase();
     var mgrs = (v.managers || []).filter(function (m) { return !q || String(m.pseudo || "").toLowerCase().indexOf(q) >= 0 || String(m.clubName || "").toLowerCase().indexOf(q) >= 0; });
     mgrs.sort(function (a, b) { return (a.busy - b.busy) || String(a.pseudo || a.clubName).localeCompare(String(b.pseudo || b.clubName), "fr"); });
     var taken = {}; staff.forEach(function (s) { taken[s.mid] = 1; });
     var count = function (role) { return staff.filter(function (s) { return s.role === role; }).length; };
-    h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>Inviter un manager</span><span>' + (v.managers || []).length + " managers</span></div>" +
+    h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>Nommer un manager</span><span>' + (v.managers || []).length + " managers</span></div>" +
       '<input type="search" class="nc-in" data-nc-staff-q="1" placeholder="Rechercher un manager ou un club" value="' + esc(ui.staffQ) + '" style="width:100%;max-width:420px;margin-bottom:10px">' +
       (mgrs.length ? mgrs.slice(0, 25).map(function (m) {
         var off = m.busy || taken[m.mid];
-        return '<div class="nc-fr">' + flag(m.country) + '<div class="nc-grow"><b>' + esc(m.pseudo || m.clubName) + '</b><br><span class="nc-club">' + esc(m.clubName || "") + (m.division ? " · " + esc(m.division) : "") + (m.busy ? " · déjà sélectionneur ou dans un staff" : taken[m.mid] ? " · déjà dans votre staff" : "") + "</span></div>" +
-          '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="assistant"' + (off || count("assistant") >= max.assistant ? " disabled" : "") + ">Inviter comme adjoint</button>" +
-          '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="scout"' + (off || count("scout") >= max.scout ? " disabled" : "") + ">Inviter comme recruteur</button></div>";
+        return '<div class="nc-fr">' + flag(m.country) + '<div class="nc-grow"><b>' + esc(m.pseudo || m.clubName) + '</b><br><span class="nc-club">' + esc(m.clubName || "") + (m.division ? " · " + esc(m.division) : "") + (m.busy ? " · déjà sélectionneur ou dans un staff" : taken[m.mid] ? " · déjà dans le staff" : "") + "</span></div>" +
+          appoint.map(function (role) {
+            return '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="' + role + '"' + (off || count(role) >= (max[role] || 0) ? " disabled" : "") + ">" + esc(INVITE_LABEL[role]) + "</button>";
+          }).join("") + "</div>";
       }).join("") : '<p class="nc-club">Aucun manager trouvé.</p>') +
-      '<p class="nc-small">L\'invité reçoit une notification et répond depuis la page Sélections. Le staff prend fin avec votre mandat.</p></div>';
+      '<p class="nc-small">Le manager nommé reçoit une notification et accepte depuis la page Sélections. Le staff prend fin avec le mandat du sélectionneur.</p></div>';
     return h;
   }
 
@@ -821,14 +861,14 @@
   var mine = [];
   // [rubrique, libellé, droit requis]
   var NAV = [
-    ["dashboard", "Tableau de bord", "view"],
+    ["dashboard", "Tableau de bord", "dashboard"],
     ["#", "Joueurs"],
     ["joueurs", "Joueurs sélectionnables", "view"], ["preselection", "Présélection", "watch"], ["convocations", "Convoqués", "convocView"],
     ["#", "Sélection"],
-    ["tactique", "Tactique", "tactics"], ["vestiaire", "Vestiaire", "tactics"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
+    ["tactique", "Tactique", "tacticsView"], ["vestiaire", "Vestiaire", "tacticsView"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
     ["amicaux", "Matchs amicaux", "friendlies"], ["analyse", "Analyse des adversaires", "analysis"], ["stats", "Statistiques", "stats"],
     ["#", "Suivi"],
-    ["notifications", "Notifications", "feed"], ["staff", "Staff", "staff"], ["mandat", "Mandat", "mandate"], ["palmares", "Palmarès", "calendar"],
+    ["notifications", "Notifications", "feed"], ["staff", "Staff", "staffView"], ["mandat", "Mandat", "mandate"], ["palmares", "Palmarès", "calendar"],
   ];
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
@@ -856,6 +896,7 @@
     ".nc-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--line)}.nc-feed-item.unread .nc-feed-dot{background:var(--amber)}",
     ".nc-mode-title{font-size:24px;font-weight:900;margin:4px 0 14px}",
     "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}#ncModeBtn{padding:6px 11px;font-size:12px}}",
+    ".nc-chips{display:flex;flex-wrap:wrap;gap:6px}.nc-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:99px;border:1px solid var(--line);font-size:12.5px;font-weight:700}.nc-chip-x{border:0;background:none;color:var(--ink-dim);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}.nc-slot-wrap{border-top:1px solid var(--line);padding:6px 0}.nc-slot-wrap:first-of-type{border-top:0}.nc-assign{padding:2px 0 6px 2px}",
     ".nc-report{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-report{grid-template-columns:repeat(2,minmax(0,1fr))}}",
   ].join("\n");
   function ensureModeCss() {
@@ -912,7 +953,7 @@
       var badge = n[0] === "notifications" && v && v.unread ? '<span class="nc-badge">' + v.unread + "</span>" :
         n[0] === "convocations" && curGathering() ? '<span class="nc-club">' + curGathering().players.length + "</span>" :
         n[0] === "amicaux" && v && v.friendlies && v.friendlies.received.length ? '<span class="nc-badge">' + v.friendlies.received.length + "</span>" : "";
-      return '<button type="button" class="nc-side-link' + (ui.nav === n[0] ? " on" : "") + (n[0] === "competition" && inFinals ? " hot" : "") + '" data-nc-nav="' + n[0] + '"><span>' + esc(n[1]) + (n[0] === "competition" && inFinals ? " · en cours" : "") + "</span>" + badge + "</button>";
+      return '<button type="button" class="nc-side-link' + (ui.nav === n[0] ? " on" : "") + (n[0] === "competition" && inFinals ? " hot" : "") + '" data-nc-nav="' + n[0] + '"><span>' + esc(navLabel(n)) + (n[0] === "competition" && inFinals ? " · en cours" : "") + "</span>" + badge + "</button>";
     }).join("") + '<button type="button" class="nc-side-back" data-nc-exit="1">' + icon("back") + " Retour au mode Club</button>";
     var left = document.querySelector(".topbar-left");
     if (left && !document.getElementById("ncTopTitle")) { var tt = document.createElement("div"); tt.id = "ncTopTitle"; left.appendChild(tt); }
@@ -964,8 +1005,17 @@
     if (typeof h === "function") h();
     setTimeout(syncDashButton, 0);
   }
+  // Libellés selon le rôle : un scout ne voit que ses joueurs attribués,
+  // la DTN n'a que ses joueurs suivis (pas de présélection).
+  function navLabel(n) {
+    if (n[0] === "joueurs" && can("assigned")) return "Mes joueurs attribués";
+    if (n[0] === "preselection" && !can("preselectView")) return "Joueurs suivis";
+    return n[1];
+  }
+  function firstNav() { var n = NAV.filter(function (x) { return x[0] !== "#" && navAllowed(x); })[0]; return n ? n[0] : "dashboard"; }
   function titleHtml(nav) {
-    var lab = (NAV.filter(function (n) { return n[0] === nav; })[0] || [0, ""])[1];
+    var cur = NAV.filter(function (n) { return n[0] === nav; })[0];
+    var lab = cur ? navLabel(cur) : "";
     return '<h2 class="nc-mode-title">' + esc(lab) + "</h2>";
   }
   function modeHtml() {
@@ -973,7 +1023,7 @@
     if (!v) return '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de votre sélection…") + "</p>";
     var nav = ui.nav || "dashboard";
     var cur = NAV.filter(function (n) { return n[0] === nav; })[0];
-    if (cur && !navAllowed(cur)) nav = ui.nav = "dashboard";
+    if (!cur || !navAllowed(cur)) nav = ui.nav = firstNav();
     var err = ui.error ? '<p class="nc-err">' + esc(ui.error) + "</p>" : "";
     var poolMissing = '<div class="nc-card"><p class="nc-club">Vivier en cours de préparation (calculé au prochain passage du monde, quelques minutes au plus).</p></div>';
     if (nav === "joueurs") return titleHtml(nav) + err + (v.pool ? joueursHtml(v) : poolMissing);
@@ -1232,6 +1282,14 @@
       return;
     }
     // Staff.
+    if (d.ncAssign) { post("/api/national/coach/staff/assign", { mid: d.ncAssign, on: d.ncOn !== "0", player: { p: Number(d.ncP), n: d.ncN } }, d.ncOn === "0" ? "Joueur retiré du scout." : "Joueur attribué."); return; }
+    if (d.ncAssignAdd) {
+      var sel = document.getElementById("ncAssignSel-" + d.ncAssignAdd);
+      if (!sel || !sel.value) return;
+      var pv = sel.value.split("|");
+      post("/api/national/coach/staff/assign", { mid: d.ncAssignAdd, on: true, player: { p: Number(pv[0]), n: pv.slice(1).join("|") } }, "Joueur attribué.");
+      return;
+    }
     if (d.ncStaffInvite) { post("/api/national/coach/staff/invite", { mid: d.ncStaffInvite, role: d.ncRole }, "Invitation envoyée."); return; }
     if (d.ncStaffRemove) {
       if (!window.confirm(t("Retirer ce membre du staff ?"))) return;

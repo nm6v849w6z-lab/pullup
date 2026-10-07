@@ -403,7 +403,7 @@ function step(store, leagues, world, now) {
   if (seasonStart != null && now < seasonStart) due(seasonStart);
   // Groupes (intérim) : recalculés au plus toutes les heures.
   if (refreshSquads(store, leagues, world, now)) changed = true;
-  // Annuaire des managers (staff des sélections : adjoints, recruteurs),
+  // Annuaire des managers (staff des sélections : staff NT et DTN),
   // recalculé au plus toutes les heures.
   if (!store.managerIndexAt || now - store.managerIndexAt >= cfg.squadRefreshMs) {
     const list = [];

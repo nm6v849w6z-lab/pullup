@@ -194,13 +194,19 @@
       h += "</div>";
     }
     // Staff des sélections (retour utilisateur 2026-10-06) : invitations à
-    // accepter ou refuser, rôle d'adjoint / recruteur en cours.
-    var meInfo = ov.me || {}, roleLab = { assistant: "Adjoint", scout: "Recruteur" };
+    // accepter ou refuser, rôle en cours (staff NT ou DTN).
+    var meInfo = ov.me || {}, roleLab = { assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" };
+    var roleDesc = {
+      assistant: "Adjoint : mêmes accès que le sélectionneur, sauf la nomination des adjoints.",
+      helper: "Personne aidante : aide aux décisions de roster et d'ordres (consultation).",
+      recruiter: "Recruteur (DTN) : joueurs suivis, nomination des scouts et attribution de leurs joueurs.",
+      scout: "Scout (DTN) : suit et analyse les joueurs qui lui sont attribués.",
+    };
     if ((meInfo.staffInvites || []).length || (meInfo.staffRoles || []).length) {
       h += '<div class="nt-h">Staff des sélections</div><div class="nt-grid">';
       (meInfo.staffInvites || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>Invitation · " + esc(roleLab[s.role] || s.role) + " de " + esc(s.label) + "</b></div>" +
-          '<p class="nt-small">Proposée par ' + esc(s.coach) + ". " + (s.role === "assistant" ? "Adjoint : joueurs, présélection en consultation, tactique et préparation des matchs." : "Recruteur : joueurs, joueurs suivis et analyse des adversaires.") + "</p>" +
+          '<p class="nt-small">Proposée par ' + esc(s.by || s.coach) + ". " + esc(roleDesc[s.role] || "") + "</p>" +
           '<div class="nt-row"><button type="button" class="nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '">Accepter</button><button type="button" class="nt-btn2" data-nt-staff-decline="' + esc(s.teamId) + '">Refuser</button></div></div>';
       });
       (meInfo.staffRoles || []).forEach(function (s) {

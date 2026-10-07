@@ -118,15 +118,30 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   }
   doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
   check2(!doc.getElementById("selectionsSection").classList.contains("hidden") && doc.getElementById("playerDetailSection").classList.contains("hidden") && doc.querySelector(".nc-side-link.on[data-nc-nav=tactique]"), "depuis la fiche joueur : clic dans le menu → rubrique affichée");
-  // Rôle recruteur : menu filtré.
-  st.view.perms = ["view", "watch", "analysis"]; st.view.role = "scout"; st.nav = "dashboard";
-  doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
-  const side2 = doc.getElementById("ncSidebar").textContent;
-  assert(/Joueurs sélectionnables/.test(side2) && /Analyse des adversaires/.test(side2) && !/Tactique|Matchs amicaux|Staff|Convoqués|Mandat/.test(side2), "recruteur : joueurs et analyse seulement");
-  st.view.perms = ["view", "watch", "preselectView", "convocView", "tactics", "feed", "analysis", "calendar"]; st.view.role = "assistant";
-  doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
-  const side3 = doc.getElementById("ncSidebar").textContent;
-  assert(/Tactique/.test(side3) && /Convoqués/.test(side3) && !/Matchs amicaux|Staff|Mandat|Statistiques/.test(side3), "adjoint : pas d'administration (amicaux, staff, mandat)");
+  // Menus selon le rôle (refonte du 2026-10-07 : mêmes droits que le
+  // serveur, nationalCoach.PERMS / APPOINT).
+  const { PERMS, APPOINT } = require("./server/nationalCoach.js");
+  const asRole = (role) => {
+    st.view.perms = PERMS[role]; st.view.role = role; st.view.appoint = APPOINT[role] || []; st.nav = "dashboard";
+    doc.querySelector("#ncSidebar [data-nc-nav]").click();
+    return doc.getElementById("ncSidebar").textContent;
+  };
+  const sideRec = asRole("recruiter");
+  assert(/Joueurs sélectionnables/.test(sideRec) && /Joueurs suivis/.test(sideRec) && /Staff/.test(sideRec) && !/Tableau de bord|Tactique|Matchs amicaux|Convoqués|Mandat|Analyse des adversaires/.test(sideRec), "recruteur (DTN) : joueurs, joueurs suivis, staff (scouts)");
+  doc.querySelector('#ncSidebar [data-nc-nav="staff"]').click();
+  assert(/DTN/.test(content().textContent) && !/Staff NT|Adjoints|Personnes aidantes/.test(content().textContent) && [...content().querySelectorAll("[data-nc-staff-invite]")].every(b => b.dataset.ncRole === "scout"), "recruteur : page Staff limitée à la DTN, ne nomme que des scouts");
+  const sideScout = asRole("scout");
+  assert(/Mes joueurs attribués/.test(sideScout) && !/Tableau de bord|Joueurs sélectionnables|Tactique|Staff|Convoqués/.test(sideScout), "scout : uniquement ses joueurs attribués");
+  const sideHelp = asRole("helper");
+  assert(/Tactique/.test(sideHelp) && /Convoqués/.test(sideHelp) && !/Matchs amicaux|Staff|Mandat|Statistiques/.test(sideHelp), "personne aidante : roster et ordres en consultation, pas d'administration");
+  doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
+  await new Promise(r => setTimeout(r, 200));
+  assert(!content().querySelector("[data-nc-tq-save]") && /Consultation/.test(content().textContent), "personne aidante : tactique en lecture seule");
+  const sideAss = asRole("assistant");
+  assert(["Tactique", "Convoqués", "Matchs amicaux", "Staff", "Mandat", "Statistiques"].every(x => sideAss.includes(x)), "adjoint : mêmes rubriques que le sélectionneur");
+  doc.querySelector('#ncSidebar [data-nc-nav="staff"]').click();
+  assert(/Staff NT/.test(content().textContent) && /DTN/.test(content().textContent) && ![...content().querySelectorAll("[data-nc-staff-invite]")].some(b => b.dataset.ncRole === "assistant"), "adjoint : Staff complet, mais ne nomme pas d'adjoint");
+  asRole("coach");
   assert(win.localStorage.getItem("hm-nat-mode") === "fr-A", "mode mémorisé pour le prochain chargement");
   doc.querySelector("#ncSidebar [data-nc-exit]").click();
   await flush(dom);

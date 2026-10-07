@@ -2871,7 +2871,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         // de bascule dans la barre du haut), sans le reste de la page.
         if (req.method === "GET" && route.pathname === "/api/national/me") {
           const mine = me ? NationalTeams.mandatesOfKey(natStore, me.key).map(m => ({ teamId: m.teamId, label: NationalTeams.teamLabel(m.teamId), country: natStore.teams[m.teamId].country, cat: natStore.teams[m.teamId].cat, fromSeason: m.fromSeason, toSeason: m.toSeason, role: "coach", unread: Math.max(0, (m.feedSeq || 0) - (m.feedSeenId || 0)) })) : [];
-          // Staff (adjoint, recruteur) : accès au mode Sélectionneur, menu
+          // Staff (staff NT et DTN) : accès au mode Sélectionneur, menu
           // filtré selon le rôle ; invitations en attente.
           const staff = me ? require("./nationalCoach.js").staffOf(natStore, me.key) : { staffRoles: [], staffInvites: [] };
           sendJson(res, 200, { ok: true, mandates: mine, staffRoles: staff.staffRoles, staffInvites: staff.staffInvites });
@@ -2963,8 +2963,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           const coachCtx = { pool: await NationalCoach.loadPool(teamId, multiSavePath), season, calendarStartAt: ctx.league.calendarStartAt, opp: req.method === "GET" ? route.searchParams.get("opp") : (body && body.opp) || null };
           let outC = null;
           if (req.method === "POST") {
-            // Droits vérifiés dans chaque action (nationalCoach.PERMS) :
-            // sélectionneur, adjoint, recruteur.
+            // Droits vérifiés dans chaque action (nationalCoach.PERMS et
+            // APPOINT) : staff NT (sélectionneur, adjoints, personnes
+            // aidantes) et DTN (recruteurs, scouts).
             const NationalFriendlies = require("./nationalFriendlies.js");
             const COACH_ACTIONS = {
               "/api/national/coach/list": NationalCoach.setListMember,
@@ -2972,12 +2973,14 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
               "/api/national/coach/replace": NationalCoach.replaceConvoked,
               "/api/national/coach/tactics": NationalCoach.setTactics,
               "/api/national/coach/seen": NationalCoach.markSeen,
-              // Staff : invitation (par mid de l'annuaire), réponse de
-              // l'invité, retrait (par le sélectionneur ou départ volontaire).
+              // Staff : nomination (par mid de l'annuaire, selon APPOINT),
+              // réponse de l'invité, retrait (même règle) ou départ
+              // volontaire, joueurs attribués aux scouts.
               "/api/national/coach/staff/invite": NationalCoach.staffInvite,
               "/api/national/coach/staff/respond": NationalCoach.staffRespond,
               "/api/national/coach/staff/remove": NationalCoach.staffRemove,
-              // Matchs amicaux internationaux (sélectionneur seulement).
+              "/api/national/coach/staff/assign": NationalCoach.staffAssign,
+              // Matchs amicaux internationaux (sélectionneur et adjoints).
               "/api/national/coach/friendly/request": NationalFriendlies.request,
               "/api/national/coach/friendly/respond": NationalFriendlies.respond,
               "/api/national/coach/friendly/cancel": NationalFriendlies.cancel,

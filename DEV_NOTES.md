@@ -734,6 +734,23 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Staff des sélections : rôles et droits (refonte du 2026-10-07)** : UNE
+  seule table, `server/nationalCoach.js` : `PERMS[rôle]` (droits) et
+  `APPOINT[rôle]` (rôles qu'il nomme / retire). Staff NT : `coach`
+  (sélectionneur), `assistant` (adjoint, `PERMS` identiques au coach),
+  `helper` (personne aidante : consultation roster / présélection /
+  convoqués / tactique via `tacticsView`, suit des joueurs). DTN :
+  `recruiter` (joueurs suivis, `assign`, nomme des scouts), `scout`
+  (`assigned` : `coachView` ne lui envoie QUE ses joueurs, `m.assign[mid]`,
+  et `setListMember` refuse les autres). Nominations : adjoint ← coach ;
+  aidant, recruteur ← coach, adjoint ; scout ← coach, adjoint, recruteur.
+  Retrait = même règle, départ volontaire toujours possible. Pas de rôle
+  « Entraîneur ». Ancien modèle : `scout` = recruteur, migré par
+  `migrateStaff` (`m.staffV = 2`), appelé par `accessOf` / `staffOf`.
+  Client (`assets/national-coach.js`) : menu filtré par `v.perms`, page
+  Staff unique filtrée par `v.appoint` / perm `assign`. Test :
+  `server/national_staff_test.js`.
+
 - **Analyse d'équipe (Scouting Pro, sa propre équipe en Premium) — mise en
   page dense (2026-10-05)** : seuils en requêtes de CONTENEUR sur
   `#scoutingProPanel` (`container-name:sp2`). Plan de match en rangées de

@@ -95,7 +95,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   const bad = await post("/api/national/coach/tactics", { matchId: "inconnu", orders: md });
   assert(!bad.ok, "serveur : match inconnu refusé");
   // Sans le droit « tactics » (recruteur) : pas de bouton d'ordres.
-  st.view.perms = ["view", "watch", "analysis"];
+  st.view.perms = require("./server/nationalCoach.js").PERMS.recruiter;
   doc.querySelector('#ncSidebar [data-nc-nav="dashboard"]').click();
   await flush(dom);
   assert(!topBtn(), "sans le droit « tactics » : pas de bouton d'ordres");

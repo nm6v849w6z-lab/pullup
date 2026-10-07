@@ -4,9 +4,9 @@
 // sélectionneur consulte les demandes reçues, envoie une demande à une
 // autre sélection (même catégorie), choisit une date compatible et le
 // terrain (domicile / extérieur) ; la sélection invitée accepte ou refuse ;
-// une demande peut être annulée. Réservé au sélectionneur (droit
-// « friendlies », voir nationalCoach.PERMS) : jamais aux adjoints ni aux
-// recruteurs.
+// une demande peut être annulée. Réservé au sélectionneur et à ses adjoints
+// (droit « friendlies », voir nationalCoach.PERMS) : jamais aux personnes
+// aidantes ni à la DTN.
 //
 // Calendrier (les matchs de club ne bougent JAMAIS) : un amical se joue
 // UNIQUEMENT pendant une fenêtre internationale (retour utilisateur
@@ -117,7 +117,7 @@ function feedTo(store, teamId, entry) {
 // --- Actions du sélectionneur (routes) -----------------------------------
 function request(store, me, body, now, ctx) {
   const m = NC().coachMandate(store, me, body && body.teamId, "friendlies");
-  if (!m) return fail("Réservé au sélectionneur de cette sélection.", 403);
+  if (!m) return fail("Réservé au sélectionneur et à ses adjoints.", 403);
   const cfg = NT().configOf(store);
   if (!cfg.matchesLive) return fail("Les matchs internationaux ne sont pas encore en service.");
   const team = store.teams[body.teamId];
@@ -153,7 +153,7 @@ function respond(store, me, body, now, ctx) {
   const f = listOf(store).find(x => x.id === (body && body.id));
   if (!f) return fail("Demande introuvable.", 404);
   const m = NC().coachMandate(store, me, f.to, "friendlies");
-  if (!m) return fail("Réservé au sélectionneur de la sélection invitée.", 403);
+  if (!m) return fail("Réservé au sélectionneur et aux adjoints de la sélection invitée.", 403);
   if (f.status !== "pending") return fail("Cette demande n'est plus en attente.");
   if (!body.accept) {
     f.status = "refused"; f.respondedAt = now;
