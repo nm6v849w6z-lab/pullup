@@ -43,6 +43,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   // gauche), recherche du club, prochain adversaire et type de match.
   assert(!doc.getElementById("ncModeBtn") && /Retour au mode Club/.test(doc.getElementById("ncSidebar").textContent), "barre du haut : plus de « Retour au mode Club » (il reste dans le menu de gauche)");
   assert(doc.getElementById("topbarSearchInput") && win.getComputedStyle(doc.getElementById("topbarSearchWrap")).display !== "none", "barre du haut : recherche présente");
+  assert(win.getComputedStyle(doc.getElementById("topbarOnline")).display !== "none", "barre du haut : compteur de managers en ligne, comme en Mode Club");
   {
     const v = win.HM_NATIONAL_COACH.state.view;
     const pl = v.pool && v.pool.players[0];

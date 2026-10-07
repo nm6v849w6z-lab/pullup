@@ -873,7 +873,7 @@
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
     "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
-    "body.nc-mode .topbar-right > :not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#topbarOnline):not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
     "body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
     "body.nc-mode #selectionsSection .page-title{display:none}",
