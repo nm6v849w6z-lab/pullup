@@ -686,8 +686,10 @@
       var taken = {}; mine.forEach(function (r) { taken[key(r)] = 1; });
       var opts = ((v.pool && v.pool.players) || []).filter(function (x) { return !taken[key(x)]; }).slice()
         .sort(function (a, b) { return (inList(v.watchlist, b) - inList(v.watchlist, a)) || (genOf(b) - genOf(a)); });
-      h += '<div class="nc-row" style="margin-top:8px"><select class="nc-in" id="ncAssignSel-' + esc(s.mid) + '" style="max-width:320px">' +
-        opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + genOf(x)) + "</option>"; }).join("") +
+      // Recherche (nom, club, poste) qui filtre la liste en direct.
+      h += '<div class="nc-row" style="margin-top:8px;flex-wrap:wrap;gap:8px"><input type="search" class="nc-in" data-nc-assign-q="' + esc(s.mid) + '" placeholder="Rechercher un joueur, un club, un poste" style="max-width:260px">' +
+        '<select class="nc-in" id="ncAssignSel-' + esc(s.mid) + '" style="max-width:320px">' +
+        opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '" data-q="' + esc((x.name + " " + ((x.club && x.club.name) || "") + " " + (x.position || "")).toLowerCase()) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + genOf(x)) + "</option>"; }).join("") +
         '</select><button type="button" class="nc-btn2" data-nc-assign-add="' + esc(s.mid) + '">Attribuer</button></div>';
     }
     return h + "</div>";
@@ -1172,7 +1174,26 @@
       var p = inList(v.preselection, r);
       out += btn("preselection", p, p ? "Retirer de la présélection" : "Ajouter à la présélection", (v.preselection || []).length >= (lim.preselection || Infinity));
     }
-    if (can("watch")) {
+    // Qui peut attribuer (sélectionneur, adjoints, recruteurs) : « Attribuer
+    // à un scout » à la place de Suivre / Ne plus suivre (demande
+    // utilisateur du 2026-10-07) ; l'attribution présélectionne le joueur.
+    if (can("assign")) {
+      var scouts = (v.staff || []).filter(function (s) { return s.role === "scout" && s.status === "active"; });
+      var owner = scouts.filter(function (s) { return inList((v.assign || {})[s.mid] || [], r); })[0];
+      var attrs = ' data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '"';
+      if (owner) {
+        out += '<div class="nc-small" style="text-align:center">Attribué à <b>' + esc(owner.pseudo || owner.clubName) + "</b></div>" +
+          '<button type="button" class="pdp2-btn" data-nc-pdp-assign="' + esc(owner.mid) + '" data-nc-on="0"' + attrs + ">Retirer l'attribution</button>";
+      } else if (!scouts.length) {
+        out += '<button type="button" class="pdp2-btn pdp2-btn--accent" disabled title="Aucun scout en poste : nommez-en un dans Staff">Attribuer à un scout</button>';
+      } else {
+        out += (scouts.length > 1 ? '<select class="nc-in" data-nc-pdp-scout="1" style="width:100%">' + scouts.map(function (s) {
+          var n = ((v.assign || {})[s.mid] || []).length;
+          return '<option value="' + esc(s.mid) + '"' + (n >= (v.assignMax || 50) ? " disabled" : "") + ">" + esc((s.pseudo || s.clubName) + " · " + n + " / " + (v.assignMax || 50)) + "</option>";
+        }).join("") + "</select>" : "") +
+          '<button type="button" class="pdp2-btn pdp2-btn--accent" data-nc-pdp-assign="' + esc(scouts[0].mid) + '" data-nc-on="1"' + attrs + ">Attribuer à un scout" + (scouts.length === 1 ? " (" + esc(scouts[0].pseudo || scouts[0].clubName) + ")" : "") + "</button>";
+      }
+    } else if (can("watch")) {
       var w = inList(v.watchlist, r);
       out += btn("watchlist", w, w ? "Ne plus suivre" : "Ajouter aux joueurs suivis", (v.watchlist || []).length >= (lim.watchlist || Infinity));
     }
@@ -1188,6 +1209,27 @@
       .then(function (data) {
         if (data.team) ui.view = data;
         toast(d.ncPdpList === "preselection" ? (d.ncOn === "1" ? "Ajouté à la présélection." : "Retiré de la présélection.") : (d.ncOn === "1" ? "Ajouté aux joueurs suivis." : "Retiré des joueurs suivis."));
+      })
+      .catch(function (e) { toast(e.message); })
+      .then(function () {
+        ui.busy = false;
+        if (box && box.isConnected) { var tmp = document.createElement("div"); tmp.innerHTML = pdpActionsHtml(player); box.replaceWith(tmp.firstChild || document.createTextNode("")); }
+      });
+    window.__lastNationalCoach = p;
+    return p;
+  }
+  function onPdpAssignClick(b) {
+    var d = b.dataset, box = b.closest(".nc-pdp-acts");
+    if (ui.busy) return;
+    var sel = box && box.querySelector("[data-nc-pdp-scout]");
+    var mid = d.ncOn === "1" && sel ? sel.value : d.ncPdpAssign;
+    ui.busy = true;
+    b.disabled = true;
+    var player = { id: Number(d.ncP), name: d.ncN };
+    var p = api("/api/national/coach/staff/assign", { teamId: ui.teamId, mid: mid, on: d.ncOn === "1", player: { p: player.id, n: player.name } })
+      .then(function (data) {
+        if (data.team) ui.view = data;
+        toast(d.ncOn === "1" ? "Joueur attribué et présélectionné." : "Attribution retirée.");
       })
       .catch(function (e) { toast(e.message); })
       .then(function () {
@@ -1287,7 +1329,7 @@
       var sel = document.getElementById("ncAssignSel-" + d.ncAssignAdd);
       if (!sel || !sel.value) return;
       var pv = sel.value.split("|");
-      post("/api/national/coach/staff/assign", { mid: d.ncAssignAdd, on: true, player: { p: Number(pv[0]), n: pv.slice(1).join("|") } }, "Joueur attribué.");
+      post("/api/national/coach/staff/assign", { mid: d.ncAssignAdd, on: true, player: { p: Number(pv[0]), n: pv.slice(1).join("|") } }, "Joueur attribué et présélectionné.");
       return;
     }
     if (d.ncStaffInvite) { post("/api/national/coach/staff/invite", { mid: d.ncStaffInvite, role: d.ncRole }, "Invitation envoyée."); return; }
@@ -1321,7 +1363,21 @@
       paint();
     }
   }
+  // Filtre la liste d'attribution d'un scout sans repeindre la page.
+  function filterAssign(input) {
+    var sel = document.getElementById("ncAssignSel-" + input.dataset.ncAssignQ);
+    if (!sel) return;
+    var q = input.value.trim().toLowerCase(), first = null;
+    Array.prototype.forEach.call(sel.options, function (o) {
+      var hit = !q || (o.getAttribute("data-q") || "").indexOf(q) >= 0;
+      o.hidden = !hit; o.disabled = !hit;
+      if (hit && !first) first = o;
+    });
+    if (first && (sel.selectedOptions[0] || {}).hidden !== false) sel.value = first.value;
+    else if (!first) sel.value = "";
+  }
   function onInput(e) {
+    if (ui.mode && e.target.dataset && e.target.dataset.ncAssignQ) { filterAssign(e.target); return; }
     if (!ui.mode || !e.target.dataset || !e.target.dataset.ncStaffQ) return;
     ui.staffQ = e.target.value;
     var pos = e.target.selectionStart;
@@ -1374,6 +1430,8 @@
       if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e);
       var pdpList = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-list]");
       if (pdpList) { e.preventDefault(); e.stopPropagation(); onPdpListClick(pdpList); }
+      var pdpAssign = ui.mode && e.target.closest && e.target.closest("[data-nc-pdp-assign]");
+      if (pdpAssign) { e.preventDefault(); e.stopPropagation(); onPdpAssignClick(pdpAssign); }
     }, true);
     holder.addEventListener("click", onClick);
     holder.addEventListener("change", onChange);

@@ -5,6 +5,14 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "Buscar um jogador, um clube, uma posição",
+  "Attribuer à un scout": "Atribuir a um olheiro",
+  "Retirer l'attribution": "Remover a atribuição",
+  "Attribué à {0}": "Atribuído a {0}",
+  "Attribution retirée.": "Atribuição removida.",
+  "Joueur attribué et présélectionné.": "Jogador atribuído e pré-selecionado.",
+  "Aucun scout en poste : nommez-en un dans Staff": "Nenhum olheiro no cargo: nomeie um em Staff",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "Olheiro",
   "Scouts": "Olheiros",
   "Personne aidante": "Colaborador",

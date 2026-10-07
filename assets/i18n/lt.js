@@ -5,6 +5,14 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "Ieškoti žaidėjo, klubo, pozicijos",
+  "Attribuer à un scout": "Priskirti skautui",
+  "Retirer l'attribution": "Pašalinti priskyrimą",
+  "Attribué à {0}": "Priskirtas: {0}",
+  "Attribution retirée.": "Priskyrimas pašalintas.",
+  "Joueur attribué et présélectionné.": "Žaidėjas priskirtas ir įtrauktas į preliminarų sąrašą.",
+  "Aucun scout en poste : nommez-en un dans Staff": "Nėra skauto: paskirkite jį skiltyje Štabas",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "Skautas",
   "Scouts": "Skautai",
   "Personne aidante": "Pagalbininkas",

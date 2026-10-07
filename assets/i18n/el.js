@@ -5,6 +5,14 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "Αναζήτηση παίκτη, ομάδας, θέσης",
+  "Attribuer à un scout": "Ανάθεση σε σκάουτ",
+  "Retirer l'attribution": "Αφαίρεση ανάθεσης",
+  "Attribué à {0}": "Ανατέθηκε σε {0}",
+  "Attribution retirée.": "Η ανάθεση αφαιρέθηκε.",
+  "Joueur attribué et présélectionné.": "Ο παίκτης ανατέθηκε και μπήκε στην προεπιλογή.",
+  "Aucun scout en poste : nommez-en un dans Staff": "Κανένας σκάουτ: διόρισε έναν στο Επιτελείο",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "Σκάουτ",
   "Scouts": "Σκάουτ",
   "Personne aidante": "Βοηθός",

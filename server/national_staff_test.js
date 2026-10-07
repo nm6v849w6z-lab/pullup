@@ -97,7 +97,9 @@ assert.ok(vr.ok && vr.pool.players.length === pool.players.length && vr.watchlis
 assert.ok(vr.gatherings.length === 0 && vr.tactics === null && vr.preselection.length === 0 && vr.friendlies === null && vr.analysis === null, "recruteur : rien du staff NT");
 assert.ok(vr.staff.length === 5 && vr.appoint.join() === "scout", "recruteur : page Staff, ne nomme que des scouts");
 assert.strictEqual(vr.assignMax, 50, "50 joueurs par scout au maximum");
-assert.ok(C.staffAssign(st, nantes, { teamId: "fr-A", mid: mid(brest), player: refOf(2) }, now, ctx).ok, "recruteur : attribue un joueur à un scout");
+const asg = C.staffAssign(st, nantes, { teamId: "fr-A", mid: mid(brest), player: refOf(2) }, now, ctx);
+assert.ok(asg.ok, "recruteur : attribue un joueur à un scout");
+assert.ok(asg.preselected && M().preselection.some(r => r.p === refOf(2).p), "joueur attribué : présélectionné automatiquement");
 assert.ok(C.staffAssign(st, nantes, { teamId: "fr-A", mid: mid(brest), player: refOf(3) }, now, ctx).ok);
 assert.ok(C.staffAssign(st, nice, { teamId: "fr-A", mid: mid(metz), player: refOf(4) }, now, ctx).ok, "adjoint : attribue aussi");
 assert.strictEqual(C.staffAssign(st, lille, { teamId: "fr-A", mid: mid(metz), player: refOf(5) }, now, ctx).status, 403, "aidant : pas d'attribution");

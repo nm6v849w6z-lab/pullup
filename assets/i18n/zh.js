@@ -5,6 +5,14 @@
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "搜索球员、俱乐部或位置",
+  "Attribuer à un scout": "分配给球探",
+  "Retirer l'attribution": "取消分配",
+  "Attribué à {0}": "已分配给 {0}",
+  "Attribution retirée.": "已取消分配。",
+  "Joueur attribué et présélectionné.": "球员已分配并加入预选名单。",
+  "Aucun scout en poste : nommez-en un dans Staff": "暂无在任球探：请在团队中任命",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "球探",
   "Scouts": "球探",
   "Personne aidante": "协助人员",

@@ -3,6 +3,14 @@
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "Search a player, club or position",
+  "Attribuer à un scout": "Assign to a scout",
+  "Retirer l'attribution": "Remove assignment",
+  "Attribué à {0}": "Assigned to {0}",
+  "Attribution retirée.": "Assignment removed.",
+  "Joueur attribué et présélectionné.": "Player assigned and shortlisted.",
+  "Aucun scout en poste : nommez-en un dans Staff": "No scout in post: appoint one in Staff",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "Scout",
   "Scouts": "Scouts",
   "Personne aidante": "Helper",

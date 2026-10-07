@@ -83,16 +83,27 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     }
     win.eval(`showPlayerDetail(${x.club.idx}, ${x.p})`);
     const box = () => doc.querySelector("#playerDetailSection .nc-pdp-acts");
-    check2(box() && /Ajouter à la présélection/.test(box().textContent) && /Ajouter aux joueurs suivis/.test(box().textContent), "fiche joueur : boutons présélection et joueurs suivis");
+    // Sélectionneur (droit « assign ») : « Attribuer à un scout » à la place
+    // de Suivre / Ne plus suivre (2026-10-07).
+    check2(box() && /Ajouter à la présélection/.test(box().textContent) && /Attribuer à un scout/.test(box().textContent) && !box().querySelector('[data-nc-pdp-list="watchlist"]'), "fiche joueur : présélection et « Attribuer à un scout » (plus de Suivre)");
     check2(box().previousElementSibling && !box().closest(".pdp2-ring"), "boutons placés sous la note");
+    check2(box().querySelector("button[disabled]") && /Attribuer à un scout/.test(box().querySelector("button[disabled]").textContent), "aucun scout en poste : bouton d'attribution désactivé");
+    const realStaff = st.view.staff;
+    st.view.staff = [{ mid: "s1", pseudo: "Scout A", role: "scout", status: "active" }, { mid: "s2", pseudo: "Scout B", role: "scout", status: "active" }];
+    win.eval(`showPlayerDetail(${x.club.idx}, ${x.p})`);
+    check2(box().querySelector("[data-nc-pdp-scout]") && box().querySelectorAll("[data-nc-pdp-scout] option").length === 2 && box().querySelector('[data-nc-pdp-assign][data-nc-on="1"]'), "plusieurs scouts : choix du scout puis « Attribuer à un scout »");
+    st.view.staff = realStaff;
     if (pool.length) {
-      box().querySelector('[data-nc-pdp-list="watchlist"]').click();
-      await win.__lastNationalCoach;
-      check2(st.view.watchlist.some(r => r.p === x.p && r.n === x.n) && /Ne plus suivre/.test(box().textContent), "clic : joueur suivi, bouton mis à jour");
       box().querySelector('[data-nc-pdp-list="preselection"]').click();
       await win.__lastNationalCoach;
       check2(st.view.preselection.some(r => r.p === x.p && r.n === x.n) && /Retirer de la présélection/.test(box().textContent), "clic : joueur en présélection, bouton mis à jour");
     }
+    // Sans droit d'attribution (personne aidante) : Suivre reste.
+    const realPerms = st.view.perms;
+    st.view.perms = require("./server/nationalCoach.js").PERMS.helper;
+    win.eval(`showPlayerDetail(${x.club.idx}, ${x.p})`);
+    check2(box() && box().querySelector('[data-nc-pdp-list="watchlist"]') && !/Attribuer/.test(box().textContent), "personne aidante : bouton Suivre, pas d'attribution");
+    st.view.perms = realPerms;
   }
   // Vestiaire (2026-10-06) : la dynamique de groupe du club, sur les joueurs
   // de la sélection.

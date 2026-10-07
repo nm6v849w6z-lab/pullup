@@ -41,6 +41,14 @@
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
   // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
+  "Rechercher un joueur, un club, un poste": "Cerca un giocatore, un club, un ruolo",
+  "Attribuer à un scout": "Assegna a un osservatore",
+  "Retirer l'attribution": "Rimuovi l'assegnazione",
+  "Attribué à {0}": "Assegnato a {0}",
+  "Attribution retirée.": "Assegnazione rimossa.",
+  "Joueur attribué et présélectionné.": "Giocatore assegnato e preselezionato.",
+  "Aucun scout en poste : nommez-en un dans Staff": "Nessun osservatore in carica: nominane uno in Staff",
+  // Sélections nationales : mode Sélectionneur, pages, messages du serveur (2026-10-06).
   "Scout": "Osservatore",
   "Scouts": "Osservatori",
   "Personne aidante": "Collaboratore",

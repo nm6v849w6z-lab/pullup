@@ -972,7 +972,12 @@ function staffAssign(store, me, body, now, ctx) {
   if (!poolMap(ctx && ctx.pool).has(refKey(r))) return fail("Ce joueur n'est pas sélectionnable pour cette sélection.");
   if (list.length >= LIMITS.assign) return fail(`${LIMITS.assign} joueurs par scout au maximum.`);
   list.push(r);
-  return { ok: true, assign: m.assign };
+  // Un joueur attribué bascule automatiquement en présélection (demande
+  // utilisateur du 2026-10-07), tant qu'il reste de la place.
+  m.preselection = Array.isArray(m.preselection) ? m.preselection : [];
+  let preselected = hasRef(m.preselection, r);
+  if (!preselected && m.preselection.length < LIMITS.preselection) { m.preselection.push(r); preselected = true; }
+  return { ok: true, assign: m.assign, preselected };
 }
 
 // --- Administration : nommer un sélectionneur (essais, intérim) -----------
