@@ -2981,6 +2981,54 @@
   .pdp-role-compat .pdp-compat > div:last-child > div:first-child{font-size:14px; line-height:1.3;}
   @container (min-width:560px){ .pdp-role-compat{padding-left:20px; border-left:1px solid var(--line);} }
   .pdp-role-pos{display:flex; gap:6px; align-items:center;}
+  /* Rôle & forces/faiblesses, refonte 2026-10-07 (maquette « Rôle &
+     forces/faiblesses — refonte »), polices du jeu. */
+  .pdp2-row--role{grid-template-columns:minmax(0,1fr) minmax(300px,520px) !important; align-items:stretch;}
+  @media (max-width:1100px){ .pdp2-row--role{grid-template-columns:minmax(0,1fr) !important;} }
+  .pdp-role2{display:grid; grid-template-columns:116px minmax(0,1fr) minmax(220px,340px); gap:22px; align-items:center;}
+  @container (max-width:760px){ .pdp-role2{grid-template-columns:96px minmax(0,1fr);} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring svg{width:96px; height:96px;} .pdp-role2-ring{width:96px; height:96px;} .pdp-role2-ring-c b{font-size:24px;} .pdp-role2-ring-c small{font-size:9.5px;} }
+  @media (max-width:768px){ .pdp-role2{grid-template-columns:84px minmax(0,1fr); gap:14px;} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring, .pdp-role2-ring svg{width:84px; height:84px;} .pdp-role2-ring-c b{font-size:21px !important;} .pdp-role2-ring-c small{font-size:8.5px !important; letter-spacing:.04em;} }
+  .pdp-role2-ring{position:relative; width:116px; height:116px; flex:none;}
+  .pdp-role2-ring svg{display:block;}
+  .pdp-role2-ring-c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;}
+  .pdp-role2-ring-c b{font-size:30px; font-weight:900;}
+  .pdp-role2-ring-c small{font-size:10.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; margin-top:4px;}
+  .pdp-role2-id{display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .pdp-role2-kicker{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .pdp-role2-k{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.1em; font-weight:800;}
+  .pdp-role2-pos{padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900; letter-spacing:.04em; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); color:var(--ink-dim);}
+  .pdp-role2-pos.on{background:var(--amber); color:var(--panel, #0E1626);}
+  .pdp-role2 .pdp-role-name{margin:0; font-size:34px; font-weight:900; line-height:1; text-transform:uppercase; letter-spacing:.01em;}
+  @media (max-width:768px){ .pdp-role2 .pdp-role-name{font-size:26px;} }
+  .pdp-role2 .pdp-role-desc{margin:0; font-size:14px; color:var(--ink-dim);}
+  .pdp-role2 .pdp-role-progress{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .pdp-role2-chip{padding:4px 10px; border-radius:999px; font-size:12.5px; font-weight:700; background:color-mix(in srgb, var(--amber) 13%, transparent); border:1px solid color-mix(in srgb, var(--amber) 35%, transparent); color:var(--amber);}
+  .pdp-role2 .pdp-role-evo{font-size:12.5px; color:var(--ink-dim); margin:0;}
+  .pdp-role2-side{align-self:stretch; display:flex; flex-direction:column; gap:10px; padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--panel-2, rgba(255,255,255,.03)); min-width:0;}
+  .pdp-role2-side .pdp-role-fit{display:grid; grid-template-columns:minmax(0,130px) minmax(40px,1fr) 40px; gap:12px; align-items:center;}
+  .pdp-role2-side .pdp-role-fit .nm{font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp-role2-side .pdp-role-fit .nm small{color:var(--ink-dim); font-weight:800; font-size:11px;}
+  .pdp-role2-side .pdp-role-track{height:6px; border-radius:999px; background:var(--line); overflow:hidden; display:block;}
+  .pdp-role2-side .pdp-role-track i{display:block; height:100%; border-radius:999px; background:color-mix(in srgb, var(--ink-dim) 70%, #6B83B0);}
+  .pdp-role2-side .pct{text-align:right; font-weight:800; font-size:15px;}
+  .pdp-role2-side .pdp-compat{margin-top:4px; padding-top:10px; border-top:1px solid var(--line); gap:12px;}
+  .pdp-role2-side .pdp-compat-ring{width:52px; height:52px;}
+  .pdp-role2-side .pdp-compat-ring > div{width:41px; height:41px; font-size:13.5px;}
+  .pdp-compat-t{font-weight:800; font-size:13px; line-height:1.3;}
+  .pdp-role2-side .coh-note{margin-top:0;}
+  .pdp-sw-card{display:flex; flex-direction:column; justify-content:center; gap:14px;}
+  .pdp-sw-row{display:flex; align-items:flex-start; gap:14px;}
+  .pdp-sw-row + .pdp-sw-row{padding-top:14px; border-top:1px solid var(--line);}
+  .pdp-sw-lbl{width:112px; flex:none; display:flex; align-items:center; gap:6px; min-height:32px; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;}
+  .pdp-sw-lbl b{min-width:18px; height:18px; padding:0 4px; border-radius:6px; display:inline-grid; place-items:center; font-size:11px; letter-spacing:0;}
+  .pdp-sw-row--ok .pdp-sw-lbl{color:#2DD4BF;} .pdp-sw-row--ok .pdp-sw-lbl b{background:color-mix(in srgb, #2DD4BF 18%, transparent);}
+  .pdp-sw-row--bad .pdp-sw-lbl{color:#F87171;} .pdp-sw-row--bad .pdp-sw-lbl b{background:color-mix(in srgb, #F87171 18%, transparent);}
+  .pdp-sw-card .pdp-sw-list{display:flex; flex-wrap:wrap; gap:6px; flex:1; min-width:0;}
+  .pdp-sw-chip{display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:8px; font-size:13px; font-weight:600; white-space:nowrap;}
+  .pdp-sw-chip.is-big{height:34px; padding:0 14px; font-size:14.5px;}
+  .pdp-sw-chip--ok{background:color-mix(in srgb, #2DD4BF 14%, transparent); border:1px solid color-mix(in srgb, #2DD4BF 30%, transparent);} .pdp-sw-chip--ok svg{color:#2DD4BF;}
+  .pdp-sw-chip--bad{background:color-mix(in srgb, #F87171 14%, transparent); border:1px solid color-mix(in srgb, #F87171 30%, transparent);} .pdp-sw-chip--bad svg{color:#F87171;}
+  @media (max-width:768px){ .pdp-sw-row{flex-direction:column; gap:8px;} .pdp-sw-lbl{width:auto; min-height:0;} }
   .pdp-role-pos .on{background:var(--amber); color:#1A0F02; border-color:var(--amber);}
   .pdp-role-pos span{font-size:11px; font-weight:900; letter-spacing:.05em; padding:4px 9px; border-radius:6px; border:1px solid var(--line); color:var(--ink-dim);}
   .pdp-role-name{font-size:22px; font-weight:900; margin:10px 0 2px;}
@@ -3025,6 +3073,68 @@
   .coh-note.warn{border-left-color:#e8a33a;}
   .coh-note b{font-weight:700;}
   .coh-good{color:var(--ok, #33b4a1);} .coh-mid{color:#e8a33a;} .coh-bad{color:var(--bad, #E2694F);}
+  /* Cohérence du cinq, refonte 2026-10-07 (maquette « Cohérence du cinq —
+     refonte »), polices du jeu. */
+  .coh2{--coh-ok:#2DD4BF; --coh-ball:var(--amber, #F5A524); --coh-paint:#F87171; --coh-role:#8C9AB3; --coh-court-line:color-mix(in srgb, var(--ink-dim) 45%, transparent); --coh-court-key:color-mix(in srgb, var(--ink-dim) 10%, transparent);}
+  .coh2-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+  .coh2-title{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .coh2-title h3{margin:0; font-size:20px; font-weight:900; letter-spacing:.02em; text-transform:uppercase;}
+  .ordres-coh-card .coh2-title h3{display:none;}
+  .coh2-meta{font-size:13px; color:var(--ink-dim);}
+  .coh2-grade{display:flex; align-items:center; gap:10px; padding:6px 14px 6px 6px; border-radius:999px; background:var(--panel-2, rgba(255,255,255,.04));}
+  .coh2-letter{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-weight:900; font-size:17px; color:var(--panel, #0E1626) !important;}
+  .coh2-letter.coh-good{background:var(--coh-ok);} .coh2-letter.coh-mid{background:var(--amber, #F5A524);} .coh2-letter.coh-bad{background:var(--coh-paint);}
+  .coh2-grade-txt{display:flex; flex-direction:column; line-height:1.2;}
+  .coh2-grade-txt small{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim);}
+  .coh2-grade-txt b{font-size:14.5px;}
+  .coh2-body{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(220px,300px) minmax(0,1.4fr); gap:18px; align-items:start;}
+  .coh2-col{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .coh2 .coh-col--sum{container-type:inline-size;}
+  .coh2 .coh-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0;}
+  .coh2 .coh-kpi{display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:10px 8px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03)); min-width:0;}
+  @container (min-width:540px){ .coh2 .coh-kpi{flex-direction:row; text-align:left; gap:12px; padding:12px;} }
+  .coh2-ring{flex:none;}
+  .coh-kpi-txt{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .coh2 .coh-kpi-txt b{font-size:14px; font-weight:800;} .coh2 .coh-kpi-txt small{font-size:11.5px; color:var(--ink-dim); line-height:1.25;}
+  .coh2-roster{border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03)); padding:2px 12px;}
+  .coh2 .coh-slot{display:grid; grid-template-columns:34px minmax(0,1.3fr) minmax(40px,1fr) 30px auto; gap:10px; align-items:center; min-height:48px; padding:4px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .coh2 .coh-slot:first-child{border-top:0;}
+  .coh2 .coh-slot .pos{height:24px; border-radius:6px; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); color:var(--amber); font-weight:900; font-size:12px; display:grid; place-items:center;}
+  .coh-who{display:flex; flex-direction:column; min-width:0; line-height:1.25;}
+  .coh-who .nm{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .coh-who .rl{font-size:12px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .coh-bar{height:6px; border-radius:999px; background:var(--line); overflow:hidden;}
+  .coh-bar i{display:block; height:100%; border-radius:999px; background:var(--amber);} .coh-bar i.is-ok{background:#2DD4BF;}
+  .coh-fit{text-align:right; font-weight:800; font-size:15px;}
+  .coh-chip{justify-self:end; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:800; white-space:nowrap;}
+  .coh-chip--ok{background:color-mix(in srgb, #2DD4BF 16%, transparent); color:#2DD4BF;}
+  .coh-chip--mid{background:color-mix(in srgb, #F5A524 16%, transparent); color:#e8a33a;}
+  .coh-chip--bad{background:color-mix(in srgb, #F87171 16%, transparent); color:#F87171;}
+  .coh2-map{display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
+  .coh2-court{width:100%; height:auto; max-width:320px; align-self:center; color:var(--ink);}
+  .coh2-k{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800;}
+  .coh2-k--ok{margin-top:6px;}
+  .coh2-legend{display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--ink-dim);}
+  .coh2-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .coh2-legend .ln{width:14px; height:3px; border-radius:2px;} .coh2-legend .ln--ball{background:var(--coh-ball);} .coh2-legend .ln--paint{background:var(--coh-paint);}
+  .coh2-legend .dot{width:9px; height:9px; border-radius:50%; border:2px solid var(--coh-ok);}
+  .coh2-conf{display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
+  .coh2-pair{display:flex; flex:none;}
+  .coh2-pair span{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:800; background:color-mix(in srgb, var(--ink-dim) 22%, var(--panel)); border:2px solid var(--panel);}
+  .coh2-pair span + span{margin-left:-9px; background:color-mix(in srgb, var(--ink-dim) 32%, var(--panel));}
+  .coh2-conf-txt{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;}
+  .coh2-conf-txt b{font-size:13.5px;} .coh2-conf-txt > span{font-size:12.5px; color:var(--ink-dim);}
+  .coh-tag{flex:none; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:800;}
+  .coh-tag--ball{background:color-mix(in srgb, #F5A524 16%, transparent); color:#e8a33a;}
+  .coh-tag--paint{background:color-mix(in srgb, #F87171 16%, transparent); color:#F87171;}
+  .coh-tag--role{background:color-mix(in srgb, var(--ink-dim) 18%, transparent); color:var(--ink-dim);}
+  .coh2-alert{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:color-mix(in srgb, #F5A524 12%, transparent); border:1px solid color-mix(in srgb, #F5A524 35%, transparent); color:#e8a33a; font-size:13px;}
+  .coh2-alert > span{color:var(--ink);} .coh2-alert b{color:#e8a33a;}
+  .coh2-empty{margin:0; font-size:13px; color:var(--ink-dim);}
+  .coh2 .coh-note{margin-top:0;}
+  @container (max-width:1050px){ .coh2-body{grid-template-columns:minmax(0,1fr) minmax(220px,300px);} .coh2 .coh-col--notes{grid-column:1 / -1;} }
+  @container (max-width:640px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-slot{grid-template-columns:30px minmax(0,1fr) 30px auto;} .coh2 .coh-slot .coh-bar{display:none;} }
+  @media (max-width:768px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-col--notes{grid-column:auto;} .coh2 .coh-slot{grid-template-columns:30px minmax(0,1fr) 30px auto;} .coh2 .coh-slot .coh-bar{display:none;} }
   .pdp-compat{display:flex; align-items:center; gap:14px; margin-top:16px;}
   .coh-tac{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px;}
   .coh-tac-chip{font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:99px; border:1px solid var(--line); color:var(--ink-dim);}
@@ -20881,29 +20991,107 @@ function cohesionNoteHtml(n) {
   return `<div class="coh-note${n.tone === "warn" ? " warn" : ""}">${n.who ? `<b>${n.who.map(escapeHtml).join(" · ")}</b> : ` : ""}<span>${escapeHtml(n.text)}</span></div>`;
 }
 // Panneau « Cohérence du cinq » (composition), phase 2 des rôles de jeu.
+// Refonte du 2026-10-07 (maquette « Cohérence du cinq — refonte ») : note
+// globale, 3 jauges, le cinq (maîtrise du rôle, conflits), carte des
+// frictions sur demi-terrain, points de friction et avertissements. Même
+// rendu pour les matchs du club et des sélections (Ordres / Tactique).
+const COH_COURT_SPOTS = { "Meneur": [150, 230], "Arrière": [60, 200], "Ailier shooteur": [262, 46], "Ailier fort": [190, 95], "Pivot": [120, 60] };
+const COH_KIND = { ball: { tag: "Ballon", cls: "ball" }, paint: { tag: "Raquette", cls: "paint" }, role: { tag: "Rôles", cls: "role" } };
+const COH_GLOBAL_LABEL = { usageHigh: "Usage saturé", usageLow: "Pas de leader", noCreator: "Pas de créateur", lowSpacing: "Écartement", crowdedPaint: "Raquette encombrée", noRim: "Cercle exposé", weakPerim: "Extérieur fragile" };
+function cohGrade(v) {
+  const steps = [[90, "A+"], [85, "A"], [80, "A-"], [75, "B+"], [70, "B"], [65, "B-"], [60, "C+"], [55, "C"], [50, "C-"], [40, "D"]];
+  const hit = steps.find(([min]) => v >= min);
+  return hit ? hit[1] : "E";
+}
+function cohInitials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : (parts[0][1] || ""))).toUpperCase();
+}
+function cohRingSvg(v) {
+  const C = 2 * Math.PI * 34, dash = (C * Math.max(0, Math.min(100, v)) / 100).toFixed(1);
+  return `<svg class="coh2-ring" width="58" height="58" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="none" stroke="var(--line)" stroke-width="8"/>` +
+    `<circle cx="40" cy="40" r="34" fill="none" stroke="var(--amber)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dash} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>` +
+    `<text x="40" y="47" text-anchor="middle" fill="currentColor" font-size="22" font-weight="800">${v}</text></svg>`;
+}
+function cohCourtHtml(slots, conflicts) {
+  const spot = pos => COH_COURT_SPOTS[pos] || [150, 140];
+  const worst = {};
+  conflicts.forEach(n => n.pair.forEach(pos => { if (worst[pos] !== "paint") worst[pos] = n.kind === "paint" ? "paint" : (worst[pos] || n.kind); }));
+  const stroke = k => (k === "paint" ? "var(--coh-paint)" : k === "ball" ? "var(--coh-ball)" : k === "role" ? "var(--coh-role)" : "var(--coh-ok)");
+  let h = `<svg class="coh2-court" viewBox="0 0 300 280" role="img" aria-label="Demi-terrain : le cinq et les frictions entre joueurs">` +
+    `<g fill="none" stroke="var(--coh-court-line)" stroke-width="2"><rect x="2" y="2" width="296" height="276" rx="10"/><rect x="100" y="10" width="100" height="120" fill="var(--coh-court-key)"/>` +
+    `<circle cx="150" cy="130" r="30"/><path d="M24 10 L24 88 A135 135 0 0 0 276 88 L276 10"/><circle cx="150" cy="40" r="7"/><line x1="130" y1="28" x2="170" y2="28"/></g><g stroke-width="3" stroke-linecap="round">`;
+  conflicts.forEach(n => {
+    const [ax, ay] = spot(n.pair[0]), [bx, by] = spot(n.pair[1]);
+    h += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke(n.kind)}"${n.kind === "ball" ? ` stroke-dasharray="2 7"` : ""} data-coh-link="${escapeHtml(n.kind)}"/>`;
+  });
+  h += `</g><g text-anchor="middle" font-size="14" font-weight="800">`;
+  slots.forEach(sl => {
+    const [x, y] = spot(sl.pos);
+    h += `<g data-coh-spot="${escapeHtml(sl.pos)}"><title>${escapeHtml(sl.name)}</title><circle cx="${x}" cy="${y}" r="17" fill="var(--panel)" stroke="${stroke(worst[sl.pos])}" stroke-width="3"/><text x="${x}" y="${y + 5}" fill="currentColor">${escapeHtml(cohInitials(sl.name))}</text></g>`;
+  });
+  return h + `</g></svg>`;
+}
 function compoCohesionHtml(team) {
   const R = typeof window !== "undefined" ? window.HM_ROLES : null;
   const slots = R ? roleSlotsOf(team) : null;
   const c = slots ? R.lineupCohesion(slots) : null;
   if (!c) return "";
-  let h = `<section class="coh-card" id="compoCohesion"><div class="coh-head"><h3>Cohérence du cinq</h3></div>`;
   // Phase 5 : adéquation de la tactique (priorités offensives, rythme) aux
   // rôles du cinq ; « Team Fit » = cohérence globale ajustée par la tactique.
   const tac = R.tacticalFit(slots, team.offensivePriorities || [], team.rhythm);
   const teamFit = tac ? Math.max(1, Math.min(99, Math.round(c.overall + (tac.score - 50) * 0.3))) : c.overall;
-  // Deux colonnes quand la brique est large (scores puis cinq | remarques),
-  // empilées sinon.
-  h += `<div class="coh-cols"><div class="coh-col coh-col--sum">`;
-  h += `<div class="coh-kpis">` + [[c.offense, "Offensive"], [c.defense, "Défensive"], [teamFit, "Team Fit"]]
-    .map(([v, l]) => `<div class="coh-kpi"><b class="${cohTone(v)}">${v}%</b><span>${l}</span></div>`).join("") + `</div>`;
-  // Pastilles des tactiques retirées, cinq sous les scores (demande
-  // utilisateur du 2026-10-06).
+  const conflicts = c.notes.filter(n => n.tone === "warn" && Array.isArray(n.pair));
+  const globals = c.notes.filter(n => n.tone === "warn" && !n.pair);
+  const strengths = c.notes.filter(n => n.tone === "ok");
+  const tacWarn = (tac ? tac.notes : []).filter(n => n.tone === "warn");
+  const tacOk = (tac ? tac.notes : []).filter(n => n.tone !== "warn");
+  const nameOf = pos => (c.slots.find(x => x.pos === pos) || {}).name || "";
+  const countOf = pos => conflicts.filter(n => n.pair.includes(pos)).length;
+  const nGlob = globals.length + tacWarn.length;
+  const meta = conflicts.length || nGlob
+    ? [conflicts.length ? `${conflicts.length} conflit${conflicts.length > 1 ? "s" : ""} détecté${conflicts.length > 1 ? "s" : ""}` : "Aucun conflit entre joueurs",
+      nGlob ? `${nGlob} avertissement${nGlob > 1 ? "s" : ""} global${nGlob > 1 ? "aux" : ""}` : ""].filter(Boolean).map(x => `<span>${x}</span>`).join(" · ")
+    : `<span>Aucun conflit détecté</span>`;
+  let h = `<section class="coh-card coh2" id="compoCohesion" data-coh-conflicts="${conflicts.length}">`;
+  h += `<div class="coh2-head"><div class="coh2-title"><h3>Cohérence du cinq</h3><span class="coh2-meta">${meta}</span></div>` +
+    `<div class="coh2-grade" title="Note globale (Team Fit)"><span class="coh2-letter ${cohTone(teamFit)}" data-coh-grade>${cohGrade(teamFit)}</span><span class="coh2-grade-txt"><small>Note globale</small><b>${teamFit} / 100</b></span></div></div>`;
+  h += `<div class="coh2-body"><div class="coh2-col coh-col--sum">`;
+  h += `<div class="coh-kpis">` + [[c.offense, "Offensive", "Création et tirs"], [c.defense, "Défensive", "Protection et extérieurs"], [teamFit, "Team Fit", "Complémentarité"]]
+    .map(([v, l, hint]) => `<div class="coh-kpi">${cohRingSvg(v)}<span class="coh-kpi-txt"><b>${l}</b><small>${hint}</small></span></div>`).join("") + `</div>`;
+  h += `<div class="coh2-roster">`;
   c.slots.forEach(sl => {
-    h += `<div class="coh-slot">${sl.warn ? COH_WARN_SVG : COH_OK_SVG}<span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><span>${escapeHtml(sl.roleName)}</span> · ${sl.mastery}%</span></div>`;
+    const n = countOf(sl.pos);
+    const chipCls = n === 0 ? "ok" : n >= 3 ? "bad" : "mid";
+    h += `<div class="coh-slot" data-coh-pos="${escapeHtml(sl.pos)}"><span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span>` +
+      `<span class="coh-who"><span class="nm">${escapeHtml(sl.name)}</span><span class="rl">${escapeHtml(sl.roleName)}</span></span>` +
+      `<span class="coh-bar" title="Maîtrise du rôle : ${sl.mastery}%"><i style="width:${Math.max(0, Math.min(100, sl.mastery))}%" class="${n ? "" : "is-ok"}"></i></span>` +
+      `<span class="coh-fit">${sl.mastery}</span><span class="coh-chip coh-chip--${chipCls}">${n ? `${n} conflit${n > 1 ? "s" : ""}` : "OK"}</span></div>`;
   });
-  h += `</div><div class="coh-col coh-col--notes">`;
-  c.notes.slice(0, 5).forEach(n => { h += cohesionNoteHtml(n); });
-  (tac ? tac.notes : []).forEach(n => { h += `<div class="coh-note${n.tone === "warn" ? " warn" : ""}"><b>${escapeHtml(n.tactic)}</b> : <span>${escapeHtml(n.text)}</span></div>`; });
+  h += `</div></div>`;
+  h += `<div class="coh2-map"><span class="coh2-k">Carte des frictions</span>${cohCourtHtml(c.slots, conflicts)}` +
+    `<div class="coh2-legend"><span><i class="ln ln--ball"></i>Ballon</span><span><i class="ln ln--paint"></i>Raquette</span><span><i class="dot"></i>Aucun conflit</span></div></div>`;
+  h += `<div class="coh2-col coh-col--notes"><span class="coh2-k">Points de friction</span>`;
+  if (!conflicts.length) h += `<p class="coh2-empty">Aucun point de friction entre les titulaires.</p>`;
+  conflicts.forEach(n => {
+    const k = COH_KIND[n.kind] || COH_KIND.role;
+    h += `<div class="coh2-conf" data-coh-kind="${k.cls}"><span class="coh2-pair"><span>${escapeHtml(cohInitials(nameOf(n.pair[0])))}</span><span>${escapeHtml(cohInitials(nameOf(n.pair[1])))}</span></span>` +
+      `<span class="coh2-conf-txt"><b>${n.who.map(escapeHtml).join(" · ")}</b><span>${escapeHtml(n.text)}</span></span><span class="coh-tag coh-tag--${k.cls}">${k.tag}</span></div>`;
+  });
+  globals.concat(tacWarn).forEach(n => {
+    // « Titre : détail » quand la remarque en a déjà un, sinon libellé court.
+    const cut = String(n.text).indexOf(" : ");
+    const label = n.tactic || (cut > 0 ? n.text.slice(0, cut) : COH_GLOBAL_LABEL[n.key] || "Attention");
+    const rest = !n.tactic && cut > 0 ? n.text.slice(cut + 3) : n.text;
+    h += `<div class="coh2-alert" data-coh-global><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></svg>` +
+      `<span><b>${escapeHtml(label)}</b> : <span>${escapeHtml(rest.charAt(0).toUpperCase() + rest.slice(1))}</span></span></div>`;
+  });
+  const goods = strengths.concat(tacOk);
+  if (goods.length) {
+    h += `<span class="coh2-k coh2-k--ok">Points forts</span>`;
+    goods.slice(0, 4).forEach(n => { h += `<div class="coh-note"><b>${escapeHtml(n.tactic || (n.who ? n.who.join(" · ") : "Collectif"))}</b> : <span>${escapeHtml(n.text)}</span></div>`; });
+  }
   h += `</div></div></section>`;
   return h;
 }
@@ -20918,68 +21106,71 @@ function pdpRoleRowHtml(player, fullyVisible) {
   const ratings = positionRatings(player);
   const prof = R.profileOf(player.attrs, ratings, 4, player.position);
   if (!prof) return "";
+  // Refonte du 2026-10-07 (maquette « Rôle & forces/faiblesses — refonte ») :
+  // anneau de maîtrise, rôle principal, « pour progresser », autres rôles ;
+  // à côté, le profil (forces / faiblesses en pastilles).
   const positions = prof.positions;
-  const tone = m => (m >= 80 ? "var(--ok, #33b4a1)" : m >= 65 ? "#9fd9a8" : m >= 50 ? "var(--amber)" : "var(--bad, #E2694F)");
   const sw = R.strengthsOf(player.attrs);
-  const li = (txt, color) => `<div class="pdp-role-li"><span class="pdp-role-dot" style="background:${color}"></span>${escapeHtml(txt)}</div>`;
+  const main = prof.fits.find(f => f.role === prof.primary.role && f.position === prof.primary.position) || prof.fits[0] || { mastery: 0 };
+  const mastery = Math.max(0, Math.min(100, Math.round(main.mastery || 0)));
+  const C = 2 * Math.PI * 48;
   let h = `<div class="pdp2-row pdp2-row--role">`;
-  h += `<section class="pdp2-card pdp-role-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp2-head"><h3>Rôle</h3><div class="pdp-role-pos" title="Postes">` +
-    positions.map(p => `<span class="${p === player.position ? "on" : ""}">${escapeHtml(POS_SHORT[p] || p)}</span>`).join("") + `</div></div>`;
-  h += `<div class="pdp-role-body"><div class="pdp-role-id">`;
-  h += `<div class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span> <small style="font-size:14px;color:var(--ink-dim);font-weight:700">· ${escapeHtml(POS_SHORT[prof.primary.position] || prof.primary.position)}</small></div>`;
-  h += `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
-  // Compatibilité avec le cinq majeur du manager (phase 2) : dans la
-  // brique Rôle, sous l'identité du rôle (demande utilisateur du 2026-10-06).
-  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
-  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
-  let compatHtml = "";
-  if (comp) {
-    compatHtml += `<div class="pdp-role-compat">`;
-    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
-    compatHtml += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
-      `<div style="font-weight:800">Compatibilité avec votre cinq majeur</div>` +
-      (comp.starter ? `<div class="pdp-role-note" style="margin-top:2px">Titulaire : cohérence actuelle du cinq.</div>`
-        : `<div class="pdp-role-note" style="margin-top:2px"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
-      `</div></div>`;
-    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
-    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
-    if (bad) compatHtml += cohesionNoteHtml(bad); else if (good) compatHtml += cohesionNoteHtml(good);
-    compatHtml += `</div>`;
+  h += `<section class="pdp2-card pdp-role-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp-role2">`;
+  h += `<div class="pdp-role2-ring" title="Maîtrise du rôle principal"><svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true"><circle cx="58" cy="58" r="48" fill="var(--panel-2, rgba(255,255,255,.03))" stroke="var(--line)" stroke-width="10"/>` +
+    `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * mastery / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 58 58)"/></svg>` +
+    `<div class="pdp-role2-ring-c"><b>${mastery}%</b><small>maîtrise</small></div></div>`;
+  h += `<div class="pdp-role2-id"><div class="pdp-role2-kicker"><span class="pdp-role2-k">Rôle principal</span>` +
+    positions.map(p => `<span class="pdp-role2-pos${p === prof.primary.position ? " on" : ""}" title="${escapeHtml(p)}">${escapeHtml(p === prof.primary.position ? p.toUpperCase() : (POS_SHORT[p] || p))}</span>`).join("") + `</div>` +
+    `<h3 class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span></h3>` +
+    `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
+  const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
+  if (progs.length) {
+    h += `<div class="pdp-role-progress"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>` +
+      `<span class="pdp-role2-k">Pour progresser</span>` + progs.map(x => `<span class="pdp-role2-chip">${escapeHtml(x)}</span>`).join("") + `</div>`;
   }
-  h += `</div>`; // identité
-  if (compatHtml) h += compatHtml;
-  h += `<div class="pdp-role-mastery"><div class="pdp-role-sub">Maîtrise des rôles</div><div class="pdp-role-fits">`;
-  // Mention « Préféré » retirée de la liste (demande utilisateur du
-  // 2026-10-06) ; le rôle préféré reste utilisé pour le moral (phase 4).
-  prof.fits.forEach(f => {
-    h += `<div class="pdp-role-fit"><b><span>${escapeHtml(f.name)}</span> · ${escapeHtml(POS_SHORT[f.position] || f.position)}</b><span class="pdp-role-track"><i style="width:${f.mastery}%;background:${tone(f.mastery)}"></i></span><span class="pct">${f.mastery}%</span></div>`;
-  });
-  h += `</div></div></div>`; // liste, maîtrise, corps
-  // Phase 5 : évolution du rôle au fil de la carrière, et programmes
-  // d'entraînement qui développent le rôle principal.
+  // Évolution du rôle au fil de la carrière (phase 5), en une ligne.
   const hist = Array.isArray(player.roleHistory) ? player.roleHistory : [];
-  h += `<div class="pdp-role-foot">`;
   if (hist.length && hist[hist.length - 1].role !== prof.primary.role || hist.length >= 2) {
     const steps = hist.concat(hist.length && hist[hist.length - 1].role === prof.primary.role ? [] : [{ name: prof.primary.name, age: player.age }]);
-    h += `<div><div class="pdp-role-sub">Évolution du rôle</div><div class="pdp-role-evo">` +
-      // Nom actuel du rôle (renommages : « Aspirateur », « Scoreur
-      // intérieur »), l'historique enregistré gardant l'ancien libellé.
-      steps.map(x => `<b><span>${escapeHtml((x.role && R.ROLES[x.role] && R.ROLES[x.role].name) || x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div></div>`;
+    h += `<div class="pdp-role-evo"><span class="pdp-role2-k">Évolution</span> ` +
+      // Nom actuel du rôle (renommages), l'historique gardant l'ancien libellé.
+      steps.map(x => `<b><span>${escapeHtml((x.role && R.ROLES[x.role] && R.ROLES[x.role].name) || x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div>`;
   }
-  const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
-  // Sur une seule ligne : « POUR PROGRESSER DANS CE RÔLE : A et B ».
-  if (progs.length) {
-    const items = progs.map(x => `<b>${escapeHtml(x)}</b>`);
-    const list = items.length > 1 ? items.slice(0, -1).join(", ") + ` <span>et</span> ` + items[items.length - 1] : items[0];
-    h += `<div class="pdp-role-progress"><span class="pdp-role-sub">Pour progresser dans ce rôle</span><span class="pdp-role-sep"> : </span>${list}</div>`;
+  h += `</div>`; // identité
+  // Autres rôles maîtrisés + compatibilité avec le cinq majeur du manager
+  // (demande utilisateur du 2026-10-06 : dans la brique Rôle).
+  const others = prof.fits.filter(f => f !== main).slice(0, 3);
+  h += `<div class="pdp-role2-side"><span class="pdp-role2-k">Autres rôles</span>`;
+  h += others.length ? others.map(f => `<div class="pdp-role-fit"><span class="nm"><span>${escapeHtml(f.name)}</span>${f.position !== prof.primary.position ? ` <small>${escapeHtml(POS_SHORT[f.position] || f.position)}</small>` : ""}</span>` +
+    `<span class="pdp-role-track"><i style="width:${Math.max(0, Math.min(100, f.mastery))}%"></i></span><span class="pct">${f.mastery}%</span></div>`).join("") : `<p class="pdp-role-note">Spécialiste d'un seul rôle.</p>`;
+  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
+  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
+  if (comp) {
+    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
+    h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
+      `<div class="pdp-compat-t">Compatibilité avec votre cinq majeur</div>` +
+      (comp.starter ? `<div class="pdp-role-note">Titulaire : cohérence actuelle du cinq.</div>`
+        : `<div class="pdp-role-note"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
+      `</div></div>`;
+    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
+    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
+    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
   }
-  h += `</div></section>`;
-  // Forces / Faiblesses : deux colonnes séparées, éléments compacts.
-  h += `<section class="pdp2-card pdp-sw-card"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div><div class="pdp-role-sw">` +
-    `<div class="pdp-sw-col pdp-sw-col--ok"><div class="pdp-role-sub">Forces <b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
-    (sw.strengths.length ? sw.strengths.map(x => li(x, "var(--ok, #33b4a1)")).join("") : `<p class="pdp-role-note">Profil équilibré.</p>`) +
-    `</div></div><div class="pdp-sw-col pdp-sw-col--bad"><div class="pdp-role-sub">Faiblesses <b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
-    (sw.weaknesses.length ? sw.weaknesses.map(x => li(x, "var(--bad, #E2694F)")).join("") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div></div>`;
+  h += `</div></div></section>`;
+  // Profil : forces / faiblesses en pastilles (plus grandes quand il y en a peu).
+  const chips = (list, kind) => {
+    const big = list.length <= 2 ? " is-big" : "";
+    const icon = kind === "ok"
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>`;
+    return list.map(x => `<span class="pdp-sw-chip pdp-sw-chip--${kind}${big}">${icon}<span>${escapeHtml(x)}</span></span>`).join("");
+  };
+  const arrow = up => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${up ? `<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>` : `<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>`}</svg>`;
+  h += `<section class="pdp2-card pdp-sw-card" aria-label="Profil : forces et faiblesses">` +
+    `<div class="pdp-sw-row pdp-sw-row--ok"><div class="pdp-sw-lbl">${arrow(true)}<span>Forces</span><b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
+    (sw.strengths.length ? chips(sw.strengths, "ok") : `<p class="pdp-role-note">Profil équilibré.</p>`) + `</div></div>` +
+    `<div class="pdp-sw-row pdp-sw-row--bad"><div class="pdp-sw-lbl">${arrow(false)}<span>Faiblesses</span><b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
+    (sw.weaknesses.length ? chips(sw.weaknesses, "bad") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
   h += `</section></div>`;
   return h;
 }
@@ -32756,7 +32947,6 @@ function managerFriendsHtml(team, own) {
     return `<div class="mp-ftier${got ? "" : " is-locked"}" data-friends-tier-row="${t.n}">${achMedalSvgSafe(i, 34, !got)}<div><b>Palier ${t.n} · ${t.n} ami${t.n > 1 ? "s" : ""}</b>` +
       `<small>${escapeHtml(t.reward)}</small><small class="${got ? "mp-fstate" : ""}">${got ? "Obtenu" : (own ? `Encore ${t.n - n}` : "Verrouillé")}</small></div></div>`;
   }).join("") + `</div>`;
-  if (own) h += `<p class="sub mp-friends-note">Un ami compte une fois qu'il a créé son compte avec ton lien et joué une saison complète. Récompenses purement visuelles, aucun avantage en match.</p>`;
   return h + `</div>`;
 }
 

@@ -183,11 +183,11 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   check(!!win.HM_ROLES, "module des rôles chargé dans le navigateur");
   win.eval("showPlayerDetail(myTeamIndex, teamA.players[0].id)");
   const card = doc.querySelector("#playerDetailSection [data-pdp-role]");
-  check(!!card && /Maîtrise des rôles/.test(card.textContent) && card.querySelectorAll(".pdp-role-fit").length >= 2, `fiche joueur : rôle « ${card && card.querySelector(".pdp-role-name").textContent.trim()} » et maîtrise des rôles`);
-  check(/Forces/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "forces et faiblesses affichées");
+  check(!!card && /Rôle principal/.test(card.textContent) && /maîtrise/.test(card.querySelector(".pdp-role2-ring").textContent) && /Autres rôles/.test(card.textContent) && card.querySelectorAll(".pdp-role-fit").length >= 1, `fiche joueur : rôle « ${card && card.querySelector(".pdp-role-name").textContent.trim()} », anneau de maîtrise et autres rôles (refonte 2026-10-07)`);
+  check(/Forces/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent) && doc.querySelector("#playerDetailSection .pdp-sw-row--ok") && doc.querySelector("#playerDetailSection .pdp-sw-row--bad"), "forces et faiblesses affichées (pastilles)");
   win.eval(`(() => { const p = teamA.players[0]; p.roleHistory = [{ season: 1, age: 21, role: "slasher", name: "Slasher" }, { season: 3, age: 24, role: "shot_creator", name: "Shot Creator" }]; showPlayerDetail(myTeamIndex, p.id); })()`);
   const card2 = doc.querySelector("#playerDetailSection [data-pdp-role]");
-  check(/Évolution du rôle/.test(card2.textContent) && /Slasher/.test(card2.textContent) && /Pour progresser dans ce rôle/.test(card2.textContent), "fiche joueur : évolution du rôle et programmes qui le développent");
+  check(/Évolution/.test(card2.textContent) && /Slasher/.test(card2.textContent) && /Pour progresser/.test(card2.textContent) && card2.querySelector(".pdp-role2-chip"), "fiche joueur : évolution du rôle et programmes qui le développent");
   check(!!doc.querySelector("#playerDetailSection [data-pdp-compat]") && /Compatibilité avec votre cinq majeur/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "fiche joueur : compatibilité avec le cinq majeur");
   // Marché : rôle et compatibilité avec le cinq majeur.
   // (Joueurs d'autres clubs : caractéristiques masquées côté navigateur,
@@ -200,7 +200,11 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   await new Promise(r => setTimeout(r, 200));
   const coh = doc.getElementById("compoCohesion");
   check(!!coh && coh.querySelectorAll(".coh-slot").length === 5 && /Offensive/.test(coh.textContent) && /Team Fit/.test(coh.textContent), "composition : cohérence du cinq (5 titulaires, offensive / défensive / Team Fit)");
-  check(!coh.querySelector(".coh-tac-chip") && coh.querySelector(".coh-col--sum .coh-kpis + .coh-slot"), "composition : pas de pastilles de tactique, cinq sous les scores");
+  check(!coh.querySelector(".coh-tac-chip") && coh.querySelector(".coh-col--sum .coh-kpis + .coh2-roster .coh-slot"), "composition : pas de pastilles de tactique, cinq sous les scores");
+  // Refonte 2026-10-07 : note globale, carte des frictions, points de friction.
+  check(/^[A-E][+-]?$/.test(coh.querySelector("[data-coh-grade]").textContent) && coh.querySelectorAll(".coh2-court [data-coh-spot]").length === 5 && /Points de friction/.test(coh.textContent) && /Carte des frictions/.test(coh.textContent), "cohérence : note globale, carte des frictions (5 joueurs), points de friction");
+  const nConf = Number(coh.dataset.cohConflicts);
+  check(coh.querySelectorAll(".coh2-conf").length === nConf && coh.querySelectorAll(".coh2-court [data-coh-link]").length === nConf, `cohérence : ${nConf} conflit(s), autant de liens sur la carte que de points de friction`);
   dom.window.close(); server.close();
   console.log("\n🏁 roles_test.js : tout est vert");
   process.exit(0);

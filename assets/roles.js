@@ -693,6 +693,14 @@
     weakPerim: "Défense extérieure fragile.",
     goodPerim: "Bonne défense sur les extérieurs.",
   };
+  // Nature d'un conflit entre deux rôles : le ballon (deux créateurs,
+  // usage) ou la raquette (congestion près du cercle), sinon « rôles ».
+  function conflictKind(reason) {
+    const r = String(reason || "").toLowerCase();
+    if (/ballon|cr[ée]ateurs?/.test(r)) return "ball";
+    if (/raquette|cercle|congestion/.test(r)) return "paint";
+    return "role";
+  }
   function slotRole(slot) {
     const fits = roleFits(slot.attrs, slot.positionRatings, slot.position).filter(f => f.position === slot.pos);
     return fits.length ? fits[0] : null;
@@ -714,29 +722,31 @@
       const val = ps.score * (w(a) + w(b)) / 2;
       pairSum += val;
       pairs.push({ a: a.pos, b: b.pos, score: ps.score });
-      if (ps.score <= -1 && ps.reason) { flagged.add(a.pos); flagged.add(b.pos); notes.push({ tone: "warn", who: [a.name, b.name], text: ps.reason }); }
-      else if (ps.score >= 3 && ps.reason) notes.push({ tone: "ok", who: [a.name, b.name], text: ps.reason });
+      // `pair` (postes) et `kind` (ballon / raquette / rôles) : carte des
+      // frictions de la cohérence du cinq (affichage seulement, 2026-10-07).
+      if (ps.score <= -1 && ps.reason) { flagged.add(a.pos); flagged.add(b.pos); notes.push({ tone: "warn", who: [a.name, b.name], text: ps.reason, pair: [a.pos, b.pos], kind: conflictKind(ps.reason) }); }
+      else if (ps.score >= 3 && ps.reason) notes.push({ tone: "ok", who: [a.name, b.name], text: ps.reason, pair: [a.pos, b.pos] });
     }
     const sum = k => rows.reduce((s2, r) => s2 + tOf(r)[k] * w(r), 0);
     const C = COHESION;
     let offense = C.offenseBase + C.pairWeight * pairSum / Math.max(1, rows.length - 1);
     const usage = sum("usage");
-    if (usage > C.usageMax) { offense -= C.usagePenalty * (usage - C.usageMax); notes.push({ tone: "warn", text: NOTES.usageHigh }); rows.filter(r => tOf(r).usage >= 0.7).forEach(r => flagged.add(r.pos)); }
+    if (usage > C.usageMax) { offense -= C.usagePenalty * (usage - C.usageMax); notes.push({ tone: "warn", text: NOTES.usageHigh, key: "usageHigh" }); rows.filter(r => tOf(r).usage >= 0.7).forEach(r => flagged.add(r.pos)); }
     const creator = Math.max(...rows.map(r => tOf(r).create * w(r)));
-    if (usage < C.usageMin && creator < 0.6) { offense -= C.usagePenalty * (C.usageMin - usage); notes.push({ tone: "warn", text: NOTES.usageLow }); }
-    if (creator < C.creatorMin) { offense -= C.noCreatorPenalty; notes.push({ tone: "warn", text: NOTES.noCreator }); }
+    if (usage < C.usageMin && creator < 0.6) { offense -= C.usagePenalty * (C.usageMin - usage); notes.push({ tone: "warn", text: NOTES.usageLow, key: "usageLow" }); }
+    if (creator < C.creatorMin) { offense -= C.noCreatorPenalty; notes.push({ tone: "warn", text: NOTES.noCreator, key: "noCreator" }); }
     const spacing = sum("spacing");
-    if (spacing < C.spacingMin) { offense -= C.spacingPenalty * (C.spacingMin - spacing); notes.push({ tone: "warn", text: NOTES.lowSpacing }); }
-    else if (spacing >= C.spacingGood) { offense += C.spacingBonus; notes.push({ tone: "ok", text: NOTES.goodSpacing }); }
+    if (spacing < C.spacingMin) { offense -= C.spacingPenalty * (C.spacingMin - spacing); notes.push({ tone: "warn", text: NOTES.lowSpacing, key: "lowSpacing" }); }
+    else if (spacing >= C.spacingGood) { offense += C.spacingBonus; notes.push({ tone: "ok", text: NOTES.goodSpacing, key: "goodSpacing" }); }
     const paint = rows.filter(r => tOf(r).paint >= 0.8).length;
-    if (paint > C.paintMax) { offense -= C.paintPenalty * (paint - C.paintMax); notes.push({ tone: "warn", text: NOTES.crowdedPaint }); rows.filter(r => tOf(r).paint >= 0.8).forEach(r => flagged.add(r.pos)); }
+    if (paint > C.paintMax) { offense -= C.paintPenalty * (paint - C.paintMax); notes.push({ tone: "warn", text: NOTES.crowdedPaint, key: "crowdedPaint" }); rows.filter(r => tOf(r).paint >= 0.8).forEach(r => flagged.add(r.pos)); }
     // Défense.
     const rim = Math.max(...rows.map(r => tOf(r).rimD * w(r)));
     const perim = rows.reduce((s2, r) => s2 + tOf(r).perimD * w(r), 0) / rows.length;
     const reb = sum("reb");
     let defense = C.defenseBase + C.rimWeight * (rim - 0.5) + C.perimWeight * (perim - 0.29) + C.rebWeight * (reb - 2);
-    if (rim < C.rimLow) notes.push({ tone: "warn", text: NOTES.noRim }); else if (rim >= C.rimGood) notes.push({ tone: "ok", text: NOTES.goodRim });
-    if (perim < C.perimLow) notes.push({ tone: "warn", text: NOTES.weakPerim }); else if (perim >= C.perimGood) notes.push({ tone: "ok", text: NOTES.goodPerim });
+    if (rim < C.rimLow) notes.push({ tone: "warn", text: NOTES.noRim, key: "noRim" }); else if (rim >= C.rimGood) notes.push({ tone: "ok", text: NOTES.goodRim, key: "goodRim" });
+    if (perim < C.perimLow) notes.push({ tone: "warn", text: NOTES.weakPerim, key: "weakPerim" }); else if (perim >= C.perimGood) notes.push({ tone: "ok", text: NOTES.goodPerim, key: "goodPerim" });
     offense = clamp(Math.round(offense), 20, 99);
     defense = clamp(Math.round(defense), 20, 99);
     const overall = Math.round(C.offenseShare * offense + (1 - C.offenseShare) * defense);

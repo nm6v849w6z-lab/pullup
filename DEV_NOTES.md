@@ -954,3 +954,15 @@ points réellement ouverts.
     `nationalityFromName`. Tests : `names_variety_test.js`.
   - Tests : `server/referrals_test.js`, `server/national_extras_test.js`,
     `national_showcase_ui_test.js`.
+
+- **Refonte visuelle (2026-10-07, maquettes « Cohérence du cinq — refonte »
+  et « Rôle & forces/faiblesses — refonte »)** : `compoCohesionHtml` (Ordres
+  du club ET Tactique des sélections) = note globale en lettre (`cohGrade`,
+  Team Fit), 3 jauges, cinq avec maîtrise du rôle et conflits, carte des
+  frictions sur demi-terrain (`cohCourtHtml`, liens par paire), points de
+  friction (tag Ballon / Raquette / Rôles), avertissements globaux, points
+  forts. `lineupCohesion` ajoute `pair`/`kind` aux remarques de paires et
+  `key` aux remarques globales (affichage seulement, scores inchangés).
+  `pdpRoleRowHtml` : anneau de maîtrise, rôle principal, « Pour progresser »
+  en pastilles, autres rôles + compatibilité avec le cinq ; carte Profil
+  (forces / faiblesses en pastilles). Polices du jeu (pas celles de la maquette).
