@@ -42,6 +42,7 @@ assert.deepStrictEqual(Object.keys(C.PERMS).sort(), ["assistant", "coach", "help
 assert.deepStrictEqual(C.PERMS.assistant, C.PERMS.coach, "adjoint = mêmes accès fonctionnels que le sélectionneur");
 assert.deepStrictEqual(C.APPOINT, { coach: ["assistant", "helper", "recruiter", "scout"], assistant: ["helper", "recruiter", "scout"], recruiter: ["scout"] });
 assert.strictEqual(C.STAFF_MAX.scout, 5, "5 scouts au maximum");
+assert.strictEqual(C.STAFF_MAX.assistant, 4, "4 adjoints au maximum");
 ok("rôles : staff NT (sélectionneur, adjoint, personne aidante) et DTN (recruteur, scout)");
 
 // 1) Nominations.
