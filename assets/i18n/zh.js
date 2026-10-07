@@ -4,6 +4,11 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Vitrine publique dans le mode Sélection (2026-10-07).
+  "Vitrine publique": "公开展示",
+  "Voir la page publique": "查看公开页面",
+  "Page publique": "公开页面",
+  "Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.": "只有主教练可以自定义队徽、横幅、球衣和球场。",
   // Cohérence du cinq et rôle (refonte 2026-10-07).
   "Carte des frictions": "摩擦图",
   "Points de friction": "摩擦点",

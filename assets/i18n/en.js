@@ -2,6 +2,11 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Vitrine publique dans le mode Sélection (2026-10-07).
+  "Vitrine publique": "Public showcase",
+  "Voir la page publique": "View the public page",
+  "Page publique": "Public page",
+  "Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.": "Only the head coach can customize the logo, banner, jersey and court.",
   // Cohérence du cinq et rôle (refonte 2026-10-07).
   "Carte des frictions": "Friction map",
   "Points de friction": "Friction points",

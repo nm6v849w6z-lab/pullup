@@ -68,6 +68,7 @@
     ".nt-hero--spotlights{background:radial-gradient(ellipse 40% 90% at 18% -10%,rgba(255,236,190,.28),transparent 70%),radial-gradient(ellipse 40% 90% at 62% -10%,rgba(255,236,190,.18),transparent 70%),linear-gradient(180deg,#0e1424,#151d33 60%,var(--panel))}",
     ".nt-hero--gold{background:linear-gradient(100deg,#6b4a12 0%,#3a2a10 38%,var(--panel) 78%);border-color:rgba(245,161,58,.45)}",
     ".nt-logo{width:96px;height:96px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}.nt-logo svg{width:100%;height:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}",
+    ".nt-hero--mini{padding:14px 18px;gap:16px}.nt-hero--mini h1{font-size:22px;margin:2px 0 0}.nt-hero--mini .nt-logo{width:56px;height:56px}.nt-hero--mini .nat-flag{width:72px;height:48px}",
     ".nt-hero-jersey{margin-left:auto;display:flex;gap:10px;align-items:center;flex:0 0 auto}.nt-hero-jersey svg{display:block}",
     ".nt-msg{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:12px;background:var(--panel);padding:14px 16px;margin-top:14px}",
     ".nt-msg-text{white-space:pre-line;font-size:14.5px;line-height:1.55;margin:8px 0 6px;overflow-wrap:anywhere}",
@@ -814,6 +815,7 @@
     var p = api("/api/national/visuals", { teamId: ui.team.team.id, visuals: ui.visPick || {} }).then(function (d) {
       if (d.team) ui.team = d.team;
       ui.visErr = ""; closeVisuals(); toast("Personnalisation enregistrée.");
+      if (ui.onTeamUpdate) ui.onTeamUpdate(ui.team);
     }).catch(function (e) { ui.visErr = e.message; if (o.isConnected) o.innerHTML = visualsModalHtml(ui.team); })
       .then(function () { ui.busy = false; paint(); });
     window.__lastNational = p;
@@ -826,10 +828,30 @@
       if (d.team) ui.team = d.team;
       ui.msgEdit = false; ui.msgDraft = null; ui.error = "";
       toast(text ? "Message publié." : "Message supprimé.");
-    }).catch(function (e) { ui.error = e.message; }).then(function () { ui.busy = false; paint(); });
+      if (ui.onTeamUpdate) ui.onTeamUpdate(ui.team);
+    }).catch(function (e) { ui.error = e.message; if (ui.onTeamUpdate) ui.onTeamUpdate(ui.team, e.message); }).then(function () { ui.busy = false; paint(); });
     window.__lastNational = p;
     return p;
   }
+  // Vitrine depuis le mode Sélection (assets/national-coach.js, demande du
+  // 2026-10-07 : « aucun bouton sur le tableau de bord en mode sélection ») :
+  // mêmes éditeurs que la page publique, sur la vue de la sélection `tv`.
+  // `onUpdate(tv, error)` : appelé après chaque enregistrement.
+  function showcaseBind(tv, onUpdate) { ensureCss(); ui.team = tv; ui.onTeamUpdate = onUpdate || null; }
+  function showcasePreviewHtml(tv) {
+    ensureCss();
+    return "<div" + heroAttrs(tv).replace('class="nt-hero', 'class="nt-hero nt-hero--mini') + ">" + heroLogoHtml(tv) +
+      '<div class="nt-hero-text"><div class="nt-kicker">Page publique</div><h1>' + teamNameHtml(tv.team) + "</h1></div>" +
+      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 60) + "</div></div>";
+  }
+  var showcase = {
+    previewHtml: showcasePreviewHtml,
+    messageHtml: function (tv, onUpdate) { showcaseBind(tv, onUpdate); return messageHtml(tv); },
+    edit: function () { ui.msgEdit = true; ui.msgDraft = null; },
+    cancel: function () { ui.msgEdit = false; ui.msgDraft = null; },
+    save: function (text) { return saveMessage(text); },
+    openVisuals: function (tv, onUpdate) { showcaseBind(tv, onUpdate); openVisuals(); },
+  };
   function teamHtml() {
     var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
     var tv = ui.team, now = Date.now();
@@ -1062,5 +1084,5 @@
     if (tab === "selectionneurs") return teamCoachesHtml(tv);
     return teamApercuHtml(tv, Date.now());
   }
-  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml, logoSvg: logoSvg, catLabel: catLabel };
+  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml, logoSvg: logoSvg, catLabel: catLabel, showcase: showcase };
 })();

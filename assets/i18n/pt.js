@@ -4,6 +4,11 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
+  // Vitrine publique dans le mode Sélection (2026-10-07).
+  "Vitrine publique": "Montra pública",
+  "Voir la page publique": "Ver a página pública",
+  "Page publique": "Página pública",
+  "Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.": "Só o selecionador pode personalizar o logótipo, a faixa, a camisola e o campo.",
   // Cohérence du cinq et rôle (refonte 2026-10-07).
   "Carte des frictions": "Mapa de atritos",
   "Points de friction": "Pontos de atrito",

@@ -40,6 +40,11 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Vitrine publique dans le mode Sélection (2026-10-07).
+  "Vitrine publique": "Vetrina pubblica",
+  "Voir la page publique": "Vedi la pagina pubblica",
+  "Page publique": "Pagina pubblica",
+  "Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.": "Solo il commissario tecnico può personalizzare logo, banner, maglia e campo.",
   // Cohérence du cinq et rôle (refonte 2026-10-07).
   "Carte des frictions": "Mappa degli attriti",
   "Points de friction": "Punti di attrito",

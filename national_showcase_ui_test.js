@@ -84,6 +84,30 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   await win.HM_NATIONAL.openTeam("fr-A");
   check(content().querySelector('[data-nt-logo="shield"]') && content().querySelector('.nt-hero[data-nt-banner="flag"]'), "personnalisation conservée après rechargement");
 
+  // ---- Mode Sélection : vitrine sur le tableau de bord ----
+  await win.HM_NATIONAL_COACH.enterMode("fr-A");
+  await wait(() => doc.getElementById("ncShowcase"), "vitrine du tableau de bord");
+  const sc = () => doc.getElementById("ncShowcase");
+  check(/Vitrine publique/.test(sc().textContent) && sc().querySelector("[data-nt-visuals]") && sc().querySelector("[data-nc-public]") && sc().querySelector('[data-nt-logo="shield"]'), "mode Sélection : bloc « Vitrine publique » (aperçu, Personnaliser, page publique)");
+  check(/Bienvenue sur la page/.test(sc().textContent) && sc().querySelector("[data-nt-msg-edit]"), "mode Sélection : message actuel et « Modifier le message »");
+  sc().querySelector("[data-nt-msg-edit]").click();
+  const ta2 = doc.getElementById("ntMsgInput");
+  ta2.value = "Message depuis le mode Sélection.";
+  ta2.dispatchEvent(new win.Event("input", { bubbles: true }));
+  check(/Message depuis le mode/.test(doc.getElementById("ntMsgPreview").textContent), "mode Sélection : aperçu en direct");
+  sc().querySelector("[data-nt-msg-save]").click();
+  await win.__lastNational; await flush(dom);
+  check(sc() && /Message depuis le mode Sélection/.test(sc().querySelector(".nt-msg-text").textContent), "mode Sélection : message publié");
+  sc().querySelector("[data-nt-visuals]").click();
+  check(doc.getElementById("ntVisualsOverlay"), "mode Sélection : fenêtre de personnalisation");
+  doc.querySelector('#ntVisualsOverlay [data-ntv-kind="logo"][data-ntv-id="flag"]').click();
+  doc.querySelector("#ntVisualsOverlay [data-ntv-save]").click();
+  await win.__lastNational; await flush(dom);
+  check(!doc.getElementById("ntVisualsOverlay") && !sc().querySelector('[data-nt-logo="shield"]'), "mode Sélection : personnalisation enregistrée (retour au drapeau)");
+  sc().querySelector("[data-nc-public]").click();
+  await win.__lastNational; await flush(dom);
+  check(!doc.body.classList.contains("nc-mode") && /Message depuis le mode Sélection/.test(content().querySelector("#ntMsg").textContent), "« Voir la page publique » : le message y est visible");
+
   // ---- Profil du manager : fonction nationale ----
   win.eval("showManagerProfile(myTeamIndex)");
   await win.__lastMpNatRoles; await flush(dom);

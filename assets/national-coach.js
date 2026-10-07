@@ -1134,11 +1134,48 @@
     var nxLive = nx ? liveBtn(nx) : "";
     if (nxLive) h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>' + (nx.status === "live" ? "Match en cours" : "Coup d'envoi imminent") + "</span></div>" +
       '<div class="nc-slot"><span class="nc-grow">' + flag(nx.home.split("-")[0]) + " " + esc(teamLab(nx.home)) + " – " + flag(nx.away.split("-")[0]) + " " + esc(teamLab(nx.away)) + ' <span class="nc-club">· ' + esc(when(nx.at, true)) + "</span></span>" + nxLive + "</div></div>";
+    h += showcaseHtml();
     h += '<div class="nc-two" style="margin-top:16px">';
     if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
     if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? gTitleText(cur) : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
       (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + esc(c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div>";
     return h + "</div>";
+  }
+  // Vitrine publique (2026-10-07) : aperçu de la page publique, message du
+  // staff (sélectionneur et adjoints) et personnalisation (sélectionneur),
+  // éditeurs partagés avec la page publique (HM_NATIONAL.showcase).
+  function showcaseHtml() {
+    var S = window.HM_NATIONAL && window.HM_NATIONAL.showcase, tv = ui.tv;
+    if (!S || !tv || !tv.extras) return "";
+    var x = tv.extras;
+    if (!x.canEditMessage && !x.canEditVisuals && !x.message) return "";
+    return '<div class="nc-card" id="ncShowcase" style="margin-top:16px"><div class="nc-sec"><span>Vitrine publique</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+      (x.canEditVisuals ? '<button type="button" class="nc-btn2" data-nt-visuals>Personnaliser</button> ' : "") +
+      '<button type="button" class="nc-btn2" data-nc-public>Voir la page publique</button></span></div>' +
+      S.previewHtml(tv) + S.messageHtml(tv, onShowcaseUpdate) +
+      (x.canEditVisuals ? "" : '<p class="nc-small">Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.</p>') + "</div>";
+  }
+  function onShowcaseUpdate(tv, err) {
+    if (tv) ui.tv = tv;
+    if (err) ui.error = err;
+    if (ui.mode && (ui.nav || "dashboard") === "dashboard") paint();
+  }
+  function onShowcaseClick(b) {
+    var S = window.HM_NATIONAL && window.HM_NATIONAL.showcase, d = b.dataset;
+    if (!S || !ui.tv) return false;
+    if (d.ntVisuals !== undefined) { S.openVisuals(ui.tv, onShowcaseUpdate); return true; }
+    if (d.ntMsgEdit !== undefined) { S.edit(); paint(); var ta = document.getElementById("ntMsgInput"); if (ta) ta.focus(); return true; }
+    if (d.ntMsgCancel !== undefined) { S.cancel(); paint(); return true; }
+    if (d.ntMsgSave !== undefined) { var inp = document.getElementById("ntMsgInput"); window.__lastNational = S.save(inp ? inp.value.trim() : ""); return true; }
+    if (d.ntMsgDelete !== undefined) { if (window.confirm(t("Supprimer le message de la sélection ?"))) window.__lastNational = S.save(""); return true; }
+    if (d.ncPublic !== undefined) {
+      // Page publique : on quitte le mode (sans passer par le tableau de bord du club).
+      var id = ui.teamId;
+      exitMode(true);
+      if (window.HM_NATIONAL && window.HM_NATIONAL.openTeam) window.__lastNational = window.HM_NATIONAL.openTeam(id);
+      return true;
+    }
+    return false;
   }
   function feedHtml(v, n) {
     var list = (v.feed || []).slice(0, n);
@@ -1368,6 +1405,7 @@
     var b = e.target.closest ? e.target.closest("button,input[type=checkbox],th[data-nc-sort],[data-nc-profile]") : null;
     if (!b) return;
     var d = b.dataset;
+    if (b.closest && b.closest("#ncShowcase") && onShowcaseClick(b)) return;
     if (d.ncSort) {
       var c = columns().filter(function (x) { return x.key === d.ncSort; })[0];
       ui.sort = ui.sort.key === d.ncSort ? { key: d.ncSort, dir: -ui.sort.dir } : { key: d.ncSort, dir: (c && c.dir) || -1 };
