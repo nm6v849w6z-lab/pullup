@@ -677,7 +677,7 @@
   ];
   var INVITE_LABEL = { assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" };
   function assignHtml(v, s) {
-    var mine = (v.assign && v.assign[s.mid]) || [], max = v.assignMax || 15;
+    var mine = (v.assign && v.assign[s.mid]) || [], max = v.assignMax || 50;
     var h = '<div class="nc-assign"><div class="nc-small" style="margin:6px 0">Joueurs attribués · ' + mine.length + " / " + max + "</div>";
     h += mine.length ? '<div class="nc-chips">' + mine.map(function (r) {
       return '<span class="nc-chip">' + esc(r.n) + (can("assign") ? '<button type="button" class="nc-chip-x" data-nc-assign="' + esc(s.mid) + '" data-nc-on="0" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '" aria-label="Retirer">×</button>' : "") + "</span>";

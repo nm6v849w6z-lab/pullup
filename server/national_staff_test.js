@@ -41,6 +41,7 @@ const M = () => N.activeMandate(st, "fr-A");
 assert.deepStrictEqual(Object.keys(C.PERMS).sort(), ["assistant", "coach", "helper", "recruiter", "scout"]);
 assert.deepStrictEqual(C.PERMS.assistant, C.PERMS.coach, "adjoint = mêmes accès fonctionnels que le sélectionneur");
 assert.deepStrictEqual(C.APPOINT, { coach: ["assistant", "helper", "recruiter", "scout"], assistant: ["helper", "recruiter", "scout"], recruiter: ["scout"] });
+assert.strictEqual(C.STAFF_MAX.scout, 5, "5 scouts au maximum");
 ok("rôles : staff NT (sélectionneur, adjoint, personne aidante) et DTN (recruteur, scout)");
 
 // 1) Nominations.
@@ -94,6 +95,7 @@ const vr = C.coachView(st, nantes, "fr-A", now, ctx);
 assert.ok(vr.ok && vr.pool.players.length === pool.players.length && vr.watchlist.length, "recruteur : vivier complet, joueurs suivis");
 assert.ok(vr.gatherings.length === 0 && vr.tactics === null && vr.preselection.length === 0 && vr.friendlies === null && vr.analysis === null, "recruteur : rien du staff NT");
 assert.ok(vr.staff.length === 5 && vr.appoint.join() === "scout", "recruteur : page Staff, ne nomme que des scouts");
+assert.strictEqual(vr.assignMax, 50, "50 joueurs par scout au maximum");
 assert.ok(C.staffAssign(st, nantes, { teamId: "fr-A", mid: mid(brest), player: refOf(2) }, now, ctx).ok, "recruteur : attribue un joueur à un scout");
 assert.ok(C.staffAssign(st, nantes, { teamId: "fr-A", mid: mid(brest), player: refOf(3) }, now, ctx).ok);
 assert.ok(C.staffAssign(st, nice, { teamId: "fr-A", mid: mid(metz), player: refOf(4) }, now, ctx).ok, "adjoint : attribue aussi");

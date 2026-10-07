@@ -43,7 +43,7 @@
 const Engine = require("../engine.js");
 
 const DAY = 24 * 3600 * 1000;
-const LIMITS = { convocation: 15, matchSquad: 12, preselection: 24, watchlist: 40, freezeDays: 3, poolMax: 220, assign: 15 };
+const LIMITS = { convocation: 15, matchSquad: 12, preselection: 24, watchlist: 40, freezeDays: 3, poolMax: 220, assign: 50 };
 
 function NT() { return require("./nationalTeams.js"); }
 
@@ -876,7 +876,7 @@ function managersFor(store, m) {
 // refuse) depuis la page Sélections. Fin du mandat = fin du staff
 // (accessOf ne regarde que le mandat en cours).
 // m.assign = { [mid du scout]: [ref] } : joueurs attribués aux scouts.
-const STAFF_MAX = { assistant: 2, helper: 3, recruiter: 2, scout: 4 };
+const STAFF_MAX = { assistant: 2, helper: 3, recruiter: 2, scout: 5 };
 const STAFF_LABEL = { assistant: "adjoint", helper: "personne aidante", recruiter: "recruteur", scout: "scout" };
 const STAFF_PLURAL = { assistant: "adjoints", helper: "personnes aidantes", recruiter: "recruteurs", scout: "scouts" };
 function publicStaff(m) {
