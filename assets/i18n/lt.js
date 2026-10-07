@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Taškai iš planų",
+  "Points gagnés": "Gauti taškai",
+  "Meilleure progression": "Didžiausia pažanga",
+  "Conseils du staff": "Personalo patarimai",
+  "Fondamentaux · un travail ciblé par joueur": "Pagrindai · tikslinis darbas kiekvienam žaidėjui",
+  "Niveau actuel": "Dabartinis lygis",
+  "Progression attendue cette semaine": "Tikėtina pažanga šią savaitę",
+  "Séance": "Treniruotė",
+  "Officiel": "Oficialus",
+  "Fait progresser un aspect": "Tobulina vieną aspektą",
+  "Recharge la forme": "Atkuria formą",
+  "Endurance et puissance": "Ištvermė ir jėga",
+  "séance du jour": "dienos treniruotė",
+  "Aspect tactique travaillé": "Treniruojamas taktinis aspektas",
+  "Connaissance tactique de l'équipe": "Komandos taktinės žinios",
+  "Avant": "Prieš",
+  "Gagné cette semaine": "Gauta šią savaitę",
+  "Physique et mental des autres": "Kitų fizinės ir psichinės savybės",
+  "Pas encore de bilan": "Ataskaitos dar nėra",
+  "Entraînement · bilan de la semaine {0}": "Treniruotės · {0} savaitės ataskaita",
+  "intensité normale": "įprastas intensyvumas",
+  "intensité légère": "lengvas intensyvumas",
+  "intensité intense": "didelis intensyvumas",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Šią savaitę sužaistos minutės (visas efektyvumas nuo {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Savaitės planas",
   "Sections de l'entraînement": "Treniruočių skyriai",

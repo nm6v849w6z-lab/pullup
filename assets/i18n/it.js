@@ -40,6 +40,32 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Punti guadagnati dai piani",
+  "Points gagnés": "Punti guadagnati",
+  "Meilleure progression": "Miglior progresso",
+  "Conseils du staff": "Consigli dello staff",
+  "Fondamentaux · un travail ciblé par joueur": "Fondamentali · lavoro mirato per giocatore",
+  "Niveau actuel": "Livello attuale",
+  "Progression attendue cette semaine": "Progresso atteso questa settimana",
+  "Séance": "Seduta",
+  "Officiel": "Ufficiale",
+  "Fait progresser un aspect": "Migliora un aspetto",
+  "Recharge la forme": "Ricarica la forma",
+  "Endurance et puissance": "Resistenza e potenza",
+  "séance du jour": "seduta del giorno",
+  "Aspect tactique travaillé": "Aspetto tattico allenato",
+  "Connaissance tactique de l'équipe": "Conoscenza tattica della squadra",
+  "Avant": "Prima",
+  "Gagné cette semaine": "Guadagnato questa settimana",
+  "Physique et mental des autres": "Fisico e mentale degli altri",
+  "Pas encore de bilan": "Ancora nessun bilancio",
+  "Entraînement · bilan de la semaine {0}": "Allenamento · bilancio della settimana {0}",
+  "intensité normale": "intensità normale",
+  "intensité légère": "intensità leggera",
+  "intensité intense": "intensità alta",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Minuti giocati questa settimana (pieno rendimento a {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Piano della settimana",
   "Sections de l'entraînement": "Sezioni dell'allenamento",

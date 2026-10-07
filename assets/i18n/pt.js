@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Pontos ganhos nos planos",
+  "Points gagnés": "Pontos ganhos",
+  "Meilleure progression": "Melhor progressão",
+  "Conseils du staff": "Conselhos da equipa técnica",
+  "Fondamentaux · un travail ciblé par joueur": "Fundamentos · trabalho específico por jogador",
+  "Niveau actuel": "Nível atual",
+  "Progression attendue cette semaine": "Progresso esperado esta semana",
+  "Séance": "Sessão",
+  "Officiel": "Oficial",
+  "Fait progresser un aspect": "Melhora um aspeto",
+  "Recharge la forme": "Recupera a forma",
+  "Endurance et puissance": "Resistência e potência",
+  "séance du jour": "sessão do dia",
+  "Aspect tactique travaillé": "Aspeto tático trabalhado",
+  "Connaissance tactique de l'équipe": "Conhecimento tático da equipa",
+  "Avant": "Antes",
+  "Gagné cette semaine": "Ganho esta semana",
+  "Physique et mental des autres": "Físico e mental dos outros",
+  "Pas encore de bilan": "Ainda sem balanço",
+  "Entraînement · bilan de la semaine {0}": "Treino · balanço da semana {0}",
+  "intensité normale": "intensidade normal",
+  "intensité légère": "intensidade leve",
+  "intensité intense": "intensidade alta",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Minutos jogados esta semana (rendimento total a {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Plano da semana",
   "Sections de l'entraînement": "Secções do treino",

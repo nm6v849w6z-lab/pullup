@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "个人计划提升点数",
+  "Points gagnés": "提升点数",
+  "Meilleure progression": "最佳进步",
+  "Conseils du staff": "教练组建议",
+  "Fondamentaux · un travail ciblé par joueur": "基本功 · 每名球员针对性训练",
+  "Niveau actuel": "当前水平",
+  "Progression attendue cette semaine": "本周预期进步",
+  "Séance": "训练课",
+  "Officiel": "正式比赛",
+  "Fait progresser un aspect": "提升一个方面",
+  "Recharge la forme": "恢复体能",
+  "Endurance et puissance": "耐力与力量",
+  "séance du jour": "当日训练",
+  "Aspect tactique travaillé": "训练的战术方面",
+  "Connaissance tactique de l'équipe": "球队战术熟练度",
+  "Avant": "之前",
+  "Gagné cette semaine": "本周提升",
+  "Physique et mental des autres": "其他球员的身体与心理",
+  "Pas encore de bilan": "暂无总结",
+  "Entraînement · bilan de la semaine {0}": "训练 · 第{0}周总结",
+  "intensité normale": "正常强度",
+  "intensité légère": "轻度强度",
+  "intensité intense": "高强度",
+  "{0}/{1} min": "{0}/{1} 分钟",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "本周出场时间（{0}分钟达到满效率）",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "本周计划",
   "Sections de l'entraînement": "训练栏目",

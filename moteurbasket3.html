@@ -6165,73 +6165,285 @@
   .tm-xp-row > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .tm-xp-row small{color:var(--ink-dim);}
   .tm-xp-idle{font-size:12.5px; color:var(--ink-dim); line-height:1.5;}
-  /* Refonte visuelle du 2026-10-07 (maquette « Entraînement ») : cartes plus
-     aérées, menu .vs-tabs, compteur de places, jours et séances en grandes
-     tuiles, connaissance tactique et expérience en cartes, bilan en chiffres
-     clés. Police et variables du Mode Club. */
-  #trainingSection .tm-views{margin:2px 0 4px;}
+  /* Refonte du 2026-10-07, reprise fidèle des maquettes « Plan de la
+     semaine » et « Bilan du lundi » (artifact KAJ4pMkfGyyvpinFL569JN) :
+     titres en capitales, cartes 18px, rangées sombres, barres graduées
+     tous les 10, tuiles de jours, séance du jour en encadré, bilan en
+     cartes séparées. Police et variables du Mode Club. */
+  #trainingSection{--tg:#34D399; --tg-ink:#6EE7B7; --tred:#F87171; --tyel:#FBBF24; --tblue:#60A5FA; --tin:var(--bg); --tin-line:var(--line-soft);
+    --tticks:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),var(--tin) calc(10% - 2px) 10%);}
+  html[data-theme="light"] #trainingSection{--tg:#17917d; --tg-ink:#17917d; --tred:#cf4b31; --tyel:#b7791f; --tblue:#2b6cb0;}
+  #trainingSection .tm{gap:20px;}
+  #trainingSection .tm-top{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px;}
+  #trainingSection .tm-break{flex-basis:100%; height:0;}
+  #trainingSection .tm[data-view="bilan"] #trainingCoachCard, #trainingSection .tm[data-view="bilan"] .tm-break{display:none;}
+  #trainingSection .tp-head{display:flex; flex-direction:column; gap:4px; margin:0;}
+  #trainingSection .tp-eyebrow{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); margin:0;}
+  #trainingSection h2.tm-title{font-size:44px !important; text-transform:uppercase !important; margin:0 !important; letter-spacing:-.005em !important;}
+  #trainingSection .tm-views{margin:0;}
   #trainingSection .tm-pane{display:flex; flex-direction:column; gap:20px;}
   #trainingSection .tm-pane.hidden{display:none;}
-  #trainingSection .tm-card{border-radius:18px; padding:24px; gap:16px;}
-  #trainingSection .tm-h h3{font-size:22px;}
-  #trainingSection .tm-coach{gap:14px; padding:12px 18px 12px 12px; border-radius:16px;}
-  #trainingSection .tm-coach .staff-avatar, #trainingSection .tm-coach > :first-child{border-radius:12px;}
+  #trainingSection .tm-card{border-radius:18px; padding:26px; gap:14px; background:var(--panel); border:1px solid var(--line);}
+  #trainingSection .tm-h{align-items:flex-end; gap:14px; margin-bottom:4px;}
+  #trainingSection .tm-h h3{margin:0; font-size:30px; font-weight:800; line-height:1; text-transform:uppercase; letter-spacing:-.005em;}
+  #trainingSection .tm-sub{margin-top:6px; font-size:14px; color:var(--ink-dim);}
+  #trainingSection .tm-label{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); margin:0;}
+  #trainingSection select{color-scheme:dark; min-height:44px; padding:0 12px; border-radius:10px; border:1px solid var(--line); background:var(--tin); color:var(--ink); font-weight:600; font-size:15px; margin:0;}
+  html[data-theme="light"] #trainingSection select{color-scheme:light;}
+  #trainingSection select:focus-visible{outline:2px solid var(--amber); outline-offset:1px;}
+  /* Entraîneur. */
+  #trainingSection .tm-coach{gap:14px; padding:12px 18px 12px 12px; border-radius:16px; background:var(--panel); border:1px solid var(--line); flex-wrap:wrap;}
+  #trainingSection .tm-coach.warn{border-color:rgba(226,105,79,.45); background:rgba(226,105,79,.08);}
+  .tm-coach-av{width:48px; height:48px; flex:none; border-radius:12px; border:2px solid var(--amber); background:var(--panel-2); overflow:hidden; display:grid; place-items:end center; box-sizing:border-box;}
+  .tm-coach-av .staff-avatar{border-radius:0 !important;}
+  .tm-coach-av--warn{place-items:center; border-color:var(--danger); color:var(--danger); font-weight:800; font-size:20px;}
   .tm-coach-main{display:flex; flex-direction:column; gap:6px; min-width:0;}
-  .tm-coach-main b{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:16px;}
+  .tm-coach-main b{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:16px; color:var(--ink);}
+  .tm-coach-main small{color:var(--ink-dim); font-size:12.5px;}
   .tm-coach-role{font-size:13px; font-weight:500; color:var(--ink-dim);}
   .tm-coach-chips{display:flex; flex-wrap:wrap; gap:6px;}
-  .tm-coach-chips .tm-badge{font-size:12px; font-weight:600; padding:3px 9px;}
-  .tm-coach-chips .tm-badge.grey{color:var(--ink);}
+  #trainingSection .tm-coach-chips .tm-badge{font-size:12px; font-weight:600; padding:3px 9px;}
+  #trainingSection .tm-coach-chips .tm-badge.grey{background:var(--panel-2); color:var(--ink);}
+  #trainingSection .tm-coach-chips .tm-badge.teal{background:rgba(52,211,153,.14); color:var(--tg-ink); font-weight:700;}
+  /* Colonnes du plan. */
+  #trainingSection .tm-cols{display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;}
+  #trainingSection .tm-cols > .tm-col:first-child{flex:999 1 640px; min-width:0;}
+  #trainingSection .tm-cols > .tm-col:last-child{flex:1 1 480px; min-width:0;}
+  #trainingSection .tm-col > .tm-card:last-child{flex:0 0 auto;}
+  #collectiveTrainingConfig.tm-card{gap:20px;}
+  /* Plans individuels. */
   .tm-places{display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:13px; color:var(--ink-dim);}
   .tm-places b{color:var(--ink);}
   .tm-places-bar{display:flex; gap:4px;}
   .tm-places-bar i{width:28px; height:6px; border-radius:3px; background:var(--line);}
   .tm-places-bar i.on{background:var(--amber);}
-  #trainingSection .tm-slot{border-radius:14px; padding:14px 16px;}
-  #trainingSection .tm-int{border-radius:10px; padding:2px;}
-  #trainingSection .tm-int button{min-height:30px; padding:0 10px; border-radius:8px;}
-  #trainingSection .tm-eff-btn{font-size:26px;}
-  #trainingSection .tm-x{width:36px; height:36px; border-radius:10px; border:1px solid var(--line); display:grid; place-items:center; padding:0;}
-  #trainingSection .tm-x:hover{color:var(--danger); border-color:var(--danger);}
+  #trainingSection .tm-slots{gap:12px;}
+  #trainingSection .tm-slot{display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; padding:12px 14px; border-radius:14px; background:var(--tin); border:1px solid var(--tin-line);}
+  .tm-slot-id{display:flex; align-items:center; gap:12px; flex:1 1 190px; min-width:0;}
+  .tm-slot-txt{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  #trainingSection .tm-slot .tm-av{width:42px; height:42px; border:2px solid var(--tg); box-sizing:border-box; align-self:center;}
+  #trainingSection .tm-slot .tm-av .player-avatar{width:38px !important; height:38px !important;}
+  #trainingSection .tm-who{display:flex; align-items:baseline; align-self:stretch; gap:8px; flex-wrap:wrap; min-width:0;}
+  #trainingSection .tm-who b{display:inline; flex:0 1 auto; min-width:0; font-size:16px; white-space:normal;}
+  #trainingSection .tm-who .player-link, #trainingSection .tr-who .player-link{text-align:left;}
+  #trainingSection .tm-who small{font-size:12px; color:var(--ink-dim);}
+  #trainingSection .tm-facts{display:flex; align-items:center; gap:4px 12px; flex-wrap:wrap; font-size:12px; color:var(--ink-dim); margin:0;}
+  #trainingSection .tm-facts b{font-weight:600;}
+  #trainingSection .tm-facts .eff-pot{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;}
+  #trainingSection .tm-prog{flex:2 1 280px; min-width:0; display:flex; flex-direction:column; gap:8px;}
+  .tm-prog-top{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  #trainingSection .tm-prog-top select{flex:1 1 140px; width:auto; min-width:0; min-height:38px; font-size:14px;}
+  #trainingSection .tm-int{display:flex; gap:2px; margin:0; padding:2px; border-radius:10px; background:var(--panel); border:1px solid var(--line);}
+  #trainingSection .tm-int button{min-height:32px; padding:0 10px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink-dim);}
+  #trainingSection .tm-int button.on, #trainingSection .tm-int button.on.normale{background:var(--line); color:var(--ink);}
+  #trainingSection .tm-int button.on.legere{background:rgba(96,165,250,.18); color:var(--tblue);}
+  #trainingSection .tm-int button.on.intense{background:rgba(248,113,113,.18); color:var(--tred);}
+  #trainingSection .tm-ceil{margin:0; gap:6px;}
+  #trainingSection .tm-ceil-row{display:flex; align-items:center; gap:10px; margin:0; font-size:12px;}
+  .tm-ceil-name{flex:0 0 auto; max-width:34%; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tm-lv{font-size:14px; min-width:22px; color:var(--ink); font-variant-numeric:tabular-nums;}
+  #trainingSection .tm-track{flex:1; height:8px; border-radius:999px; background:var(--tin-line); overflow:hidden; position:relative;}
+  #trainingSection .tm-slot .tm-track{background:var(--line-soft);}
+  #trainingSection .tm-track::after{content:""; position:absolute; inset:0; background:var(--tticks); pointer-events:none;}
+  #trainingSection .tm-fill{border-radius:0; background:var(--amber);}
+  #trainingSection .tm-room{background:repeating-linear-gradient(-45deg,var(--tg) 0 4px,rgba(52,211,153,.35) 4px 8px);}
+  #trainingSection .tm-room.faible{background:repeating-linear-gradient(-45deg,var(--tyel) 0 4px,rgba(251,191,36,.35) 4px 8px);}
+  #trainingSection .tm-room-label{flex:none; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap;}
+  #trainingSection .tm-room-label.forte{background:rgba(52,211,153,.14); color:var(--tg-ink);}
+  #trainingSection .tm-room-label.faible{background:rgba(251,191,36,.14); color:var(--tyel);}
+  #trainingSection .tm-room-label.atteinte{background:rgba(248,113,113,.14); color:var(--tred);}
+  .tm-slot-end{display:flex; align-items:center; gap:10px; flex:0 0 auto; margin-left:auto;}
+  #trainingSection .tm-eff{display:flex; flex-direction:column; align-items:flex-end; min-width:64px;}
+  #trainingSection .tm-eff-btn{font-size:26px; font-weight:800; line-height:1; border-bottom:0; padding:0; color:var(--ink); font-variant-numeric:tabular-nums;}
+  #trainingSection .tm-eff-btn small{font-size:16px; color:var(--ink-faint);}
+  #trainingSection .tm-eff-cap{margin-top:2px; font-size:11px; color:var(--ink-dim);}
+  /* Carte étroite (barre latérale ouverte) : le travail passe sous le
+     joueur, rendement et retrait restent à droite du nom. */
+  #trainingPlansCard{container-type:inline-size;}
+  @container (max-width:720px){
+    #trainingSection .tm-slot .tm-prog{order:3; flex-basis:100%;}
+    #trainingSection .tm-slot .tm-slot-id{flex:1 1 0;}
+  }
+  #trainingSection .tm-x{width:36px; height:36px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); display:grid; place-items:center; padding:0; flex:none;}
+  #trainingSection .tm-x:hover{color:var(--tred); border-color:var(--tred);}
+  #trainingSection .tm-add{border-radius:14px;}
+  #trainingSection .tm-add select{min-height:40px; font-size:14px;}
+  .tm-legend{display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--ink-dim);}
+  .tm-legend span{display:inline-flex; align-items:center; gap:8px;}
+  .tm-legend i{width:18px; height:8px; border-radius:3px; background:var(--amber);}
+  .tm-legend i.gain{background:repeating-linear-gradient(-45deg,var(--tg) 0 4px,rgba(52,211,153,.35) 4px 8px);}
+  .tm-legend i.won{background:var(--tg);}
+  .tm-xp-legend i{width:10px; height:10px;}
+  .tm-legend i.low{background:var(--tred);} .tm-legend i.mid{background:var(--tyel);} .tm-legend i.high{background:var(--tg);}
+  #trainingSection .tm-hint{border-radius:12px;}
+  /* Collectif. */
+  .tm-week-pick{display:flex; flex-direction:column; gap:6px; flex:0 1 210px; min-width:0;}
+  .tm-week-pick .tm-label{font-size:11px !important;}
+  #trainingSection .tm-week-select{width:100%; max-width:none; min-height:44px; font-size:14px;}
+  #collectiveTrainingConfig > .tm-h{flex-wrap:wrap; align-items:flex-end;}
   #trainingSection .tm-week{gap:5px;}
-  #trainingSection .tm-day{border-radius:12px; border-width:2px;}
-  #trainingSection .tm-day.sel{box-shadow:none; border-color:var(--amber); background:rgba(240,162,60,.12);}
+  #trainingSection .tm-day{min-height:88px; padding:8px 3px; gap:6px; border-radius:12px; border:2px solid var(--tin-line); background:var(--tin); color:var(--ink-dim); box-shadow:none; outline:0;}
+  #trainingSection .tm-day .d{font-size:13px; font-weight:800; letter-spacing:.06em; color:inherit;}
+  #trainingSection .tm-day .ic{display:grid; place-items:center; line-height:0;}
+  #trainingSection .tm-day .t{font-size:10.5px; font-weight:700; color:var(--ink); line-height:1.2; letter-spacing:-.01em;}
+  #trainingSection .tm-day small{font-size:10px; color:var(--ink-dim); max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #trainingSection .tm-day.match{background:rgba(240,162,60,.06); border-color:rgba(240,162,60,.35); color:var(--tyel);}
+  #trainingSection .tm-day.match .t{color:var(--tyel);}
+  #trainingSection .tm-day.friendly{background:rgba(96,165,250,.06); border-color:rgba(96,165,250,.3);}
+  #trainingSection .tm-day.friendly .t{color:var(--tblue);}
+  #trainingSection .tm-day.tac .t{color:var(--tg-ink);} #trainingSection .tm-day.rec .t{color:var(--tblue);} #trainingSection .tm-day.phy .t{color:#c49bff;}
+  #trainingSection .tm-day.past{opacity:.45; filter:none;}
+  #trainingSection .tm-day.today .d{color:var(--amber);}
+  #trainingSection .tm-day.sel{border-color:var(--amber); background:rgba(240,162,60,.12); color:var(--ink);}
+  .tm-session{display:flex; flex-direction:column; gap:14px; padding:18px; border-radius:16px; background:var(--tin); border:1px solid var(--tin-line);}
   #trainingSection .tm-dayedit{gap:8px;}
-  #trainingSection .tm-dayedit button{min-height:64px; border-radius:12px; border-width:2px; font-size:14px; justify-content:center;}
-  #trainingSection .tm-kn{gap:10px;}
-  #trainingSection .tm-kn-row{grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"name right" "bar bar"; gap:8px 10px; padding:12px 14px; border-radius:12px; background:var(--panel-2);}
-  #trainingSection .tm-kn-row > div:first-child{grid-area:name; font-weight:600; font-size:15px;}
-  #trainingSection .tm-kn-row > .tm-track{grid-area:bar;}
-  #trainingSection .tm-kn-row > .tm-kn-right{grid-area:right;}
-  #trainingSection .tm-kn-row:has(.tm-tier.decouverte) .tm-fill{background:#F87171 !important;}
-  #trainingSection .tm-kn-row:has(.tm-tier.rodage) .tm-fill{background:#FBBF24 !important;}
-  #trainingSection .tm-kn-row:has(.tm-tier.maitrisee) .tm-fill{background:#34D399 !important;}
-  #trainingSection .tm-kn-row:has(.tm-tier.signature) .tm-fill{background:#c49bff !important;}
-  #trainingSection .tm-pair{border-radius:14px; padding:12px 14px;}
+  #trainingSection .tm-dayedit button{min-height:64px; border-radius:12px; border:2px solid var(--line); background:var(--panel); color:var(--ink); justify-content:center; gap:2px; padding:8px 6px;}
+  #trainingSection .tm-dayedit button b{font-size:14px; font-weight:600;}
+  #trainingSection .tm-dayedit button span{font-size:11px; font-weight:500; color:var(--ink-dim); opacity:1;}
+  #trainingSection .tm-dayedit button.on{border-color:var(--tg); background:rgba(52,211,153,.10); color:var(--tg-ink);}
+  #trainingSection .tm-session .trained-tactics-picker{display:flex; flex-direction:column; gap:6px; margin:0;}
+  #trainingSection .tm-session .trained-tactics-picker .tm-label{font-size:11px;}
+  #trainingSection .trained-tactic-trigger{min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--panel); font-size:15px; font-weight:600;}
+  #trainingSection .tm-session .recovery-form-gauge{margin:0;}
+  #trainingSection .tm-kn{gap:12px;}
+  #trainingSection .tm-kn-row{display:flex; flex-direction:column; align-items:stretch; gap:8px; padding:12px 14px; border-radius:12px; background:var(--tin);}
+  .tm-kn-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .tm-kn-name{display:flex; flex-direction:column; min-width:0;}
+  .tm-kn-name b{font-size:15px; font-weight:600; color:var(--ink);}
+  .tm-kn-name small{font-size:12px; color:var(--ink-dim);}
+  #trainingSection .tm-kn-right{display:flex; align-items:center; gap:10px; flex:none;}
+  #trainingSection .tm-gain{font-size:12px; font-weight:600; color:var(--tg-ink);}
+  #trainingSection .tm-gain.off{color:var(--ink-dim);}
+  #trainingSection .tm-tier{font-size:12px; font-weight:700; padding:3px 10px;}
+  #trainingSection .tm-tier.decouverte{background:rgba(248,113,113,.14); color:var(--tred);}
+  #trainingSection .tm-tier.rodage{background:rgba(251,191,36,.14); color:var(--tyel);}
+  #trainingSection .tm-tier.maitrisee{background:rgba(52,211,153,.14); color:var(--tg-ink);}
+  #trainingSection .tm-kn-row .tm-track{flex:none; width:100%;}
+  #trainingSection .tm-kn-row .tm-fill{border-radius:999px; background:var(--tg);}
+  #trainingSection .tm-kn-row.decouverte .tm-fill{background:var(--tred);}
+  #trainingSection .tm-kn-row.rodage .tm-fill{background:var(--tyel);}
+  #trainingSection .tm-kn-row.signature .tm-fill{background:#c49bff;}
+  /* Parrainage. */
+  #trainingSection .tm-pair{border-radius:14px; padding:12px 14px; background:var(--tin); border-color:var(--tin-line);}
+  #trainingSection .tm-pair-add{border-radius:14px;}
+  /* Expérience. */
   #trainingSection .tm-xp{grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px;}
-  #trainingSection .tm-xp-row{grid-template-columns:auto minmax(0,1fr) auto; gap:12px; padding:10px 14px; border-radius:12px; background:var(--panel-2);}
+  #trainingSection .tm-xp-row{grid-template-columns:auto minmax(0,1fr) auto; gap:12px; padding:10px 14px; border-radius:12px; background:var(--tin);}
+  #trainingSection .tm-xp-row .tm-av{width:34px; height:34px;}
   .tm-xp-main{display:flex; flex-direction:column; gap:6px; min-width:0;}
   .tm-xp-top{display:flex; justify-content:space-between; gap:8px; font-size:14px; font-weight:600;}
   .tm-xp-top span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .tm-xp-top small{flex:none; font-weight:400; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
-  .tm-xp-row .tm-fill.tm-up{background:#34D399;} .tm-xp-row .tm-fill.tm-flat{background:#FBBF24;} .tm-xp-row .tm-fill.tm-low{background:#F87171;}
-  .tm-xp-pill{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--panel);}
-  #trainingSection .tm-xp-idle{display:flex; flex-direction:column; gap:10px; padding-top:14px; border-top:1px solid var(--line);}
+  .tm-xp-top small{flex:none; font-weight:400; font-size:13px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  #trainingSection .tm-xp-row .tm-track{height:6px; flex:none;}
+  #trainingSection .tm-xp-row .tm-track::after{display:none;}
+  #trainingSection .tm-xp-row .tm-fill{border-radius:999px;}
+  #trainingSection .tm-xp-row .tm-fill.tm-up{background:var(--tg);} #trainingSection .tm-xp-row .tm-fill.tm-flat{background:var(--tyel);} #trainingSection .tm-xp-row .tm-fill.tm-low{background:var(--tred);}
+  .tm-xp-pill{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px;}
+  .tm-xp-pill.tm-up{background:rgba(52,211,153,.14);} .tm-xp-pill.tm-flat{background:rgba(251,191,36,.14);} .tm-xp-pill.tm-low{background:rgba(248,113,113,.14);}
+  #trainingSection .tm-xp-idle{display:flex; flex-direction:column; gap:10px; padding-top:14px; border-top:1px solid var(--tin-line);}
+  #trainingSection .tm-xp-idle .tm-label{color:var(--tred);}
   .tm-xp-chips{display:flex; flex-wrap:wrap; gap:8px;}
-  .tm-xp-chip{display:inline-flex; align-items:center; gap:8px; padding:3px 12px 3px 3px; border-radius:999px; border:1px dashed var(--line); font-size:13px; color:var(--ink-dim);}
-  .tm-xp-chip .tm-av{width:26px; height:26px; font-size:10px;}
-  #trainingSection .tr-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;}
-  #trainingSection .tr-kpi{flex-direction:column; align-items:flex-start; gap:10px; padding:18px 20px; border-radius:16px; background:var(--panel-2); border:1px solid var(--line);}
-  #trainingSection .tr-kpi b{font-family:var(--display); font-size:40px; font-weight:800; line-height:1; letter-spacing:-.01em;}
-  #trainingSection .tr-kpi.up b{color:#34D399;}
-  #trainingSection .tr-grid{gap:14px;}
-  #trainingSection .tr-card{border-radius:16px; padding:18px;}
-  #trainingSection .tr-big{font-size:30px;}
-  #trainingSection .tr-track{height:10px; border-radius:999px;}
-  #trainingSection .tr-base{background:var(--amber);}
-  #trainingSection .tr-gain.up{background:#34D399;}
-  #trainingSection .tr-tile{border-radius:12px;}
-  @media (max-width:720px){ #trainingSection .tm-card{padding:16px; border-radius:14px;} .tm-places{align-items:flex-start;} #trainingSection .tr-kpi b{font-size:32px;} }
+  .tm-xp-chip{display:inline-flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:999px; background:var(--tin); border:1px dashed var(--line); font-size:13px; color:var(--ink-dim);}
+  .tm-xp-chip .tm-av{width:24px !important; height:24px !important; font-size:10px;}
+  /* Bilan du lundi. */
+  #trainingSection .tp-report{display:flex; flex-direction:column; gap:20px;}
+  #trainingSection .tr-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px;}
+  #trainingSection .tr-kpi{display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:8px; padding:24px; border-radius:18px; background:var(--panel); border:1px solid var(--line); min-width:0;}
+  #trainingSection .tr-kpi-l{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); display:block; white-space:normal;}
+  #trainingSection .tr-kpi-v{display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-width:0;}
+  #trainingSection .tr-kpi-v b{font-family:var(--display); font-size:52px; font-weight:800; line-height:1; letter-spacing:-.02em; color:var(--ink); font-variant-numeric:tabular-nums;}
+  #trainingSection .tr-kpi-v small{font-size:24px; font-weight:800; color:var(--ink-faint); margin-left:-8px; align-self:flex-end; padding-bottom:4px;}
+  #trainingSection .tr-kpi.up .tr-kpi-v b{color:var(--tg);}
+  #trainingSection .tr-kpi.zero .tr-kpi-v b{color:var(--ink-faint);}
+  #trainingSection .tr-kpi .tr-kpi-who{display:inline-flex; align-items:center; gap:8px; padding:4px 10px 4px 4px; border-radius:999px; background:var(--tin); border:1px solid var(--line); font-size:14px; font-weight:600; color:var(--ink); min-width:0; max-width:100%;}
+  #trainingSection .tr-kpi .tr-kpi-who .tm-av{display:inline-flex; width:28px; height:28px; flex:none; border:2px solid var(--tg); box-sizing:content-box; align-items:flex-end; justify-content:center; overflow:hidden; border-radius:50%;}
+  #trainingSection .tr-kpi .tr-kpi-who .tm-av .player-avatar{width:28px !important; height:28px !important; border-radius:0 !important;}
+  #trainingSection .tr-kpi .tr-kpi-who > span:last-child{display:inline; font-size:14px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #trainingSection .tr-sec{gap:18px;}
+  #trainingSection .tr-sec > .tm-h{justify-content:space-between;}
+  #trainingSection .tr-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; align-items:stretch;}
+  #trainingSection .tr-card{display:flex; flex-direction:column; gap:16px; padding:18px; border-radius:16px; background:var(--tin); border:1px solid var(--tin-line);}
+  #trainingSection .tr-card.is-up{border-color:var(--tin-line);}
+  #trainingSection .tr-head{gap:12px;}
+  #trainingSection .tr-head .tm-av{width:44px; height:44px; border:2px solid var(--tg); box-sizing:border-box;}
+  #trainingSection .tr-who b{font-size:16px;}
+  #trainingSection .tr-who small{font-size:12px; color:var(--ink-dim); display:block;}
+  #trainingSection .tr-big{flex:none; padding:0; border-radius:0; background:none !important; box-shadow:none; font-family:var(--display); font-weight:800; line-height:1; font-size:34px; font-variant-numeric:tabular-nums;}
+  #trainingSection .tr-big.md{font-size:26px;}
+  #trainingSection .tr-big.sm{font-size:28px;}
+  #trainingSection .tr-big.up{color:var(--tg);}
+  #trainingSection .tr-big.flat{color:var(--ink-faint);}
+  #trainingSection .tr-big.down{color:var(--tred);}
+  #trainingSection .tr-bars{gap:12px;}
+  #trainingSection .tr-bar{display:flex; flex-direction:column; gap:8px;}
+  #trainingSection .tr-bar-top{margin:0; font-size:13px; color:var(--ink-dim);}
+  #trainingSection .tr-bar-top > span:first-child{color:var(--ink-dim);}
+  #trainingSection .tr-bar-val{font-variant-numeric:tabular-nums;}
+  #trainingSection .tr-track{height:10px; border-radius:999px; background:var(--line-soft); overflow:hidden; position:relative;}
+  #trainingSection .tr-track::after{content:""; position:absolute; inset:0; background:var(--tticks); pointer-events:none;}
+  #trainingSection .tr-base{background:var(--amber); border-radius:0;}
+  #trainingSection .tr-gain.up{background:var(--tg); box-shadow:none;}
+  #trainingSection .tr-gain.down{background:var(--tred);}
+  #trainingSection .tr-row{display:flex; flex-wrap:wrap; gap:20px; align-items:stretch;}
+  #trainingSection .tr-row > .tr-team{flex:999 1 560px; min-width:0; gap:18px;}
+  #trainingSection .tr-row > .tr-others{flex:1 1 340px; min-width:0;}
+  #trainingSection .tr-others .tm-h h3{font-size:26px; line-height:1.05;}
+  #trainingSection .tr-days{gap:8px;}
+  #trainingSection .tr-day{display:inline-flex; align-items:center; gap:8px; padding:0 14px; min-height:40px; border-radius:10px; background:var(--tin); border:1px solid var(--line); font-size:14px; font-weight:600; color:var(--ink);}
+  #trainingSection .tr-day b{font-family:var(--display); font-size:20px; font-weight:800; line-height:1;}
+  #trainingSection .tr-day.tactique b{color:var(--amber);} #trainingSection .tr-day.recuperation b{color:var(--tblue);} #trainingSection .tr-day.physique b{color:#c49bff;}
+  .tr-tac{display:flex; flex-direction:column; gap:12px; padding:18px; border-radius:14px; background:var(--tin); border:1px solid var(--tin-line);}
+  .tr-tac-top{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px;}
+  .tr-tac-name{display:flex; align-items:center; gap:10px;}
+  .tr-tac-name b{font-size:16px; color:var(--ink);}
+  .tr-tac-val{display:flex; align-items:baseline; gap:10px; font-size:14px; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .tr-tac-val b{color:var(--ink);}
+  #trainingSection .tr-tac .tr-track{height:12px;}
+  #trainingSection .tr-phys{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-radius:12px; background:var(--tin); font-size:15px; font-weight:600;}
+  #trainingSection .tr-tiles{display:flex; flex-direction:column; gap:10px;}
+  #trainingSection .tr-tile{gap:12px; padding:12px 14px; border-radius:12px; background:var(--tin); border:0;}
+  #trainingSection .tr-tile .tm-av{width:38px; height:38px; border:2px solid var(--tg); box-sizing:border-box;}
+  #trainingSection .tr-tile .tr-who b{font-size:15px;}
+  #trainingSection .tr-pills{gap:6px; margin-top:2px;}
+  #trainingSection .tr-pill{padding:0; background:none !important; font-size:12px; font-weight:500; color:var(--ink-dim);}
+  #trainingSection .tr-pill.neg{color:var(--tred);}
+  #trainingSection .tr-pill + .tr-pill::before{content:"· "; color:var(--ink-faint);}
+  #trainingSection .tr-advice{gap:10px;}
+  #trainingSection .tm-report-empty .tm-h h3{font-size:24px;}
+  #trainingSection .tp-hist{display:flex; flex-wrap:wrap; gap:6px;}
+  /* Téléphone. */
+  @media (max-width:900px){
+    #trainingSection .tm-slot{display:flex;}
+  }
+  @media (max-width:720px){
+    #trainingSection h2.tm-title{font-size:34px !important;}
+    #trainingSection .tm-card{padding:16px; border-radius:16px;}
+    #trainingSection .tm-h h3{font-size:24px;}
+    #trainingSection .tr-others .tm-h h3{font-size:22px;}
+    .tm-places{align-items:flex-start;}
+    #trainingSection .tm-coach{width:100%; box-sizing:border-box;}
+    #trainingSection .tm-slot{gap:10px;}
+    #trainingSection .tm-prog{flex-basis:100%; order:3;}
+    .tm-slot-end{margin-left:auto;}
+    .tm-week-pick{flex-basis:100%;}
+    #trainingSection .tm-week{gap:3px;}
+    #trainingSection .tm-day{min-height:76px; padding:6px 1px; gap:4px; border-radius:10px;}
+    #trainingSection .tm-day .d{font-size:10.5px; letter-spacing:.02em;}
+    #trainingSection .tm-day .ic svg{width:16px; height:16px;}
+    #trainingSection .tm-day .t{font-size:9.5px;}
+    #trainingSection .tm-day small{display:none;}
+    .tm-session{padding:12px;}
+    #trainingSection .tm-dayedit button{min-height:58px;}
+    #trainingSection .tm-dayedit button span{font-size:10px;}
+    #trainingSection .tr-kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+    #trainingSection .tr-kpi{padding:14px; border-radius:14px;}
+    #trainingSection .tr-kpi.best{grid-column:1 / -1;}
+    #trainingSection .tr-kpi-l{font-size:11px; letter-spacing:.1em;}
+    #trainingSection .tr-kpi-v b{font-size:38px;}
+    #trainingSection .tr-kpi-v small{font-size:18px; margin-left:-10px;}
+    #trainingSection .tr-grid, #trainingSection .tm-xp{grid-template-columns:minmax(0,1fr);}
+    #trainingSection .tr-big{font-size:28px;}
+  }
   .tm-up{color:var(--ok);}
   .tm-flat{color:var(--amber);}
   .tm-low{color:var(--danger);}
@@ -9214,15 +9426,17 @@
       <div class="tm-top">
         <div class="tp-head">
           <span class="tp-eyebrow" id="trainingEyebrow">Entraînement</span>
-          <h2 id="trainingTitle" class="tp-title page-title">Semaine</h2>
+          <h2 id="trainingTitle" class="tp-title page-title tm-title">Semaine</h2>
         </div>
         <div id="trainingCoachCard"></div>
-      </div>
-      <!-- Refonte du 2026-10-07 (maquette « Entraînement ») : deux vues,
-           menu commun du Mode Club (.vs-tabs). -->
-      <div class="vs-tabs tm-views" role="tablist" aria-label="Sections de l'entraînement">
-        <button type="button" role="tab" class="active" aria-selected="true" data-tm-view="plan">Plan de la semaine</button>
-        <button type="button" role="tab" aria-selected="false" data-tm-view="bilan">Bilan du lundi</button>
+        <!-- Refonte du 2026-10-07 (maquettes « Plan de la semaine » et
+             « Bilan du lundi ») : deux vues, menu commun du Mode Club
+             (.vs-tabs) sous l'en-tête du plan, à droite du titre du bilan. -->
+        <i class="tm-break" aria-hidden="true"></i>
+        <div class="vs-tabs tm-views" role="tablist" aria-label="Sections de l'entraînement">
+          <button type="button" role="tab" class="active" aria-selected="true" data-tm-view="plan">Plan de la semaine</button>
+          <button type="button" role="tab" aria-selected="false" data-tm-view="bilan">Bilan du lundi</button>
+        </div>
       </div>
       <div class="tm-pane" data-tm-pane="plan">
       <div class="tm-cols">
@@ -46124,20 +46338,20 @@ function showTrainingSection() {
 function renderTrainingPage() {
   const title = document.getElementById("trainingTitle");
   if (!title || !teamA) return;
-  title.textContent = `Semaine ${teamA.week}`;
-  const eyebrow = document.getElementById("trainingEyebrow");
-  if (eyebrow) eyebrow.textContent = `Entraînement · ${trainingWeekLabel(0).replace(/^Semaine /, "")}`;
-  applyTrainingView();
   renderTrainingCoachCard();
   renderTrainingPlans();
   renderCollectivePlan();
   renderMentorshipCard();
   renderExperienceCard();
   renderLastTrainingReport();
+  applyTrainingView();
 }
 
 // Vue affichée : « Plan de la semaine » ou « Bilan du lundi » (menu .vs-tabs).
+// L'en-tête suit la vue, comme les deux maquettes du 2026-10-07 : « Semaine N »
+// avec l'entraîneur, ou « Bilan du lundi » avec le menu à droite.
 let trainingView = "plan";
+let trainingBilanHead = null;
 function applyTrainingView() {
   document.querySelectorAll("#trainingSection [data-tm-view]").forEach(b => {
     const on = b.dataset.tmView === trainingView;
@@ -46145,6 +46359,22 @@ function applyTrainingView() {
     b.setAttribute("aria-selected", String(on));
   });
   document.querySelectorAll("#trainingSection [data-tm-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.tmPane !== trainingView));
+  const page = document.querySelector("#trainingSection .tm");
+  if (page) page.dataset.view = trainingView;
+  updateTrainingHeader();
+}
+function updateTrainingHeader() {
+  const title = document.getElementById("trainingTitle");
+  const eyebrow = document.getElementById("trainingEyebrow");
+  if (!title || !teamA) return;
+  if (trainingView === "bilan") {
+    const h = trainingBilanHead;
+    title.textContent = h && !h.last ? "Bilan de la semaine" : "Bilan du lundi";
+    if (eyebrow) eyebrow.textContent = h ? `Entraînement · bilan de la semaine ${h.week}` : "Entraînement";
+  } else {
+    title.textContent = `Semaine ${teamA.week}`;
+    if (eyebrow) eyebrow.textContent = `Entraînement · ${trainingWeekLabel(0).replace(/^Semaine /, "")}`;
+  }
 }
 document.getElementById("trainingSection").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tm-view]");
@@ -46159,8 +46389,8 @@ function renderTrainingCoachCard() {
   if (!holder) return;
   const tr = teamA.trainer;
   if (!tr) {
-    holder.innerHTML = `<div class="tm-coach warn"><span class="tm-av coach" aria-hidden="true">!</span>` +
-      `<div><b>Aucun entraîneur</b><small>Sans entraîneur, les fondamentaux ne sont pas travaillés.</small></div>` +
+    holder.innerHTML = `<div class="tm-coach warn"><span class="tm-coach-av tm-coach-av--warn" aria-hidden="true">!</span>` +
+      `<div class="tm-coach-main"><b>Aucun entraîneur</b><small>Sans entraîneur, les fondamentaux ne sont pas travaillés.</small></div>` +
       `<button type="button" class="tm-btn" data-staff-market="coach">Engager un entraîneur</button></div>`;
     return;
   }
@@ -46168,7 +46398,7 @@ function renderTrainingCoachCard() {
   // Visage et nom de l'entraîneur, comme sur la page Staff (retour
   // utilisateur 2026-10-02 : « la tête de l'entraîneur ne s'affiche pas »).
   const ident = staffIdentity(staffMemberKey("coach", tr));
-  holder.innerHTML = `<div class="tm-coach">${staffAvatarHtml(ident, teamAvatarColors(teamA), 40)}` +
+  holder.innerHTML = `<div class="tm-coach"><span class="tm-coach-av">${staffAvatarHtml(ident, teamAvatarColors(teamA), 44)}</span>` +
     `<div class="tm-coach-main"><b><span data-no-i18n>${escapeHtml(ident.name)}</span> <span class="tm-coach-role">Entraîneur</span> ${staffStarsHtml(tr.level)}</b>` +
     `<div class="tm-coach-chips"><span class="tm-badge grey">${trainingSlotsForTrainer(tr)} places individuelles</span><span class="tm-badge grey">Rendement ${trainingFmtMult(trainerRateMultiplier(tr))}</span><span class="tm-badge grey">Plafond +${trainerCeilingBonus(tr)}</span>` +
     (spec ? `<span class="tm-badge teal">Spécialité ${escapeHtml(spec.label)}</span>` : "") + `</div></div></div>`;
@@ -46190,6 +46420,9 @@ function trainingCeilingGaugesHtml(player, programKey) {
   const program = TRAINING_PROGRAMS[programKey];
   if (!program) return "";
   const labels = { forte: "Marge forte", faible: "Marge faible", atteinte: "Plafond atteint" };
+  const multi = program.attrs.length > 1;
+  // Maquette « Plan de la semaine » : niveau à gauche, barre (niveau actuel
+  // + progression attendue hachurée, graduée tous les 10), marge à droite.
   return `<div class="tm-ceil">` + program.attrs.map(({ attr, weight }) => {
     const value = player.attrs[attr];
     const room = trainingCeilingFor(player, weight, teamA.trainer) - value;
@@ -46197,11 +46430,12 @@ function trainingCeilingGaugesHtml(player, programKey) {
     // Marge RELATIVE seulement (jamais le potentiel exact) : largeur fixe par palier.
     const roomWidth = level === "forte" ? 12 : level === "faible" ? 5 : 0;
     const left = Math.min(value, 99);
-    return `<div><div class="tm-ceil-row"><span>${escapeHtml(TRAINING_LABELS[attr])} <b>${value}</b></span>` +
-      `<span class="tm-room-label ${level}">${labels[level]}</span></div>` +
+    return `<div class="tm-ceil-row" title="${escapeHtml(TRAINING_LABELS[attr])}">` +
+      (multi ? `<span class="tm-ceil-name">${escapeHtml(TRAINING_LABELS[attr])}</span>` : "") +
+      `<b class="tm-lv">${value}</b>` +
       `<div class="tm-track"><div class="tm-fill" style="width:${left}%"></div>` +
       (roomWidth ? `<div class="tm-room ${level}" style="left:${left}%;width:${Math.min(roomWidth, 100 - left)}%"></div>` : "") +
-      `</div></div>`;
+      `</div><span class="tm-room-label ${level}">${labels[level]}</span></div>`;
   }).join("") + `</div>`;
 }
 // Conseil affiché sous un plan : celui du bilan du lundi tant que le joueur
@@ -46251,20 +46485,21 @@ function trainingSlotFactsHtml(p, eff) {
   const minCls = eff.minutes >= fullMin ? "tm-up" : eff.minutes > 0 ? "tm-flat" : "tm-low";
   const hPct = Math.round((eff.heightMult - 1) * 100);
   const hCls = hPct > 0 ? "tm-up" : hPct < 0 ? "tm-low" : "tm-flat";
-  return `<dl class="tm-facts">` +
-    `<div><dt>Minutes</dt><dd class="${minCls}">${eff.minutes} / ${fullMin} min</dd></div>` +
-    `<div><dt>Taille</dt><dd>${p.height} cm <span class="${hCls}">${hPct > 0 ? "+" : hPct < 0 ? "−" : "±"}${Math.abs(hPct)} %</span></dd></div>` +
-    `<div><dt>Potentiel</dt><dd>${effPotentialHtml(p)}</dd></div>` +
-    `</dl>`;
+  // Une seule ligne sous le nom, comme la maquette : minutes, taille et
+  // effet du gabarit, potentiel.
+  return `<div class="tm-facts">` +
+    `<span title="Minutes jouées cette semaine (plein rendement à ${fullMin} min)"><span class="${minCls}">${eff.minutes}/${fullMin} min</span></span>` +
+    `<span title="Taille">${p.height} cm <b class="${hCls}">${hPct > 0 ? "+" : hPct < 0 ? "−" : "±"}${Math.abs(hPct)} %</b></span>` +
+    `<span title="Potentiel">${effPotentialHtml(p)}</span>` +
+    `</div>`;
 }
+const TM_X_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
 function renderTrainingPlans() {
   const holder = document.getElementById("trainingPlansCard");
   if (!holder) return;
   const max = teamA.trainingSlotsMax();
   const slots = teamA.activeTrainingSlots();
-  let html = `<div class="tm-h"><div class="tm-h-main">` +
-    `<span class="tp-icon tp-icon-fond" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg></span>` +
-    `<div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · ${slots.length} joueurs suivis sur ${max}</span></div></div>` +
+  let html = `<div class="tm-h"><div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · un travail ciblé par joueur</span></div>` +
     (max ? `<div class="tm-places"><span><b>${slots.length}</b> place${slots.length > 1 ? "s" : ""} sur ${max} utilisée${slots.length > 1 ? "s" : ""}</span><span class="tm-places-bar">${Array.from({ length: max }, (_, i) => `<i class="${i < slots.length ? "on" : ""}"></i>`).join("")}</span></div>` : "") + `</div>`;
   if (!max) {
     html += `<div class="tm-empty"><span>Engagez un entraîneur pour travailler les fondamentaux : chaque entraîneur ouvre des places de plan individuel (3 au niveau 1, jusqu'à 5 au niveau 5).</span>` +
@@ -46278,14 +46513,14 @@ function renderTrainingPlans() {
     const p = trainingPlayerById(slot.playerId);
     if (!p) return;
     const eff = trainingEfficiencyFor(teamA, p, slot.program);
-    html += `<div class="tm-slot" data-slot-player="${escapeHtml(String(p.id))}">` +
-      trainingAvatarHtml(p, p.name) +
-      `<div class="tm-who"><b>${trainingNameHtml(p)}</b><small>${escapeHtml(p.position)} · ${p.age} ans</small></div>` +
-      trainingSlotFactsHtml(p, eff) +
-      `<div class="tm-prog">${trainingProgramSelectHtml(idx, slot.program)}${trainingCeilingGaugesHtml(p, slot.program)}${trainingIntensityPickerHtml(idx, p)}</div>` +
-      `<div class="tm-eff"><button type="button" class="tm-eff-btn" data-eff-toggle aria-expanded="false" aria-label="Rendement de ${escapeHtml(p.name)}">${eff.pct} %</button>` +
+    html += `<article class="tm-slot" data-slot-player="${escapeHtml(String(p.id))}">` +
+      `<div class="tm-slot-id">${trainingAvatarHtml(p, p.name)}<div class="tm-slot-txt">` +
+        `<div class="tm-who"><b>${trainingNameHtml(p)}</b><small>${escapeHtml(p.position)} · ${p.age} ans</small></div>` +
+        trainingSlotFactsHtml(p, eff) + `</div></div>` +
+      `<div class="tm-prog"><div class="tm-prog-top">${trainingProgramSelectHtml(idx, slot.program)}${trainingIntensityPickerHtml(idx, p)}</div>${trainingCeilingGaugesHtml(p, slot.program)}</div>` +
+      `<div class="tm-slot-end"><div class="tm-eff"><button type="button" class="tm-eff-btn" data-eff-toggle aria-expanded="false" aria-label="Rendement de ${escapeHtml(p.name)}">${eff.pct}<small> %</small></button>` +
       `<span class="tm-eff-cap">rendement</span><div class="tm-tip" role="tooltip">${trainingEfficiencyTipHtml(eff)}</div></div>` +
-      `<button type="button" class="tm-x" data-slot-remove="${idx}" title="Retirer" aria-label="Retirer ${escapeHtml(p.name)}">✕</button></div>`;
+      `<button type="button" class="tm-x" data-slot-remove="${idx}" title="Retirer" aria-label="Retirer ${escapeHtml(p.name)}">${TM_X_ICON}</button></div></article>`;
     const tip = trainingSlotAdvice(p, slot.program);
     if (tip) html += trainingAdviceHtml(tip, p.name);
   });
@@ -46298,6 +46533,7 @@ function renderTrainingPlans() {
       `</select><span class="tm-badge grey">${free} place${free > 1 ? "s" : ""} libre${free > 1 ? "s" : ""}</span></div>`;
   }
   html += `</div>`;
+  if (slots.length) html += `<div class="tm-legend"><span><i class="lv"></i>Niveau actuel</span><span><i class="gain"></i>Progression attendue cette semaine</span></div>`;
   holder.innerHTML = html;
 }
 function setTrainingSlots(next) {
@@ -46350,7 +46586,7 @@ function trainingWeekDays(now = Date.now(), offset = trainingWeekOffset) {
     // Jour d'amical : la tactique est impossible, elle compte comme une
     // récupération (même règle que Team.syncCollectiveTrainingLog).
     if (!match && friendly && option === "tactique") option = "recuperation";
-    days.push({ i, dayIndex, past: dayIndex < todayIndex, today: dayIndex === todayIndex, match: !!match, friendly: !match && !!friendly, opponent, option });
+    days.push({ i, dayIndex, past: dayIndex < todayIndex, today: dayIndex === todayIndex, match: !!match, friendly: !match && !!friendly, opponent, option, home: !!(match && match.isHome), official: !!(match && match.competition === "official") });
   }
   return days;
 }
@@ -46369,6 +46605,13 @@ function trainingWeekLabel(offset) {
   const from = sameMonth ? fmt(monday, { day: "numeric" }) : fmt(monday, { day: "numeric", month: "long" });
   return `Semaine du ${from} au ${fmt(sunday, { day: "numeric", month: "long" })}`;
 }
+// Icônes des tuiles de jour (maquette « Plan de la semaine ») : ballon pour
+// un match, planchette pour une séance.
+const TM_DAY_ICONS = {
+  match: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8"/></svg>`,
+  session: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 8 3 3M11 8l-3 3M14 15h3M15.5 13.5v3"/></svg>`,
+};
+const TM_SESSION_HINTS = { tactique: "Fait progresser un aspect", recuperation: "Recharge la forme", physique: "Endurance et puissance" };
 function renderCollectivePlan() {
   const holder = document.getElementById("collectiveTrainingConfig");
   if (!holder) return;
@@ -46377,27 +46620,29 @@ function renderCollectivePlan() {
   if (trainingSelectedDay == null || !editable.some(d => d.dayIndex === trainingSelectedDay)) {
     trainingSelectedDay = editable.length ? editable[0].dayIndex : null;
   }
-  let html = `<div class="tm-h"><div class="tm-h-main">` +
-    `<span class="tp-icon tp-icon-coll" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="7" r="2.5"></circle><circle cx="18" cy="7" r="2.5"></circle><circle cx="12" cy="17" r="2.5"></circle><path d="M8 8.5l2.5 6M16 8.5l-2.5 6M8.5 7h7"></path></svg></span>` +
-    `<div><h3 id="tpCollTitle">Collectif</h3><span class="tm-sub">Un choix par jour sans match</span></div></div>` +
-    `<select class="tm-week-select" data-train-week-select aria-label="Semaine affichée">` +
+  let html = `<div class="tm-h"><div><h3 id="tpCollTitle">Collectif</h3><span class="tm-sub">Un choix par jour sans match</span></div>` +
+    `<label class="tm-week-pick"><span class="tm-label">Semaine</span><select class="tm-week-select" data-train-week-select aria-label="Semaine affichée">` +
       Array.from({ length: TRAINING_PLAN_WEEKS_AHEAD + 1 }, (_, k) => `<option value="${k}"${k === trainingWeekOffset ? " selected" : ""}>${escapeHtml(trainingWeekLabel(k))}</option>`).join("") +
-    `</select></div>`;
+    `</select></label></div>`;
   html += `<div class="tm-week" role="group" aria-label="Semaine">` + days.map(d => {
     const ui = COLLECTIVE_OPTION_UI[d.option];
-    let cls = "tm-day", body;
+    let cls = "tm-day", label, sub, icon = TM_DAY_ICONS.session;
     if (d.match) {
       cls += " match";
-      body = `<span class="ic" aria-hidden="true">${TM_ICONS.match}</span><span class="t">${escapeHtml(d.opponent || "Match")}</span>`;
+      icon = TM_DAY_ICONS.match;
+      label = d.opponent || "Match";
+      sub = d.official ? "Officiel" : d.home ? "Domicile" : "Extérieur";
     } else if (d.friendly) {
       cls += " friendly";
-      const sub = ui && d.option !== "tactique" ? `<small>+ ${escapeHtml(ui.short)}</small>` : "";
-      body = `<span class="ic" aria-hidden="true">${TM_ICONS.friendly}</span><span class="t">Amical</span>${sub}`;
+      label = "Amical";
+      sub = ui && d.option !== "tactique" ? `+ ${ui.short}` : "Amical";
     } else if (ui) {
       cls += " " + ui.cls;
-      body = `<span class="ic" aria-hidden="true">${ui.icon}</span><span class="t">${escapeHtml(ui.short)}</span>`;
+      label = ui.short;
+      sub = "Séance";
     } else {
-      body = `<span class="ic" aria-hidden="true">·</span><span class="t">Repos</span>`;
+      label = "Repos";
+      sub = "—";
     }
     if (d.past) cls += " past";
     if (d.today) cls += " today";
@@ -46405,29 +46650,29 @@ function renderCollectivePlan() {
     const disabled = d.past || d.match;
     const tip = d.past ? "Jour passé : plus modifiable" : d.match ? "Jour de match officiel" : "";
     return `<button type="button" class="${cls}" data-train-day="${d.dayIndex}"${disabled ? " disabled" : ""}${tip ? ` title="${tip}"` : ""} aria-pressed="${d.dayIndex === trainingSelectedDay}">` +
-      `<span class="d">${TRAINING_DAY_SHORT[d.i]}</span>${body}</button>`;
+      `<span class="d">${TRAINING_DAY_SHORT[d.i]}</span><span class="ic">${icon}</span><span class="t" title="${escapeHtml(label)}">${escapeHtml(label)}</span><small>${escapeHtml(sub)}</small></button>`;
   }).join("") + `</div>`;
   const sel = days.find(d => d.dayIndex === trainingSelectedDay);
   if (sel) {
     const cfg = teamA.collectiveDayConfig(sel.dayIndex);
     const opts = [
-      { key: "tactique", sub: sel.friendly ? "impossible (amical)" : "", disabled: sel.friendly },
-      { key: "recuperation", sub: "" },
-      { key: "physique", sub: "" },
+      { key: "tactique", sub: sel.friendly ? "impossible (amical)" : TM_SESSION_HINTS.tactique, disabled: sel.friendly },
+      { key: "recuperation", sub: TM_SESSION_HINTS.recuperation },
+      { key: "physique", sub: TM_SESSION_HINTS.physique },
     ];
-    html += `<div><div class="tm-label">${TRAINING_DAY_LONG[sel.i]} · ${sel.friendly ? "jour d'amical" : "jour de repos"}</div>` +
+    html += `<div class="tm-session"><div class="tm-label">${TRAINING_DAY_LONG[sel.i]} · ${sel.friendly ? "jour d'amical" : "séance du jour"}</div>` +
       `<div class="tm-dayedit" role="group">` + opts.map(o => {
         const ui = COLLECTIVE_OPTION_UI[o.key];
         const chosen = sel.friendly && cfg.collectiveTraining === "tactique" ? "recuperation" : cfg.collectiveTraining;
         const on = chosen === o.key && !(o.disabled);
-        return `<button type="button" data-day-option="${o.key}" class="${on ? "on" : ""}"${o.disabled ? " disabled" : ""} aria-pressed="${on}"><b>${ui.icon}<span>${ui.label}</span></b>${o.sub ? `<span>${o.sub}</span>` : ""}</button>`;
+        return `<button type="button" data-day-option="${o.key}" class="${on ? "on" : ""}"${o.disabled ? " disabled" : ""} aria-pressed="${on}"><b>${ui.label}</b><span>${o.sub}</span></button>`;
       }).join("") + `</div>` +
-      (sel.friendly ? `<div class="tm-note" style="margin-top:8px">S'applique aux joueurs non retenus pour l'amical.</div>` : "") +
-      `</div>`;
+      (sel.friendly ? `<div class="tm-note">S'applique aux joueurs non retenus pour l'amical.</div>` : "");
     if (cfg.collectiveTraining === "tactique" && !sel.friendly) {
       html += `<div id="trainedTacticsPicker" class="trained-tactics-picker"></div>`;
     }
     if (cfg.collectiveTraining === "recuperation" || (sel.friendly && cfg.collectiveTraining === "tactique")) html += `<div id="recoveryFormGauge" class="recovery-form-gauge"></div>`;
+    html += `</div>`;
   }
   html += trainingKnowledgeHtml(days);
   holder.innerHTML = html;
@@ -46464,13 +46709,14 @@ function trainingKnowledgeHtml(days) {
   (teamA.offensivePriorities || []).forEach(v => add("offense", v, null));
   add("defense", teamA.defense, null);
   add("rhythm", teamA.rhythm, null);
-  return `<div class="tm-kn"><div class="tm-label">Connaissance tactique en cours</div>` + items.map(it => {
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  return `<div class="tm-kn"><div class="tm-label">Connaissance tactique de l'équipe</div>` + items.map(it => {
     const tier = tacticTierFor(it.level);
     const gain = Math.round(tacticDailyGainForLevel(it.level));
-    const sub = TACTIC_CATEGORY_LABELS[it.cat] + (it.days.length ? ` · travaillée ${it.days.join(", ")}` : "");
-    return `<div class="tm-kn-row"><div>${escapeHtml(it.value)}<small>${escapeHtml(sub)}</small></div>` +
-      `<div class="tm-track" title="${Math.round(it.level)}/100"><div class="tm-fill" style="width:${Math.max(3, Math.round(it.level))}%;background:var(--ok)"></div></div>` +
-      `<div class="tm-kn-right"><span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span>${it.worked ? `<span class="tm-gain">+${gain} × ${it.days.length} j</span>` : `<span class="tm-gain off">en match</span>`}</div></div>`;
+    const sub = cap(TACTIC_CATEGORY_LABELS[it.cat]) + (it.days.length ? ` · travaillée ${it.days.join(", ")}` : "");
+    return `<div class="tm-kn-row ${tier.key}"><div class="tm-kn-top"><div class="tm-kn-name"><b>${escapeHtml(it.value)}</b><small>${escapeHtml(sub)}</small></div>` +
+      `<div class="tm-kn-right">${it.worked ? `<span class="tm-gain">+${gain} × ${it.days.length} j</span>` : `<span class="tm-gain off">en match</span>`}<span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span></div></div>` +
+      `<div class="tm-track" title="${Math.round(it.level)}/100"><div class="tm-fill" style="width:${Math.max(3, Math.round(it.level))}%"></div></div></div>`;
   }).join("") +
     `</div>`;
 }
@@ -46520,7 +46766,7 @@ function renderTrainedTacticsPicker(day) {
   holder.innerHTML = "";
   const label = document.createElement("div");
   label.className = "tm-label";
-  label.textContent = `${TRAINING_DAY_LONG[day.i]} · aspect tactique travaillé`;
+  label.textContent = "Aspect tactique travaillé";
   holder.appendChild(label);
   const knowledge = teamA.tacticalKnowledge || {};
   const knowledgeValue = (cat, key) => knowledge[cat] && typeof knowledge[cat][key] === "number" ? knowledge[cat][key] : 50;
@@ -46590,7 +46836,7 @@ function renderMentorshipCard() {
     if (!y || !v) return;
     html += `<div class="tm-pair">${trainingAvatarHtml(y, y.name)}<div class="who"><b>${trainingNameHtml(y)}</b><small>${escapeHtml(y.position)} · ${y.age} ans</small></div>` +
       `<span class="lk" aria-hidden="true">⟷</span>${trainingAvatarHtml(v, v.name, "coach")}<div class="who"><b>${trainingNameHtml(v)}</b><small>${escapeHtml(v.position)} · ${v.age} ans</small></div>` +
-      `<span class="tm-badge teal">Mental ×1,3</span><button type="button" class="tm-x" data-mentor-remove="${idx}" aria-label="Retirer le parrainage">✕</button></div>`;
+      `<span class="tm-badge teal">Mental ×1,3</span><button type="button" class="tm-x" data-mentor-remove="${idx}" aria-label="Retirer le parrainage">${TM_X_ICON}</button></div>`;
   });
   if (pairs.length < MENTORSHIP_MAX_PAIRS) {
     const used = new Set(pairs.flatMap(m => [String(m.youngId), String(m.veteranId)]));
@@ -46628,7 +46874,8 @@ function renderExperienceCard() {
   const all = teamA.players.map(p => ({ p, secs: playerWeekSeconds(p) })).sort((a, b) => b.secs - a.secs);
   const rows = all.filter(r => r.secs >= 60);
   const idle = all.filter(r => r.secs < 60);
-  let html = `<div class="tm-h"><div><h3 id="tpXpTitle">Expérience</h3><span class="tm-sub">Le mental progresse avec les minutes jouées</span></div></div><div class="tm-xp">`;
+  let html = `<div class="tm-h"><div><h3 id="tpXpTitle">Expérience</h3><span class="tm-sub">Le mental progresse avec les minutes jouées</span></div>` +
+    `<div class="tm-legend tm-xp-legend"><span><i class="low"></i>Faible</span><span><i class="mid"></i>Moyenne</span><span><i class="high"></i>Forte</span></div></div><div class="tm-xp">`;
   rows.forEach(({ p, secs }) => {
     const mult = mentalExperienceMult(secs);
     const x = (mult - MENTAL_NATURAL_SHARE) / (1 - MENTAL_NATURAL_SHARE);
@@ -46642,52 +46889,56 @@ function renderExperienceCard() {
 }
 
 // --- Bilan du lundi --------------------------------------------------
-// Remplace l'ancien « Bilan de la semaine dernière » (retour utilisateur
-// 2026-10-01) : une ligne par joueur suivi (programme, avant → après, +N
-// ou =), une ligne « Collectif », puis les conseils avec « Appliquer ».
-// Bilan du lundi, version visuelle (retour utilisateur 2026-10-01 : « fais
-// qqch de bcp plus visuel », l'ancienne liste était illisible) : chiffres
-// clés, une carte par plan individuel avec une barre avant → après par
-// caractéristique, une carte Collectif, puis les progrès physiques et
-// mentaux des autres joueurs en tuiles compactes.
+// Bilan du lundi (maquette « Bilan du lundi », 2026-10-07) : chiffres clés
+// en cartes séparées, puis une carte « Plans individuels » (une tuile par
+// joueur suivi, barre avant + gain par caractéristique), « Collectif » et
+// « Physique et mental des autres » côte à côte.
 function trainingDeltaBarHtml(label, before, after, extra = "") {
   const lo = Math.max(0, Math.min(before, after)), hi = Math.min(100, Math.max(before, after));
   const up = after >= before;
   const d = Math.round(after - before);
-  return `<div class="tr-bar"><div class="tr-bar-top"><span>${escapeHtml(label)}${extra}</span>` +
-    `<span class="tr-bar-val">${Math.round(before)} → <b>${Math.round(after)}</b>${d ? ` <i class="${up ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</i>` : ""}</span></div>` +
-    `<div class="tr-track"><div class="tr-base" style="width:${lo}%"></div><div class="tr-gain ${up ? "up" : "down"}" style="left:${lo}%;width:${Math.max(hi - lo, d ? 1.2 : 0)}%"></div></div></div>`;
+  return `<div class="tr-bar"><div class="tr-track"><div class="tr-base" style="width:${lo}%"></div><div class="tr-gain ${up ? "up" : "down"}" style="left:${lo}%;width:${Math.max(hi - lo, d ? 1.2 : 0)}%"></div></div>` +
+    `<div class="tr-bar-top"><span>${escapeHtml(label)}${extra}</span>` +
+    `<span class="tr-bar-val">${Math.round(before)} → <b>${Math.round(after)}</b></span></div></div>`;
 }
 function trainingAttrFamily(attr) {
   return PHYSICAL_ATTRS.includes(attr) ? "phy" : MENTAL_ATTRS.includes(attr) ? "men" : "fon";
 }
 const TRAINING_FAMILY_LABELS = { fon: "Fondamentaux", phy: "Physique", men: "Mental" };
+function trainingBigDeltaHtml(delta, extraCls = "") {
+  const cls = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  return `<span class="tr-big ${cls}${extraCls ? " " + extraCls : ""}">${delta > 0 ? "+" + delta : delta < 0 ? delta : "="}</span>`;
+}
 function trainingReportRowsHtml(report) {
   let html = "";
   const slots = report.slots || [];
   if (slots.length) {
-    html += `<div class="tr-sec"><div class="tm-label">Plans individuels</div><div class="tr-grid">` + slots.map(s => {
+    html += `<section class="tm-card tr-sec"><div class="tm-h"><div><h3>Plans individuels</h3></div>` +
+      `<div class="tm-legend"><span><i class="lv"></i>Avant</span><span><i class="won"></i>Gagné cette semaine</span></div></div><div class="tr-grid">` + slots.map(s => {
       const p = trainingPlayerById(s.playerId);
-      const chip = s.delta > 0 ? `<span class="tr-big up">+${s.delta}</span>` : s.delta < 0 ? `<span class="tr-big down">${s.delta}</span>` : `<span class="tr-big flat">=</span>`;
-      const intensity = s.intensity && TRAINING_INTENSITIES[s.intensity] ? `<span class="tm-int-tag ${s.intensity}">${TRAINING_INTENSITIES[s.intensity].label}</span>` : "";
+      const intensity = s.intensity && TRAINING_INTENSITIES[s.intensity] ? ` · intensité ${TRAINING_INTENSITIES[s.intensity].label.toLowerCase()}` : "";
       const bars = (s.changes || []).map(c => trainingDeltaBarHtml(TRAINING_LABELS[c.attr] || c.attr, c.before, c.after)).join("");
-      return `<div class="tr-card${s.delta > 0 ? " is-up" : ""}"><div class="tr-head">${trainingAvatarHtml(p, s.name)}<div class="tr-who"><b>${trainingNameHtml(p, s.name)}</b>` +
-        `<small>${escapeHtml(trainingProgramLabel(s.program, true))}${intensity}</small></div>${chip}</div>` +
+      return `<article class="tr-card${s.delta > 0 ? " is-up" : ""}"><div class="tr-head">${trainingAvatarHtml(p, s.name)}<div class="tr-who"><b>${trainingNameHtml(p, s.name)}</b>` +
+        `<small>${escapeHtml(trainingProgramLabel(s.program, true) + intensity)}</small></div>${trainingBigDeltaHtml(s.delta)}</div>` +
         `<div class="tr-bars">${bars}</div>` +
-        (s.injured ? `<div class="tr-injury">Blessé à l'entraînement</div>` : "") + `</div>`;
-    }).join("") + `</div></div>`;
+        (s.injured ? `<div class="tr-injury">Blessé à l'entraînement</div>` : "") + `</article>`;
+    }).join("") + `</div></section>`;
   }
+  let side = "";
   const c = report.collective;
   if (c && ((c.days.tactique || 0) + (c.days.recuperation || 0) + (c.days.physique || 0)) > 0) {
-    const days = [["tactique", TM_ICONS.tac, "Tactique"], ["recuperation", TM_ICONS.rec, "Récupération"], ["physique", TM_ICONS.phy, "Physique"]]
-      .filter(([k]) => c.days[k]).map(([k, ic, l]) => `<span class="tr-day ${k}">${ic}<span>${l}</span><b>× ${c.days[k]}</b></span>`).join("");
-    const bars = (c.tactics || []).map(t => {
+    const days = [["tactique", "Tactique"], ["recuperation", "Récupération"], ["physique", "Physique"]]
+      .filter(([k]) => c.days[k]).map(([k, l]) => `<span class="tr-day ${k}"><span>${l}</span><b>× ${c.days[k]}</b></span>`).join("");
+    const tactics = (c.tactics || []).map(t => {
       const tier = tacticTierFor(t.after);
-      return trainingDeltaBarHtml(t.value, t.before, t.after, ` <span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span>`);
+      const d = Math.round(t.after - t.before);
+      const lo = Math.max(0, Math.min(t.before, t.after)), hi = Math.min(100, Math.max(t.before, t.after));
+      return `<div class="tr-tac"><div class="tr-tac-top"><div class="tr-tac-name"><b>${escapeHtml(t.value)}</b><span class="tm-tier ${tier.key}">${escapeHtml(tier.label)}</span></div>` +
+        `<div class="tr-tac-val"><span>${Math.round(t.before)} → <b>${Math.round(t.after)}</b></span>${trainingBigDeltaHtml(d, "sm")}</div></div>` +
+        `<div class="tr-track"><div class="tr-base" style="width:${lo}%"></div><div class="tr-gain ${d >= 0 ? "up" : "down"}" style="left:${lo}%;width:${Math.max(hi - lo, d ? 1.2 : 0)}%"></div></div></div>`;
     }).join("");
-    const phys = c.physicalPoints ? `<div class="tr-phys">${TM_ICONS.phy}<span>Physique de l'effectif</span><b>+${c.physicalPoints}</b></div>` : "";
-    html += `<div class="tr-sec"><div class="tm-label">Collectif</div><div class="tr-card tr-team"><div class="tr-days">${days}</div>` +
-      (bars ? `<div class="tr-bars">${bars}</div>` : "") + phys + `</div></div>`;
+    const phys = c.physicalPoints ? `<div class="tr-phys"><span>Physique de l'effectif</span>${trainingBigDeltaHtml(c.physicalPoints, "sm")}</div>` : "";
+    side += `<section class="tm-card tr-team"><div class="tm-h"><h3>Collectif</h3></div><div class="tr-days">${days}</div>${tactics}${phys}</section>`;
   }
   // Autres progrès (physique, mental ; tout pour un ancien bilan sans plans).
   const inSlot = new Set(slots.map(s => String(s.playerId)));
@@ -46701,16 +46952,17 @@ function trainingReportRowsHtml(report) {
     })
     .sort((x, y) => y.total - x.total);
   if (others.length) {
-    html += `<div class="tr-sec"><div class="tm-label">${slots.length ? "Physique et mental des autres joueurs" : "Progrès de l'effectif"}</div><div class="tr-tiles">` + others.map(({ id, e, fam, total }) => {
+    side += `<section class="tm-card tr-others"><div class="tm-h"><h3>${slots.length ? "Physique et mental des autres" : "Progrès de l'effectif"}</h3></div><div class="tr-tiles">` + others.map(({ id, e, fam, total }) => {
       // Infobulle : noms traduits un par un (la liste entière, avec ses
       // chiffres, ne correspond à aucune entrée du dictionnaire).
       const trLabel = l => (window.hmI18n && typeof window.hmI18n.t === "function" ? window.hmI18n.t(l) : l);
       const detail = e.gains.filter(g => g.after !== g.before).map(g => `${trLabel(TRAINING_LABELS[g.attr] || g.attr)} ${g.before} → ${g.after}`).join(" · ");
-      const pills = ["fon", "phy", "men"].filter(k => fam[k]).map(k => `<span class="tr-pill ${k}${fam[k] < 0 ? " neg" : ""}">${TRAINING_FAMILY_LABELS[k]} ${fam[k] > 0 ? "+" : ""}${fam[k]}</span>`).join("");
-      return `<div class="tr-tile" title="${escapeHtml(detail)}">${trainingAvatarHtml(trainingPlayerById(id), e.name)}<div class="tr-who"><b>${trainingNameHtml(trainingPlayerById(id), e.name)}</b><div class="tr-pills">${pills}</div></div>` +
-        `<span class="tr-big sm ${total > 0 ? "up" : total < 0 ? "down" : "flat"}">${total > 0 ? "+" : ""}${total || "="}</span></div>`;
-    }).join("") + `</div></div>`;
+      const fams = ["fon", "phy", "men"].filter(k => fam[k]).map(k => `<span class="tr-pill ${k}${fam[k] < 0 ? " neg" : ""}">${TRAINING_FAMILY_LABELS[k]} ${fam[k] > 0 ? "+" : ""}${fam[k]}</span>`).join("");
+      return `<div class="tr-tile" title="${escapeHtml(detail)}">${trainingAvatarHtml(trainingPlayerById(id), e.name)}<div class="tr-who"><b>${trainingNameHtml(trainingPlayerById(id), e.name)}</b><div class="tr-pills">${fams}</div></div>` +
+        trainingBigDeltaHtml(total, "md") + `</div>`;
+    }).join("") + `</div></section>`;
   }
+  if (side) html += `<div class="tr-row">${side}</div>`;
   return html;
 }
 function renderLastTrainingReport() {
@@ -46726,9 +46978,12 @@ function renderLastTrainingReport() {
     if (h) { report = h; shownWeek = h.week; } else trainingReportSelectedWeek = null;
   }
   if (!report) {
-    holder.innerHTML = `<section class="tm-card tp-report tm-report-empty"><div class="tm-h"><div><h3 id="tpReportTitle">Bilan du lundi</h3><span class="tm-sub">Le premier bilan arrive lundi, après une semaine d'entraînement.</span></div></div></section>`;
+    trainingBilanHead = null;
+    holder.innerHTML = `<section class="tm-card tp-report tm-report-empty"><div class="tm-h"><div><h3 id="tpReportTitle">Pas encore de bilan</h3><span class="tm-sub">Le premier bilan arrive lundi, après une semaine d'entraînement.</span></div></div></section>`;
+    updateTrainingHeader();
     return;
   }
+  trainingBilanHead = { week: shownWeek, last: shownWeek === lastWeek };
   let histHtml = "";
   if (premium && history.length > 1) {
     histHtml = `<div class="tp-hist" role="group" aria-label="Semaine affichée">` + history.slice().reverse().map(h =>
@@ -46740,7 +46995,7 @@ function renderLastTrainingReport() {
   const advice = report.advice || [];
   const rows = trainingReportRowsHtml(report);
   // Chiffres clés : points des plans (ou de tout l'effectif pour un ancien
-  // bilan), meilleure progression, conseils.
+  // bilan), joueurs suivis, meilleure progression, conseils.
   const gainsOf = e => (e.gains || []).reduce((sum, g) => sum + Math.max(0, g.after - g.before), 0);
   const points = report.slots
     ? slots.reduce((sum, s) => sum + Math.max(0, s.delta || 0), 0)
@@ -46751,18 +47006,18 @@ function renderLastTrainingReport() {
     const g = gainsOf(e);
     if (g > 0 && (!best || g > best.g)) best = { id, name: e.name, g };
   });
-  const kpi = (icon, value, label, cls = "") => `<div class="tr-kpi ${cls}">${icon}<div><b>${value}</b><span>${label}</span></div></div>`;
+  const kpi = (label, value, cls = "", extra = "") => `<div class="tr-kpi ${cls}"><span class="tr-kpi-l">${label}</span><div class="tr-kpi-v"><b>${value}</b>${extra}</div></div>`;
+  const maxSlots = typeof teamA.trainingSlotsMax === "function" ? teamA.trainingSlotsMax() : 0;
   const kpis = `<div class="tr-kpis">` +
-    kpi(`<span class="tr-kpi-ic up">▲</span>`, `+${points}`, report.slots ? "points sur les plans" : "points gagnés", "up") +
-    (report.slots ? kpi(`<span class="tr-kpi-ic">${TM_ICONS.team}</span>`, slots.length, "joueurs suivis") : "") +
-    (best ? kpi(trainingAvatarHtml(trainingPlayerById(best.id), best.name), `+${best.g}`, `meilleure progression · ${escapeHtml(best.name)}`, "best") : "") +
-    kpi(`<span class="tr-kpi-ic hint">${TM_ICONS.hint}</span>`, advice.length, advice.length > 1 ? "conseils" : "conseil") +
+    kpi(report.slots ? "Points gagnés sur les plans" : "Points gagnés", `+${points}`, points > 0 ? "up" : "zero") +
+    (report.slots ? kpi("Joueurs suivis", slots.length, "", maxSlots ? `<small>/${maxSlots}</small>` : "") : "") +
+    (best ? kpi("Meilleure progression", `+${best.g}`, "up best", `<span class="tr-kpi-who">${trainingAvatarHtml(trainingPlayerById(best.id), best.name)}<span>${escapeHtml(best.name)}</span></span>`) : "") +
+    kpi("Conseils du staff", advice.length, advice.length ? "" : "zero") +
     `</div>`;
-  const body = rows || `<p class="training-empty">Pas de changement visible cette semaine, la progression est lente et se joue sur plusieurs semaines.</p>`;
-  holder.innerHTML = `<section class="tm-card tp-report" aria-labelledby="tpReportTitle">` +
-    `<div class="tm-h"><div><h3 id="tpReportTitle">${shownWeek === lastWeek ? "Bilan du lundi" : "Bilan de la semaine"}</h3><span class="tm-sub">Semaine ${shownWeek}</span></div></div>` +
-    histHtml + kpis + body +
-    advice.map(tip => trainingAdviceHtml(tip, tip.name)).join("") + `</section>`;
+  const body = rows || `<section class="tm-card"><p class="training-empty">Pas de changement visible cette semaine, la progression est lente et se joue sur plusieurs semaines.</p></section>`;
+  const tips = advice.length ? `<section class="tm-card tr-advice"><div class="tm-h"><h3>Conseils du staff</h3></div>${advice.map(tip => trainingAdviceHtml(tip, tip.name)).join("")}</section>` : "";
+  holder.innerHTML = `<div class="tp-report" aria-label="Bilan de la semaine ${shownWeek}">` + histHtml + kpis + body + tips + `</div>`;
+  updateTrainingHeader();
 }
 
 // Notes du récapitulatif « Pendant votre absence » (catchupTrainingHtml) :

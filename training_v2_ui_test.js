@@ -89,7 +89,7 @@ const D = 24 * 60 * 60 * 1000;
   } else {
     console.log("(pas de jour libre futur cette semaine : vérification de l'amical sautée)");
   }
-  assert(/Connaissance tactique en cours/.test(doc.getElementById("collectiveTrainingConfig").textContent) && !!doc.querySelector(".tm-tier")
+  assert(/Connaissance tactique de l'équipe/.test(doc.getElementById("collectiveTrainingConfig").textContent) && !!doc.querySelector(".tm-tier")
     && [...doc.querySelectorAll(".tm-gain")].every(g => /^\+\d+ × \d+ j$|^en match$/.test(g.textContent)), "jauges tactiques : palier, gain sur les jours travaillés sinon « en match »");
 
   // 4 bis) Semaines à venir (retour utilisateur 2026-10-02) : menu en haut à
@@ -125,7 +125,8 @@ const D = 24 * 60 * 60 * 1000;
     renderLastTrainingReport();
   })()`);
   const rep = doc.getElementById("lastTrainingReportHolder");
-  assert(/Bilan du lundi/.test(rep.textContent), "bilan du lundi affiché");
+  doc.querySelector("[data-tm-view='bilan']").click();
+  assert(doc.getElementById("trainingTitle").textContent === "Bilan du lundi" && /bilan de la semaine \d+/.test(doc.getElementById("trainingEyebrow").textContent), "bilan du lundi affiché (titre et sur-titre de la vue)");
   const kpis = [...rep.querySelectorAll(".tr-kpi b")].map(b => b.textContent);
   assert(kpis[0] === "+2" && kpis[1] === "2" && kpis[kpis.length - 1] === "1", `chiffres clés : points, joueurs suivis, conseils (${kpis.join(", ")})`);
   assert(rep.querySelectorAll(".tr-grid .tr-card").length === 2 && !!rep.querySelector(".tr-big.flat") && !!rep.querySelector(".tr-team") && rep.querySelectorAll(".tr-grid .tr-bar").length >= 2, "une carte par joueur suivi avec barres avant → après (+N ou =) et une carte Collectif");

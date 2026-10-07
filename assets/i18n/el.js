@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Πόντοι από τα πλάνα",
+  "Points gagnés": "Πόντοι που κερδήθηκαν",
+  "Meilleure progression": "Καλύτερη πρόοδος",
+  "Conseils du staff": "Συμβουλές του επιτελείου",
+  "Fondamentaux · un travail ciblé par joueur": "Βασικά · στοχευμένη δουλειά ανά παίκτη",
+  "Niveau actuel": "Τρέχον επίπεδο",
+  "Progression attendue cette semaine": "Αναμενόμενη πρόοδος αυτή την εβδομάδα",
+  "Séance": "Προπόνηση",
+  "Officiel": "Επίσημος",
+  "Fait progresser un aspect": "Βελτιώνει μία πτυχή",
+  "Recharge la forme": "Αναπληρώνει τη φόρμα",
+  "Endurance et puissance": "Αντοχή και δύναμη",
+  "séance du jour": "προπόνηση της ημέρας",
+  "Aspect tactique travaillé": "Τακτική πτυχή που δουλεύεται",
+  "Connaissance tactique de l'équipe": "Τακτική γνώση της ομάδας",
+  "Avant": "Πριν",
+  "Gagné cette semaine": "Κέρδος αυτή την εβδομάδα",
+  "Physique et mental des autres": "Σωματικά και πνευματικά των υπολοίπων",
+  "Pas encore de bilan": "Δεν υπάρχει ακόμη απολογισμός",
+  "Entraînement · bilan de la semaine {0}": "Προπόνηση · απολογισμός εβδομάδας {0}",
+  "intensité normale": "κανονική ένταση",
+  "intensité légère": "ελαφριά ένταση",
+  "intensité intense": "υψηλή ένταση",
+  "{0}/{1} min": "{0}/{1} λεπ.",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Λεπτά συμμετοχής αυτή την εβδομάδα (πλήρης απόδοση στα {0} λεπ.)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Πλάνο εβδομάδας",
   "Sections de l'entraînement": "Ενότητες προπόνησης",

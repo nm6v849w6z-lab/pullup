@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Punkty zdobyte w planach",
+  "Points gagnés": "Zdobyte punkty",
+  "Meilleure progression": "Największy postęp",
+  "Conseils du staff": "Rady sztabu",
+  "Fondamentaux · un travail ciblé par joueur": "Podstawy · ukierunkowana praca dla każdego zawodnika",
+  "Niveau actuel": "Obecny poziom",
+  "Progression attendue cette semaine": "Oczekiwany postęp w tym tygodniu",
+  "Séance": "Sesja",
+  "Officiel": "Oficjalny",
+  "Fait progresser un aspect": "Rozwija jeden element",
+  "Recharge la forme": "Odnawia formę",
+  "Endurance et puissance": "Wytrzymałość i siła",
+  "séance du jour": "sesja dnia",
+  "Aspect tactique travaillé": "Trenowany element taktyczny",
+  "Connaissance tactique de l'équipe": "Wiedza taktyczna drużyny",
+  "Avant": "Przed",
+  "Gagné cette semaine": "Zdobyte w tym tygodniu",
+  "Physique et mental des autres": "Fizyczne i mentalne pozostałych",
+  "Pas encore de bilan": "Brak podsumowania",
+  "Entraînement · bilan de la semaine {0}": "Trening · podsumowanie tygodnia {0}",
+  "intensité normale": "normalna intensywność",
+  "intensité légère": "lekka intensywność",
+  "intensité intense": "wysoka intensywność",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Minuty rozegrane w tym tygodniu (pełna wydajność przy {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Plan tygodnia",
   "Sections de l'entraînement": "Sekcje treningu",

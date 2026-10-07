@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_DE = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Punkte aus den Plänen",
+  "Points gagnés": "Gewonnene Punkte",
+  "Meilleure progression": "Bester Fortschritt",
+  "Conseils du staff": "Ratschläge des Stabs",
+  "Fondamentaux · un travail ciblé par joueur": "Grundlagen · gezielte Arbeit pro Spieler",
+  "Niveau actuel": "Aktuelles Niveau",
+  "Progression attendue cette semaine": "Erwarteter Fortschritt diese Woche",
+  "Séance": "Einheit",
+  "Officiel": "Pflichtspiel",
+  "Fait progresser un aspect": "Verbessert einen Aspekt",
+  "Recharge la forme": "Stellt die Fitness wieder her",
+  "Endurance et puissance": "Ausdauer und Kraft",
+  "séance du jour": "Einheit des Tages",
+  "Aspect tactique travaillé": "Trainierter taktischer Aspekt",
+  "Connaissance tactique de l'équipe": "Taktisches Wissen des Teams",
+  "Avant": "Vorher",
+  "Gagné cette semaine": "Diese Woche gewonnen",
+  "Physique et mental des autres": "Physis und Mentalität der anderen",
+  "Pas encore de bilan": "Noch keine Bilanz",
+  "Entraînement · bilan de la semaine {0}": "Training · Bilanz der Woche {0}",
+  "intensité normale": "normale Intensität",
+  "intensité légère": "leichte Intensität",
+  "intensité intense": "hohe Intensität",
+  "{0}/{1} min": "{0}/{1} Min.",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Diese Woche gespielte Minuten (volle Wirkung ab {0} Min.)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Wochenplan",
   "Sections de l'entraînement": "Trainingsbereiche",

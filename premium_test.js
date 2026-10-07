@@ -81,10 +81,11 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
     check(!!doc.querySelector("#teamDetailContent .tactical-report") && !/version payante est prévue/.test(doc.getElementById("teamDetailContent").textContent), "Premium : analyse de sa propre équipe affichée");
     // Historique : choix de la semaine.
     [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement").click();
+    doc.querySelector("[data-tm-view='bilan']").click();
     const weekBtns = doc.querySelectorAll("#lastTrainingReportHolder [data-training-week]");
-    check(weekBtns.length === 2 && /Bilan du lundi/.test(doc.getElementById("tpReportTitle").textContent), "Premium : historique des semaines, bilan de la dernière par défaut (« Bilan du lundi », entraînement v2 2026-10-01)");
+    check(weekBtns.length === 2 && /Bilan du lundi/.test(doc.getElementById("trainingTitle").textContent), "Premium : historique des semaines, bilan de la dernière par défaut (« Bilan du lundi », entraînement v2 2026-10-01)");
     doc.querySelector('#lastTrainingReportHolder [data-training-week="1"]').click();
-    check(/Bilan de la semaine$/.test(doc.getElementById("tpReportTitle").textContent) && doc.getElementById("lastTrainingReportHolder").textContent.includes(win.eval("teamA.players[0].name")), "Premium : bilan d'une semaine précédente");
+    check(/Bilan de la semaine$/.test(doc.getElementById("trainingTitle").textContent) && doc.getElementById("lastTrainingReportHolder").textContent.includes(win.eval("teamA.players[0].name")), "Premium : bilan d'une semaine précédente");
     // Badge Premium : fiche équipe.
     win.showTeamDetail(win.eval("myTeamIndex"));
     check(!!doc.querySelector("#teamDetailName .prm-badge"), "badge Premium sur la fiche du club");

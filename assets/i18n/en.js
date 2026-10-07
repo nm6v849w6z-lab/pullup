@@ -2,6 +2,32 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Points gained from plans",
+  "Points gagnés": "Points gained",
+  "Meilleure progression": "Best progression",
+  "Conseils du staff": "Staff advice",
+  "Fondamentaux · un travail ciblé par joueur": "Fundamentals · targeted work per player",
+  "Niveau actuel": "Current level",
+  "Progression attendue cette semaine": "Expected progress this week",
+  "Séance": "Session",
+  "Officiel": "Official",
+  "Fait progresser un aspect": "Improves one aspect",
+  "Recharge la forme": "Restores fitness",
+  "Endurance et puissance": "Stamina and power",
+  "séance du jour": "today's session",
+  "Aspect tactique travaillé": "Tactical aspect worked on",
+  "Connaissance tactique de l'équipe": "Team tactical knowledge",
+  "Avant": "Before",
+  "Gagné cette semaine": "Gained this week",
+  "Physique et mental des autres": "Physical and mental of the others",
+  "Pas encore de bilan": "No report yet",
+  "Entraînement · bilan de la semaine {0}": "Training · week {0} report",
+  "intensité normale": "normal intensity",
+  "intensité légère": "light intensity",
+  "intensité intense": "high intensity",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Minutes played this week (full efficiency at {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Weekly plan",
   "Sections de l'entraînement": "Training sections",

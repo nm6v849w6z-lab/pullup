@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
+  // Entraînement : refonte selon les maquettes (2026-10-07).
+  "Points gagnés sur les plans": "Puntos ganados en los planes",
+  "Points gagnés": "Puntos ganados",
+  "Meilleure progression": "Mejor progresión",
+  "Conseils du staff": "Consejos del cuerpo técnico",
+  "Fondamentaux · un travail ciblé par joueur": "Fundamentos · trabajo específico por jugador",
+  "Niveau actuel": "Nivel actual",
+  "Progression attendue cette semaine": "Progreso esperado esta semana",
+  "Séance": "Sesión",
+  "Officiel": "Oficial",
+  "Fait progresser un aspect": "Mejora un aspecto",
+  "Recharge la forme": "Recupera la forma",
+  "Endurance et puissance": "Resistencia y potencia",
+  "séance du jour": "sesión del día",
+  "Aspect tactique travaillé": "Aspecto táctico trabajado",
+  "Connaissance tactique de l'équipe": "Conocimiento táctico del equipo",
+  "Avant": "Antes",
+  "Gagné cette semaine": "Ganado esta semana",
+  "Physique et mental des autres": "Físico y mental de los demás",
+  "Pas encore de bilan": "Todavía no hay balance",
+  "Entraînement · bilan de la semaine {0}": "Entrenamiento · balance de la semana {0}",
+  "intensité normale": "intensidad normal",
+  "intensité légère": "intensidad ligera",
+  "intensité intense": "intensidad alta",
+  "{0}/{1} min": "{0}/{1} min",
+  "Minutes jouées cette semaine (plein rendement à {0} min)": "Minutos jugados esta semana (rendimiento pleno a {0} min)",
   // Entraînement : refonte d'après la maquette (2026-10-07).
   "Plan de la semaine": "Plan de la semana",
   "Sections de l'entraînement": "Secciones del entrenamiento",
