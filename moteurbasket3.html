@@ -42506,7 +42506,7 @@ function compositionModel(team) {
     if (!starter) list.push({ kind: "danger", text: "Aucun titulaire à ce poste" });
     else {
       if (typeof isCurrentlyInjured === "function" && isCurrentlyInjured(starter)) list.push({ kind: "danger", text: `${compoShortName(starter)} est blessé` });
-      const best = bestPosition(starter);
+      const best = displayBestPosition(starter);
       const here = compoRatingAt(starter, pos), there = compoRatingAt(starter, best);
       if (best !== pos && there - here >= COMPO_OFF_POSITION_GAP) list.push({ kind: "warn", offPosition: true, text: `Hors poste : ${here} ici, ${there} en ${POS_SHORT[best]}` });
     }
@@ -42854,7 +42854,7 @@ function compoRosterRowsData(team, model, ro = null) {
   return team.players.map(p => {
     const on = model.convoked.has(p.id);
     const roles = (model.rolesOf.get(p.id) || []).slice().sort((a, b) => a.rank - b.rank);
-    const best = bestPosition(p);
+    const best = displayBestPosition(p);
     const ratedPos = roles.length ? roles[0].pos : best;
     const cond = currentCondition(p, now, recovery(p));
     const { gp, sum } = seasonLine(p);
@@ -50167,11 +50167,11 @@ function renderEffectifSection() {
   effSortPlayers(teamA.players, defaultCmp).forEach(p => {
     {
       const role = playerRoleLabel(teamA, p);
-      // Une seule notion de « meilleur poste » (retour utilisateur
-      // 2026-09-30) : la même que la fiche joueur (bestPosition). Le poste de
-      // carte la suit (Team.syncCardPositions) ; la flèche n'apparaît que
-      // dans l'entre-deux, écart encore sous POSITION_CHANGE_MARGIN.
-      const bestPos = bestPosition(p);
+      // Une seule notion de « meilleur poste », la même que la fiche joueur
+      // (displayBestPosition) : plus de flèche dans l'entre-deux (écart sous
+      // POSITION_CHANGE_MARGIN, demande du 2026-10-07) ; elle ne reste que
+      // si le poste de carte est réellement en retard.
+      const bestPos = displayBestPosition(p);
       const effPos = bestPos && bestPos !== p.position ? bestPos : null;
       const posCell = effPosBadgeHtml(p.position) + (effPos
         ? ` <span class="eff-position" title="Meilleur poste d'après ses caractéristiques : ${escapeHtml(effPos)} (${Math.round(positionRating(p, effPos))} contre ${Math.round(positionRating(p, p.position))})">→ ${POS_SHORT[effPos]}</span>`
