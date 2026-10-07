@@ -3188,6 +3188,7 @@
   .coh2-court{display:block; width:100%; height:auto; color:var(--ink);}
   .coh2-spot{position:absolute; width:40px; height:40px; transform:translate(-50%,-50%); border-radius:50%; border:3px solid var(--coh-ring); background:var(--panel); overflow:hidden; display:grid; place-items:end center; box-shadow:0 4px 10px rgba(0,0,0,.35);}
   .coh2-spot .player-avatar{width:36px !important; height:39px !important; border-radius:0 !important; margin-top:4px;}
+  .coh2-spot--pos{place-items:center; font-size:13px; font-weight:900; color:var(--ink); width:36px; height:36px;}
   .coh2-ini{font-size:12px; font-weight:800; align-self:center;}
   .coh-av{width:34px; height:34px; border-radius:50%; overflow:hidden; display:grid; place-items:end center; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); flex:none;}
   .coh-av .player-avatar{width:32px !important; height:35px !important; border-radius:0 !important;}
@@ -21112,7 +21113,9 @@ function cohCourtHtml(slots, conflicts, avatarOf) {
   // pourcentage du demi-terrain (300 × 280), cerclés selon leur conflit.
   slots.forEach(sl => {
     const [x, y] = spot(sl.pos);
-    h += `<span class="coh2-spot" data-coh-spot="${escapeHtml(sl.pos)}" title="${escapeHtml(sl.name)}" style="left:${(x / 300 * 100).toFixed(2)}%;top:${(y / 280 * 100).toFixed(2)}%;--coh-ring:${stroke(worst[sl.pos])}">${avatarOf(sl, 34)}</span>`;
+    // Carte des frictions : le poste (M, A, AS, AF, P) plutôt que l'avatar
+    // (demande du 2026-10-07), le nom au survol.
+    h += `<span class="coh2-spot coh2-spot--pos" data-coh-spot="${escapeHtml(sl.pos)}" title="${escapeHtml(sl.name)}" style="left:${(x / 300 * 100).toFixed(2)}%;top:${(y / 280 * 100).toFixed(2)}%;--coh-ring:${stroke(worst[sl.pos])}">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span>`;
   });
   return `<div class="coh2-courtwrap">${h}</div>`;
 }
