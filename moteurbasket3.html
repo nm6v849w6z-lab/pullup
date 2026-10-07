@@ -3057,7 +3057,7 @@
   .ordres-coh-card{gap:12px;}
   .ordres-coh-card .coh-card{background:none; padding:0; margin:0; border-radius:0;}
   .ordres-coh-card .coh-head{display:none;}
-  .ordres-coh-card{container-type:inline-size;}
+  .ordres-coh-card{container-type:inline-size; container-name:cohcard;}
   .coh-col--slots .coh-slot:first-child{margin-top:0;}
   .coh-col--notes .coh-note:first-child{margin-top:0;}
   .coh-col--notes:empty{display:none;}
@@ -3104,7 +3104,7 @@
   .coh-kpi-txt{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .coh2 .coh-kpi-txt b{font-size:14px; font-weight:800;} .coh2 .coh-kpi-txt small{font-size:11.5px; color:var(--ink-dim); line-height:1.25;}
   .coh2-roster{border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03)); padding:2px 12px;}
-  .coh2 .coh-slot{display:grid; grid-template-columns:34px minmax(0,1.3fr) minmax(40px,1fr) 30px auto; gap:10px; align-items:center; min-height:48px; padding:4px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .coh2 .coh-slot{display:grid; grid-template-columns:34px minmax(0,1.3fr) minmax(40px,1fr) 30px 78px; gap:10px; align-items:center; min-height:48px; padding:4px 0; border-top:1px solid var(--line); font-size:13.5px;}
   .coh2 .coh-slot:first-child{border-top:0;}
   .coh2 .coh-slot .pos{height:24px; border-radius:6px; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); color:var(--amber); font-weight:900; font-size:12px; display:grid; place-items:center;}
   .coh-who{display:flex; flex-direction:column; min-width:0; line-height:1.25;}
@@ -3118,7 +3118,14 @@
   .coh-chip--mid{background:color-mix(in srgb, #F5A524 16%, transparent); color:#e8a33a;}
   .coh-chip--bad{background:color-mix(in srgb, #F87171 16%, transparent); color:#F87171;}
   .coh2-map{display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
-  .coh2-court{width:100%; height:auto; max-width:320px; align-self:center; color:var(--ink);}
+  .coh2-courtwrap{position:relative; width:100%; max-width:320px; align-self:center;}
+  .coh2-court{display:block; width:100%; height:auto; color:var(--ink);}
+  .coh2-spot{position:absolute; width:40px; height:40px; transform:translate(-50%,-50%); border-radius:50%; border:3px solid var(--coh-ring); background:var(--panel); overflow:hidden; display:grid; place-items:end center; box-shadow:0 4px 10px rgba(0,0,0,.35);}
+  .coh2-spot .player-avatar{width:36px !important; height:39px !important; border-radius:0 !important; margin-top:4px;}
+  .coh2-ini{font-size:12px; font-weight:800; align-self:center;}
+  .coh-av{width:34px; height:34px; border-radius:50%; overflow:hidden; display:grid; place-items:end center; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); flex:none;}
+  .coh-av .player-avatar{width:32px !important; height:35px !important; border-radius:0 !important;}
+  .coh2 .coh-slot .rl b{color:var(--amber); font-weight:900;}
   .coh2-k{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800;}
   .coh2-k--ok{margin-top:6px;}
   .coh2-legend{display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--ink-dim);}
@@ -3127,8 +3134,9 @@
   .coh2-legend .dot{width:9px; height:9px; border-radius:50%; border:2px solid var(--coh-ok);}
   .coh2-conf{display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
   .coh2-pair{display:flex; flex:none;}
-  .coh2-pair span{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:800; background:color-mix(in srgb, var(--ink-dim) 22%, var(--panel)); border:2px solid var(--panel);}
-  .coh2-pair span + span{margin-left:-9px; background:color-mix(in srgb, var(--ink-dim) 32%, var(--panel));}
+  .coh2-pair > span{width:32px; height:32px; border-radius:50%; overflow:hidden; display:grid; place-items:end center; font-size:12px; font-weight:800; background:color-mix(in srgb, var(--ink-dim) 22%, var(--panel)); border:2px solid var(--panel);}
+  .coh2-pair .player-avatar{width:28px !important; height:31px !important; border-radius:0 !important;}
+  .coh2-pair > span + span{margin-left:-9px; background:color-mix(in srgb, var(--ink-dim) 32%, var(--panel));}
   .coh2-conf-txt{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;}
   .coh2-conf-txt b{font-size:13.5px;} .coh2-conf-txt > span{font-size:12.5px; color:var(--ink-dim);}
   .coh-tag{flex:none; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:800;}
@@ -3139,9 +3147,9 @@
   .coh2-alert > span{color:var(--ink);} .coh2-alert b{color:#e8a33a;}
   .coh2-empty{margin:0; font-size:13px; color:var(--ink-dim);}
   .coh2 .coh-note{margin-top:0;}
-  @container (max-width:1050px){ .coh2-body{grid-template-columns:minmax(0,1fr) minmax(220px,300px);} .coh2 .coh-col--notes{grid-column:1 / -1;} }
-  @container (max-width:640px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-slot{grid-template-columns:30px minmax(0,1fr) 30px auto;} .coh2 .coh-slot .coh-bar{display:none;} }
-  @media (max-width:768px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-col--notes{grid-column:auto;} .coh2 .coh-slot{grid-template-columns:30px minmax(0,1fr) 30px auto;} .coh2 .coh-slot .coh-bar{display:none;} }
+  @container cohcard (max-width:1050px){ .coh2-body{grid-template-columns:minmax(0,1fr) minmax(220px,300px);} .coh2 .coh-col--notes{grid-column:1 / -1;} }
+  @container cohcard (max-width:640px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-slot{grid-template-columns:34px minmax(0,1fr) 30px 78px;} .coh2 .coh-slot .coh-bar{display:none;} }
+  @media (max-width:768px){ .coh2-body{grid-template-columns:1fr;} .coh2 .coh-col--notes{grid-column:auto;} .coh2 .coh-slot{grid-template-columns:34px minmax(0,1fr) 30px 78px;} .coh2 .coh-slot .coh-bar{display:none;} }
   .pdp-compat{display:flex; align-items:center; gap:14px; margin-top:16px;}
   .coh-tac{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px;}
   .coh-tac-chip{font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:99px; border:1px solid var(--line); color:var(--ink-dim);}
@@ -21021,7 +21029,7 @@ function cohRingSvg(v) {
     `<circle cx="40" cy="40" r="34" fill="none" stroke="var(--amber)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dash} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>` +
     `<text x="40" y="47" text-anchor="middle" fill="currentColor" font-size="22" font-weight="800">${v}</text></svg>`;
 }
-function cohCourtHtml(slots, conflicts) {
+function cohCourtHtml(slots, conflicts, avatarOf) {
   const spot = pos => COH_COURT_SPOTS[pos] || [150, 140];
   const worst = {};
   conflicts.forEach(n => n.pair.forEach(pos => { if (worst[pos] !== "paint") worst[pos] = n.kind === "paint" ? "paint" : (worst[pos] || n.kind); }));
@@ -21033,12 +21041,14 @@ function cohCourtHtml(slots, conflicts) {
     const [ax, ay] = spot(n.pair[0]), [bx, by] = spot(n.pair[1]);
     h += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke(n.kind)}"${n.kind === "ball" ? ` stroke-dasharray="2 7"` : ""} data-coh-link="${escapeHtml(n.kind)}"/>`;
   });
-  h += `</g><g text-anchor="middle" font-size="14" font-weight="800">`;
+  h += `</g></svg>`;
+  // Avatars des joueurs (demande du 2026-10-07) posés sur le terrain, en
+  // pourcentage du demi-terrain (300 × 280), cerclés selon leur conflit.
   slots.forEach(sl => {
     const [x, y] = spot(sl.pos);
-    h += `<g data-coh-spot="${escapeHtml(sl.pos)}"><title>${escapeHtml(sl.name)}</title><circle cx="${x}" cy="${y}" r="17" fill="var(--panel)" stroke="${stroke(worst[sl.pos])}" stroke-width="3"/><text x="${x}" y="${y + 5}" fill="currentColor">${escapeHtml(cohInitials(sl.name))}</text></g>`;
+    h += `<span class="coh2-spot" data-coh-spot="${escapeHtml(sl.pos)}" title="${escapeHtml(sl.name)}" style="left:${(x / 300 * 100).toFixed(2)}%;top:${(y / 280 * 100).toFixed(2)}%;--coh-ring:${stroke(worst[sl.pos])}">${avatarOf(sl, 34)}</span>`;
   });
-  return h + `</g></svg>`;
+  return `<div class="coh2-courtwrap">${h}</div>`;
 }
 function compoCohesionHtml(team) {
   const R = typeof window !== "undefined" ? window.HM_ROLES : null;
@@ -21055,6 +21065,12 @@ function compoCohesionHtml(team) {
   const tacWarn = (tac ? tac.notes : []).filter(n => n.tone === "warn");
   const tacOk = (tac ? tac.notes : []).filter(n => n.tone !== "warn");
   const nameOf = pos => (c.slots.find(x => x.pos === pos) || {}).name || "";
+  // Avatar du joueur (club ou sélection) ; initiales si introuvable.
+  const avatarOf = (sl, size) => {
+    const p = sl && (team.players || []).find(x => x.id === sl.id);
+    return p ? playerAvatarHtml(p, team, size) : `<span class="coh2-ini">${escapeHtml(cohInitials(sl && sl.name))}</span>`;
+  };
+  const slotOf = pos => c.slots.find(x => x.pos === pos);
   const countOf = pos => conflicts.filter(n => n.pair.includes(pos)).length;
   const nGlob = globals.length + tacWarn.length;
   const meta = conflicts.length || nGlob
@@ -21071,19 +21087,19 @@ function compoCohesionHtml(team) {
   c.slots.forEach(sl => {
     const n = countOf(sl.pos);
     const chipCls = n === 0 ? "ok" : n >= 3 ? "bad" : "mid";
-    h += `<div class="coh-slot" data-coh-pos="${escapeHtml(sl.pos)}"><span class="pos">${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</span>` +
-      `<span class="coh-who"><span class="nm">${escapeHtml(sl.name)}</span><span class="rl">${escapeHtml(sl.roleName)}</span></span>` +
+    h += `<div class="coh-slot" data-coh-pos="${escapeHtml(sl.pos)}"><span class="coh-av">${avatarOf(sl, 34)}</span>` +
+      `<span class="coh-who"><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><b>${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</b> · <span>${escapeHtml(sl.roleName)}</span></span></span>` +
       `<span class="coh-bar" title="Maîtrise du rôle : ${sl.mastery}%"><i style="width:${Math.max(0, Math.min(100, sl.mastery))}%" class="${n ? "" : "is-ok"}"></i></span>` +
       `<span class="coh-fit">${sl.mastery}</span><span class="coh-chip coh-chip--${chipCls}">${n ? `${n} conflit${n > 1 ? "s" : ""}` : "OK"}</span></div>`;
   });
   h += `</div></div>`;
-  h += `<div class="coh2-map"><span class="coh2-k">Carte des frictions</span>${cohCourtHtml(c.slots, conflicts)}` +
+  h += `<div class="coh2-map"><span class="coh2-k">Carte des frictions</span>${cohCourtHtml(c.slots, conflicts, avatarOf)}` +
     `<div class="coh2-legend"><span><i class="ln ln--ball"></i>Ballon</span><span><i class="ln ln--paint"></i>Raquette</span><span><i class="dot"></i>Aucun conflit</span></div></div>`;
   h += `<div class="coh2-col coh-col--notes"><span class="coh2-k">Points de friction</span>`;
   if (!conflicts.length) h += `<p class="coh2-empty">Aucun point de friction entre les titulaires.</p>`;
   conflicts.forEach(n => {
     const k = COH_KIND[n.kind] || COH_KIND.role;
-    h += `<div class="coh2-conf" data-coh-kind="${k.cls}"><span class="coh2-pair"><span>${escapeHtml(cohInitials(nameOf(n.pair[0])))}</span><span>${escapeHtml(cohInitials(nameOf(n.pair[1])))}</span></span>` +
+    h += `<div class="coh2-conf" data-coh-kind="${k.cls}"><span class="coh2-pair"><span>${avatarOf(slotOf(n.pair[0]), 30)}</span><span>${avatarOf(slotOf(n.pair[1]), 30)}</span></span>` +
       `<span class="coh2-conf-txt"><b>${n.who.map(escapeHtml).join(" · ")}</b><span>${escapeHtml(n.text)}</span></span><span class="coh-tag coh-tag--${k.cls}">${k.tag}</span></div>`;
   });
   globals.concat(tacWarn).forEach(n => {
