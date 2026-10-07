@@ -2981,6 +2981,72 @@
   .pdp-role-compat .pdp-compat > div:last-child > div:first-child{font-size:14px; line-height:1.3;}
   @container (min-width:560px){ .pdp-role-compat{padding-left:20px; border-left:1px solid var(--line);} }
   .pdp-role-pos{display:flex; gap:6px; align-items:center;}
+  /* Fiche joueur, bloc Rôle / Profil (refonte 2 du 2026-10-07) : une carte,
+     3 colonnes séparées par un trait vertical (horizontal sous 1100 px). */
+  .pdp-rx{--pdp-rx-track:var(--line, #1E2A42); display:flex !important; flex-direction:row !important; gap:28px; align-items:stretch; padding:24px 28px !important; border-radius:18px !important; border:1px solid var(--line, #1E2A42); background:var(--panel, #0E1626);}
+  .pdp2-row--role:has(.pdp-rx){grid-template-columns:minmax(0,1fr) !important; container-type:inline-size; container-name:pdprx;}
+  .pdp-rx-sep{flex:none; width:1px; align-self:stretch; background:var(--line, #1E2A42);}
+  .pdp-rx-col{display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .pdp-rx-col--id{flex:1 1 auto; flex-direction:row; align-items:flex-start; gap:22px;}
+  .pdp-rx-col--others{flex:0 0 380px;}
+  .pdp-rx-col--profile{flex:0 0 440px; gap:14px;}
+  .pdp-rx-k{font-size:12px; text-transform:uppercase; letter-spacing:1.5px; font-weight:800; color:var(--ink-dim, #8C9AB3); line-height:1.2;}
+  .pdp-rx .pdp-role2-ring{position:relative; width:120px; height:120px; flex:none;}
+  .pdp-rx .pdp-role2-ring svg{display:block; width:120px; height:120px;}
+  .pdp-rx .pdp-role2-ring-c{position:absolute; inset:10px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; gap:4px;}
+  .pdp-rx .pdp-role2-ring-c b{font-size:34px; font-weight:900; letter-spacing:-1px; font-stretch:condensed;}
+  .pdp-rx .pdp-role2-ring-c small{font-size:11px; color:var(--ink-dim, #8C9AB3); text-transform:uppercase; letter-spacing:1px; margin:0;}
+  .pdp-rx .pdp-role2-id{display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .pdp-rx .pdp-role2-kicker{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .pdp-rx .pdp-role2-pos{padding:2px 8px; border-radius:6px; font-size:12px; font-weight:900; background:var(--line, #1E2A42); color:var(--ink-dim, #8C9AB3);}
+  .pdp-rx .pdp-role2-pos.on{background:var(--amber, #F5A524); color:var(--panel, #0E1626);}
+  .pdp-rx .pdp-role-name{margin:0; font-size:44px; font-weight:900; line-height:.95; text-transform:uppercase; letter-spacing:-.5px; font-stretch:condensed; overflow-wrap:break-word;}
+  .pdp-rx .pdp-role-desc{margin:0; font-size:14px; color:#A9B5CA;}
+  .pdp-rx .pdp-role-progress{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .pdp-rx .pdp-role2-chip{display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; background:#2A2113; border:1px solid #4A3818; color:#FFE2A8; font-size:13px; font-weight:700;}
+  .pdp-rx .pdp-role-evo{font-size:12.5px; color:var(--ink-dim); margin:0;}
+  .pdp-rx-list{display:flex; flex-direction:column; gap:10px;}
+  .pdp-rx .pdp-role-fit{display:grid; grid-template-columns:140px minmax(0,1fr) 40px; gap:12px; align-items:center;}
+  .pdp-rx .pdp-role-fit .nm{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pdp-rx .pdp-role-fit .nm small{color:var(--ink-dim); font-weight:800; font-size:11px;}
+  .pdp-rx .pdp-role-fit .pct{text-align:right; font-weight:800; font-size:15px;}
+  .pdp-rx-bar{display:block; height:6px; border-radius:999px; background:var(--pdp-rx-track); overflow:hidden;}
+  .pdp-rx-bar i{display:block; height:100%; border-radius:999px;}
+  .pdp-rx-bar--short{flex:0 0 90px; width:90px;}
+  .pdp-rx-compat{margin-top:auto; padding-top:12px; border-top:1px solid var(--line, #1E2A42); display:flex; align-items:center; gap:12px;}
+  .pdp-rx-compat .pdp-rx-k{flex:1 1 auto;}
+  .pdp-rx-compat b{font-size:15px; font-weight:900; min-width:40px; text-align:right;}
+  .pdp-rx .pdp-sw-row{display:flex; flex-direction:column; gap:8px; padding:0; border:0;}
+  .pdp-rx .pdp-sw-row + .pdp-sw-row{padding:0; border:0;}
+  .pdp-rx .pdp-sw-lbl{width:auto; min-height:0; font-size:13px; font-weight:800; text-transform:none; letter-spacing:0; display:block;}
+  .pdp-rx .pdp-sw-lbl b{background:none !important; color:#5B6B8C; display:inline; padding:0; font-size:13px;}
+  .pdp-rx .pdp-sw-row--ok .pdp-sw-lbl{color:#5EEAD4;} .pdp-rx .pdp-sw-row--bad .pdp-sw-lbl{color:#FCA5A5;}
+  .pdp-rx .pdp-sw-list{display:flex; flex-wrap:wrap; gap:6px;}
+  .pdp-rx .pdp-sw-chip{display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; white-space:nowrap; box-sizing:border-box;}
+  .pdp-rx .pdp-sw-chip--ok{background:#12363A; border:1px solid #17434A;} .pdp-rx .pdp-sw-chip--ok svg{color:#5EEAD4;}
+  .pdp-rx .pdp-sw-chip--bad{background:#3A1A20; border:1px solid #4A2229;} .pdp-rx .pdp-sw-chip--bad svg{color:#FCA5A5;}
+  /* Carte moins large que les 3 colonnes : identité en haut (trait
+     horizontal), Autres rôles | Profil dessous ; empilé sous 820 px. */
+  @container pdprx (max-width:1379px){
+    .pdp-rx{flex-wrap:wrap; row-gap:20px;}
+    .pdp-rx > .pdp-rx-col--id{flex:1 1 100%;}
+    .pdp-rx > .pdp-rx-sep:nth-child(2){flex:1 1 100%; width:auto; height:1px;}
+    .pdp-rx-col--others{flex:1 1 300px;}
+    .pdp-rx-col--profile{flex:1 1 360px;}
+  }
+  @container pdprx (max-width:820px){
+    .pdp-rx{flex-direction:column !important; flex-wrap:nowrap; gap:20px;}
+    .pdp-rx-sep{width:auto !important; height:1px; align-self:stretch;}
+    .pdp-rx-col--others, .pdp-rx-col--profile{flex:1 1 auto;}
+  }
+  @container pdprx (max-width:560px){
+    .pdp-rx{padding:18px !important;}
+    .pdp-rx-col--id{gap:14px;}
+    .pdp-rx .pdp-role2-ring, .pdp-rx .pdp-role2-ring svg{width:96px; height:96px;}
+    .pdp-rx .pdp-role2-ring-c{inset:8px;} .pdp-rx .pdp-role2-ring-c b{font-size:26px;} .pdp-rx .pdp-role2-ring-c small{font-size:9.5px;}
+    .pdp-rx .pdp-role-name{font-size:30px;}
+    .pdp-rx .pdp-role-fit{grid-template-columns:110px minmax(0,1fr) 40px;}
+  }
   /* Rôle & forces/faiblesses, refonte 2026-10-07 (maquette « Rôle &
      forces/faiblesses — refonte »), polices du jeu. */
   .pdp2-row--role{grid-template-columns:minmax(0,1fr) minmax(300px,520px) !important; align-items:stretch;}
@@ -2994,7 +3060,7 @@
   .pdp-compat-card .coh-note{margin-top:0;}
   .pdp-role2{display:grid; grid-template-columns:116px minmax(0,1fr) minmax(220px,340px); gap:22px; align-items:center;}
   @container (max-width:760px){ .pdp-role2{grid-template-columns:96px minmax(0,1fr);} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring svg{width:96px; height:96px;} .pdp-role2-ring{width:96px; height:96px;} .pdp-role2-ring-c b{font-size:24px;} .pdp-role2-ring-c small{font-size:9.5px;} }
-  @media (max-width:768px){ .pdp-role2{grid-template-columns:84px minmax(0,1fr); gap:14px;} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring, .pdp-role2-ring svg{width:84px; height:84px;} .pdp-role2-ring-c b{font-size:21px !important;} .pdp-role2-ring-c small{font-size:8.5px !important; letter-spacing:.04em;} }
+  @media (max-width:768px){ .pdp-role2{grid-template-columns:84px minmax(0,1fr); gap:14px;} .pdp-role2-side{grid-column:1 / -1;} }
   .pdp-role2-ring{position:relative; width:116px; height:116px; flex:none;}
   .pdp-role2-ring svg{display:block;}
   .pdp-role2-ring-c{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;}
@@ -21026,8 +21092,8 @@ function cohInitials(name) {
 function cohRingSvg(v) {
   const C = 2 * Math.PI * 34, dash = (C * Math.max(0, Math.min(100, v)) / 100).toFixed(1);
   return `<svg class="coh2-ring" width="58" height="58" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="none" stroke="var(--line)" stroke-width="8"/>` +
-    `<circle cx="40" cy="40" r="34" fill="none" stroke="var(--amber)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dash} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>` +
-    `<text x="40" y="47" text-anchor="middle" fill="currentColor" font-size="22" font-weight="800">${v}</text></svg>`;
+    `<circle cx="40" cy="40" r="34" fill="none" stroke="${radarTierColor(v)}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dash} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>` +
+    `<text x="40" y="47" text-anchor="middle" fill="${radarTierColor(v)}" font-size="22" font-weight="800">${v}</text></svg>`;
 }
 function cohCourtHtml(slots, conflicts, avatarOf) {
   const spot = pos => COH_COURT_SPOTS[pos] || [150, 140];
@@ -21089,8 +21155,8 @@ function compoCohesionHtml(team) {
     const chipCls = n === 0 ? "ok" : n >= 3 ? "bad" : "mid";
     h += `<div class="coh-slot" data-coh-pos="${escapeHtml(sl.pos)}"><span class="coh-av">${avatarOf(sl, 34)}</span>` +
       `<span class="coh-who"><span class="nm">${escapeHtml(sl.name)}</span><span class="rl"><b>${escapeHtml(POS_SHORT[sl.pos] || sl.pos)}</b> · <span>${escapeHtml(sl.roleName)}</span></span></span>` +
-      `<span class="coh-bar" title="Maîtrise du rôle : ${sl.mastery}%"><i style="width:${Math.max(0, Math.min(100, sl.mastery))}%" class="${n ? "" : "is-ok"}"></i></span>` +
-      `<span class="coh-fit">${sl.mastery}</span><span class="coh-chip coh-chip--${chipCls}">${n ? `${n} conflit${n > 1 ? "s" : ""}` : "OK"}</span></div>`;
+      `<span class="coh-bar" title="Maîtrise du rôle : ${sl.mastery}%"><i style="width:${Math.max(0, Math.min(100, sl.mastery))}%;background:${radarTierColor(sl.mastery)}"></i></span>` +
+      `<span class="coh-fit" style="color:${radarTierColor(sl.mastery)}">${sl.mastery}</span><span class="coh-chip coh-chip--${chipCls}">${n ? `${n} conflit${n > 1 ? "s" : ""}` : "OK"}</span></div>`;
   });
   h += `</div></div>`;
   h += `<div class="coh2-map"><span class="coh2-k">Carte des frictions</span>${cohCourtHtml(c.slots, conflicts, avatarOf)}` +
@@ -21129,76 +21195,74 @@ function pdpRoleRowHtml(player, fullyVisible) {
   const ratings = positionRatings(player);
   const prof = R.profileOf(player.attrs, ratings, 4, player.position);
   if (!prof) return "";
-  // Refonte du 2026-10-07 (maquette « Rôle & forces/faiblesses — refonte ») :
-  // anneau de maîtrise, rôle principal, « pour progresser », autres rôles ;
-  // à côté, le profil (forces / faiblesses en pastilles).
+  // Refonte du 2026-10-07 : UNE carte, 3 colonnes séparées par un trait
+  // (identité du rôle | autres rôles + compatibilité | profil). Données et
+  // calculs inchangés. Jauge, barres et compatibilité : même code couleur
+  // que les caractéristiques (radarTierColor).
   const positions = prof.positions;
   const sw = R.strengthsOf(player.attrs);
   const main = prof.fits.find(f => f.role === prof.primary.role && f.position === prof.primary.position) || prof.fits[0] || { mastery: 0 };
   const mastery = Math.max(0, Math.min(100, Math.round(main.mastery || 0)));
-  const C = 2 * Math.PI * 48;
-  let h = `<div class="pdp2-row pdp2-row--role pdp2-row--role3">`;
-  h += `<section class="pdp2-card pdp-role-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp-role2">`;
-  h += `<div class="pdp-role2-ring" title="Maîtrise du rôle principal"><svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true"><circle cx="58" cy="58" r="48" fill="var(--panel-2, rgba(255,255,255,.03))" stroke="var(--line)" stroke-width="10"/>` +
-    `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * mastery / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 58 58)"/></svg>` +
-    `<div class="pdp-role2-ring-c"><b>${mastery}%</b><small>maîtrise</small></div></div>`;
-  h += `<div class="pdp-role2-id"><div class="pdp-role2-kicker"><span class="pdp-role2-k">Rôle principal</span>` +
+  const mCol = radarTierColor(mastery);
+  const RR = 55, C = 2 * Math.PI * RR;
+  let h = `<div class="pdp2-row pdp2-row--role">`;
+  h += `<section class="pdp2-card pdp-role-card pdp-rx" data-pdp-role="${escapeHtml(prof.primary.role)}">`;
+  // --- Colonne A : identité ---
+  h += `<div class="pdp-rx-col pdp-rx-col--id"><div class="pdp-role2-ring" title="Maîtrise du rôle principal">` +
+    `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${RR}" fill="none" stroke="var(--pdp-rx-track)" stroke-width="10"/>` +
+    `<circle cx="60" cy="60" r="${RR}" fill="none" stroke="${mCol}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * mastery / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 60 60)"/></svg>` +
+    `<div class="pdp-role2-ring-c"><b style="color:${mCol}">${mastery}%</b><small>maîtrise</small></div></div>`;
+  h += `<div class="pdp-role2-id"><div class="pdp-role2-kicker"><span class="pdp-rx-k">Rôle principal</span>` +
     positions.map(p => `<span class="pdp-role2-pos${p === prof.primary.position ? " on" : ""}" title="${escapeHtml(p)}">${escapeHtml(p === prof.primary.position ? p.toUpperCase() : (POS_SHORT[p] || p))}</span>`).join("") + `</div>` +
     `<h3 class="pdp-role-name"><span>${escapeHtml(prof.primary.name)}</span></h3>` +
     `<p class="pdp-role-desc">${escapeHtml(prof.role.desc)}</p>`;
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
   if (progs.length) {
-    h += `<div class="pdp-role-progress"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>` +
-      `<span class="pdp-role2-k">Pour progresser</span>` + progs.map(x => `<span class="pdp-role2-chip">${escapeHtml(x)}</span>`).join("") + `</div>`;
+    const up = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`;
+    h += `<div class="pdp-role-progress"><span class="pdp-rx-k">Pour progresser</span>` + progs.map(x => `<span class="pdp-role2-chip">${up}<span>${escapeHtml(x)}</span></span>`).join("") + `</div>`;
   }
   // Évolution du rôle au fil de la carrière (phase 5), en une ligne.
   const hist = Array.isArray(player.roleHistory) ? player.roleHistory : [];
   if (hist.length && hist[hist.length - 1].role !== prof.primary.role || hist.length >= 2) {
     const steps = hist.concat(hist.length && hist[hist.length - 1].role === prof.primary.role ? [] : [{ name: prof.primary.name, age: player.age }]);
-    h += `<div class="pdp-role-evo"><span class="pdp-role2-k">Évolution</span> ` +
-      // Nom actuel du rôle (renommages), l'historique gardant l'ancien libellé.
+    h += `<div class="pdp-role-evo"><span class="pdp-rx-k">Évolution</span> ` +
       steps.map(x => `<b><span>${escapeHtml((x.role && R.ROLES[x.role] && R.ROLES[x.role].name) || x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div>`;
   }
-  h += `</div>`; // identité
-  // Autres rôles maîtrisés.
+  h += `</div></div>`;
+  h += `<span class="pdp-rx-sep" aria-hidden="true"></span>`;
+  // --- Colonne B : autres rôles + compatibilité avec le cinq majeur ---
   const others = prof.fits.filter(f => f !== main).slice(0, 3);
-  h += `<div class="pdp-role2-side"><span class="pdp-role2-k">Autres rôles</span>`;
-  h += others.length ? others.map(f => `<div class="pdp-role-fit"><span class="nm"><span>${escapeHtml(f.name)}</span>${f.position !== prof.primary.position ? ` <small>${escapeHtml(POS_SHORT[f.position] || f.position)}</small>` : ""}</span>` +
-    `<span class="pdp-role-track"><i style="width:${Math.max(0, Math.min(100, f.mastery))}%"></i></span><span class="pct">${f.mastery}%</span></div>`).join("") : `<p class="pdp-role-note">Spécialiste d'un seul rôle.</p>`;
-  h += `</div></div></section>`;
-  // Profil : forces / faiblesses en pastilles (plus grandes quand il y en a peu).
-  const chips = (list, kind) => {
-    const big = list.length <= 2 ? " is-big" : "";
-    const icon = kind === "ok"
-      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
-      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>`;
-    return list.map(x => `<span class="pdp-sw-chip pdp-sw-chip--${kind}${big}">${icon}<span>${escapeHtml(x)}</span></span>`).join("");
-  };
-  const arrow = up => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${up ? `<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>` : `<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>`}</svg>`;
-  h += `<section class="pdp2-card pdp-sw-card" aria-label="Profil : forces et faiblesses"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div>` +
-    `<div class="pdp-sw-row pdp-sw-row--ok"><div class="pdp-sw-lbl">${arrow(true)}<span>Forces</span><b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
-    (sw.strengths.length ? chips(sw.strengths, "ok") : `<p class="pdp-role-note">Profil équilibré.</p>`) + `</div></div>` +
-    `<div class="pdp-sw-row pdp-sw-row--bad"><div class="pdp-sw-lbl">${arrow(false)}<span>Faiblesses</span><b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
-    (sw.weaknesses.length ? chips(sw.weaknesses, "bad") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
-  h += `</section>`;
-  // 3e brique « Compatibilité avec votre cinq majeur » (demande du
-  // 2026-10-07 : Rôle, Forces/faiblesses et Compatibilité séparés), pour
-  // tous les joueurs, titulaires compris.
+  h += `<div class="pdp-rx-col pdp-rx-col--others"><span class="pdp-rx-k">Autres rôles</span><div class="pdp-rx-list">`;
+  h += others.length ? others.map(f => {
+    const v = Math.max(0, Math.min(100, Math.round(f.mastery)));
+    return `<div class="pdp-role-fit"><span class="nm"><span>${escapeHtml(f.name)}</span>${f.position !== prof.primary.position ? ` <small>${escapeHtml(POS_SHORT[f.position] || f.position)}</small>` : ""}</span>` +
+      `<span class="pdp-rx-bar"><i style="width:${v}%;background:${radarTierColor(v)}"></i></span><span class="pct">${v}%</span></div>`;
+  }).join("") : `<p class="pdp-role-note">Spécialiste d'un seul rôle.</p>`;
+  h += `</div>`;
   const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
   const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
   if (comp) {
-    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
-    h += `<section class="pdp2-card pdp-compat-card"><div class="pdp2-head"><h3>Compatibilité avec votre cinq majeur</h3></div>` +
-      `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
-      (comp.starter ? `<div class="pdp-role-note">Titulaire : cohérence actuelle du cinq.</div>`
-        : `<div class="pdp-role-note"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
-      `</div></div>`;
-    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
-    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
-    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
-    h += `</section>`;
+    const cv = Math.max(0, Math.min(100, comp.value)), cCol = radarTierColor(cv);
+    const detail = comp.starter ? "Titulaire : cohérence actuelle du cinq."
+      : `Au poste ${POS_SHORT[comp.pos] || comp.pos}${comp.replaced ? ` (${comp.replaced})` : ""} : ${comp.before}% → ${comp.after}%`;
+    h += `<div class="pdp-rx-compat" data-pdp-compat="${comp.value}" title="${escapeHtml(detail)}"><span class="pdp-rx-k">Compatibilité cinq majeur</span>` +
+      `<span class="pdp-rx-bar pdp-rx-bar--short"><i style="width:${cv}%;background:${cCol}"></i></span><b style="color:${cCol}">${comp.value}%</b></div>`;
   }
   h += `</div>`;
+  h += `<span class="pdp-rx-sep" aria-hidden="true"></span>`;
+  // --- Colonne C : profil (forces / faiblesses, pastilles de taille unique) ---
+  const chips = (list, kind) => {
+    const icon = kind === "ok"
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>`;
+    return list.map(x => `<span class="pdp-sw-chip pdp-sw-chip--${kind}">${icon}<span>${escapeHtml(x)}</span></span>`).join("");
+  };
+  h += `<div class="pdp-rx-col pdp-rx-col--profile pdp-sw-card" aria-label="Profil : forces et faiblesses"><span class="pdp-rx-k">Profil</span>` +
+    `<div class="pdp-sw-row pdp-sw-row--ok"><div class="pdp-sw-lbl"><span>Forces</span> · <b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
+    (sw.strengths.length ? chips(sw.strengths, "ok") : `<p class="pdp-role-note">Profil équilibré.</p>`) + `</div></div>` +
+    `<div class="pdp-sw-row pdp-sw-row--bad"><div class="pdp-sw-lbl"><span>Faiblesses</span> · <b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
+    (sw.weaknesses.length ? chips(sw.weaknesses, "bad") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div></div>`;
+  h += `</section></div>`;
   return h;
 }
 
@@ -31262,9 +31326,15 @@ function revertOrdres() {
 // Onglet "Adversaires" masqué quand sa carte l'est (niveau Débutant, voir
 // buildTeamPanel/applyTierVisibility).
 function updateOrdresSectionTabs() {
-  document.querySelectorAll("#ordresSectionTabs [data-ordres-jump]").forEach(btn => {
-    const target = document.getElementById(btn.dataset.ordresJump);
-    btn.classList.toggle("hidden", !target || target.classList.contains("hidden"));
+  // Club (#ordresSectionTabs) et Tactique des sélections (data-nc-jump) ;
+  // une carte est masquée elle-même ou par son conteneur (Temps de jeu).
+  document.querySelectorAll("#ordresSectionTabs [data-ordres-jump], [data-nc-jump]").forEach(btn => {
+    const id = btn.dataset.ordresJump || btn.dataset.ncJump;
+    const target = document.getElementById(id) || document.querySelector(`.area-${id}`);
+    // La carte elle-même ou son conteneur direct (Temps de jeu), jamais la
+    // page entière (masquée tant qu'on n'est pas sur les Ordres).
+    const off = el => !!el && el.classList.contains("hidden");
+    btn.classList.toggle("hidden", !target || off(target) || off(target.parentElement));
   });
 }
 
@@ -42284,9 +42354,10 @@ function buildTeamPanel(team, side, opts = {}) {
   minutesHost.className = "lineup-minutes-host";
   refreshLineupEditor = () => renderLineupEditor(team, hint, { onDirty, readonly: !editable, minutesContainer: minutesHost, cohesionContainer: cohesionHost, roster: opts.roster });
   refreshLineupEditor();
-  // Temps de jeu sous Défense (2026-10-06) : la Cohérence du cinq a quitté
-  // cette colonne, Attaque | Défense + Temps de jeu s'équilibrent.
-  if (editable) colRight.appendChild(minutesHost);
+  // Temps de jeu : colonne de gauche, sous Attaque, et seulement en niveau
+  // tactique Confirmé (demande du 2026-10-07, club et sélections) ; en
+  // Débutant, la répartition reste automatique.
+  if (editable) { colLeft.appendChild(minutesHost); confirmedEls.push(minutesHost); }
   colRight.appendChild(adversaires);
 
   applyTierVisibility();

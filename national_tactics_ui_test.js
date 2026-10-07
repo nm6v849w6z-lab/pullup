@@ -57,7 +57,10 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   const confirmed = page().querySelector(".ordres-settings-grid-nested");
   const tierBtn = [...page().querySelectorAll(".tier-toggle-btn")].find(b => b.dataset.value === "confirmée");
   const wasHidden = confirmed.classList.contains("hidden");
+  const minutesHidden = () => page().querySelector(".area-ordresCardMinutes").parentElement.classList.contains("hidden");
+  assert(minutesHidden() === wasHidden, "Temps de jeu : masqué en Débutant, affiché en Confirmé (comme les réglages Confirmé)");
   tierBtn.click();
+  assert(!minutesHidden() && page().querySelector(".area-ordresCardMinutes").closest(".prep-col--left"), "Confirmé : Temps de jeu visible, colonne de gauche");
   assert(wasHidden && !confirmed.classList.contains("hidden") && !page().querySelector(".area-ordresCardAdversaires").classList.contains("hidden"), "niveau tactique : réglages confirmés et postes à surveiller affichés");
   assert(/Modifications à valider/.test(doc.getElementById("ncTqStatus").textContent), "état : modifications à valider");
   // Feuille de match : 12 au plus parmi les 15.

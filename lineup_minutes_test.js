@@ -158,6 +158,21 @@ const doc = dom.window.document;
 const win = dom.window;
 const ptRow = p => doc.querySelector(`#ordresCardMinutes .pt-block[data-pos="${p}"]`);
 assert(doc.getElementById("ordresCardMinutes"), "la carte « Temps de jeu » doit exister");
+// Niveau Débutant : carte masquée (et son onglet) ; Confirmé : visible, dans
+// la colonne de gauche sous Attaque (demande du 2026-10-07).
+{
+  const card = doc.getElementById("ordresCardMinutes");
+  const tab = doc.querySelector('#ordresSectionTabs [data-ordres-jump="ordresCardMinutes"]');
+  if (win.eval("teamA.tacticalTier") !== "confirmée") {
+    assert(card.parentElement.classList.contains("hidden"), "Débutant : la carte « Temps de jeu » ne doit pas s'afficher");
+    assert(!tab || tab.classList.contains("hidden"), "Débutant : l'onglet « Temps de jeu » ne doit pas s'afficher");
+    doc.querySelector("#ordresTierToggle [data-value=\"confirmée\"]").click();
+  }
+  const card2 = doc.getElementById("ordresCardMinutes");
+  assert(!card2.parentElement.classList.contains("hidden"), "Confirmé : la carte « Temps de jeu » s'affiche");
+  assert(card2.closest(".prep-col--left") && card2.closest(".prep-col--left").querySelector("#ordresCardAttaque"), "Confirmé : « Temps de jeu » dans la colonne de gauche, avec Attaque");
+  console.log("✅ « Temps de jeu » : masqué en Débutant, colonne de gauche en Confirmé.");
+}
 assert(!doc.querySelector("#ordresCardCinq input[type=number]"), "la composition (ex-carte Rotation) ne doit pas contenir de minutes");
 assert(/Automatique/.test(ptRow("Meneur").textContent), "le poste Meneur doit être en automatique au départ");
 ptRow("Meneur").querySelector(".pt-btn").click();

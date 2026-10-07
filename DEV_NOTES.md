@@ -966,3 +966,15 @@ points réellement ouverts.
   `pdpRoleRowHtml` : anneau de maîtrise, rôle principal, « Pour progresser »
   en pastilles, autres rôles + compatibilité avec le cinq ; carte Profil
   (forces / faiblesses en pastilles). Polices du jeu (pas celles de la maquette).
+
+- **Ordres, Temps de jeu (2026-10-07)** : la carte n'apparaît qu'en niveau
+  tactique Confirmé (club et sélections, `confirmedEls`), dans la colonne de
+  gauche sous Attaque ; son onglet suit (`updateOrdresSectionTabs` regarde
+  la carte et son conteneur direct, jamais la page).
+- **Fiche joueur, bloc Rôle (refonte 2, 2026-10-07)** : une seule carte
+  `.pdp-rx`, 3 colonnes séparées (identité | autres rôles + compatibilité
+  cinq majeur | profil forces/faiblesses), pastilles de taille unique. Mise
+  en page par container query (`pdprx`) : 3 colonnes ≥ 1380 px, identité
+  en haut puis 2 colonnes, empilé < 820 px. Jauge de maîtrise, barres des
+  autres rôles, compatibilité ET cohérence du cinq (jauges, barres) :
+  `radarTierColor` (code couleur des caractéristiques).

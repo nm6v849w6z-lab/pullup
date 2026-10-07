@@ -190,10 +190,14 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   check(/Évolution/.test(card2.textContent) && /Slasher/.test(card2.textContent) && /Pour progresser/.test(card2.textContent) && card2.querySelector(".pdp-role2-chip"), "fiche joueur : évolution du rôle et programmes qui le développent");
   win.eval(`showPlayerDetail(myTeamIndex, Object.values(teamA.lineup.starters)[0])`);
   const row3 = () => doc.querySelector("#playerDetailSection .pdp2-row--role");
-  check(row3().querySelector(".pdp-role-card") && row3().querySelector(".pdp-sw-card") && row3().querySelector(".pdp-compat-card [data-pdp-compat]") && !row3().querySelector(".pdp-role-card [data-pdp-compat]"), "fiche joueur : 3 briques (Rôle, Forces/faiblesses, Compatibilité)");
-  check(/Titulaire : cohérence actuelle du cinq/.test(row3().querySelector(".pdp-compat-card").textContent), "fiche joueur d'un titulaire : compatibilité = cohérence actuelle du cinq");
+  // Refonte 2 (2026-10-07) : une seule carte, 3 colonnes séparées.
+  check(row3().querySelectorAll(".pdp2-card").length === 1 && row3().querySelectorAll(".pdp-rx > .pdp-rx-col").length === 3 && row3().querySelectorAll(".pdp-rx > .pdp-rx-sep").length === 2, "fiche joueur : une carte, 3 colonnes (identité | autres rôles + compatibilité | profil)");
+  check(row3().querySelector(".pdp-rx-col--others .pdp-rx-compat[data-pdp-compat]") && /Compatibilité cinq majeur/.test(row3().querySelector(".pdp-rx-compat").textContent), "compatibilité : en bas de la colonne Autres rôles (plus de 3e carte)");
+  check(/Titulaire : cohérence actuelle du cinq/.test(row3().querySelector(".pdp-rx-compat").title), "fiche joueur d'un titulaire : compatibilité = cohérence actuelle du cinq (détail au survol)");
+  const sizes = new Set([...row3().querySelectorAll(".pdp-sw-chip")].map(c => c.className.replace(/pdp-sw-chip--(ok|bad)/, "")));
+  check(sizes.size <= 1 && !row3().querySelector(".pdp-sw-chip.is-big"), "forces et faiblesses : pastilles de taille unique");
   win.eval(`(() => { const ids = new Set(Object.values(teamA.lineup.starters)); showPlayerDetail(myTeamIndex, teamA.players.find(p => !ids.has(p.id)).id); })()`);
-  check(/Compatibilité avec votre cinq majeur/.test(row3().querySelector(".pdp-compat-card").textContent) && /→/.test(row3().querySelector(".pdp-compat-card").textContent), "fiche joueur d'un remplaçant : compatibilité avec le cinq majeur (effet s'il entrait dans le cinq)");
+  check(/→/.test(row3().querySelector(".pdp-rx-compat").title) && /\d+%/.test(row3().querySelector(".pdp-rx-compat").textContent), "fiche joueur d'un remplaçant : compatibilité avec le cinq majeur (effet s'il entrait dans le cinq, au survol)");
   // Marché : rôle et compatibilité avec le cinq majeur.
   // (Joueurs d'autres clubs : caractéristiques masquées côté navigateur,
   // donc pas de compatibilité ; un remplaçant du club pour le calcul.)
