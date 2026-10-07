@@ -20,51 +20,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **🟠 CODE FAIT, TESTS EN COURS (2026-10-07) — live 2D v2 + améliorations
-  de l'audit, EN BÊTA pour Gotham Knights uniquement.** Audit : doc
-  « Audit du live 2D » (Claude Docs). Fichiers : `engine.js`,
-  `server/liveMatch.js`, `server/index.js`, `moteurbasket3.html`,
-  `assets/live/{court2d,live-view,adapter}.js`, `live.css`, `README.md` ;
-  tests `live_court2d_test`, `live_next_action_test`, `live_adapter_test`,
-  `admin_beta_feature_test`.
-  - Priorité 1 (état) : `liveState` (score, quart, chrono interpolé, chrono
-    des 24 s, possession, pause) alimenté par `applyEvent` + le tick ; le
-    DOM hérité n'est plus qu'une sortie ; `hmLiveBuildState` lit liveState ;
-    équipes/joueurs mis en cache entre deux ticks (`hmLive.teamsCache`).
-  - Priorité 2 (moteur → live) : chaque événement porte le contexte de SA
-    possession (`possStart`, `possLen`, `handler`, `creator`, `quality`,
-    `situation`, `shotType`, `defender`, `foulType`, `tovType`) et le
-    `delta` de stats qu'il produit (`MatchEngine.statsDelta`, `log()`) ;
-    `viewLiveMatchForTeam` échange aussi les clés du delta. Le tir porte
-    déjà `spot` (sous-secteur) : désormais utilisé pour la position.
-  - Chrono des 24 s : source unique `liveState.shotClock` (dixièmes),
-    passée à la vue et au terrain (`state.shotClock`, null en pause).
-  - Feuille en direct : `applyLiveStatsDelta` (deltas moteur) ; l'ancien
-    comptage ne sert plus que pour un direct calculé avant ce changement.
-  - court2d : passes = chaîne réelle porteur → créateur → tireur (passe et
-    va possible), type de tir (drive, floater, post, jumper, three :
-    trajectoire et hauteur), défenseur réel du tir qui conteste selon
-    `quality`, saut au tir / contre / rebond, rebond sur le cercle + lutte,
-    contact sur faute (fautif → victime), célébration + banc (médaillons),
-    temps mort tenu toute la pause, chrono 24 s depuis l'état.
-  - Adaptateur générique `assets/live/adapter.js` (payload serveur + deux
-    équipes → état de la vue, sans teamA/league/currentMatch) : utilisé par
-    le mode spectateur (`spectateMountLiveView`) → matchs des autres,
-    SÉLECTIONS NATIONALES (`/api/national/live`), rediffusions des autres
-    affichent la même vue live (+ terrain si le spectateur est en bêta).
-    RESTE : faire passer le direct de son propre club (hmLive*) par ce même
-    adaptateur (il produit déjà le même contrat ; migration à part).
-  - Bêta par club : `Team.betaFeatures`, `hasBetaFeature`, route
-    `POST /api/admin/beta-feature` `{ "teamName": "Gotham Knights",
-    "feature": "live2d", "enabled": true }` (X-Admin-Token ; toutes
-    divisions / pays ; `enabled: false` retire) ; miroir dans la Team
-    embarquée de moteurbasket3.html ; `opts.court2d` dans createLiveView.
-    Sans bêta : carte des tirs seule, sélecteur masqué (inchangé).
-  - RESTE : suite de tests complète verte → commit + push main + prod →
-    lancer l'appel admin pour Gotham Knights en prod (le jeton est côté
-    utilisateur) → revue en conditions réelles. Non fait (secondaire, voir
-    plan) : pause / vitesse en rediffusion, navigation par événement,
-    orientation des sprites, sons, mesure Safari / iPhone.
+- **🟡 POUSSÉ main + prod (2026-10-07, 79b1fce) — live 2D v2 en BÊTA,
+  à activer pour Gotham Knights seulement** : tout est en prod mais
+  INVISIBLE tant que le drapeau n'est pas posé (sans bêta : carte des tirs,
+  comportement inchangé). RESTE :
+  1. Activer en prod (jeton côté utilisateur) :
+     `curl -X POST https://hoop-manager.com/api/admin/beta-feature -H "X-Admin-Token: …" -H "Content-Type: application/json" -d '{"teamName":"Gotham Knights","feature":"live2d","enabled":true}'`
+     (`"enabled":false` pour retirer ; réponse `betaFeatures:["live2d"]`).
+  2. Revue en conditions réelles (match de club ; un match de sélection ou
+     d'un autre club via le mode spectateur affiche la même vue).
+  3. Après validation : ouvrir à tous (poser le drapeau club par club, ou
+     retirer le `court2d:` conditionnel dans hmLiveReset/spectateMountLiveView).
+  Détails livrés : `liveState` centralisé ; contexte de possession + delta
+  de stats sur chaque événement moteur (`MatchEngine.statsDelta`) ; feuille
+  en direct par deltas ; chrono des 24 s source unique ; court2d guidé par
+  les faits (passes réelles, type de tir, défenseur, rebond, faute,
+  célébration) ; `assets/live/adapter.js` + mode spectateur / sélections sur
+  la même vue. Non fait (secondaire) : pause / vitesse en rediffusion,
+  navigation par événement, sons, mesure Safari / iPhone, migration du
+  direct de son propre club (hmLive*) vers l'adaptateur partagé. Suite
+  complète : 291 / 312 verts ; les 21 autres échouent aussi sur origin/main
+  (préexistants : attr_color_scheme, club_history, cup_ordres_planning,
+  engine_balance (statistique), personnalisation_tab, premium_features,
+  private_league_ui, server/actions, italy, national_cup, world_season,
+  staff_v2_ui, super_cup, world_market) ou passent seuls (délais sous
+  charge).
 - **🟠 À FAIRE — Économie, masse salariale en 3 lignes** (retour
   2026-09-30 : « joueurs, staff, centre de formation, ça fait trop de lignes
   sinon ») : agréger le staff (entraîneur, analyste, recruteur, médecin,
