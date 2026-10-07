@@ -868,7 +868,7 @@
     var opts = COUNTRIES.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), "fr"); })
       .map(function (x) { return '<option value="' + esc(x) + '"' + (x === c ? " selected" : "") + ">" + esc(nm(x)) + "</option>"; }).join("");
     return '<div class="nt-switch"><label class="nt-country">' + flag(c) + '<select data-nt-country aria-label="Pays de la sélection">' + opts + "</select></label>" +
-      '<div class="nt-seg" role="tablist" aria-label="Catégorie">' + [["A", "Équipe A"], ["U21", "U21"]].map(function (x) {
+      '<div class="nt-seg vs-tabs" role="tablist" aria-label="Catégorie">' + [["A", "Équipe A"], ["U21", "U21"]].map(function (x) {
         return '<button type="button" role="tab" aria-selected="' + (cat === x[0]) + '" class="' + (cat === x[0] ? "on" : "") + '" data-nt-cat="' + x[0] + '">' + x[1] + "</button>";
       }).join("") + '</div><span class="nt-grow"></span><button type="button" class="nt-btn2" data-nt-back>Toutes les sélections</button></div>';
   }
@@ -884,7 +884,7 @@
     var tv = ui.team, now = Date.now();
     if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
     var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["finale", "Phase finale"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
-    var h = back + '<div class="nt-tabs">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    var h = back + '<div class="nt-tabs vs-tabs" role="tablist">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
     h += "<div" + heroAttrs(tv) + ">" + heroLogoHtml(tv) + '<div class="nt-hero-text"><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : ' + esc(honoursSummary(tv)) + "</span>" +
       (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +

@@ -98,10 +98,8 @@
       ".vs-h3{margin:0;font-size:18px;font-weight:700}",
       ".vs-big{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;line-height:1}",
       ".vs-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}",
+      // Onglets : composant commun .vs-tabs (CSS dans moteurbasket3.html).
       ".vs-head h1{margin:2px 0 0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:42px;text-transform:uppercase;line-height:1}",
-      ".vs-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--vs-card);border:1px solid var(--vs-line);border-radius:14px}",
-      ".vs-tabs button{min-height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--vs-dim);font:inherit;font-weight:600;font-size:14px;cursor:pointer}",
-      ".vs-tabs button:hover{color:var(--ink);background:var(--vs-in)}.vs-tabs button.active{background:var(--vs-acc);color:#1A1205}",
       ".vs-hero{display:flex;flex-wrap:wrap;gap:28px;align-items:center}",
       ".vs-ring{position:relative;width:156px;height:156px;flex:none}.vs-ring>div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}",
       ".vs-ring b{font-size:56px}.vs-ring small{font-size:12px;color:var(--vs-faint);font-weight:600}",
@@ -349,9 +347,8 @@
         '<div class="vs-gfoot"><div class="vs-row" style="font-size:13px"><span style="color:var(--vs-faint)">Moral du groupe</span><b style="color:' + mc + '">' + esc(levelWord(gr.mood)) + "</b></div>" +
         '<div class="vs-bar6"><i style="width:' + Math.max(3, Math.min(100, gr.mood)) + "%;background:" + mc + '"></i></div></div></div></article>';
     }).join("");
-    var explain = '<article class="vs-card" style="border-style:dashed;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:10px"><p class="vs-eyebrow">Comment naissent les groupes</p>' +
       '<p class="vs-text" style="font-size:15px">Même nationalité, même génération, du temps passé ensemble : les affinités se créent d\'elles-mêmes. Un groupe soudé et heureux tire le moral vers le haut.</p></article>';
-    var groups = '<section class="vs-groups">' + (cards || '<article class="vs-card"><p class="vs-empty">Pas encore de groupe marqué : les affinités se créent avec le temps passé ensemble.</p></article>') + explain + "</section>";
+    var groups = '<section class="vs-groups">' + (cards || '<article class="vs-card"><p class="vs-empty">Pas encore de groupe marqué : les affinités se créent avec le temps passé ensemble.</p></article>') + "</section>";
     var solo = alone.length ? '<section class="vs-card" style="display:flex;flex-direction:column;gap:16px"><div class="vs-row" style="flex-wrap:wrap;align-items:baseline"><h2 class="vs-h2" style="font-size:24px">Hors des groupes</h2>' +
       '<p class="vs-text" style="max-width:560px">Pas forcément un problème. Un joueur isolé <em>et</em> frustré, en revanche, mérite qu\'on s\'en occupe.</p></div>' +
       '<div class="vs-solo">' + alone.map(function (p) { return "<div>" + avatar(p, MOOD_COLOR[p.mood]) + "<div>" + link(p) + "<small>" + esc(p.label) + "</small></div></div>"; }).join("") + "</div></section>" : "";

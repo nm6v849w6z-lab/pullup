@@ -166,6 +166,8 @@ const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond())
   if (!/Lyon Coupe/.test(bs)) fail("feuille de match du tour de Coupe attendue.");
   win.eval("TAB_HANDLERS.coupe()");
   await wait(() => doc.querySelector('#cupRoundTabs [data-cup-round="0"]'), "onglets");
+  if (!doc.getElementById("cupRoundTabs").classList.contains("vs-tabs")) fail("onglets des tours : menu commun .vs-tabs (comme Vestiaire et Centre médical)");
+  ok("onglets des tours : menu commun .vs-tabs");
   doc.querySelector('#cupRoundTabs [data-cup-round="0"]').click();
   await wait(() => doc.querySelector("#cupRoundBody tr.cp-m .cp-score .w"), "résultat dans le tableau du tour");
   if (errs.length) fail(`erreurs : ${errs.join(" | ")}`);

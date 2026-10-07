@@ -29,10 +29,13 @@ const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log(
     return w === (v <= 20 ? "Faible" : v <= 50 ? "Moyen" : v <= 80 ? "Bon" : "Élevé") && c.querySelector(".vs-verdict").getAttribute("style").includes(win.radarTierColor(v));
   });
   assert(tierOk, "cohésion, moral, confiance : barème commun radarTierColor (rouge, jaune, blanc, vert)");
-  for (const [k, re] of [["hierarchy", /La pyramide du vestiaire/], ["groups", /Comment naissent les groupes/], ["relations", /Carte des relations/], ["evolution", /Journal du vestiaire/]]) {
+  for (const [k, re] of [["hierarchy", /La pyramide du vestiaire/], ["groups", /Groupes formés/], ["relations", /Carte des relations/], ["evolution", /Journal du vestiaire/]]) {
     content.querySelector(`[data-vs-tab="${k}"]`).click();
     assert(re.test(content.textContent), `vue ${k}`);
   }
+  content.querySelector('[data-vs-tab="groups"]').click();
+  assert(!/Comment naissent les groupes|les affinités se créent d'elles-mêmes/.test(content.textContent), "Groupes : bloc explicatif « Comment naissent les groupes » retiré");
+  assert(content.querySelectorAll(".vs-kpi").length === 4, "Groupes : chiffres et cartes des groupes conservés");
   content.querySelector('[data-vs-tab="relations"]').click();
   assert(content.querySelectorAll(".vs-graph g[data-player-id]").length === win.eval("teamA.players.length"), "graphe : un point par joueur");
   content.querySelector('[data-vs-tab="hierarchy"]').click();

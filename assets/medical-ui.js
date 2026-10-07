@@ -74,10 +74,6 @@
       ".md-kicker{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--md-acc)}",
       ".md-head h1{margin:4px 0;font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.01em}",
       ".md-sub{font-size:15px;color:var(--md-dim)}",
-      ".md-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--md-card);border:1px solid var(--md-line);border-radius:14px}",
-      ".md-tabs button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--md-dim);font:inherit;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer}",
-      ".md-tabs button span{font-size:12px;padding:1px 7px;border-radius:999px;background:var(--md-in);color:var(--ink)}",
-      ".md-tabs button.active{background:var(--md-acc);color:#1A1206}.md-tabs button.active span{background:rgba(0,0,0,.18);color:#1A1206}",
       ".md-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}",
       ".md-kpi{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:20px 22px;background:var(--md-card);border:1px solid var(--md-line);border-radius:18px;min-width:0}",
       ".md-kpi.md-ring{flex-direction:row;align-items:center;justify-content:flex-start;gap:18px}",
@@ -121,7 +117,7 @@
       ".md-dist{display:flex;flex-direction:column;gap:8px;font-size:13px}.md-dist>div{display:flex;justify-content:space-between}.md-dist span{display:flex;align-items:center;gap:8px;color:var(--md-dim)}.md-dist i{width:10px;height:10px;border-radius:3px;display:inline-block}",
       ".md-tip{font-size:12px;color:var(--md-faint);border-top:1px solid var(--md-line);padding-top:12px;line-height:1.5}",
       ".md-next{font-size:13px;color:var(--md-dim)}.md-next b{color:var(--ink);font-weight:600}",
-      "@media (max-width:720px){.md-root{gap:16px}.md-head h1{font-size:32px}.md-tabs{width:100%}.md-tabs button{flex:1 1 auto;justify-content:center;padding:0 8px;font-size:13px}.md-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.md-kpi{padding:14px}.md-kpi .md-n{font-size:34px}.md-kpi.md-ring{flex-direction:column;align-items:flex-start;gap:8px}.md-kpi.md-ring svg{width:52px;height:52px}",
+      "@media (max-width:720px){.md-root{gap:16px}.md-head h1{font-size:32px}.md-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.md-kpi{padding:14px}.md-kpi .md-n{font-size:34px}.md-kpi.md-ring{flex-direction:column;align-items:flex-start;gap:8px}.md-kpi.md-ring svg{width:52px;height:52px}",
       ".md-table{min-width:0}.md-grid{grid-template-columns:minmax(0,1fr) 112px;gap:10px;padding:10px 14px}.md-grid>.md-c-fat{display:none}.md-th>.md-c-fat{display:none}.md-group{padding:9px 14px}.md-panel-head{padding:14px}.md-bar{display:none}.md-risk{justify-content:flex-end}.md-c-end{text-align:right}}",
     ].join("\n");
     document.head.appendChild(s);
@@ -189,7 +185,7 @@
       return '<button type="button" class="' + (on ? "active" : "") + '" data-med-filter="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + " <span>" + counts[x[0]] + "</span></button>";
     }).join("");
     var h = '<header class="md-head"><div><div class="md-kicker">Équipe · Santé</div><h1>Centre médical</h1><div class="md-sub">Bilan physique de l\'effectif avant le prochain match</div></div>' +
-      '<div class="md-tabs" role="group" aria-label="Filtrer">' + tabs + "</div></header>";
+      '<div class="vs-tabs" role="group" aria-label="Filtrer">' + tabs + "</div></header>";
 
     // Bandeau de chiffres.
     var avail = players.length - injuredPros.length, ratio = players.length ? avail / players.length : 1;

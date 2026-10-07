@@ -3718,6 +3718,20 @@
   .cal-filter:hover{color:var(--ink); border-color:var(--ink-faint);}
   .cal-filter.active{background:var(--amber); border-color:var(--amber); color:var(--amber-ink);}
   .cal-filter-count{opacity:.75; font-weight:500; margin-left:2px;}
+  /* Menu d'onglets commun du Mode Club (2026-10-07) : le contrôle segmenté
+     du Vestiaire (.vs-tabs, assets/vestiaire-ui.js), sorti ici pour servir à
+     Vestiaire, Centre médical, Calendrier, Effectif, Coupe, Histoire du club,
+     Sélections nationales et fiche d'une équipe. Il s'ajoute au conteneur de
+     menu existant : boutons, data-* et écouteurs de chaque page inchangés
+     (sélecteur doublé pour primer sur .cal-filter / .bs-tab / .nt-tab). */
+  .vs-tabs.vs-tabs{display:flex; flex-wrap:wrap; gap:4px; width:fit-content; max-width:100%; box-sizing:border-box; padding:4px; background:var(--panel); border:1px solid var(--line); border-radius:14px;}
+  .vs-tabs.vs-tabs > button{min-height:40px; padding:0 16px; border:0; border-radius:10px; background:transparent; color:var(--ink-dim); font:inherit; font-size:14px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; box-shadow:none; white-space:nowrap;}
+  .vs-tabs.vs-tabs > button:hover{color:var(--ink); background:var(--panel-2);}
+  .vs-tabs.vs-tabs > button:is(.active, .on){background:var(--amber); color:var(--amber-ink);}
+  .vs-tabs.vs-tabs > button > span{font-size:12px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--panel-2); color:var(--ink); opacity:1; margin:0;}
+  .vs-tabs.vs-tabs > button:is(.active, .on) > span{background:rgba(0,0,0,.18); color:inherit;}
+  .vs-tabs.vs-tabs > button:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  @media (max-width:720px){ .vs-tabs.vs-tabs{width:100%;} .vs-tabs.vs-tabs > button{flex:1 1 auto; padding:0 10px; font-size:13px;} }
   .cal-filter:focus-visible, .cal-next-btn:focus-visible, .calendar-order-btn:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
 
   .calendar-table.cal-month{table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; background:var(--panel); border:1px solid var(--line-soft); border-radius:12px; overflow:hidden; margin-bottom:14px;}
@@ -36535,7 +36549,7 @@ function teamDetailSubNavHtml() {
     { key: "analyse", label: "Analyse d'équipe" },
     { key: "transferts", label: "Transferts" },
   ].filter(t => !(teamDetailForeign && t.key === "analyse"));
-  return `<div class="boxscore-toggle team-detail-subnav">` +
+  return `<div class="boxscore-toggle team-detail-subnav vs-tabs">` +
     tabs.map(t => `<button type="button" class="bs-tab${teamDetailSubView === t.key ? " active" : ""}" data-team-detail-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
     `</div>`;
 }
@@ -36746,7 +36760,7 @@ function teamDetailEffectifSubNavHtml(isOwnTeam, revealedSet) {
     { key: "stats", label: "Statistiques" },
   ];
   // Même forme de menu que le Calendrier et la Coupe (.cal-filter).
-  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs" role="tablist" aria-label="Vues de l'effectif">` +
+  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs vs-tabs" role="tablist" aria-label="Vues de l'effectif">` +
     tabs.map(t => `<button type="button" role="tab" aria-selected="${teamDetailEffectifView === t.key}" class="cal-filter${teamDetailEffectifView === t.key ? " active" : ""}" data-team-effectif-view="${t.key}">${escapeHtml(t.label)}${t.extra || ""}</button>`).join("") +
     `</div></div>`;
 }
@@ -37165,7 +37179,7 @@ function teamCalendarTableHtml(teamIdx) {
     `<button type="button" class="cal-filter${teamDetailCalendarFilter === key ? " active" : ""}" data-tde-cal-filter="${key}" aria-pressed="${teamDetailCalendarFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
 
   let html = `<div class="cal-layout tde-calendar"><div class="cal-main">`;
-  html += `<div class="cal-toolbar" role="group" aria-label="Filtrer les matchs">` +
+  html += `<div class="cal-toolbar vs-tabs" role="group" aria-label="Filtrer les matchs">` +
     filterBtn("all", "Tous") + filterBtn("home", "Domicile") + filterBtn("away", "Extérieur") + filterBtn("upcoming", "À venir") + `</div>`;
   groups.forEach(g => {
     html += `<table class="calendar-table cal-month"><colgroup><col class="cal-col-date"><col class="cal-col-round"><col><col class="cal-col-result"><col class="tde-col-action"></colgroup>` +
@@ -49708,7 +49722,7 @@ function effectifSubNavHtml(rightHtml = "") {
   // [data-effectif-subview] qu'avant, classe dédiée .eff-seg (pas .bs-tab,
   // déjà écoutée ailleurs pour le box-score).
   // Même forme de menu que le Calendrier et la Coupe (.cal-filter).
-  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs effectif-subnav" role="tablist" aria-label="Vues de l'effectif">` +
+  return `<div class="eff-toolbar"><div class="cal-toolbar eff-tabs effectif-subnav vs-tabs" role="tablist" aria-label="Vues de l'effectif">` +
     tabs.map(t => `<button type="button" role="tab" aria-selected="${effectifSubView === t.key}" class="cal-filter${effectifSubView === t.key ? " active" : ""}" data-effectif-subview="${t.key}">${escapeHtml(t.label)}</button>`).join("") +
     `</div>${rightHtml}</div>`;
 }
@@ -52589,9 +52603,9 @@ function renderCalendrierSection() {
     `<button type="button" class="cal-filter${calendarFilter === key ? " active" : ""}" data-cal-filter="${key}" aria-pressed="${calendarFilter === key}">${label} <span class="cal-filter-count">${counts[key]}</span></button>`;
 
   let html = `<div class="cal-layout"><div class="cal-main">`;
-  html += `<div class="cal-toolbar" role="group" aria-label="Filtrer les matchs">` +
+  html += `<div class="cal-toolbar"><div class="vs-tabs" role="group" aria-label="Filtrer les matchs">` +
     filterBtn("all", "Tous") + filterBtn("home", "Domicile") + filterBtn("away", "Extérieur") + filterBtn("upcoming", "À venir") +
-    calSeasonSelectHtml() +
+    `</div>` + calSeasonSelectHtml() +
     `</div>`;
 
   groups.forEach(g => {
@@ -53191,7 +53205,7 @@ function renderNationalCupSection(holder) {
   html += `<div class="ncup-intro">Coupe nationale${countryName ? ` · ${escapeHtml(countryName)}` : ""} · saison ${cup.season} : tous les clubs du pays, un tour chaque jeudi. ` +
     `Le club de division inférieure part avec <b>+7 points par division d'écart</b> (au plus +21), compris dans les scores.</div>`;
   html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
-  html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
+  html += `<div class="cal-toolbar cp-rounds vs-tabs" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
   html += `<div class="cp-tools"><button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
   html += `<div id="cupRoundBody"></div>`;
   html += `<div class="cp-final-wrap"><div class="cp-final-head"><span class="cal-month-title">Phase finale</span></div><div class='cup-bracket cp-bracket' id="ncupFinal"></div></div>`;
@@ -53221,7 +53235,7 @@ function renderCoupeSection() {
     html += `<div class="cup-champion-banner">Vainqueur de la Coupe : ${teamLinkHtml(cup.champion, league.teams[cup.champion].name)}${isMe ? " (c'est vous !)" : ""}</div>`;
   }
   html += `<div class="cal-layout cp-layout"><div class="cal-main">`;
-  html += `<div class="cal-toolbar cp-rounds" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
+  html += `<div class="cal-toolbar cp-rounds vs-tabs" id="cupRoundTabs" role="tablist" aria-label="Tours de coupe"></div>`;
   html += `<div class="cp-tools">` + // champ "Chercher un club" retiré (retour utilisateur 2026-09-26)
     `<button type="button" class="cal-filter cp-chip" data-cup-filter="all">Tous</button><button type="button" class="cal-filter cp-chip" data-cup-filter="pending">À jouer</button></div>`;
   html += `<div id="cupRoundBody"></div>`;
@@ -58548,7 +58562,7 @@ function renderHistoireSection() {
   // est complétée par des sous-onglets, même forme de menu que le Calendrier.
   const tabs = [["chrono", "Chronologie"], ["legendes", "Légendes"], ["palmares", "Palmarès et records"], ["rivalites", "Rivalités"], ["managers", "Managers"]];
   if (!tabs.some(t => t[0] === histoireView)) histoireView = "chrono";
-  html += `<div class="cal-toolbar hc-tabs" role="tablist" aria-label="Histoire du club">` +
+  html += `<div class="cal-toolbar hc-tabs vs-tabs" role="tablist" aria-label="Histoire du club">` +
     tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${histoireView === k}" class="cal-filter${histoireView === k ? " active" : ""}" data-hc-view="${k}">${escapeHtml(l)}</button>`).join("") + `</div>`;
   if (histoireView === "palmares") {
     html += `<div class="hc-grid">`;
