@@ -991,6 +991,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
     ...ev,
     ...(ev.team !== undefined ? { team: swapTeamLabel(ev.team) } : null),
     ...(ev.possession !== undefined ? { possession: swapTeamLabel(ev.possession) } : null),
+    ...(ev.possessionAfter !== undefined ? { possessionAfter: swapTeamLabel(ev.possessionAfter) } : null),
     ...(ev.score !== undefined ? { score: { A: ev.score.B, B: ev.score.A } } : null),
     // Deltas de statistiques par équipe (live 2D, 2026-10-07) : même repère.
     ...(ev.delta !== undefined ? { delta: { ...(ev.delta.B ? { A: ev.delta.B } : null), ...(ev.delta.A ? { B: ev.delta.A } : null) } } : null),

@@ -19493,6 +19493,21 @@ function foulProneness(p) {
   return Math.max(base * foulCaution(p), 1);
 }
 
+// Événements de jeu qui portent la possession (voir markPossessionEvents).
+const POSSESSION_PLAY_TYPES = new Set(["shot", "rebound", "turnover", "foul", "freeThrow", "technicalFoul", "unsportsmanlikeFoul"]);
+// Pose `possession` (pendant) et `possessionAfter` (après) sur les
+// événements journalisés depuis `from` pour une possession de `offKey` qui
+// se termine avec le ballon à `nextKey`.
+function markPossessionEvents(events, from, offKey, nextKey) {
+  let last = -1;
+  for (let i = from; i < events.length; i++) if (POSSESSION_PLAY_TYPES.has(events[i].type)) last = i;
+  for (let i = from; i < events.length; i++) {
+    const ev = events[i];
+    if (POSSESSION_PLAY_TYPES.has(ev.type) && ev.possession !== "A" && ev.possession !== "B") ev.possession = offKey;
+    ev.possessionAfter = i < last ? offKey : nextKey;
+  }
+}
+
 class MatchEngine {
   // `options.homeAdvantage` : teamA reçoit, teamB se déplace ; +/-
   // HOME_ADVANTAGE_FACTOR sur toutes les caractéristiques effectives (voir
@@ -20972,7 +20987,7 @@ class MatchEngine {
       this.log(events, quarter, clock, say(
         offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
       return { possessionOffense: offensiveRebound };
@@ -21225,7 +21240,7 @@ class MatchEngine {
     // utilisateur : "on ne sait pas qui a la balle" — voir
     // updateLiveClockTick côté client).
     const tipOffWinner = possessionTeam === "A" ? this.teamA : this.teamB;
-    this.log(events, 1, QUARTER_SECONDS, `L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner) });
+    this.log(events, 1, QUARTER_SECONDS, `L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner), possessionAfter: this.teamKey(tipOffWinner) });
 
     // Un match de basket ne peut pas finir sur une égalité : au-delà du 4e
     // quart-temps, on enchaîne des prolongations de 5 minutes (règle
@@ -21242,7 +21257,7 @@ class MatchEngine {
       // Le marqueur du 1er quart-temps est déjà loggué plus haut, AVANT
       // l'entre-deux (voir commentaire ci-dessus) — ne pas le dupliquer ici.
       if (q > 1) {
-        this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart" });
+        this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart", possession: possessionTeam, possessionAfter: possessionTeam });
       }
       const startScoreA = score.A, startScoreB = score.B;
       // Fautes d'équipe remises à zéro à chaque quart-temps (bonus, voir
@@ -21333,6 +21348,7 @@ class MatchEngine {
         // Contexte de possession pour les événements (voir log) : chrono de
         // début et durée réelle. Complété dans playPossession.
         this._possCtx = { possStart: Math.round((clock + possessionLength) * 10) / 10, possLen: Math.round(possessionLength * 10) / 10 };
+        const possFirstEvent = events.length;
         const result = this.playPossession(offTeam, defTeam, q, clock, events, scoreDiff);
         if (typeof result.clockUsed === "number" && result.clockUsed < possessionLength) {
           // Possession écourtée : les événements déjà journalisés gardent la
@@ -21381,11 +21397,21 @@ class MatchEngine {
             if (this.maybeCallTimeout(caller, q, clock, score, run, events)) run = { team: null, points: 0 };
           }
         }
+        // Possession du ballon pour le direct (audit possession live,
+        // 2026-10-07) : SOURCE DE VÉRITÉ unique côté client. `possession` =
+        // équipe qui a le ballon PENDANT l'action (complété sur les fautes
+        // techniques/antisportives qui ne le portaient pas), `possessionAfter`
+        // = équipe qui l'a APRÈS l'événement : l'attaque jusqu'au dernier
+        // événement de jeu de la possession, puis l'équipe qui remonte le
+        // ballon (panier encaissé, rebond défensif, interception, perte,
+        // dernier lancer franc…) — y compris pour les changements et temps
+        // morts qui suivent.
+        markPossessionEvents(events, possFirstEvent, offTeam === this.teamA ? "A" : "B", possessionTeam);
       }
 
       quarterScores.A[q - 1] = score.A - startScoreA;
       quarterScores.B[q - 1] = score.B - startScoreB;
-      this.log(events, q, 0, `Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name}`, { type: "quarterEnd" });
+      this.log(events, q, 0, `Fin ${isOvertime ? "de la" : "du"} ${label} : ${this.teamA.name} ${score.A} - ${score.B} ${this.teamB.name}`, { type: "quarterEnd", possessionAfter: possessionTeam });
 
       if (q >= 4 && score.A !== score.B) break;
       if (q >= 14) {

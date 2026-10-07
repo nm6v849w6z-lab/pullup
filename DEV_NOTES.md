@@ -780,6 +780,25 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Possession du ballon dans le direct (audit du 2026-10-07)** : SOURCE DE
+  VÉRITÉ = le moteur. Chaque événement de jeu porte `possession` (équipe qui
+  a le ballon PENDANT l'action) et `possessionAfter` (APRÈS), posés par
+  `markPossessionEvents` (engine.js, fin de chaque possession) ; idem
+  `quarterStart` / `quarterEnd` / `tipoff`. ⚠ `rebound.possession` = équipe
+  qui TIRAIT (avant : celle du rebond). Le serveur réoriente
+  `possessionAfter` (viewLiveMatchForTeam). Côté client, la possession du
+  direct = `possessionAfter` du dernier événement diffusé :
+  `assets/live/adapter.js:possessionAt` (spectateur, autre match,
+  sélections, rediffusions) et sa copie `livePossessionAt` dans
+  moteurbasket3.html (direct de son club) — garder les deux identiques.
+  `court2d.js` ne tient plus de possession concurrente : `giveBall` refuse
+  un joueur de l'autre équipe (ou sortant), `enforcePossession` lâche le
+  ballon dès que l'état change, passes guidées (`flyTo`/`pass`, cible qui
+  suit le receveur), rebondeur / intercepteur du moteur. Tests :
+  `engine_possession_chain_test.js` (moteur) et
+  `live_possession_sync_test.js` (moteur → serveur → adaptateur → terrain,
+  horloge virtuelle, `court.debug()`).
+
 - **Règle UI mobile (2026-10-07, permanente, voir aussi CLAUDE.md)** : sur
   téléphone, AUCUN menu / modale / dropdown / popup au milieu de l'écran,
   tout en bottom sheet (fixed, bottom 0, 90dvh max, scroll interne, zone

@@ -51,6 +51,24 @@ export function shotPoint(zone, teamIdx, seed, spot) {
   }
   return { x: teamIdx === 0 ? 94 - x : x, y: Math.max(0.8, Math.min(49.2, y)) };
 }
+// Équipe qui a le ballon après `ev` ("A"/"B") : ev.possessionAfter (moteur
+// depuis 2026-10-07), sinon l'ancien champ `possession` (directs antérieurs).
+export function possessionAfterOf(ev) {
+  if (!ev) return null;
+  if (ev.possessionAfter === "A" || ev.possessionAfter === "B") return ev.possessionAfter;
+  return ev.type !== "rebound" && (ev.possession === "A" || ev.possession === "B") ? ev.possession : (ev.type === "rebound" && (ev.team === "A" || ev.team === "B") ? ev.team : null);
+}
+// SOURCE DE VÉRITÉ de la possession du direct (audit 2026-10-07) : l'équipe
+// qui a le ballon juste après le dernier événement diffusé `evs[prevIdx]`,
+// telle que le moteur l'a décidée. Directs antérieurs (sans
+// possessionAfter) : la prochaine action du quart qui porte une possession.
+export function possessionAt(evs, prevIdx) {
+  const prev = evs[prevIdx];
+  if (!prev) return null;
+  if (prev.possessionAfter === "A" || prev.possessionAfter === "B") return prev.possessionAfter;
+  for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (evs[i].possession === "A" || evs[i].possession === "B") return evs[i].possession; }
+  return possessionAfterOf(prev);
+}
 export function clockSeconds(str) {
   if (typeof str === "number") return str;
   const m = /^(\d+):(\d+)$/.exec(String(str || ""));
@@ -171,13 +189,18 @@ export function createLiveAdapter(opts) {
     const quarter = ev.quarter || st.quarter;
     st.quarter = quarter; st.clock = clock;
     if (ev.score) st.scoreAB = { A: ev.score.A, B: ev.score.B };
-    if (ev.possession === "A" || ev.possession === "B") st.possession = idx(ev.possession);
+    // Possession (audit possession live, 2026-10-07) : l'équipe qui a le
+    // ballon APRÈS l'événement (ev.possessionAfter, moteur) ; un direct
+    // plus ancien n'a que `possession` (lu comme avant).
+    const after = possessionAfterOf(ev);
+    if (after) st.possession = idx(after);
     if (ev.airAt) st.lastAirAt = Math.max(st.lastAirAt, ev.airAt);
     if (ev.quarter != null && ev.clock != null) st.elapsed = elapsedAt(ev.quarter, ev.clock);
     const sc = [st.scoreAB[keyOf(0)], st.scoreAB[keyOf(1)]];
     st.raw.push({ quarter, score: sc });
     const out = { id: ++st.seq, team: t, quarter, clock, text: ev.text || "", score: null, highlight: false, kind: ev.type, made: ev.made, offensive: ev.offensive,
       zone: ev.zone === "inside" ? "paint" : ev.zone || null, airAt: ev.airAt || null, possessionTeam: ev.possession === "A" || ev.possession === "B" ? idx(ev.possession) : null,
+      possessionAfter: after ? idx(after) : null, blocked: !!ev.blocked,
       type: (TYPE[ev.type] || (() => "info"))(ev) };
     if (hasTeam) { out.actors = actors(ev); Object.assign(out, facts(ev)); }
     if ((ev.type === "shot" && ev.made) || (ev.type === "freeThrow" && (ev.made || 0) > 0)) out.score = sc;
@@ -230,7 +253,8 @@ export function createLiveAdapter(opts) {
     const interp = prevSec - (prevSec - clockSeconds(nextDiff.clock)) * frac;
     st.clock = Math.max(0, Math.round(interp));
     st.shotClock = Math.max(0, Math.min(24, 24 - Math.max(0, prevSec - interp)));
-    for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (evs[i].possession) { st.possession = idx(evs[i].possession); break; } }
+    const poss = possessionAt(evs, prevIdx);
+    if (poss) st.possession = idx(poss);
   }
   function nextAction(now) {
     if (st.final || live.pregame) return null;

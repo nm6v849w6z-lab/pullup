@@ -28717,7 +28717,23 @@ const liveState = {
   shotClock: null, possession: null, inPause: false, lastAirAt: 0,
   reset(clock) { this.scoreAB = { A: 0, B: 0 }; this.quarter = 1; this.eventClock = this.clock = clock; this.shotClock = null; this.possession = null; this.inPause = false; this.lastAirAt = 0; },
 };
-let liveTickEvents = []; // [{ airAt, quarter, clockSec, possession }], trié par airAt, un par événement diffusé
+let liveTickEvents = []; // [{ airAt, quarter, clockSec, possession, possessionAfter, type, team }], trié par airAt, un par événement diffusé
+// Possession du direct (audit 2026-10-07) — copie exacte de
+// assets/live/adapter.js:possessionAfterOf / possessionAt (le direct de son
+// club n'importe pas le module) ; live_possession_sync_test.js vérifie que
+// les deux donnent le même résultat.
+function livePossessionAfterOf(ev) {
+  if (!ev) return null;
+  if (ev.possessionAfter === "A" || ev.possessionAfter === "B") return ev.possessionAfter;
+  return ev.type !== "rebound" && (ev.possession === "A" || ev.possession === "B") ? ev.possession : (ev.type === "rebound" && (ev.team === "A" || ev.team === "B") ? ev.team : null);
+}
+function livePossessionAt(evs, prevIdx) {
+  const prev = evs[prevIdx];
+  if (!prev) return null;
+  if (prev.possessionAfter === "A" || prev.possessionAfter === "B") return prev.possessionAfter;
+  for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (evs[i].possession === "A" || evs[i].possession === "B") return evs[i].possession; }
+  return livePossessionAfterOf(prev);
+}
 let liveTickPauses = [];  // [{ airAt, endAt }] — mi-temps/pauses de quart-temps/temps morts
 let liveClockTicker = null;
 
@@ -28857,13 +28873,13 @@ function updateLiveClockTick() {
     // Un changement de joueur, un temps mort… n'ont pas de possession : on
     // prend la prochaine action du quart qui en porte une (retour
     // utilisateur 2026-10-03 : indicateur décalé par rapport au fil).
-    let nextPoss = null;
-    for (let i = prevIdx + 1; i < liveTickEvents.length; i++) {
-      if (liveTickEvents[i].quarter !== prev.quarter) break;
-      if (liveTickEvents[i].possession) { nextPoss = liveTickEvents[i].possession; break; }
-    }
-    setPossessionDot(nextPoss || prev.possession || null);
-    liveState.possession = nextPoss || prev.possession || liveState.possession;
+    // Audit possession live (2026-10-07) : SOURCE DE VÉRITÉ = l'équipe qui
+    // a le ballon après le dernier événement diffusé (possessionAfter du
+    // moteur), même règle que assets/live/adapter.js:possessionAt ; la
+    // lecture « prochaine action » ne sert plus qu'aux directs antérieurs.
+    const nextPoss = livePossessionAt(liveTickEvents, prevIdx);
+    setPossessionDot(nextPoss || null);
+    liveState.possession = nextPoss || liveState.possession;
   } else {
     liveState.shotClock = null;
     // Dernier événement diffusé du quart (ou du match) : plus rien à
@@ -43681,7 +43697,7 @@ function enterLiveMatch(liveMatch, opts) {
   ].sort((a, b) => a.airAt - b.airAt);
 
   liveTickEvents = liveMatch.events
-    .map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSecondsFromStr(ev.clock), possession: ev.possession || null }))
+    .map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSecondsFromStr(ev.clock), possession: ev.possession || null, possessionAfter: ev.possessionAfter || null, type: ev.type, team: ev.team }))
     .sort((a, b) => a.airAt - b.airAt);
   liveTickPauses = liveMatch.pauses.map(p => ({ airAt: p.airAt, endAt: p.airAt + p.durationMs }));
   startLiveClockTick();
@@ -44652,7 +44668,7 @@ function applyEvent(ev) {
   liveState.scoreAB = { A: ev.score.A, B: ev.score.B };
   liveState.quarter = ev.quarter;
   liveState.eventClock = liveState.clock = clockSecondsFromStr(ev.clock);
-  if (ev.possession === "A" || ev.possession === "B") liveState.possession = ev.possession;
+  { const after = livePossessionAfterOf(ev); if (after) { liveState.possession = after; setPossessionDot(after); } }
   if (ev.airAt) liveState.lastAirAt = Math.max(liveState.lastAirAt, ev.airAt);
   document.getElementById("scoreA").textContent = ev.score.A;
   document.getElementById("scoreB").textContent = ev.score.B;
@@ -44957,7 +44973,8 @@ function hmLiveOnEvent(ev) {
     const quarter = ev.quarter || hmLive.quarter;
     const sc = hmLiveScoreArr(ev.score);
     hmLive.quarter = quarter;
-    if (ev.possession === "A" || ev.possession === "B") hmLive.possession = hmLiveIdx(ev.possession);
+    const possAfter = livePossessionAfterOf(ev);
+    if (possAfter) hmLive.possession = hmLiveIdx(possAfter);
     hmLive.raw.push({ quarter, score: sc });
 
     const out = { id: ++hmLive.seq, team: t, quarter, clock, text: ev.text || "", score: null, highlight: false };
@@ -44973,7 +44990,9 @@ function hmLiveOnEvent(ev) {
     // le tir sur airAt ; il reconnaît ainsi l'événement quand il arrive.
     out.airAt = ev.airAt || null;
     out.possessionTeam = ev.possession === "A" || ev.possession === "B" ? hmLiveIdx(ev.possession) : null;
-    hmLive.lastAirAt = ev.airAt || hmLive.lastAirAt || 0;
+    out.possessionAfter = possAfter ? hmLiveIdx(possAfter) : null;
+    out.blocked = !!ev.blocked;
+    hmLive.lastAirAt = Math.max(hmLive.lastAirAt || 0, ev.airAt || 0);
     switch (ev.type) {
       case "shot": out.type = ev.made ? "made" : "miss"; if (ev.made) out.score = sc; break;
       case "rebound": out.type = "miss"; break;

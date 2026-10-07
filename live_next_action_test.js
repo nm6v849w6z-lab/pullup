@@ -99,6 +99,26 @@ const q1 = S.events.find(e => e.type === "period");
 if (q1 && S.events.indexOf(q1) > first) fail("le premier commentaire doit suivre le début du match, pas le précéder.");
 console.log(`✅ ${quotes.length} commentaire(s) de Nicolas Cosset dans le fil.`);
 
+// 3b. Possession (audit possession live 2026-10-07) : le direct de son club
+// expose la possession du moteur — possessionAfter du dernier événement
+// diffusé —, chaque action porte possessionTeam (pendant) et possessionAfter
+// (après), et la prochaine action est jouée par l'équipe qui a le ballon.
+{
+  const evs = hm.match.events;
+  let last = -1; evs.forEach((e, i) => { if (e.airAt <= clock.now) last = i; });
+  const expected = w.eval("livePossessionAt")(evs, last);
+  const idx = k => w.eval("hmLiveIdx")(k);
+  w.eval("updateLiveClockTick && updateLiveClockTick()");
+  const P = w.eval("hmLiveBuildState()");
+  if (P.possession !== idx(expected)) fail(`possession du direct de son club : ${P.possession}, moteur : ${expected} (${idx(expected)}).`);
+  const plays = P.events.filter(e => ["shot", "rebound", "turnover", "foul", "freeThrow"].includes(e.kind));
+  if (!plays.length || !plays.every(e => (e.possessionTeam === 0 || e.possessionTeam === 1) && (e.possessionAfter === 0 || e.possessionAfter === 1))) fail("chaque action doit porter possessionTeam et possessionAfter.");
+  const lastPlay = plays[plays.length - 1];
+  if (lastPlay.possessionAfter !== P.possession) fail("la possession du direct doit être celle laissée par la dernière action.");
+  if (P.nextAction && P.nextAction.possessionTeam != null && P.nextAction.possessionTeam !== P.possession) fail(`la prochaine action (${P.nextAction.kind}) doit être jouée par l'équipe en possession (${P.nextAction.possessionTeam} ≠ ${P.possession}).`);
+  console.log(`✅ Possession du direct de son club = moteur (${expected}) ; ${plays.length} actions avec possession pendant / après ; prochaine action jouée par l'équipe qui a le ballon.`);
+}
+
 // 4. Fin du direct : plus de nextAction, commentaire final.
 w.eval("finishPlayback()");
 await flush(dom);

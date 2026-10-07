@@ -189,6 +189,13 @@ export function createCourt2D(host, opts = {}) {
   let plan = null;                 // possession en cours (voir buildPlan)
   let possStart = now();           // début de la possession courante (chrono des 24 s)
   let medalsKey = null, missKey = null, lastDrift = 0;
+  // Audit possession (2026-10-07) : dernier événement joué, compteurs du
+  // garde-fou (voir giveBall / tick) lus par les tests via debug().
+  let lastPlayed = null;
+  // releases : ballon lâché à l'instant où le moteur change la possession
+  // (interception, perte…) ; corrections : écart rattrapé par le garde-fou
+  // de l'animation (scène en retard) ; refusals : remise refusée.
+  const audit = { refusals: 0, corrections: 0, releases: 0 };
 
   function makeSprite(p, t) {
     const g = el("g", { class: "c2d-p t" + t, "data-id": p.id }, layer);
@@ -278,10 +285,53 @@ export function createCourt2D(host, opts = {}) {
   const onCourt = t => [...sprites.values()].filter(s => s.team === t && !s.leaving);
   const handlerOf = t => onCourt(t).sort((a, b) => a.slot - b.slot)[0] || null;
 
-  function giveBall(sp) { ball.holder = sp ? sp.id : null; ball.flight = null; }
+  // ---------- possession : source de vérité ----------
+  // Audit possession live (2026-10-07). L'équipe qui a le ballon est celle de
+  // l'état du direct (S.possession = possessionAfter du dernier événement
+  // diffusé, décidé par le moteur). Le terrain ne tient PAS de possession
+  // concurrente : `possession` ci-dessous n'est que l'équipe en attaque de la
+  // scène jouée, et le ballon ne peut être porté que par un joueur de
+  // l'équipe du moteur. Une remise à l'autre équipe est refusée (ballon
+  // libre, rendu à la bonne équipe à la resynchronisation).
+  function ownerTeam() { return S && S.status === "live" && (S.possession === 0 || S.possession === 1) ? S.possession : null; }
+  const teamOf = v => (v === 0 || v === 1 ? v : null);
+  function giveBall(sp) {
+    const own = ownerTeam();
+    if (sp && ((own !== null && sp.team !== own) || sp.leaving || !sprites.has(sp.id))) { audit.refusals++; if (opts.onAudit) opts.onAudit({ kind: "refusal", id: sp.id, team: sp.team, owner: own, leaving: !!sp.leaving, stack: new Error().stack }); ball.holder = null; ball.flight = null; return false; }
+    ball.holder = sp ? sp.id : null; ball.flight = null;
+    return true;
+  }
   function fly(to, ms, height, done) {
     ball.holder = null;
-    ball.flight = { from: { x: ball.x, y: ball.y }, to, t: 0, ms, h: height, done };
+    ball.flight = { from: { x: ball.x, y: ball.y }, to, t: 0, ms, h: height, done, target: null };
+  }
+  // Passe vers un joueur : la cible suit le receveur PENDANT le vol (plus de
+  // position figée au départ qui devient fausse quand il se déplace).
+  // Garde-fou (chaque image et à chaque nouvel état du direct) : un porteur
+  // sorti du terrain ou de l'équipe qui n'a pas le ballon selon le moteur
+  // (scène encore en retard sur le fil) lâche le ballon immédiatement.
+  function enforcePossession(onUpdate = false) {
+    if (!ball.holder) return;
+    const own = ownerTeam(), h = sprites.get(ball.holder);
+    if (!h || h.leaving || (own !== null && h.team !== own)) { if (onUpdate) audit.releases++; else audit.corrections++; ball.holder = null; }
+  }
+  function flyTo(sp, ms, height, done) {
+    if (!sp) return;
+    fly({ x: sp.x, y: sp.y }, ms, height, done);
+    ball.flight.target = sp.id;
+  }
+  // Passe de `from` à `to` (même équipe) : depuis le porteur réel ; si le
+  // ballon est encore en route vers `from`, la passe part à sa réception ;
+  // jamais vers un adversaire.
+  // `maxMs` : durée maximale du vol (la passe doit arriver avant le tir).
+  function pass(from, to, lob = false, maxMs = Infinity) {
+    if (!to || ball.holder === to.id || (ball.flight && ball.flight.target === to.id)) return;
+    if (ball.flight && from && ball.flight.target === from.id) { const d = ball.flight.done; ball.flight.done = () => { if (d) d(); pass(from, to, lob, maxMs); }; return; }
+    const src = ball.holder ? spriteOf(ball.holder) : null;
+    if (src && src.team !== to.team) return;
+    if (ball.flight) return;
+    const dist = Math.hypot(to.x - ball.x, to.y - ball.y);
+    flyTo(to, Math.max(140, Math.min(lob ? 520 : 320 + dist * 6, maxMs)), lob ? 7 : 2.5, () => giveBall(to));
   }
   const later = (ms, fn) => { const id = setTimeout(fn, Math.max(0, ms)); timers.push(id); return id; };
   function busy(sp, ms) { if (!sp) return; sp.busy = true; later(ms, () => { sp.busy = false; }); }
@@ -322,8 +372,8 @@ export function createCourt2D(host, opts = {}) {
     busy(pg, 2400); moveTo(pg, baseline - dir * 9, 30 + rnd(-4, 4), 2);
     for (const sp of onCourt(nt)) if (sp !== pg && sp !== inb) { busy(sp, 1200); moveTo(sp, lerp(sp.x, 47, 0.5), sp.y + rnd(-4, 4), 1.4); }
     formation();
-    later(800, () => { const src = (inb && inb !== pg) ? inb : pg; fly({ x: src.x, y: src.y }, 300, 1, () => giveBall(src)); });
-    later(1650, () => { if (inb && inb !== pg && ball.holder === inb.id) fly({ x: pg.x, y: pg.y }, 380, 2, () => giveBall(pg)); });
+    later(800, () => { const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 300, 1, () => giveBall(src)); });
+    later(1650, () => { if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
     later(2200, () => { pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
   }
 
@@ -344,14 +394,21 @@ export function createCourt2D(host, opts = {}) {
     }
     const t0 = now();
     const total = na.airAt - t0;
-    if (!(total > 1200)) { plan = { airAt: na.airAt, fired: true }; return; }
+    // Plan non joué (trop tard, action non planifiable) : `skipped`, pour que
+    // l'arrivée de l'événement joue la version courte (et pas un ballon
+    // téléporté au cercle comme si le tir était déjà parti).
+    if (!(total > 1200)) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     const kind = na.kind;
-    if (!PLANNED_KINDS.has(kind)) { plan = { airAt: na.airAt, fired: true }; return; }
+    if (!PLANNED_KINDS.has(kind)) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     const a = na.actors || {};
-    const offT = kind === "rebound" ? (na.offensive ? na.team : 1 - na.team)
-      : kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul" ? (na.possessionTeam != null ? na.possessionTeam : 1 - na.team)
+    // Équipe en attaque : celle que le moteur donne pour l'action
+    // (possessionTeam = possession PENDANT l'action) ; repli pour un direct
+    // antérieur.
+    const offT = teamOf(na.possessionTeam) !== null && kind !== "rebound" ? na.possessionTeam
+      : kind === "rebound" ? (na.offensive ? na.team : 1 - na.team)
+      : kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul" ? 1 - na.team
       : na.team;
-    if (offT !== 0 && offT !== 1) { plan = { airAt: na.airAt, fired: true }; return; }
+    if (offT !== 0 && offT !== 1) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     if (possession !== offT) startPossession(offT);
     plan = { airAt: na.airAt, kind, offT, fired: false, steps: [] };
     const at = (frac, fn) => later(total * frac, () => { if (plan && plan.airAt === na.airAt) fn(); });
@@ -362,11 +419,11 @@ export function createCourt2D(host, opts = {}) {
     const current = ball.holder && spriteOf(ball.holder);
     const handler = (real && real.team === offT ? real : null) || (current && current.team === offT ? current : null) || handlerOf(offT);
     if (!handler) return;
-    if (ball.holder !== handler.id) {
-      // Le ballon vient d'une remise en jeu / d'un rebond chez un coéquipier : courte passe au porteur réel.
-      if (current && current.team === offT && current !== handler && !ball.flight) fly({ x: handler.x, y: handler.y }, 320, 2.5, () => giveBall(handler));
-      else if (!ball.flight) giveBall(handler);
-    }
+    // Le ballon vient d'une remise en jeu / d'un rebond chez un coéquipier :
+    // c'est lui qui commence la chaîne (passe au porteur réel). Sans
+    // porteur, le ballon rejoint le porteur réel.
+    const starter = current && current.team === offT ? current : null;
+    if (!starter && ball.holder !== handler.id && !ball.flight) giveBall(handler);
     // Remontée : le porteur dribble jusqu'à la tête de raquette.
     const top = slotPos(offT, 0, true);
     moveTo(handler, top.x, top.y, 1.6);
@@ -381,17 +438,21 @@ export function createCourt2D(host, opts = {}) {
         busy(sh, total); moveTo(sh, line.x, line.y, 1.8);
         const others = [...onCourt(offT).filter(s => s !== sh), ...onCourt(1 - offT)];
         others.forEach((sp, i) => { busy(sp, total); moveTo(sp, rim.x + dir * (3 + (i >> 1) * 5.5), i % 2 ? 16.5 : 33.5, 1.8); });
-        later(700, () => { if (plan && plan.airAt === na.airAt) giveBall(sh); });
+        later(700, () => { if (plan && plan.airAt === na.airAt && sh && ball.holder !== sh.id) flyTo(sh, 300, 1.5, () => giveBall(sh)); });
       });
       at(0.97, () => { fly({ x: RIM[offT].x, y: RIM[offT].y }, Math.max(350, total * 0.03), 6); plan.fired = true; firedAt = na.airAt; });
       return;
     }
     if (kind === "turnover" || kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul") {
-      // Le porteur (celui qui perd la balle / qui subit la faute) reçoit le
-      // ballon après une passe, l'événement conclut.
-      const victim = spriteOf(a.player) || handler;
-      at(0.45, () => { const teammates = onCourt(offT).filter(s => s !== handler); const to = teammates[Math.floor(Math.random() * teammates.length)]; if (to && to !== victim) { fly({ x: to.x, y: to.y }, 350, 2, () => giveBall(to)); } });
-      at(0.75, () => { if (victim && ball.holder !== victim.id) fly({ x: victim.x, y: victim.y }, 350, 2, () => giveBall(victim)); });
+      // Chaîne réelle du moteur (porteur → créateur → joueur qui perd le
+      // ballon / qui subit la faute) ; aucune passe inventée. Sur une faute
+      // technique ou antisportive, `player` est le FAUTIF (défense) : il ne
+      // reçoit jamais le ballon.
+      const victim = (kind === "turnover" || kind === "foul") ? spriteOf(a.player) : null;
+      const chain = [];
+      for (const sp of [handler, ...(na.passes || []).map(spriteOf), victim]) if (sp && sp.team === offT && chain[chain.length - 1] !== sp) chain.push(sp);
+      const n = chain.length - 1;
+      for (let i = 0; i < n; i++) at(n === 1 ? 0.7 : 0.45 + 0.3 * (i / (n - 1)), () => pass(chain[i], chain[i + 1]));
       return;
     }
     // Tir (kind shot ou rebound = tir manqué + rebond). Mise en scène des
@@ -410,18 +471,30 @@ export function createCourt2D(host, opts = {}) {
     for (const id of [...(na.passes || []), a.shooter]) { const sp = spriteOf(id); if (sp && sp.team === offT && chain[chain.length - 1] !== sp) chain.push(sp); }
     if (!chain.length && shooter) chain.push(shooter);
     if (chain[0] && chain[0] !== handler) chain.unshift(handler);
+    if (starter && chain[0] && chain[0] !== starter) chain.unshift(starter);
+    // Action très courte (enchaînée à 2,2 s d'une autre) : si la chaîne ne
+    // tient pas avant le tir, on garde le premier porteur et le tireur (le
+    // tireur reçoit toujours le ballon avant de tirer).
+    while (chain.length > 2 && (chain.length - 1) * 360 > total - flightMs - 200) chain.splice(chain.length - 2, 1);
     const tShot = total - flightMs;
     const atMs = (ms, fn) => later(ms, () => { if (plan && plan.airAt === na.airAt) fn(); });
     // Les passes se répartissent entre 35 % et 80 % du temps ; aucune passe
     // inventée : une chaîne d'un seul joueur = isolation / drive.
     const nPass = Math.max(0, chain.length - 1);
-    const tLastPass = Math.min(total * 0.8, tShot - 350);
-    const tFirstPass = Math.max(150, Math.min(total * 0.35, tLastPass - 600 * Math.max(1, nPass - 1)));
+    // La dernière passe arrive avant le tir (vol ≤ ~700 ms) : le tir ne coupe
+    // plus une passe en l'air.
+    // Action courte : passes serrées dès maintenant.
+    const shortPlan = tShot - 800 < 150 + 600 * Math.max(0, nPass - 1);
+    const tLastPass = shortPlan ? Math.max(0, tShot - 480) : Math.min(total * 0.8, tShot - 800);
+    const tFirstPass = shortPlan ? 0 : Math.max(150, Math.min(total * 0.35, tLastPass - 600 * Math.max(1, nPass - 1)));
+    const times = [];
+    for (let i = 0; i < nPass; i++) times.push(nPass === 1 ? tLastPass : tFirstPass + (tLastPass - tFirstPass) * (i / (nPass - 1)));
     for (let i = 0; i < nPass; i++) {
-      const from = chain[i], to = chain[i + 1];
-      const t = nPass === 1 ? tLastPass : tFirstPass + (tLastPass - tFirstPass) * (i / (nPass - 1));
+      const from = chain[i], to = chain[i + 1], t = times[i];
       const lob = type === "post" && i === nPass - 1;   // entrée de balle au poste : lobée
-      atMs(t, () => { if (ball.holder === from.id) fly({ x: to.x, y: to.y }, lob ? 520 : 320 + Math.hypot(to.x - from.x, to.y - from.y) * 6, lob ? 7 : 2.5, () => giveBall(to)); else if (ball.holder !== to.id && !ball.flight) giveBall(to); });
+      // Vol borné : arrivée avant la passe suivante, et au plus tard 120 ms avant le tir.
+      const limit = (i + 1 < nPass ? times[i + 1] : tShot - 120) - t;
+      atMs(t, () => pass(from, to, lob, limit));
     }
     // Le tireur rejoint son emplacement (un drive attaque le cercle depuis
     // le périmètre ; un post-up se gagne dos au panier, lentement).
@@ -444,8 +517,13 @@ export function createCourt2D(host, opts = {}) {
     later(Math.max(0, tShot), () => {
       if (!plan || plan.airAt !== na.airAt) return;
       // Le tir part : le ballon touche le cercle à airAt. Saut du tireur.
+      // Le ballon part d'où il est (dans les mains du tireur, ou encore en
+      // fin de passe) : plus de téléportation sur le tireur.
       const sh = shooter || spriteOf(ball.holder);
-      if (sh) { ball.x = sh.x; ball.y = sh.y; jump(sh, drive ? 0.9 : 1.15); }
+      // Passe vers le tireur encore en l'air (action très courte) : il la
+      // reçoit maintenant, le tir part de ses mains.
+      if (sh && ball.flight && ball.flight.target === sh.id) { ball.flight.done = null; giveBall(sh); const h = sprites.get(sh.id); if (h) { ball.x = h.x; ball.y = h.y; } }
+      if (sh) jump(sh, drive ? 0.9 : 1.15);
       if (defender && na.quality !== "ouvert") later(120, () => jump(defender, 1.1));
       fly({ x: rim.x, y: rim.y }, flightMs, flightH);
       plan.fired = true; firedAt = na.airAt;
@@ -492,7 +570,10 @@ export function createCourt2D(host, opts = {}) {
     if (e.kind === "quote") return;   // commentaire du présentateur : fil seulement
     const a = e.actors || {};
     const shooter = spriteOf(a.shooter), assister = spriteOf(a.assister), t = e.team;
-    const prePlayed = firedAt === e.airAt || !!(plan && plan.airAt === e.airAt && plan.fired);
+    const prePlayed = firedAt === e.airAt || !!(plan && plan.airAt === e.airAt && plan.fired && !plan.skipped);
+    // Équipe qui a le ballon APRÈS cet événement, selon le moteur.
+    const after = teamOf(e.possessionAfter);
+    const prev = lastPlayed; lastPlayed = e;
     switch (e.kind) {
       case "tipoff": {
         // Entre-deux : les deux pivots au centre, les autres autour du rond
@@ -515,15 +596,25 @@ export function createCourt2D(host, opts = {}) {
           fly({ x: c.x, y: c.y }, 800, 10, () => {
             const to = handlerOf(t) || onCourt(t)[0];
             if (!to) return;
-            fly({ x: to.x, y: to.y }, 380, 3, () => { for (const sp of sprites.values()) sp.busy = false; startPossession(t); giveBall(to); formation(); });
+            startPossession(t);
+            flyTo(to, 380, 3, () => { for (const sp of sprites.values()) sp.busy = false; giveBall(to); formation(); });
           });
         });
         break;
       }
       case "shot": case "rebound": {
         const isReb = e.kind === "rebound";
-        const offT = isReb ? (e.offensive ? t : 1 - t) : t;
+        const offT = teamOf(e.possessionTeam) !== null && (!isReb || teamOf(e.possessionAfter) !== null) ? e.possessionTeam : isReb ? (e.offensive ? t : 1 - t) : t;
         possession = offT;
+        // Équipe qui récupère le ballon : moteur (possessionAfter), sinon
+        // celle du rebondeur / l'adversaire après un panier.
+        const nextT = after !== null ? after : isReb ? t : e.made ? 1 - offT : offT;
+        // Rebond après un tir contré déjà joué : le ballon est déjà libre.
+        const afterBlock = isReb && prev && prev.kind === "shot" && prev.blocked && !prev.made;
+        // Tir manqué SANS rebond derrière (contre : le rebond suit ; faute
+        // sur le tir : les lancers suivent).
+        const blockedShot = !isReb && !e.made && (e.blocked || !!a.blocker);
+        const fouledShot = !isReb && !e.made && !blockedShot;
         const spot = e.shot ? { x: e.shot.x, y: e.shot.y } : slotPos(offT, shooter ? shooter.slot : 0, true);
         const rim = RIM[offT];
         const finish = () => {
@@ -533,36 +624,55 @@ export function createCourt2D(host, opts = {}) {
             later(350, () => { jump(shooter, 0.6); cheer(offT); });
             ball.x = rim.x + (rim.x > 47 ? -1.5 : 1.5); ball.y = rim.y + 1; ball.holder = null; ball.flight = null;
             // Panier + faute (« and one ») : pas de remise en jeu, les lancers suivent.
-            later(900, () => { if (queue.some(q => q.kind === "foul" || q.kind === "freeThrow")) return; inbound(1 - offT, rim); });
-          } else {
-            if (a.blocker) { const bl = spriteOf(a.blocker); flash(bl, "CONTRE", "good"); jump(bl, 1.2); }
+            // Panier + faute (« and one ») : le moteur laisse le ballon à
+            // l'attaque (possessionAfter), les lancers suivent.
+            later(900, () => {
+              if (after === null ? queue.some(q => q.kind === "foul" || q.kind === "freeThrow") : nextT === offT) return;
+              inbound(nextT, rim);
+            });
+          } else if (blockedShot) {
+            // Contre : le ballon part du contre et reste LIBRE ; le rebond
+            // (événement suivant du moteur) dira qui le récupère.
+            const bl = spriteOf(a.blocker); flash(bl, "CONTRE", "good"); jump(bl, 1.2);
             addMiss(spot, offT);
+            const dir = rim.x > 47 ? -1 : 1;
+            fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5);
+          } else if (fouledShot) {
+            // Faute sur le tir : pas de rebond, le tireur va aux lancers.
+            fly({ x: rim.x + (rim.x > 47 ? -2 : 2), y: rim.y + 1.5 }, 300, 1.5, () => { if (shooter && shooter.team === nextT) flyTo(shooter, 380, 2, () => giveBall(shooter)); });
+          } else {
+            if (!afterBlock) addMiss(spot, offT);
             // Rebond : le ballon rebondit sur le cercle (ou part du contre)
             // puis retombe ; le vrai rebondeur y va, les autres proches
             // s'approchent (lutte), et il saute pour le capter.
             const dir = rim.x > 47 ? -1 : 1;
             const drop = { x: rim.x + dir * rnd(3, 9), y: rim.y + rnd(-7, 7) };
-            const hop = a.blocker ? { x: spot.x + dir * 3, y: spot.y + rnd(-3, 3) } : { x: rim.x + dir * rnd(0.5, 2), y: rim.y + rnd(-1.5, 1.5) };
+            const hop = afterBlock ? { x: ball.x, y: ball.y } : { x: rim.x + dir * rnd(0.5, 2), y: rim.y + rnd(-1.5, 1.5) };
             scene(1700);
-            const rb = spriteOf(a.rebounder);
+            // Rebondeur désigné par le moteur, de l'équipe qui récupère.
+            const named = spriteOf(a.rebounder);
+            const rb = named && named.team === nextT ? named : handlerOf(nextT);
             const near = [...sprites.values()].filter(sp => sp !== rb && !sp.leaving && Math.hypot(sp.x - rim.x, sp.y - rim.y) < 14).slice(0, 3);
             fly(hop, 200, 2.5, () => {
               near.forEach(sp => { busy(sp, 900); moveTo(sp, lerp(sp.x, drop.x, 0.5) + rnd(-1.5, 1.5), lerp(sp.y, drop.y, 0.5) + rnd(-1.5, 1.5), 1.6); });
               if (rb) { busy(rb, 1000); moveTo(rb, drop.x + rnd(-0.8, 0.8), drop.y + rnd(-0.8, 0.8), 2.4); }
               fly(drop, 420, 3.5, () => {
                 if (rb) jump(rb, 1);
-                later(450, () => { if (isReb) startPossession(t); giveBall(rb || handlerOf(possession)); if (rb) flash(rb, "REB"); formation(); });
+                later(450, () => { startPossession(nextT); giveBall(rb); if (rb && isReb) flash(rb, "REB"); formation(); });
               });
             });
           }
         };
-        if (prePlayed) { ball.flight = null; ball.x = rim.x; ball.y = rim.y; finish(); break; }
+        if (afterBlock) { finish(); break; }
+        if (prePlayed) { ball.flight = null; if (!blockedShot) { ball.x = rim.x; ball.y = rim.y; } finish(); break; }
         // Pas de plan (première action, reconnexion) : version courte.
-        const handler = spriteOf(ball.holder) || handlerOf(offT);
+        const cur = spriteOf(ball.holder);
+        const handler = (cur && cur.team === offT ? cur : null) || handlerOf(offT);
         let delay = 0;
         if (shooter) { busy(shooter, 1800); moveTo(shooter, spot.x, spot.y, 2); }
-        if (assister && assister !== handler && assister !== shooter) { later(delay, () => fly({ x: assister.x, y: assister.y }, 350, 2, () => giveBall(assister))); delay += 420; }
-        if (shooter && (handler !== shooter || assister)) { later(delay, () => { const src = assister || handler; if (src && src !== shooter) fly({ x: shooter.x, y: shooter.y }, 380, 2, () => giveBall(shooter)); else giveBall(shooter); }); delay += 450; }
+        if (handler && ball.holder !== handler.id && !ball.flight) giveBall(handler);
+        if (assister && assister !== handler && assister !== shooter) { later(delay, () => pass(handler, assister)); delay += 420; }
+        if (shooter && (handler !== shooter || assister)) { later(delay, () => pass(assister || handler, shooter)); delay += 450; }
         later(delay + 250, () => fly({ x: rim.x, y: rim.y }, e.zone === "three" ? 700 : 520, e.zone === "paint" ? 4 : 8, finish));
         break;
       }
@@ -570,17 +680,24 @@ export function createCourt2D(host, opts = {}) {
         possession = t;
         const rim = RIM[t], dir = rim.x > 47 ? -1 : 1;
         const made = (e.made || 0) > 0;
+        // Équipe qui a le ballon après les lancers (moteur) : l'adversaire en
+        // général ; l'équipe qui tire si la possession continue (faute
+        // technique / antisportive au milieu d'une action).
+        const nextT = after !== null ? after : 1 - t;
         const finish = () => {
           rimFx(t, made); if (made) flash(shooter, "+" + e.made, "good");
           scene(1500);
           later(500, () => {
             for (const sp of sprites.values()) sp.busy = false;
-            if (made) { inbound(1 - t, rim); return; }
-            const rb = onCourt(1 - t).sort((a, b) => b.slot - a.slot)[0];
+            if (nextT === t) { startPossession(t); const h = handlerOf(t); if (h) flyTo(h, 420, 2, () => { giveBall(h); formation(); }); return; }
+            if (made) { inbound(nextT, rim); return; }
+            // Lancer manqué : le moteur rend le ballon à `nextT` sans désigner
+            // de rebondeur ; on prend son joueur le plus grand (créneau 4).
+            const rb = onCourt(nextT).sort((a, b) => b.slot - a.slot)[0];
             const drop = { x: rim.x - dir * rnd(2, 5), y: rim.y + rnd(-5, 5) };
             fly(drop, 380, 3, () => {
               if (rb) { busy(rb, 700); moveTo(rb, drop.x, drop.y, 2.2); }
-              later(600, () => { startPossession(1 - t); giveBall(rb || handlerOf(1 - t)); formation(); });
+              later(600, () => { startPossession(nextT); giveBall(rb || handlerOf(nextT)); formation(); });
             });
           });
         };
@@ -589,15 +706,35 @@ export function createCourt2D(host, opts = {}) {
         if (shooter) { busy(shooter, 2600); moveTo(shooter, line.x, line.y, 1.6); }
         const others = [...onCourt(t).filter(s => s !== shooter), ...onCourt(1 - t)];
         others.forEach((sp, i) => { busy(sp, 2600); moveTo(sp, rim.x + dir * (3 + (i >> 1) * 5.5), i % 2 ? 16.5 : 33.5, 1.6); });
-        later(900, () => giveBall(shooter));
+        // Lancers joués après leur diffusion (version courte) : si le moteur a
+        // déjà rendu le ballon à l'adversaire, le tireur ne le « porte » pas,
+        // le ballon passe seulement par ses mains avant le cercle.
+        later(900, () => { if (shooter && ball.holder !== shooter.id) flyTo(shooter, 300, 1.5, nextT === t ? () => giveBall(shooter) : null); });
         later(1400, () => fly({ x: rim.x, y: rim.y }, 600, 6, finish));
         break;
       }
       case "turnover": {
-        const st = spriteOf(a.stealer), pl = spriteOf(a.player) || spriteOf(ball.holder);
-        if (st && pl) { busy(st, 900); moveTo(st, pl.x + 1, pl.y + 1, 2.4); later(500, () => { giveBall(st); flash(st, "INT", "good"); }); }
-        else if (pl) { flash(pl, "PERTE", "bad"); if (ball.holder !== pl.id && !ball.flight) giveBall(pl); later(80, () => fly({ x: pl.x + rnd(-3, 3), y: pl.y < 25 ? -2 : 52 }, 500, 2)); }
-        later(900, () => { startPossession(1 - t); if (!st) giveBall(handlerOf(1 - t)); formation(); });
+        // Le ballon quitte IMMÉDIATEMENT l'équipe qui le perd : vers
+        // l'intercepteur (désigné par le moteur), ou hors du terrain puis
+        // remise en jeu de l'équipe qui le récupère (possessionAfter).
+        const nt = after !== null ? after : 1 - t;
+        const stl = spriteOf(a.stealer), st = stl && stl.team === nt ? stl : null;
+        const pl = spriteOf(a.player) || spriteOf(ball.holder);
+        startPossession(nt);
+        if (st) {
+          busy(st, 900);
+          if (pl) moveTo(st, pl.x + (st.team === 0 ? -1 : 1), pl.y + 1, 2.4);
+          flash(st, "INT", "good");
+          flyTo(st, 420, 1.5, () => giveBall(st));
+          later(900, () => formation());
+        } else {
+          if (pl) flash(pl, "PERTE", "bad");
+          const src = pl || { x: ball.x, y: ball.y };
+          fly({ x: src.x + rnd(-3, 3), y: src.y < 25 ? -2 : 52 }, 500, 2, () => {
+            const h = handlerOf(nt);
+            later(400, () => { if (h && !ball.holder) flyTo(h, 420, 2, () => { giveBall(h); formation(); }); });
+          });
+        }
         break;
       }
       case "foul": case "unsportsmanlikeFoul": case "technicalFoul": {
@@ -628,7 +765,7 @@ export function createCourt2D(host, opts = {}) {
           break;
         }
         // Reprise : remise en jeu de l'équipe en possession depuis sa ligne de fond.
-        const pt = S.possession != null ? S.possession : possession;
+        const pt = teamOf(e.possessionTeam) !== null ? e.possessionTeam : teamOf(ownerTeam()) !== null ? ownerTeam() : possession;
         inbound(pt, RIM[1 - pt]);
         break;
       }
@@ -647,7 +784,7 @@ export function createCourt2D(host, opts = {}) {
         scene(hold);
         for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1); busy(sp, hold - 600); }
         ball.holder = null; ball.flight = null;
-        later(hold - 500, () => { for (const sp of sprites.values()) sp.busy = false; giveBall(handlerOf(possession)); formation(); });
+        later(hold - 500, () => { for (const sp of sprites.values()) sp.busy = false; const own = ownerTeam(); if (own !== null) possession = own; giveBall(handlerOf(possession)); formation(); });
         break;
       }
       default: break;
@@ -750,6 +887,7 @@ export function createCourt2D(host, opts = {}) {
     }
     if (ball.flight) {
       const f = ball.flight; f.t = Math.min(1, f.t + (dt * 1000) / f.ms);
+      if (f.target) { const tg = sprites.get(f.target); if (tg) f.to = { x: tg.x + (tg.team === 0 ? 1.6 : -1.6), y: tg.y + 0.6 }; }
       const k = ease(f.t);
       ball.x = lerp(f.from.x, f.to.x, k); ball.y = lerp(f.from.y, f.to.y, k);
       ball.z = Math.sin(f.t * Math.PI) * f.h;
@@ -758,6 +896,10 @@ export function createCourt2D(host, opts = {}) {
       const h = sprites.get(ball.holder);
       if (h) { ball.x = h.x + (h.team === 0 ? 1.6 : -1.6); ball.y = h.y + 0.6; ball.z = h.moving ? Math.abs(Math.sin(nowP / 110)) * 1.2 : 0; }
     }
+    // Garde-fou : jamais de porteur dans l'équipe qui n'a pas le ballon selon
+    // le moteur (ex. scène encore en retard sur le fil) — le ballon est
+    // libéré, la resynchronisation le rend à la bonne équipe.
+    enforcePossession();
     ballG.setAttribute("transform", `translate(${(ball.x * PX).toFixed(1)} ${(ball.y * PX).toFixed(1)})`);
     ballBody.setAttribute("transform", `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`);
     // Chrono des 24 s : descend depuis le début de la possession.
@@ -790,11 +932,16 @@ export function createCourt2D(host, opts = {}) {
       if (lk !== logoKey) { logoKey = lk; logoG.innerHTML = state.courtLogo || ""; adTop.textContent = adBot.textContent = (state.arenaSponsor || "HOOP MANAGER").toUpperCase(); }
       const before = sprites.size;
       syncRoster();
+      enforcePossession(true);
       syncMedals();
       syncMisses();
       const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
-      if ((sprites.size !== before || ball.holder == null) && !newEvents.length && state.status === "live" && quiet) {
-        if (state.possession != null) possession = state.possession;
+      // Ballon volontairement libre après un tir manqué (contre, faute sur le
+      // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
+      // désigne qui le récupère — pas de meneur choisi ici.
+      const looseByEngine = lastPlayed && lastPlayed.kind === "shot" && !lastPlayed.made;
+      if ((sprites.size !== before || ball.holder == null) && !newEvents.length && state.status === "live" && quiet && !looseByEngine) {
+        if (state.possession === 0 || state.possession === 1) possession = state.possession;
         if (ball.holder == null) giveBall(handlerOf(possession));
         formation();
       }
@@ -823,6 +970,12 @@ export function createCourt2D(host, opts = {}) {
         ball.holder = null;
         clockTxt.textContent = "24";
       }
+    },
+    // État du ballon pour les tests (audit possession 2026-10-07).
+    debug() {
+      const h = ball.holder ? sprites.get(ball.holder) : null;
+      return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null,
+        scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases };
     },
     destroy() { cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
   };
