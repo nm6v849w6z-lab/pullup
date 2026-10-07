@@ -2985,6 +2985,13 @@
      forces/faiblesses — refonte »), polices du jeu. */
   .pdp2-row--role{grid-template-columns:minmax(0,1fr) minmax(300px,520px) !important; align-items:stretch;}
   @media (max-width:1100px){ .pdp2-row--role{grid-template-columns:minmax(0,1fr) !important;} }
+  /* 3 briques : Rôle, Forces/faiblesses, Compatibilité (2026-10-07). */
+  .pdp2-row--role3:has(.pdp-compat-card){grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr) minmax(220px,.8fr) !important;}
+  @media (max-width:1400px){ .pdp2-row--role3:has(.pdp-compat-card){grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;} .pdp2-row--role3 .pdp-role-card{grid-column:1 / -1;} }
+  @media (max-width:900px){ .pdp2-row--role3:has(.pdp-compat-card){grid-template-columns:minmax(0,1fr) !important;} }
+  .pdp-compat-card{display:flex; flex-direction:column; gap:12px;}
+  .pdp-compat-card .pdp-compat{margin-top:0;}
+  .pdp-compat-card .coh-note{margin-top:0;}
   .pdp-role2{display:grid; grid-template-columns:116px minmax(0,1fr) minmax(220px,340px); gap:22px; align-items:center;}
   @container (max-width:760px){ .pdp-role2{grid-template-columns:96px minmax(0,1fr);} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring svg{width:96px; height:96px;} .pdp-role2-ring{width:96px; height:96px;} .pdp-role2-ring-c b{font-size:24px;} .pdp-role2-ring-c small{font-size:9.5px;} }
   @media (max-width:768px){ .pdp-role2{grid-template-columns:84px minmax(0,1fr); gap:14px;} .pdp-role2-side{grid-column:1 / -1;} .pdp-role2-ring, .pdp-role2-ring svg{width:84px; height:84px;} .pdp-role2-ring-c b{font-size:21px !important;} .pdp-role2-ring-c small{font-size:8.5px !important; letter-spacing:.04em;} }
@@ -3016,7 +3023,7 @@
   .pdp-role2-side .pdp-compat-ring > div{width:41px; height:41px; font-size:13.5px;}
   .pdp-compat-t{font-weight:800; font-size:13px; line-height:1.3;}
   .pdp-role2-side .coh-note{margin-top:0;}
-  .pdp-sw-card{display:flex; flex-direction:column; justify-content:center; gap:14px;}
+  .pdp-sw-card{display:flex; flex-direction:column; justify-content:flex-start; gap:14px;}
   .pdp-sw-row{display:flex; align-items:flex-start; gap:14px;}
   .pdp-sw-row + .pdp-sw-row{padding-top:14px; border-top:1px solid var(--line);}
   .pdp-sw-lbl{width:112px; flex:none; display:flex; align-items:center; gap:6px; min-height:32px; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;}
@@ -21114,7 +21121,7 @@ function pdpRoleRowHtml(player, fullyVisible) {
   const main = prof.fits.find(f => f.role === prof.primary.role && f.position === prof.primary.position) || prof.fits[0] || { mastery: 0 };
   const mastery = Math.max(0, Math.min(100, Math.round(main.mastery || 0)));
   const C = 2 * Math.PI * 48;
-  let h = `<div class="pdp2-row pdp2-row--role">`;
+  let h = `<div class="pdp2-row pdp2-row--role pdp2-row--role3">`;
   h += `<section class="pdp2-card pdp-role-card" data-pdp-role="${escapeHtml(prof.primary.role)}"><div class="pdp-role2">`;
   h += `<div class="pdp-role2-ring" title="Maîtrise du rôle principal"><svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true"><circle cx="58" cy="58" r="48" fill="var(--panel-2, rgba(255,255,255,.03))" stroke="var(--line)" stroke-width="10"/>` +
     `<circle cx="58" cy="58" r="48" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * mastery / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 58 58)"/></svg>` +
@@ -21137,27 +21144,11 @@ function pdpRoleRowHtml(player, fullyVisible) {
       steps.map(x => `<b><span>${escapeHtml((x.role && R.ROLES[x.role] && R.ROLES[x.role].name) || x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div>`;
   }
   h += `</div>`; // identité
-  // Autres rôles maîtrisés + compatibilité avec le cinq majeur du manager
-  // (demande utilisateur du 2026-10-06 : dans la brique Rôle).
+  // Autres rôles maîtrisés.
   const others = prof.fits.filter(f => f !== main).slice(0, 3);
   h += `<div class="pdp-role2-side"><span class="pdp-role2-k">Autres rôles</span>`;
   h += others.length ? others.map(f => `<div class="pdp-role-fit"><span class="nm"><span>${escapeHtml(f.name)}</span>${f.position !== prof.primary.position ? ` <small>${escapeHtml(POS_SHORT[f.position] || f.position)}</small>` : ""}</span>` +
     `<span class="pdp-role-track"><i style="width:${Math.max(0, Math.min(100, f.mastery))}%"></i></span><span class="pct">${f.mastery}%</span></div>`).join("") : `<p class="pdp-role-note">Spécialiste d'un seul rôle.</p>`;
-  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
-  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
-  // Titulaire : pas de bloc « Compatibilité » (demande du 2026-10-07 : il ne
-  // faisait que répéter la cohérence actuelle du cinq).
-  if (comp && !comp.starter) {
-    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
-    h += `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
-      `<div class="pdp-compat-t">Compatibilité avec votre cinq majeur</div>` +
-      (comp.starter ? `<div class="pdp-role-note">Titulaire : cohérence actuelle du cinq.</div>`
-        : `<div class="pdp-role-note"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
-      `</div></div>`;
-    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
-    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
-    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
-  }
   h += `</div></div></section>`;
   // Profil : forces / faiblesses en pastilles (plus grandes quand il y en a peu).
   const chips = (list, kind) => {
@@ -21168,12 +21159,30 @@ function pdpRoleRowHtml(player, fullyVisible) {
     return list.map(x => `<span class="pdp-sw-chip pdp-sw-chip--${kind}${big}">${icon}<span>${escapeHtml(x)}</span></span>`).join("");
   };
   const arrow = up => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${up ? `<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>` : `<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>`}</svg>`;
-  h += `<section class="pdp2-card pdp-sw-card" aria-label="Profil : forces et faiblesses">` +
+  h += `<section class="pdp2-card pdp-sw-card" aria-label="Profil : forces et faiblesses"><div class="pdp2-head"><h3><span>Forces</span> / <span>Faiblesses</span></h3></div>` +
     `<div class="pdp-sw-row pdp-sw-row--ok"><div class="pdp-sw-lbl">${arrow(true)}<span>Forces</span><b>${sw.strengths.length}</b></div><div class="pdp-sw-list">` +
     (sw.strengths.length ? chips(sw.strengths, "ok") : `<p class="pdp-role-note">Profil équilibré.</p>`) + `</div></div>` +
     `<div class="pdp-sw-row pdp-sw-row--bad"><div class="pdp-sw-lbl">${arrow(false)}<span>Faiblesses</span><b>${sw.weaknesses.length}</b></div><div class="pdp-sw-list">` +
     (sw.weaknesses.length ? chips(sw.weaknesses, "bad") : `<p class="pdp-role-note">Aucune faiblesse marquée.</p>`) + `</div></div>`;
-  h += `</section></div>`;
+  h += `</section>`;
+  // 3e brique « Compatibilité avec votre cinq majeur » (demande du
+  // 2026-10-07 : Rôle, Forces/faiblesses et Compatibilité séparés), pour
+  // tous les joueurs, titulaires compris.
+  const myFive = typeof teamA !== "undefined" ? roleSlotsOf(teamA) : null;
+  const comp = myFive ? R.compatibilityWith(myFive, { attrs: player.attrs, positionRatings: ratings, name: player.name, id: player.id, position: player.position }) : null;
+  if (comp) {
+    const col = comp.value >= 75 ? "var(--ok, #33b4a1)" : comp.value >= 60 ? "#e8a33a" : "var(--bad, #E2694F)";
+    h += `<section class="pdp2-card pdp-compat-card"><div class="pdp2-head"><h3>Compatibilité avec votre cinq majeur</h3></div>` +
+      `<div class="pdp-compat" data-pdp-compat="${comp.value}"><div class="pdp-compat-ring" style="background:conic-gradient(${col} 0 ${comp.value}%, var(--line) ${comp.value}% 100%)"><div>${comp.value}%</div></div><div>` +
+      (comp.starter ? `<div class="pdp-role-note">Titulaire : cohérence actuelle du cinq.</div>`
+        : `<div class="pdp-role-note"><span>Au poste</span> ${escapeHtml(POS_SHORT[comp.pos] || comp.pos)}${comp.replaced ? ` (${escapeHtml(comp.replaced)})` : ""} : ${comp.before}% → <b class="${cohTone(comp.after)}">${comp.after}%</b></div>`) +
+      `</div></div>`;
+    const bad = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "warn" && n.who && n.who.includes(player.name));
+    const good = comp.cohesion && comp.cohesion.notes.find(n => n.tone === "ok" && n.who && n.who.includes(player.name));
+    if (bad) h += cohesionNoteHtml(bad); else if (good) h += cohesionNoteHtml(good);
+    h += `</section>`;
+  }
+  h += `</div>`;
   return h;
 }
 

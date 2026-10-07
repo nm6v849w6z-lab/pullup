@@ -189,9 +189,11 @@ const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ 
   const card2 = doc.querySelector("#playerDetailSection [data-pdp-role]");
   check(/Évolution/.test(card2.textContent) && /Slasher/.test(card2.textContent) && /Pour progresser/.test(card2.textContent) && card2.querySelector(".pdp-role2-chip"), "fiche joueur : évolution du rôle et programmes qui le développent");
   win.eval(`showPlayerDetail(myTeamIndex, Object.values(teamA.lineup.starters)[0])`);
-  check(!doc.querySelector("#playerDetailSection [data-pdp-compat]") && !/Titulaire : cohérence actuelle/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "fiche joueur d'un titulaire : pas de bloc « Compatibilité avec votre cinq majeur »");
+  const row3 = () => doc.querySelector("#playerDetailSection .pdp2-row--role");
+  check(row3().querySelector(".pdp-role-card") && row3().querySelector(".pdp-sw-card") && row3().querySelector(".pdp-compat-card [data-pdp-compat]") && !row3().querySelector(".pdp-role-card [data-pdp-compat]"), "fiche joueur : 3 briques (Rôle, Forces/faiblesses, Compatibilité)");
+  check(/Titulaire : cohérence actuelle du cinq/.test(row3().querySelector(".pdp-compat-card").textContent), "fiche joueur d'un titulaire : compatibilité = cohérence actuelle du cinq");
   win.eval(`(() => { const ids = new Set(Object.values(teamA.lineup.starters)); showPlayerDetail(myTeamIndex, teamA.players.find(p => !ids.has(p.id)).id); })()`);
-  check(!!doc.querySelector("#playerDetailSection [data-pdp-compat]") && /Compatibilité avec votre cinq majeur/.test(doc.querySelector("#playerDetailSection .pdp2-row--role").textContent), "fiche joueur d'un remplaçant : compatibilité avec le cinq majeur (effet s'il entrait dans le cinq)");
+  check(/Compatibilité avec votre cinq majeur/.test(row3().querySelector(".pdp-compat-card").textContent) && /→/.test(row3().querySelector(".pdp-compat-card").textContent), "fiche joueur d'un remplaçant : compatibilité avec le cinq majeur (effet s'il entrait dans le cinq)");
   // Marché : rôle et compatibilité avec le cinq majeur.
   // (Joueurs d'autres clubs : caractéristiques masquées côté navigateur,
   // donc pas de compatibilité ; un remplaçant du club pour le calcul.)
