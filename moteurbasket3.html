@@ -8962,7 +8962,7 @@
      Aucun contour autour d'un avatar joueur (bordure, anneau, ombre en
      anneau, demande du 2026-10-07) : ni sur l'avatar, ni sur son cadre.
      Seule exception : le petit contour jaune des MVP (MVP du match, de la
-     journée, de la saison et des play-offs).
+     journée, de la saison, des play-offs) et du meilleur jeune.
      Nouveau composant : playerAvatarHtml() seul, ou dans un élément de
      classe `.player-av-frame` (ou ajouter son cadre à la liste ci-dessous).
      Test : player_avatar_shape_test.js.
@@ -33219,7 +33219,7 @@ function seasonAwardsCardHtml(sa) {
   const by = key => awards.find(a => a.key === key) || null;
   const mine = a => (a && a.teamIdx === myTeamIndex ? " hn-mine" : "");
   const card = (a, label) => a
-    ? `<div class="hn-award${mine(a)}${a.key === "mvp" || a.key === "playoffsMvp" ? " hn-award--mvp" : ""}">${hnAvatarHtml(hnAwardRef(a), 44)}<div><small>${escapeHtml(label)}</small><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)} · ${escapeHtml(a.detail || "")}</span></div></div>`
+    ? `<div class="hn-award${mine(a)}${a.key === "mvp" || a.key === "playoffsMvp" || a.key === "youngPlayer" ? " hn-award--mvp" : ""}">${hnAvatarHtml(hnAwardRef(a), 44)}<div><small>${escapeHtml(label)}</small><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)} · ${escapeHtml(a.detail || "")}</span></div></div>`
     : "";
   const po = by("playoffsMvp");
   const poCard = po ? card(po, "MVP des play-offs")

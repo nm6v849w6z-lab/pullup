@@ -784,7 +784,7 @@ points réellement ouverts.
   aux coins arrondis à 18 % de la largeur (référence fiche Joueur /
   Effectif, `playerAvatarHtml`), JAMAIS de cercle, ni de contour (bordure,
   anneau coloré, ombre en anneau, cadre SVG du terrain 2D) — sauf le petit
-  contour jaune des MVP (match, journée, saison, play-offs). Bloc « AVATAR JOUEUR :
+  contour jaune des MVP (match, journée, saison, play-offs) et du meilleur jeune. Bloc « AVATAR JOUEUR :
   FORMAT UNIQUE » à la fin du grand `<style>` de moteurbasket3.html :
   `.player-avatar` seul porte la forme ; dans un cadre (liste `:is(...)`,
   ou classe `.player-av-frame` pour tout nouveau composant) c'est le cadre
