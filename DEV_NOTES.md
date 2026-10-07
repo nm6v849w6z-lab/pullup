@@ -734,6 +734,17 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Règle UI mobile (2026-10-07, permanente, voir aussi CLAUDE.md)** : sur
+  téléphone, AUCUN menu / modale / dropdown / popup au milieu de l'écran,
+  tout en bottom sheet (fixed, bottom 0, 90dvh max, scroll interne, zone
+  sûre). Appliquée à la source dans `assets/mobile/mobile.css` (bloc
+  « RÈGLE UI MOBILE ») : `.upgrade-confirm-overlay > *` (toutes les
+  modales), `.m-sheet` (classe pour tout futur menu), `.pc-picker-menu`,
+  `.trained-tactic-menu`, `.eff-menu`, `.tm-tip`, `.tour-callout`,
+  `.tour-center-overlay`, chat de ligue `.lgc`, menu principal `.sidebar`
+  (monte du bas). Suggestions de recherche (`.pc-search-results`,
+  `.fr-opp-results`) dans le flux sous leur champ.
+
 - **Staff des sélections : rôles et droits (refonte du 2026-10-07)** : UNE
   seule table, `server/nationalCoach.js` : `PERMS[rôle]` (droits) et
   `APPOINT[rôle]` (rôles qu'il nomme / retire). Staff NT : `coach`

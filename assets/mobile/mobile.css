@@ -237,3 +237,95 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .ordres-match-card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) !important; }
   #prepSection .omc-gauges { border-top: none !important; padding-top: 0 !important; }
 }
+
+/* =====================================================================
+   RÈGLE UI MOBILE (2026-10-07, globale et permanente) : sur téléphone,
+   aucun menu, panneau, modale, dropdown, sélecteur ou popup n'apparaît au
+   milieu de l'écran. Tout s'ancre EN BAS (bottom sheet) : position fixed,
+   bottom 0, pleine largeur, coins arrondis en haut, hauteur max 90dvh,
+   défilement interne, zone sûre du bas respectée.
+   Appliquée À LA SOURCE, sur les composants partagés :
+   - .upgrade-confirm-overlay (+ son premier enfant) : TOUTES les modales
+     du jeu (paramètres, interview, box score, saison du joueur, pubs,
+     confirmations, historique d'affluence…) ;
+   - .m-sheet : classe à poser sur tout futur menu / popover ;
+   - menus et popovers existants (.pc-picker-menu, .trained-tactic-menu,
+     .eff-menu, .tm-tip), tutoriel (.tour-callout, .tour-center-overlay),
+     chat de ligue (.lgc), menu principal (.sidebar).
+   Les listes de suggestions d'un champ de recherche restent attachées à
+   leur champ, dans le flux (jamais flottantes au milieu de la page).
+   Toute nouvelle interface : réutiliser ces classes, jamais de centrage
+   vertical sur mobile. Voir DEV_NOTES.md (« Règle UI mobile »).
+   ===================================================================== */
+@media (max-width: 768px), (max-height: 520px) and (pointer: coarse) {
+  @keyframes m-sheet-up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+
+  /* Modales partagées → bottom sheet. */
+  .upgrade-confirm-overlay, .tour-center-overlay {
+    align-items: flex-end !important; justify-content: stretch !important;
+    padding: 0 !important; overflow: hidden !important;
+  }
+  .upgrade-confirm-overlay > *, .tour-center-overlay > * {
+    width: 100% !important; max-width: none !important; margin: 0 !important;
+    max-height: min(90vh, 90dvh) !important; overflow-y: auto !important; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 18px 18px 0 0 !important; border-bottom: 0 !important;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 -16px 40px rgba(0,0,0,.45);
+    animation: m-sheet-up .2s ease-out;
+  }
+  /* Poignée visuelle en haut de chaque panneau. */
+  .upgrade-confirm-overlay > *::before, .tour-center-overlay > *::before, .m-sheet::before,
+  .pc-picker-menu::before, .trained-tactic-menu::before, .eff-menu::before, .tm-tip::before, .tour-callout::before {
+    content: ""; display: block; width: 40px; height: 4px; border-radius: 99px;
+    background: var(--line); margin: -6px auto 12px; flex: none;
+  }
+
+  /* Menus et popovers ancrés à un bouton → panneau en bas de l'écran. Le
+     fond est assombri par une ombre étendue (les clics hors du panneau
+     restent gérés par chaque menu, comme sur ordinateur). */
+  .m-sheet, .pc-picker-menu, .trained-tactic-menu, .eff-menu, .tm-tip {
+    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
+    width: auto !important; min-width: 0 !important; max-width: none !important;
+    max-height: min(85vh, 85dvh) !important; overflow-y: auto !important; overscroll-behavior: contain;
+    margin: 0 !important; z-index: 560 !important;
+    border-radius: 18px 18px 0 0 !important; border-bottom: 0 !important;
+    padding: 16px 14px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 0 0 100vmax rgba(4,8,15,.55), 0 -16px 40px rgba(0,0,0,.45) !important;
+    animation: m-sheet-up .2s ease-out;
+  }
+  .trained-tactic-menu.hidden { display: none !important; }
+
+  /* Tutoriel : la bulle n'est plus posée à côté de sa cible (calcul en
+     JS), elle s'ancre en bas. */
+  .tour-callout {
+    left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+    width: auto !important; max-height: min(60vh, 60dvh) !important;
+    border-radius: 18px 18px 0 0 !important; border-bottom: 0 !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    animation: m-sheet-up .2s ease-out;
+  }
+
+  /* Chat de ligue : panneau qui monte du bas (plus de volet latéral). */
+  .lgc-drawer .lgc {
+    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    width: 100% !important; height: min(90vh, 90dvh) !important;
+    border-left: 0 !important; border-radius: 18px 18px 0 0;
+    padding-top: 12px !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    animation: m-sheet-up .2s ease-out !important;
+  }
+
+  /* Menu principal (bouton « Menu » de la barre du bas) : monte du bas,
+     au lieu d'un tiroir latéral pleine hauteur. */
+  .sidebar {
+    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    width: 100% !important; height: auto !important; max-height: min(88vh, 88dvh) !important;
+    overflow-y: auto !important; border-radius: 18px 18px 0 0;
+    transform: translateY(105%); box-shadow: 0 -16px 40px rgba(0,0,0,.45);
+  }
+  body.m-drawer-open .sidebar { transform: none; }
+  .sidebar-brand { padding-top: 14px !important; }
+
+  /* Suggestions de recherche : dans le flux, sous leur champ. */
+  .pc-search-results, .fr-opp-results { position: static !important; margin-top: 6px; max-height: 50vh; }
+}
