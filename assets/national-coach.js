@@ -1051,7 +1051,7 @@
     }, 30000);
     return p;
   }
-  function exitMode() {
+  function exitMode(quiet) {
     ui.mode = null; ui.teamId = null; ui.view = null; ui.tq = null;
     if (ui.lockTimer) { clearInterval(ui.lockTimer); ui.lockTimer = null; }
     lsSet(null);
@@ -1059,7 +1059,9 @@
     ["ncSidebar", "ncTopTitle"].forEach(function (id) { var el = document.getElementById(id); if (el) el.remove(); });
     if (window.HM_NATIONAL && window.HM_NATIONAL.state) window.HM_NATIONAL.state.coachOpen = null;
     syncModeButton();
-    var h = typeof TAB_HANDLERS !== "undefined" && TAB_HANDLERS.club;
+    // `quiet` : sortie par le bouton Retour (historique), la page à
+    // réafficher est choisie par la navigation, pas le tableau de bord.
+    var h = !quiet && typeof TAB_HANDLERS !== "undefined" && TAB_HANDLERS.club;
     if (typeof h === "function") h();
     setTimeout(syncDashButton, 0);
   }
@@ -1195,6 +1197,22 @@
     // Rapport Scouting Pro : placement adaptatif des blocs (comme le club).
     var sp = document.getElementById("ncScoutingPanel");
     if (sp && g("sp2WatchMasonry")) { try { window.sp2WatchMasonry(sp); } catch (e) { /* mise en page par défaut */ } }
+    // Chaque page du mode est une étape de l'historique (bouton Retour du
+    // jeu et du navigateur, voir hmNavCurrent) : avant (retour utilisateur
+    // 2026-10-07), « Retour » depuis « Mes joueurs attribués » sautait
+    // directement à la dernière page du CLUB visitée avant le mode.
+    if (g("hmNavSchedule")) { try { window.hmNavSchedule(); } catch (e) { /* rien */ } }
+  }
+  // Étape d'historique de la page du mode affichée (null hors du mode).
+  function navKey() { return ui.mode ? ui.mode + "|" + ui.nav : null; }
+  // Retour/Avancer : réaffiche la page du mode enregistrée.
+  function restoreNav(key) {
+    var i = String(key || "").lastIndexOf("|");
+    if (i <= 0) return;
+    var team = key.slice(0, i), nav = key.slice(i + 1);
+    if (ui.mode !== team) enterMode(team);
+    ui.nav = nav; ui.replaceOut = null; ui.error = "";
+    showModePage(); paint();
   }
   function openModeMatch(id) {
     // Feuille de statistiques des matchs de club (fenêtre par-dessus la page,
@@ -1561,7 +1579,7 @@
   })(0);
   window.HM_NATIONAL_COACH = {
     enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: function () { return bootMode(); },
-    dashButtonHtml: dashButtonHtml, state: ui, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
+    dashButtonHtml: dashButtonHtml, state: ui, navKey: navKey, restoreNav: restoreNav, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
     // Ancien point d'entrée (« Gérer la sélection ») : ouvre le mode.
     open: function (id) { bind(); return enterMode(id); },
   };

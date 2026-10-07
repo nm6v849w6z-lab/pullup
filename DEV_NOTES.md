@@ -876,3 +876,13 @@ points réellement ouverts.
     poste, la note AFFICHÉE sur la carte) et non plus `overall()` ; départage
     potentiel, âge, nom, identifiant d'annonce. Test :
     `injury_status_market_sort_test.js`.
+
+- **Retour en Mode Sélection (2026-10-07)** : chaque rubrique du mode est
+  une étape de l'historique (`hmNavCurrent` porte `ncMode`/`nc`, voir
+  `HM_NATIONAL_COACH.navKey/restoreNav` ; `paint()` appelle
+  `hmNavSchedule`). « Retour » (barre du haut ou navigateur) revient à la
+  rubrique précédente du mode ; avant le mode, il le quitte proprement
+  (`exitMode(true)`, sans renvoyer au tableau de bord). Le « ‹ Retour » des
+  pages de détail remonte l'historique (`history.back()`) au lieu de
+  cliquer la fermeture (qui empilait une étape en avant). Test :
+  `national_mode_back_test.js`.

@@ -59729,12 +59729,17 @@ const hmNav = { started: false, restoring: false, stack: [], idx: 0 };
 function hmNavCurrent() {
   const page = PAGE_IDS.find(id => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); }) || "";
   const tab = document.querySelector(".tab-btn.active");
-  return { page, tab: tab ? tab.dataset.tab : hmActiveTabKey };
+  // Mode Sélection : le mode actif et, sur sa page, la rubrique affichée
+  // (voir HM_NATIONAL_COACH.navKey) font partie de l'étape.
+  const C = window.HM_NATIONAL_COACH;
+  const ncMode = (C && C.state && C.state.mode) || null;
+  const nc = ncMode && page === "selectionsSection" && C.navKey ? C.navKey() : null;
+  return { page, tab: tab ? tab.dataset.tab : hmActiveTabKey, ncMode, nc };
 }
 function hmNavRecord() {
   if (!hmNav.started || hmNav.restoring) return;
   const cur = hmNavCurrent(), last = hmNav.stack[hmNav.idx];
-  if (!cur.page || (last && last.page === cur.page && last.tab === cur.tab)) return;
+  if (!cur.page || (last && last.page === cur.page && last.tab === cur.tab && last.nc === cur.nc && last.ncMode === cur.ncMode)) return;
   hmNav.stack.length = hmNav.idx + 1;
   hmNav.stack.push(cur);
   hmNav.idx = hmNav.stack.length - 1;
@@ -59768,6 +59773,10 @@ window.addEventListener("popstate", (e) => {
   if (!target) return;
   hmNav.restoring = true;
   try {
+    // Étape d'avant l'entrée en Mode Sélection : on quitte le mode (sans
+    // l'envoyer au tableau de bord du club), puis on réaffiche la page.
+    const C = window.HM_NATIONAL_COACH;
+    if (C && C.state && C.state.mode && !target.ncMode && C.exitMode) C.exitMode(true);
     const cur = hmNavCurrent();
     const backBtn = NAV_BACK_BTNS[cur.page] && document.getElementById(NAV_BACK_BTNS[cur.page]);
     if (backBtn && cur.page !== target.page) backBtn.click();
@@ -59776,6 +59785,9 @@ window.addEventListener("popstate", (e) => {
       const tb = target.tab && document.querySelector(`.tab-btn[data-tab="${target.tab}"]`);
       if (tb) tb.click(); else if (target.tab && TAB_HANDLERS[target.tab]) TAB_HANDLERS[target.tab]();
     }
+    // Page du Mode Sélection : la rubrique enregistrée (Tableau de bord,
+    // Mes joueurs attribués...).
+    if (target.nc && C && C.restoreNav && hmNavCurrent().nc !== target.nc) C.restoreNav(target.nc);
   } catch (err) { /* page impossible à restaurer : on reste où on est */ }
   hmNav.restoring = false;
   hmNav.stack[hmNav.idx] = hmNavCurrent();
@@ -59800,6 +59812,11 @@ function syncTopbarBack(id) {
 }
 document.getElementById("topbarBackBtn").addEventListener("click", (e) => {
   const t = e.currentTarget.dataset.target && document.getElementById(e.currentTarget.dataset.target);
+  // Page de détail (fiche joueur, fiche club...) : on remonte l'historique
+  // (popstate clique la fermeture puis rétablit la page ou la rubrique du
+  // Mode Sélection précédente) plutôt que d'empiler une étape EN AVANT,
+  // qu'un second « Retour » faisait rejouer (2026-10-07).
+  if (t && hmNav.started && hmNav.idx > 0 && hmNavCurrent().page !== "liveSection") { try { history.back(); return; } catch (err) { /* rien */ } }
   if (t) { t.click(); return; }
   // Page ouverte depuis le menu : page précédente du jeu, sinon tableau de bord.
   if (hmNav.started && hmNav.idx > 0) { try { history.back(); return; } catch (err) { /* rien */ } }
