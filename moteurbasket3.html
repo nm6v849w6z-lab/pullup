@@ -3200,6 +3200,7 @@
   .pdp-perso-facts span{color:var(--ink-dim); min-width:78px;}
   .pdp2-inj-count{display:inline-block; min-width:20px; text-align:center; font-size:11px; border-radius:999px; padding:1px 7px; background:rgba(226,105,79,.16); color:var(--danger); margin-left:6px; vertical-align:2px;}
   .pdp2-inj-list{display:flex; flex-direction:column;}
+  .pdp2-inj-row.is-current{color:var(--danger); font-weight:700;}
   .pdp2-inj-row{display:grid; grid-template-columns:88px minmax(0,1fr) auto; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13.5px;}
   .pdp2-inj-row:first-child{border-top:0;}
   .pdp2-inj-date{color:var(--ink-dim);} .pdp2-inj-type{font-weight:700;} .pdp2-inj-days{color:var(--ink-dim);}
@@ -15399,6 +15400,22 @@ function isOnNationalDuty(player, at = Date.now()) {
 function injuryDaysRemaining(player, now = Date.now()) {
   if (!isCurrentlyInjured(player, now)) return 0;
   return Math.ceil((player.injuryUntil - now) / CONDITION_DAY_MS);
+}
+
+// Statut de blessure : SOURCE UNIQUE de tous les écrans (Effectif, fiche
+// joueur, Centre médical, Ordres, analyses ; bug 2026-10-07 « blessé dans
+// l'effectif, rien sur sa fiche »). Toujours dérivé de injuryUntil/
+// injuryType (blessure persistante) à l'instant `now`, jamais d'un
+// indicateur recopié ou de l'historique : un joueur guéri redevient
+// disponible partout au même instant.
+function playerInjuryStatus(player, now = Date.now()) {
+  const injured = !!player && isCurrentlyInjured(player, now);
+  return {
+    injured, available: !injured,
+    type: injured ? (player.injuryType || "Blessure") : null,
+    until: injured ? player.injuryUntil : null,
+    days: injured ? injuryDaysRemaining(player, now) : 0,
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -33858,7 +33875,18 @@ function playerInjuryEntries(player, team) {
     out.push({ at: e.at, season: e.seasonNo, type: e.injuryType || "Blessure", days: e.days || null,
       until: typeof e.at === "number" && e.days ? e.at + e.days * CONDITION_DAY_MS : null, opponent: e.opponentName || null, training: !!e.training, friendly: !!e.friendly, doctor: null, club: team.name });
   });
-  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+  out.sort((a, b) => (b.at || 0) - (a.at || 0));
+  // Blessure EN COURS (playerInjuryStatus) : toujours en tête, même si le
+  // journal ne la contient pas (blessure antérieure au journal, carnet du
+  // club plafonné) ; sinon la fiche affichait « Aucune blessure » pour un
+  // joueur blessé dans l'Effectif.
+  const st = playerInjuryStatus(player);
+  if (st.injured) {
+    const i = out.findIndex(e => e.until === st.until || (e.type === st.type && typeof e.until === "number" && Math.abs(e.until - st.until) < CONDITION_DAY_MS));
+    const cur = i >= 0 ? out.splice(i, 1)[0] : { at: null, type: st.type, days: null, until: st.until, club: team ? team.name : null };
+    out.unshift({ ...cur, current: true });
+  }
+  return out;
 }
 function phInjuryContext(e) {
   if (e.training) return "À l'entraînement";
@@ -33884,7 +33912,7 @@ const PH_INJURY_PREVIEW = 3;
 function playerInjuryCardHtml(player, team) {
   const list = playerInjuryEntries(player, team);
   const rows = list.slice(0, PH_INJURY_PREVIEW).map(e =>
-    `<div class="pdp2-inj-row"><span class="pdp2-inj-date">${escapeHtml(phDate(e.at))}</span><span class="pdp2-inj-type">${escapeHtml(e.type)}</span><span class="pdp2-inj-days">${e.days ? `${e.days} j` : "–"}</span></div>`).join("");
+    `<div class="pdp2-inj-row${e.current ? " is-current" : ""}"${e.current ? ` data-injury-current="1"` : ""}><span class="pdp2-inj-date">${e.current ? "En cours" : escapeHtml(phDate(e.at))}</span><span class="pdp2-inj-type">${escapeHtml(e.type)}</span><span class="pdp2-inj-days">${e.current ? `${injuryDaysRemaining(player)} j rest.` : e.days ? `${e.days} j` : "–"}</span></div>`).join("");
   return `<div class="pdp-card pdp2-inj-card"><h3>Blessures${list.length ? ` <span class="pdp2-inj-count">${list.length}</span>` : ""}</h3>` +
     (list.length ? `<div class="pdp2-inj-list">${rows}</div>` : `<p class="sub">Aucune blessure.</p>`) +
     (list.length > PH_INJURY_PREVIEW ? `<button type="button" class="secondary pdp2-hist-btn" data-ph-open="injuries">Tout voir (${list.length})</button>` : "") +
@@ -34040,8 +34068,10 @@ function renderPlayerDetail(teamIdx, playerId) {
   // câblés plus bas dans ce fichier), juste placées AVANT la grille de
   // cartes plutôt que dispersées dedans — ce sont des actions/états de
   // gestion, pas des caractéristiques à présenter façon maquette. ----
+  // Statut de blessure : même source que l'Effectif (playerInjuryStatus).
+  const injury = playerInjuryStatus(player);
   const detailCross = injuryCrossHtml(player);
-  if (detailCross) html += `<p class="training-intro">${detailCross} Blessé : ${escapeHtml(player.injuryType || "Blessure")}, ${injuryDaysRemaining(player)} jour${injuryDaysRemaining(player) > 1 ? "s" : ""} restant${injuryDaysRemaining(player) > 1 ? "s" : ""}</p>`;
+  if (injury.injured) html += `<p class="training-intro pdp-injury-notice" data-injury-status="injured">${detailCross} Blessé : ${escapeHtml(injury.type)}, ${injury.days} jour${injury.days > 1 ? "s" : ""} restant${injury.days > 1 ? "s" : ""}, retour prévu ${escapeHtml(formatCalendarDayFr(injury.until))}</p>`;
   if (isOwnTeam && player.transferRequestActive) {
     html += `<p class="training-intro transfer-request-notice">${escapeHtml(player.transferRequestQuote || `${player.name} demande son transfert.`)}</p>`;
     // Une seule discussion par demande (retour utilisateur 2026-09-28).
@@ -34135,11 +34165,16 @@ function renderPlayerDetail(teamIdx, playerId) {
   html += `</div>`; // id
 
   const condValue = currentCondition(player, now, team.conditionRecoveryPerDay());
-  const condBox = condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
-  html += `<div class="pdp2-cond">` +
+  const condBox = injury.injured ? "bad" : condValue >= 75 ? "ok" : condValue >= 60 ? "mid" : "bad";
+  // Blessé : la tuile Forme l'annonce (avant, « Pas de fatigue » restait
+  // affiché pendant toute la blessure).
+  const condText = injury.injured
+    ? `<span class="condition-badge cond-critical pdp2-injury-badge" title="${escapeHtml(injury.type)}, ${injury.days} jour${injury.days > 1 ? "s" : ""} restant${injury.days > 1 ? "s" : ""}">Blessé · ${injury.days} j</span>`
+    : conditionBadgeHtml(player, now, team.conditionRecoveryPerDay());
+  html += `<div class="pdp2-cond" data-injury-status="${injury.injured ? "injured" : "available"}">` +
     `<div class="pdp2-form pdp2-form--${condBox}">` +
     `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line><line x1="6" y1="10" x2="6" y2="14"></line></svg>` +
-    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${conditionBadgeHtml(player, now, team.conditionRecoveryPerDay())}</div>` +
+    `<div class="pdp2-form-text"><span class="pdp2-form-lbl">Forme</span>${condText}</div>` +
     `</div>`;
   if (isOwnTeam) {
     // Petit visage comme l'icône de batterie de la Forme (retour 2026-10-03).
@@ -35681,7 +35716,7 @@ function teamDetailEffectifGeneralHtml(teamIdx, team, isOwnTeam, revealedSet) {
       const cross = injuryCrossHtml(p, now);
       const { gp, sum } = teamDetailSeasonLine(p);
       const stat = k => gp ? fmt(sum[k] / gp) : "–";
-      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
+      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}" data-player-id="${escapeHtml(String(p.id))}" data-injury-status="${cross ? "injured" : "available"}">` +
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, team, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(teamIdx, p.id, p.name)}${effRoleMarkHtml(role)}${cross || ""}${retirementBadgeHtml(p)}</span></td>` +
         `<td>${effPosBadgeHtml(p.position)}</td>` +
         `<td class="eff-num">${p.age}</td><td class="eff-num">${p.height} cm</td><td class="eff-num">${isOwnTeam ? formatMoney(p.salary) : fogSalaryText(p)}</td>` +
@@ -38604,7 +38639,7 @@ function suggestStartingFive(team, now = Date.now()) {
   const starters = {};
   POSITIONS.forEach(pos => {
     const atPos = team.players
-      .filter(p => p.position === pos && !(p.injuryUntil && p.injuryUntil > now))
+      .filter(p => p.position === pos && !isCurrentlyInjured(p, now))
       .sort((a, b) => b.overall() - a.overall());
     starters[pos] = atPos[0] ? atPos[0].id : null;
   });
@@ -38633,7 +38668,7 @@ function scoutingStartingFiveCardHtml(team, teamIdx, now = Date.now(), startersO
     const totalPts = log.reduce((s, m) => s + (m.pts || 0), 0);
     const totalReb = log.reduce((s, m) => s + (m.reb || 0), 0);
     const totalAst = log.reduce((s, m) => s + (m.ast || 0), 0);
-    const injured = !!(p.injuryUntil && p.injuryUntil > now);
+    const injured = isCurrentlyInjured(p, now);
     return {
       pos, empty: false, player: p, games,
       ppg: games ? (totalPts / games).toFixed(1) : "0.0",
@@ -39363,7 +39398,7 @@ function sp2SuggestedFiveHtml(setup, mine = null) {
     if (!p) return `<div class="sp2-fcard empty"><span class="sp2-fcard-pos">${effPosBadgeHtml(pos)}</span><span class="sub">Non pourvu</span></div>`;
     const log = p.matchLog || [], gp = log.length;
     const avg = mine && mine.avg ? k => mine.avg(p, k) : k => gp ? (log.reduce((t, m) => t + (m[k] || 0), 0) / gp).toFixed(1) : "0.0";
-    const injured = !!(p.injuryUntil && p.injuryUntil > now);
+    const injured = isCurrentlyInjured(p, now);
     return `<div class="sp2-fcard${injured ? " injured" : ""}"><div class="sp2-fcard-top">${playerAvatarHtml(p, myTeam, 40)}<div class="sp2-fcard-id">${effPosBadgeHtml(pos)}` +
       `<span class="sp2-fcard-name">${mine ? mine.link(p) : playerLinkHtml(myTeamIndex, p.id, p.name)}</span><span class="sp2-fcard-sal">${escapeHtml(mine ? mine.sub(p) : formatMoney(p.salary) + "/sem.")}</span></div></div>` +
       `<div class="sp2-fcard-cond">${injured ? `<span class="gain-down">Blessé</span>` : typeof p.condition === "number" ? effConditionHtml(p, now, recovery) : ""}</div>` +
@@ -39830,7 +39865,7 @@ function sp2RosterHtml(report, oppTeam, adv, teamIdx) {
       const ppg = gp ? (log.reduce((s, m) => s + (m.pts || 0), 0) / gp).toFixed(1) : "0.0";
       const rpg = gp ? (log.reduce((s, m) => s + (m.reb || 0), 0) / gp).toFixed(1) : "0.0";
       const apg = gp ? (log.reduce((s, m) => s + (m.ast || 0), 0) / gp).toFixed(1) : "0.0";
-      const injured = !!(p.injuryUntil && p.injuryUntil > now);
+      const injured = isCurrentlyInjured(p, now);
       // Âge retiré (retour utilisateur, 2026-09-25 : "enlève l'age sur les
       // joueurs, ça sert à rien") — seule une blessure reste signalée.
       const meta = injured ? `<span class="gain-down">blessé</span>` : "";
@@ -45852,6 +45887,34 @@ setInterval(() => {
   });
 }, 30000);
 
+// Retour de blessure (bug 2026-10-07) : un joueur guéri redevient
+// disponible TOUT SEUL dans les écrans ouverts. Une blessure prend fin à
+// l'heure de injuryUntil sans aucune nouvelle donnée du serveur : sans ce
+// suivi, l'Effectif déjà affiché gardait la ligne rouge alors que la fiche,
+// rendue plus tard, montrait le joueur disponible. Compare l'ensemble des
+// blessés (playerInjuryStatus) d'une minute à l'autre et ne redessine que
+// la page visible concernée.
+let injuryWatchKey = null;
+function injuryWatchSignature(now = Date.now()) {
+  if (typeof teamA === "undefined" || !teamA) return "";
+  return (teamA.players || []).concat(teamA.youthPlayers || [])
+    .filter(p => playerInjuryStatus(p, now).injured).map(p => p.id).sort().join(",");
+}
+function injuryWatchTick(now = Date.now()) {
+  const key = injuryWatchSignature(now);
+  const changed = injuryWatchKey !== null && key !== injuryWatchKey;
+  injuryWatchKey = key;
+  if (!changed) return false;
+  const page = currentVisiblePageId();
+  try {
+    if (page === "effectifSection") renderEffectifSection();
+    else if (page === "medicalSection") renderMedicalSection();
+    else if (page === "playerDetailSection" && currentPlayerDetailRef) renderPlayerDetail(currentPlayerDetailRef.teamIdx, currentPlayerDetailRef.playerId);
+  } catch (e) { /* page en cours de reconstruction */ }
+  return true;
+}
+setInterval(() => { if (document.visibilityState !== "hidden") injuryWatchTick(); }, 60000);
+
 // L'entraînement hebdomadaire n'est plus déclenché par un clic : depuis le
 // passage au calendrier réel (préparation à l'avance, plus d'action
 // immédiate — tâche #21), le serveur l'applique tout seul UNE FOIS par
@@ -48716,7 +48779,7 @@ function renderEffectifSection() {
         // la colonne Poste (retour utilisateur 2026-09-29 : "mettre un $ à
         // la place qui prend moins de place, mets un beau dollar").
         (isListed ? `<span class="eff-listed-coin" title="Aux enchères" aria-label="Aux enchères">$</span>` : "");
-      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}">` +
+      html += `<tr class="eff-row${effRoleRowClass(role)}${cross ? " injured" : ""}" data-player-id="${escapeHtml(String(p.id))}" data-injury-status="${cross ? "injured" : "available"}">` +
         `<td class="eff-td-name"><span class="eff-player">${playerAvatarHtml(p, teamA, 26)}${nationFlagHtml(p.nationality)}${playerLinkHtml(myTeamIndex, p.id, p.name)}${effRoleMarkHtml(role)}${badges}</span></td>` +
         `<td class="eff-td-rating"><span class="attr-cell eff-attr ${attrColorTier(effAttrAverage(p))}"><span class="attr-val">${rosterRatingValue(p)}</span></span></td>` +
         `<td>${posCell}</td><td>${effPotentialHtml(p)}</td>` +
@@ -49952,9 +50015,20 @@ function mkFilteredListings() {
     for (const c of crit) { const v = player.attrs[c.key]; if (v < c.min || v > c.max) return false; }
     return true;
   });
+  // Note : la MÊME valeur que celle affichée sur la carte (mkListingRating,
+  // GEN du meilleur poste), calculée une fois par annonce. Avant
+  // (bug 2026-10-07), le tri comparait overall() (moyenne au poste de
+  // carte) alors que la carte affiche la note du meilleur poste : le mieux
+  // noté à l'écran n'arrivait pas forcément en tête. À note égale : départage
+  // stable (potentiel, âge, nom, puis identifiant de l'annonce).
+  rows.forEach(r => { r.rating = mkListingRating(r.player); });
+  const tie = (a, b) => potentialTierIndex(b.player.potential) - potentialTierIndex(a.player.potential) ||
+    a.player.age - b.player.age ||
+    String(a.player.name || "").localeCompare(String(b.player.name || ""), "fr") ||
+    String(a.l.id).localeCompare(String(b.l.id));
   const by = {
-    ends: (a, b) => a.l.closesAt - b.l.closesAt,
-    ovr: (a, b) => b.player.overall() - a.player.overall(),
+    ends: (a, b) => a.l.closesAt - b.l.closesAt || String(a.l.id).localeCompare(String(b.l.id)),
+    ovr: (a, b) => b.rating - a.rating || tie(a, b),
     pot: (a, b) => potentialTierIndex(b.player.potential) - potentialTierIndex(a.player.potential) || a.l.closesAt - b.l.closesAt,
     price: (a, b) => minNextBidFor(a.l) - minNextBidFor(b.l),
     age: (a, b) => a.player.age - b.player.age,
@@ -49969,6 +50043,12 @@ function normalizeSearchTextSafe(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 
+// Note d'une annonce : celle de la carte (anneau « Note », GEN) ET du tri
+// « Trier par note » (voir mkFilteredListings). Toujours un nombre.
+function mkListingRating(player) {
+  const v = Number(playerBestRating(player));
+  return Number.isFinite(v) ? v : 0;
+}
 function mkRingHtml(value) {
   const circ = 2 * Math.PI * 48;
   const dash = (clamp(value, 0, 100) / 100) * circ;
@@ -50087,7 +50167,7 @@ function mkListingCardHtml(l, player, now) {
   const asked = typeof l.askedSalary === "number" ? l.askedSalary : askedSalary(player);
   const lastSeason = !fa && isLastContractSeason(player, league.contractSeason());
   const st = mkStatus(l);
-  const overall = playerBestRating(player);
+  const overall = mkListingRating(player);
   const critKeys = mkCritActive().map(c => c.key);
   const minBid = minNextBidFor(l);
   const value = estimateMarketValue(player);
@@ -50219,6 +50299,10 @@ function renderMarketListings() {
   const total = mkOpenListings().length;
   const rows = mkFilteredListings();
   const u = marketUi;
+  // Le menu de tri reflète toujours le tri appliqué (jamais un défaut
+  // affiché pendant qu'un autre tri s'applique, ou l'inverse).
+  const sortSel = document.getElementById("marketSort");
+  if (sortSel && sortSel.value !== u.sort && [...sortSel.options].some(o => o.value === u.sort)) sortSel.value = u.sort;
   const active = u.pos !== "all" || u.q || u.origin !== "all" || mkRangesActive() || u.hideMine || u.watched || mkCritActive().length > 0;
   const count = document.getElementById("marketResCount");
   if (count) {

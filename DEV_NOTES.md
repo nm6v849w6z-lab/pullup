@@ -861,3 +861,18 @@ points réellement ouverts.
   800 k/43 k, 1,4 M/83 k ; musculation 550 k (blessures ×0,56), 900 k
   (×0,48) ; bien-être 550 k (fatigue ×0,68), 900 k (×0,62). Quartier du
   club (clubDistrictBuilder) : tailles et détails répartis sur 5 niveaux.
+
+- **Statut blessé et tri du marché (2026-10-07)** :
+  - Blessure : SOURCE UNIQUE `playerInjuryStatus(player, now)` (dérivée de
+    `injuryUntil`/`injuryType`, jamais de `Player.injured` qui ne dure qu'un
+    match ni de l'historique). La fiche joueur l'affiche dans la tuile Forme
+    (« Blessé · N j ») et en tête de la carte Blessures (« En cours », même
+    si le journal ne la contient pas), plus le bandeau. `injuryWatchTick`
+    (toutes les minutes) redessine l'Effectif / la fiche / le Centre médical
+    ouverts quand un joueur se blesse ou guérit : avant, un écran déjà
+    affiché gardait l'ancien statut. Les tests « injuryUntil > now » épars
+    passent par `isCurrentlyInjured`.
+  - Marché, « Trier par note » : trie sur `mkListingRating` (GEN du meilleur
+    poste, la note AFFICHÉE sur la carte) et non plus `overall()` ; départage
+    potentiel, âge, nom, identifiant d'annonce. Test :
+    `injury_status_market_sort_test.js`.
