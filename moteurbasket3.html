@@ -21347,6 +21347,16 @@ function cardPositionChangeFor(player) {
   return { from: player.position, to: best, ratingFrom, ratingTo };
 }
 
+// Meilleur poste AFFICHÉ sur la fiche (2026-10-07, « incohérence : meilleur
+// poste P, poste AF, rôle Inside 4 AF ») : tant que l'écart avec le poste de
+// carte reste sous la marge de changement (voir cardPositionChangeFor), le
+// poste de carte est le meilleur poste affiché — badge, note en évidence,
+// « Meilleur poste » et rôle disent la même chose.
+function displayBestPosition(player) {
+  if (!player || !POSITIONS.includes(player.position)) return bestPosition(player);
+  return cardPositionChangeFor(player) ? bestPosition(player) : player.position;
+}
+
 // Création d'un joueur : retire les caractéristiques (`makeAttrs`) jusqu'à ce
 // que `position` soit son meilleur poste (effectif équilibré : 3 joueurs par
 // poste restent 3 joueurs par poste) ; au pire, le poste devient le
@@ -35348,7 +35358,7 @@ function renderPlayerDetail(teamIdx, playerId) {
     // clair (« Meilleur poste : A ») ; quand les 5 notes sont identiques à
     // l'unité, on passe à une décimale pour montrer quand même l'ordre ; et
     // un écart max-min sous PDP_POLYVALENT_SPREAD points vaut « Polyvalent ».
-    const best = bestPosition(player);
+    const best = displayBestPosition(player);
     const ratings = positionRatings(player);
     const vals = POSITIONS.map(pos => ratings[pos]);
     const spread = Math.max(...vals) - Math.min(...vals);

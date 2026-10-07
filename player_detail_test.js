@@ -62,7 +62,7 @@ console.log("✅ Fiche joueur ouverte depuis l'Effectif : caractéristiques en c
 {
   const pid = Number(firstPlayerLink.dataset.playerId);
   const cells = [...doc1.querySelectorAll("#playerDetailContent .pdp2-posratings .pdp2-posrating")];
-  const expected = dom1.window.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); return { vals: POSITIONS.map(q => Math.round(positionRating(p, q))), best: bestPosition(p) }; })()`);
+  const expected = dom1.window.eval(`(() => { const p = teamA.players.find(x => x.id === ${pid}); return { vals: POSITIONS.map(q => Math.round(positionRating(p, q))), best: displayBestPosition(p) }; })()`);
   if (cells.length !== 5) throw new Error(`❌ La fiche devrait afficher 5 notes par poste, obtenu ${cells.length}.`);
   // Une décimale (virgule) quand les 5 notes sont égales à l'unité près.
   const shown = cells.map(c => Math.round(Number(c.querySelector("b").textContent.replace(",", "."))));
@@ -70,6 +70,26 @@ console.log("✅ Fiche joueur ouverte depuis l'Effectif : caractéristiques en c
   const bestCells = cells.filter(c => c.classList.contains("is-best"));
   if (bestCells.length !== 1 || bestCells[0].dataset.pos !== expected.best) throw new Error("❌ Le meilleur poste devrait être le seul mis en évidence.");
   console.log("✅ Note par poste sur la fiche :", cells.map(c => c.textContent).join(" "), "— meilleur poste :", expected.best);
+}
+
+// Entre-deux (2026-10-07) : un autre poste devance le poste de carte de
+// MOINS que la marge de changement → la fiche garde le poste de carte comme
+// meilleur poste (badge, note en évidence et rôle cohérents).
+{
+  const r = dom1.window.eval(`(() => {
+    const p = { position: "Ailier fort", previousCardPosition: null, attrs: {} };
+    ATTRS.forEach(a => { p.attrs[a] = 60; });
+    // Petit avantage au Pivot, sous la marge.
+    let k = 0;
+    for (const a of Object.keys(POSITION_KEY_WEIGHTS["Pivot"])) {
+      p.attrs[a] = 60 + (++k);
+      const gap = positionRating(p, "Pivot") - positionRating(p, "Ailier fort");
+      if (bestPosition(p) === "Pivot" && gap < POSITION_CHANGE_MARGIN) return { best: bestPosition(p), shown: displayBestPosition(p), change: !!cardPositionChangeFor(p), gap };
+    }
+    return null;
+  })()`);
+  if (r && !(r.best === "Pivot" && r.shown === "Ailier fort" && !r.change)) throw new Error("❌ Entre-deux : la fiche devrait garder le poste de carte comme meilleur poste " + JSON.stringify(r));
+  console.log("✅ Entre-deux (écart " + (r ? r.gap.toFixed(2) : "?") + " < marge) : meilleur poste affiché = poste de carte.");
 }
 
 // Retour utilisateur 2026-09-30 (téléphone) : "31 aux 5 postes alors qu'il
