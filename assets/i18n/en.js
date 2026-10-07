@@ -2,6 +2,10 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Entraînement : refonte d'après la maquette (2026-10-07).
+  "Plan de la semaine": "Weekly plan",
+  "Sections de l'entraînement": "Training sections",
+  "Le premier bilan arrive lundi, après une semaine d'entraînement.": "The first report arrives on Monday, after a week of training.",
   // Centre médical : refonte d'après la maquette (2026-10-07).
   "Équipe · Santé": "Team · Health",
   "Bilan physique de l'effectif avant le prochain match": "Squad fitness check before the next game",

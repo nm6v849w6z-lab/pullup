@@ -4,6 +4,10 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Entraînement : refonte d'après la maquette (2026-10-07).
+  "Plan de la semaine": "Savaitės planas",
+  "Sections de l'entraînement": "Treniruočių skyriai",
+  "Le premier bilan arrive lundi, après une semaine d'entraînement.": "Pirmoji ataskaita – pirmadienį, po savaitės treniruočių.",
   // Centre médical : refonte d'après la maquette (2026-10-07).
   "Équipe · Santé": "Komanda · Sveikata",
   "Bilan physique de l'effectif avant le prochain match": "Komandos fizinė būklė prieš kitas rungtynes",

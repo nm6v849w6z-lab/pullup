@@ -40,6 +40,10 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Entraînement : refonte d'après la maquette (2026-10-07).
+  "Plan de la semaine": "Piano della settimana",
+  "Sections de l'entraînement": "Sezioni dell'allenamento",
+  "Le premier bilan arrive lundi, après une semaine d'entraînement.": "Il primo bilancio arriva lunedì, dopo una settimana di allenamento.",
   // Centre médical : refonte d'après la maquette (2026-10-07).
   "Équipe · Santé": "Squadra · Salute",
   "Bilan physique de l'effectif avant le prochain match": "Bilancio fisico della rosa prima della prossima partita",

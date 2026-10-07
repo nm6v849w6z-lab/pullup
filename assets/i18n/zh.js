@@ -4,6 +4,10 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Entraînement : refonte d'après la maquette (2026-10-07).
+  "Plan de la semaine": "本周计划",
+  "Sections de l'entraînement": "训练栏目",
+  "Le premier bilan arrive lundi, après une semaine d'entraînement.": "第一份总结将在周一发布，即训练一周之后。",
   // Centre médical : refonte d'après la maquette (2026-10-07).
   "Équipe · Santé": "球队 · 健康",
   "Bilan physique de l'effectif avant le prochain match": "下一场比赛前的阵容身体状况",

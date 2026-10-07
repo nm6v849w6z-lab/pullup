@@ -23,6 +23,7 @@ const wait = async (fn, label) => { for (let i = 0; i < 150; i++) { try { if (fn
     ["Histoire du club", "TAB_HANDLERS.histoire()", "#histoireSection"],
     ["Sélections nationales", "TAB_HANDLERS.selections()", "#nationalContent"],
     ["Fiche d'une équipe", "showTeamDetail(1)", "#teamDetailContent"],
+    ["Entraînement", "TAB_HANDLERS.entrainement()", "#trainingSection"],
   ];
   const css = [...doc.querySelectorAll("style")].map(s => s.textContent).join("\n");
   assert(/\.vs-tabs\.vs-tabs\{/.test(css), "composant .vs-tabs dans la feuille de styles commune de la page");

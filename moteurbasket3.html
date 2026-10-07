@@ -6165,6 +6165,73 @@
   .tm-xp-row > span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .tm-xp-row small{color:var(--ink-dim);}
   .tm-xp-idle{font-size:12.5px; color:var(--ink-dim); line-height:1.5;}
+  /* Refonte visuelle du 2026-10-07 (maquette « Entraînement ») : cartes plus
+     aérées, menu .vs-tabs, compteur de places, jours et séances en grandes
+     tuiles, connaissance tactique et expérience en cartes, bilan en chiffres
+     clés. Police et variables du Mode Club. */
+  #trainingSection .tm-views{margin:2px 0 4px;}
+  #trainingSection .tm-pane{display:flex; flex-direction:column; gap:20px;}
+  #trainingSection .tm-pane.hidden{display:none;}
+  #trainingSection .tm-card{border-radius:18px; padding:24px; gap:16px;}
+  #trainingSection .tm-h h3{font-size:22px;}
+  #trainingSection .tm-coach{gap:14px; padding:12px 18px 12px 12px; border-radius:16px;}
+  #trainingSection .tm-coach .staff-avatar, #trainingSection .tm-coach > :first-child{border-radius:12px;}
+  .tm-coach-main{display:flex; flex-direction:column; gap:6px; min-width:0;}
+  .tm-coach-main b{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:16px;}
+  .tm-coach-role{font-size:13px; font-weight:500; color:var(--ink-dim);}
+  .tm-coach-chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .tm-coach-chips .tm-badge{font-size:12px; font-weight:600; padding:3px 9px;}
+  .tm-coach-chips .tm-badge.grey{color:var(--ink);}
+  .tm-places{display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:13px; color:var(--ink-dim);}
+  .tm-places b{color:var(--ink);}
+  .tm-places-bar{display:flex; gap:4px;}
+  .tm-places-bar i{width:28px; height:6px; border-radius:3px; background:var(--line);}
+  .tm-places-bar i.on{background:var(--amber);}
+  #trainingSection .tm-slot{border-radius:14px; padding:14px 16px;}
+  #trainingSection .tm-int{border-radius:10px; padding:2px;}
+  #trainingSection .tm-int button{min-height:30px; padding:0 10px; border-radius:8px;}
+  #trainingSection .tm-eff-btn{font-size:26px;}
+  #trainingSection .tm-x{width:36px; height:36px; border-radius:10px; border:1px solid var(--line); display:grid; place-items:center; padding:0;}
+  #trainingSection .tm-x:hover{color:var(--danger); border-color:var(--danger);}
+  #trainingSection .tm-week{gap:5px;}
+  #trainingSection .tm-day{border-radius:12px; border-width:2px;}
+  #trainingSection .tm-day.sel{box-shadow:none; border-color:var(--amber); background:rgba(240,162,60,.12);}
+  #trainingSection .tm-dayedit{gap:8px;}
+  #trainingSection .tm-dayedit button{min-height:64px; border-radius:12px; border-width:2px; font-size:14px; justify-content:center;}
+  #trainingSection .tm-kn{gap:10px;}
+  #trainingSection .tm-kn-row{grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"name right" "bar bar"; gap:8px 10px; padding:12px 14px; border-radius:12px; background:var(--panel-2);}
+  #trainingSection .tm-kn-row > div:first-child{grid-area:name; font-weight:600; font-size:15px;}
+  #trainingSection .tm-kn-row > .tm-track{grid-area:bar;}
+  #trainingSection .tm-kn-row > .tm-kn-right{grid-area:right;}
+  #trainingSection .tm-kn-row:has(.tm-tier.decouverte) .tm-fill{background:#F87171 !important;}
+  #trainingSection .tm-kn-row:has(.tm-tier.rodage) .tm-fill{background:#FBBF24 !important;}
+  #trainingSection .tm-kn-row:has(.tm-tier.maitrisee) .tm-fill{background:#34D399 !important;}
+  #trainingSection .tm-kn-row:has(.tm-tier.signature) .tm-fill{background:#c49bff !important;}
+  #trainingSection .tm-pair{border-radius:14px; padding:12px 14px;}
+  #trainingSection .tm-xp{grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px;}
+  #trainingSection .tm-xp-row{grid-template-columns:auto minmax(0,1fr) auto; gap:12px; padding:10px 14px; border-radius:12px; background:var(--panel-2);}
+  .tm-xp-main{display:flex; flex-direction:column; gap:6px; min-width:0;}
+  .tm-xp-top{display:flex; justify-content:space-between; gap:8px; font-size:14px; font-weight:600;}
+  .tm-xp-top span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tm-xp-top small{flex:none; font-weight:400; color:var(--ink-dim); font-variant-numeric:tabular-nums;}
+  .tm-xp-row .tm-fill.tm-up{background:#34D399;} .tm-xp-row .tm-fill.tm-flat{background:#FBBF24;} .tm-xp-row .tm-fill.tm-low{background:#F87171;}
+  .tm-xp-pill{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--panel);}
+  #trainingSection .tm-xp-idle{display:flex; flex-direction:column; gap:10px; padding-top:14px; border-top:1px solid var(--line);}
+  .tm-xp-chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .tm-xp-chip{display:inline-flex; align-items:center; gap:8px; padding:3px 12px 3px 3px; border-radius:999px; border:1px dashed var(--line); font-size:13px; color:var(--ink-dim);}
+  .tm-xp-chip .tm-av{width:26px; height:26px; font-size:10px;}
+  #trainingSection .tr-kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;}
+  #trainingSection .tr-kpi{flex-direction:column; align-items:flex-start; gap:10px; padding:18px 20px; border-radius:16px; background:var(--panel-2); border:1px solid var(--line);}
+  #trainingSection .tr-kpi b{font-family:var(--display); font-size:40px; font-weight:800; line-height:1; letter-spacing:-.01em;}
+  #trainingSection .tr-kpi.up b{color:#34D399;}
+  #trainingSection .tr-grid{gap:14px;}
+  #trainingSection .tr-card{border-radius:16px; padding:18px;}
+  #trainingSection .tr-big{font-size:30px;}
+  #trainingSection .tr-track{height:10px; border-radius:999px;}
+  #trainingSection .tr-base{background:var(--amber);}
+  #trainingSection .tr-gain.up{background:#34D399;}
+  #trainingSection .tr-tile{border-radius:12px;}
+  @media (max-width:720px){ #trainingSection .tm-card{padding:16px; border-radius:14px;} .tm-places{align-items:flex-start;} #trainingSection .tr-kpi b{font-size:32px;} }
   .tm-up{color:var(--ok);}
   .tm-flat{color:var(--amber);}
   .tm-low{color:var(--danger);}
@@ -9146,11 +9213,18 @@
     <div class="section tp-page tm">
       <div class="tm-top">
         <div class="tp-head">
-          <span class="tp-eyebrow">Entraînement</span>
+          <span class="tp-eyebrow" id="trainingEyebrow">Entraînement</span>
           <h2 id="trainingTitle" class="tp-title page-title">Semaine</h2>
         </div>
         <div id="trainingCoachCard"></div>
       </div>
+      <!-- Refonte du 2026-10-07 (maquette « Entraînement ») : deux vues,
+           menu commun du Mode Club (.vs-tabs). -->
+      <div class="vs-tabs tm-views" role="tablist" aria-label="Sections de l'entraînement">
+        <button type="button" role="tab" class="active" aria-selected="true" data-tm-view="plan">Plan de la semaine</button>
+        <button type="button" role="tab" aria-selected="false" data-tm-view="bilan">Bilan du lundi</button>
+      </div>
+      <div class="tm-pane" data-tm-pane="plan">
       <div class="tm-cols">
         <div class="tm-col">
           <section class="tm-card" id="trainingPlansCard" aria-labelledby="tpFondTitle"></section>
@@ -9159,12 +9233,13 @@
           <section class="tm-card" id="collectiveTrainingConfig" aria-labelledby="tpCollTitle"></section>
         </div>
       </div>
-      <!-- Bilan du lundi juste sous Plans / Collectif, Parrainage en dernier
-           (retour utilisateur 2026-10-02 : le bilan compte plus que
-           l'expérience et le parrainage). -->
+      <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
+      </div>
+      <!-- Bilan du lundi puis Expérience (le mental par les minutes jouées). -->
+      <div class="tm-pane hidden" data-tm-pane="bilan">
       <div id="lastTrainingReportHolder"></div>
       <section class="tm-card" id="experienceCard" aria-labelledby="tpXpTitle"></section>
-      <section class="tm-card" id="mentorshipCard" aria-labelledby="tpMentorTitle"></section>
+      </div>
     </div>
   </div>
 
@@ -46050,6 +46125,9 @@ function renderTrainingPage() {
   const title = document.getElementById("trainingTitle");
   if (!title || !teamA) return;
   title.textContent = `Semaine ${teamA.week}`;
+  const eyebrow = document.getElementById("trainingEyebrow");
+  if (eyebrow) eyebrow.textContent = `Entraînement · ${trainingWeekLabel(0).replace(/^Semaine /, "")}`;
+  applyTrainingView();
   renderTrainingCoachCard();
   renderTrainingPlans();
   renderCollectivePlan();
@@ -46057,6 +46135,23 @@ function renderTrainingPage() {
   renderExperienceCard();
   renderLastTrainingReport();
 }
+
+// Vue affichée : « Plan de la semaine » ou « Bilan du lundi » (menu .vs-tabs).
+let trainingView = "plan";
+function applyTrainingView() {
+  document.querySelectorAll("#trainingSection [data-tm-view]").forEach(b => {
+    const on = b.dataset.tmView === trainingView;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+  });
+  document.querySelectorAll("#trainingSection [data-tm-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.tmPane !== trainingView));
+}
+document.getElementById("trainingSection").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tm-view]");
+  if (!b) return;
+  trainingView = b.dataset.tmView === "bilan" ? "bilan" : "plan";
+  applyTrainingView();
+});
 
 // --- Entraîneur ------------------------------------------------------
 function renderTrainingCoachCard() {
@@ -46074,9 +46169,9 @@ function renderTrainingCoachCard() {
   // utilisateur 2026-10-02 : « la tête de l'entraîneur ne s'affiche pas »).
   const ident = staffIdentity(staffMemberKey("coach", tr));
   holder.innerHTML = `<div class="tm-coach">${staffAvatarHtml(ident, teamAvatarColors(teamA), 40)}` +
-    `<div><b><span data-no-i18n>${escapeHtml(ident.name)}</span> · Entraîneur ${staffStarsHtml(tr.level)}</b>` +
-    `<small>${trainingSlotsForTrainer(tr)} places individuelles · rendement ${trainingFmtMult(trainerRateMultiplier(tr))} · plafond +${trainerCeilingBonus(tr)}</small></div>` +
-    (spec ? `<span class="tm-badge teal">Spécialité ${escapeHtml(spec.label)}</span>` : "") + `</div>`;
+    `<div class="tm-coach-main"><b><span data-no-i18n>${escapeHtml(ident.name)}</span> <span class="tm-coach-role">Entraîneur</span> ${staffStarsHtml(tr.level)}</b>` +
+    `<div class="tm-coach-chips"><span class="tm-badge grey">${trainingSlotsForTrainer(tr)} places individuelles</span><span class="tm-badge grey">Rendement ${trainingFmtMult(trainerRateMultiplier(tr))}</span><span class="tm-badge grey">Plafond +${trainerCeilingBonus(tr)}</span>` +
+    (spec ? `<span class="tm-badge teal">Spécialité ${escapeHtml(spec.label)}</span>` : "") + `</div></div></div>`;
 }
 
 // --- Plans individuels -----------------------------------------------
@@ -46169,7 +46264,8 @@ function renderTrainingPlans() {
   const slots = teamA.activeTrainingSlots();
   let html = `<div class="tm-h"><div class="tm-h-main">` +
     `<span class="tp-icon tp-icon-fond" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"></path></svg></span>` +
-    `<div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · ${slots.length} joueurs suivis sur ${max}</span></div></div></div>`;
+    `<div><h3 id="tpFondTitle">Plans individuels</h3><span class="tm-sub">Fondamentaux · ${slots.length} joueurs suivis sur ${max}</span></div></div>` +
+    (max ? `<div class="tm-places"><span><b>${slots.length}</b> place${slots.length > 1 ? "s" : ""} sur ${max} utilisée${slots.length > 1 ? "s" : ""}</span><span class="tm-places-bar">${Array.from({ length: max }, (_, i) => `<i class="${i < slots.length ? "on" : ""}"></i>`).join("")}</span></div>` : "") + `</div>`;
   if (!max) {
     html += `<div class="tm-empty"><span>Engagez un entraîneur pour travailler les fondamentaux : chaque entraîneur ouvre des places de plan individuel (3 au niveau 1, jusqu'à 5 au niveau 5).</span>` +
       `<button type="button" class="tm-btn" data-staff-market="coach">Voir le marché des entraîneurs</button></div>` +
@@ -46537,11 +46633,11 @@ function renderExperienceCard() {
     const mult = mentalExperienceMult(secs);
     const x = (mult - MENTAL_NATURAL_SHARE) / (1 - MENTAL_NATURAL_SHARE);
     const tier = mult >= 0.8 ? ["Forte", "tm-up"] : mult >= 0.6 ? ["Moyenne", "tm-flat"] : ["Faible", "tm-low"];
-    html += `<div class="tm-xp-row"><span>${trainingNameHtml(p)} <small>· ${Math.round(secs / 60)} min</small></span>` +
-      `<div class="tm-track"><div class="tm-fill" style="width:${Math.max(4, Math.round(x * 100))}%;background:#7fb6ff"></div></div><span class="${tier[1]}">${tier[0]}</span></div>`;
+    html += `<div class="tm-xp-row">${trainingAvatarHtml(p, p.name)}<div class="tm-xp-main"><div class="tm-xp-top"><span>${trainingNameHtml(p)}</span><small>${Math.round(secs / 60)} min</small></div>` +
+      `<div class="tm-track"><div class="tm-fill ${tier[1]}" style="width:${Math.max(4, Math.round(x * 100))}%"></div></div></div><span class="tm-xp-pill ${tier[1]}">${tier[0]}</span></div>`;
   });
   html += `</div>`;
-  if (idle.length) html += `<div class="tm-xp-idle"><span class="tm-low">Sans minutes cette semaine</span> · ${idle.map(r => trainingNameHtml(r.p)).join(", ")}</div>`;
+  if (idle.length) html += `<div class="tm-xp-idle"><div class="tm-label tm-low">Sans minutes cette semaine · ${idle.length} joueur${idle.length > 1 ? "s" : ""}</div><div class="tm-xp-chips">${idle.map(r => `<span class="tm-xp-chip">${trainingAvatarHtml(r.p, r.p.name)}${trainingNameHtml(r.p)}</span>`).join("")}</div></div>`;
   holder.innerHTML = html;
 }
 
@@ -46629,7 +46725,10 @@ function renderLastTrainingReport() {
     const h = history.find(x => x.week === trainingReportSelectedWeek);
     if (h) { report = h; shownWeek = h.week; } else trainingReportSelectedWeek = null;
   }
-  if (!report) { holder.innerHTML = ""; return; }
+  if (!report) {
+    holder.innerHTML = `<section class="tm-card tp-report tm-report-empty"><div class="tm-h"><div><h3 id="tpReportTitle">Bilan du lundi</h3><span class="tm-sub">Le premier bilan arrive lundi, après une semaine d'entraînement.</span></div></div></section>`;
+    return;
+  }
   let histHtml = "";
   if (premium && history.length > 1) {
     histHtml = `<div class="tp-hist" role="group" aria-label="Semaine affichée">` + history.slice().reverse().map(h =>

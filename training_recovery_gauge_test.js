@@ -18,11 +18,13 @@ function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.l
   const win = dom.window, doc = win.document;
   [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === "entrainement" || b.dataset.tab === "training").click();
   const page = doc.querySelector("#trainingSection .tp-page");
-  const kids = [...page.children].map(c => c.id || c.className);
-  // Ordre (retour utilisateur 2026-10-02) : Plans / Collectif, Bilan du lundi,
-  // Expérience, Parrainage.
-  const at = id => kids.indexOf(id);
-  assert(at("lastTrainingReportHolder") > kids.findIndex(k => /tm-cols/.test(k)) && at("lastTrainingReportHolder") < at("experienceCard") && at("experienceCard") < at("mentorshipCard") && kids[kids.length - 1] === "mentorshipCard", "bilan sous Plans / Collectif, puis Expérience, Parrainage en dernier");
+  // Refonte du 2026-10-07 : menu « Plan de la semaine » / « Bilan du lundi ».
+  const plan = page.querySelector('[data-tm-pane="plan"]'), bilan = page.querySelector('[data-tm-pane="bilan"]');
+  assert(page.querySelector(".vs-tabs [data-tm-view='plan']") && plan.querySelector(".tm-cols") && plan.querySelector("#mentorshipCard"), "Plan de la semaine : Plans / Collectif puis Parrainage");
+  assert(bilan.querySelector("#lastTrainingReportHolder") && bilan.querySelector("#experienceCard") && bilan.classList.contains("hidden"), "Bilan du lundi : bilan puis Expérience (vue masquée par défaut)");
+  page.querySelector("[data-tm-view='bilan']").click();
+  assert(!bilan.classList.contains("hidden") && plan.classList.contains("hidden"), "menu : bascule vers le Bilan du lundi");
+  page.querySelector("[data-tm-view='plan']").click();
 
   const team = win.eval("teamA");
   const now = Date.now();

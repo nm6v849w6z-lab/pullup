@@ -4,6 +4,10 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PL = {
+  // Entraînement : refonte d'après la maquette (2026-10-07).
+  "Plan de la semaine": "Plan tygodnia",
+  "Sections de l'entraînement": "Sekcje treningu",
+  "Le premier bilan arrive lundi, après une semaine d'entraînement.": "Pierwszy bilans pojawi się w poniedziałek, po tygodniu treningu.",
   // Centre médical : refonte d'après la maquette (2026-10-07).
   "Équipe · Santé": "Drużyna · Zdrowie",
   "Bilan physique de l'effectif avant le prochain match": "Stan fizyczny kadry przed następnym meczem",
