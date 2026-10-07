@@ -568,6 +568,9 @@ function teamView(store, teamId, me, season, now, calendarStartAt) {
     honours: require("./nationalMatches.js").honoursOf(store, team.id),
     // Matchs amicaux internationaux programmés et joués.
     friendlies: require("./nationalFriendlies.js").publicListOf(store, team.id, now),
+    // Vitrine (2026-10-07, server/nationalExtras.js) : message du staff,
+    // personnalisation visuelle et droits de modification.
+    extras: require("./nationalExtras.js").publicExtras(store, team.id, me, now),
   };
 }
 

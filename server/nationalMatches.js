@@ -215,6 +215,17 @@ function buildSide(store, teamId, gid, leagues, world, at, tempIds, matchId) {
   const shell = Engine.generateTeam(NT().teamLabel(teamId), 1, team.country);
   shell.isHuman = false;
   shell.players = sheet.map(x => x.src);
+  // Habillage choisi par le sélectionneur (server/nationalExtras.js,
+  // 2026-10-07) : maillot et parquet, purement visuels. Les helpers
+  // d'affichage (motif, parquet) ne lisent ces réglages que pour une équipe
+  // « Premium » : cette équipe de match éphémère l'est le temps du match.
+  const dress = require("./nationalExtras.js").matchDress(store, teamId, at);
+  if (dress) {
+    shell.jerseyColor = dress.jerseyColor;
+    shell.jerseyPattern = dress.jerseyPattern;
+    shell.courtStyle = dress.court.wood === "nuit" && !dress.court.paint ? null : { wood: dress.court.wood, paint: dress.court.paint };
+    shell.premiumUntil = at + 7 * 24 * 3600 * 1000;
+  }
   // Ids provisoires (uniques sur le match), remis par restoreIds.
   sheet.forEach(x => { const tmp = TEMP_ID_BASE + tempIds.size + 1; tempIds.set(tmp, { player: x.src, id: x.src.id, club: x.club }); x.src.id = tmp; });
   const tmpOf = x => x.src.id;

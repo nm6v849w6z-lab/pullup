@@ -1404,7 +1404,7 @@
     var pw = document.getElementById("suPw").value;
     var invite = document.getElementById("suInvite").value.trim();
     if (!club || !email || !pw || (inviteNeeded() && !invite)) { showMsg(signupMsg, "fill"); return; }
-    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw, country: pickedCountry("su"), countryChosen: countryTouched, inviteCode: invite, lang: lang }).then(function (d) {
+    return api("POST", "/api/account/signup", { clubName: club, email: email, password: pw, country: pickedCountry("su"), countryChosen: countryTouched, inviteCode: invite, lang: lang, ref: referralCode() }).then(function (d) {
       if (d.code === "email-taken") { showMsg(signupMsg, "email-taken"); document.getElementById("liEmail").value = email; return; }
       handleSession(d, signupMsg);
     });
@@ -1448,7 +1448,7 @@
     var club = document.getElementById("dcClub").value.trim();
     var invite = document.getElementById("dcInvite").value.trim();
     if (!club || (inviteNeeded() && !invite)) { showMsg(dclubMsg, "fill"); return; }
-    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club, country: pickedCountry("dc"), countryChosen: countryTouched, inviteCode: invite, lang: lang }).then(function (d) {
+    return api("POST", "/api/account/discord-complete", { pending: discordPending, clubName: club, country: pickedCountry("dc"), countryChosen: countryTouched, inviteCode: invite, lang: lang, ref: referralCode() }).then(function (d) {
       if (d.code === "discord-expired") { show("viewSignup"); showMsg(signupMsg, "discord-expired"); return; }
       handleSession(d, dclubMsg);
     });
@@ -1490,7 +1490,19 @@
   // côté serveur) : champ affiché seulement s'il est exigé, prérempli par
   // un lien /?invite=CODE.
   function inviteNeeded() { return !!(config && config.inviteRequired); }
+  function referralCode() {
+    try {
+      var r = JSON.parse(localStorage.getItem("hm-ref") || "null");
+      return r && r.code && Date.now() - (r.at || 0) < 30 * 86400000 ? r.code : null;
+    } catch (e) { return null; }
+  }
   var inviteFromUrl = new URLSearchParams(location.search).get("invite");
+  // Parrainage (2026-10-07) : lien /bienvenue?ref=<code>. Gardé 30 jours dans
+  // le navigateur (l'inscription Discord quitte la page puis y revient).
+  var refFromUrl = new URLSearchParams(location.search).get("ref");
+  if (refFromUrl && /^[A-Za-z0-9]{6,12}$/.test(refFromUrl)) {
+    try { localStorage.setItem("hm-ref", JSON.stringify({ code: refFromUrl.toUpperCase(), at: Date.now() })); } catch (e) { /* navigation privée */ }
+  }
   if (inviteFromUrl) { document.getElementById("suInvite").value = inviteFromUrl; document.getElementById("dcInvite").value = inviteFromUrl; }
   api("GET", "/api/account/config").then(function (c) {
     if (!c || !c.ok) return;

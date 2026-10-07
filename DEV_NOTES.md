@@ -886,3 +886,40 @@ points réellement ouverts.
   pages de détail remonte l'historique (`history.back()`) au lieu de
   cliquer la fermeture (qui empilait une étape en avant). Test :
   `national_mode_back_test.js`.
+
+- **Social, sélections, noms (2026-10-07)** :
+  - **Parrainage / badge « Amis »** (`server/referrals.js`) : code personnel
+    `account.referralCode`, lien `/bienvenue?ref=<code>` (gardé 30 j dans le
+    navigateur, envoyé par `/api/account/signup` et `discord-complete`).
+    `account.referredBy = { id, at, fp, status: pending|validated|blocked,
+    reason, clubName, seasonsDone, validatedAt }`, posé UNE fois à la
+    création. Validé quand le club du filleul a `achStats.seasons >= 2`
+    (première saison prise en cours = incomplète). Anti-abus : même empreinte
+    IP que le parrain (à l'inscription ET à la validation), même email (alias
+    Gmail/+étiquette), 10 invitations en attente max, jamais après coup.
+    `GET /api/account/referral` (réévaluation au plus toutes les 10 min) ;
+    le nombre validé est recopié sur `team.friendsReferrals` (sérialisé dans
+    les deux miroirs, remis à 0 à la reprise/libération d'un club).
+    Récompenses PUREMENT cosmétiques (FRIENDS_TIERS) : cadre bronze/argent/or
+    de l'avatar, titres « Rassembleur » / « Ambassadeur », pastille « Amis ».
+    UI : bloc « Amis » du profil (`managerFriendsHtml`), Réglages > Compte
+    « Inviter un ami » (`hmReferralSectionHtml`).
+  - **Vitrine des sélections** (`server/nationalExtras.js`, catalogue
+    partagé `assets/national-visuals.js`) : `store.teams[id].message`
+    (sélectionneur + adjoints, 500 car., `POST /api/national/message`) et
+    `store.teams[id].visuals` (sélectionneur seul, logo/bannière/maillot/
+    terrain, certains débloqués : 1er match, 5 victoires, phase finale,
+    podium, titre ; `POST /api/national/visuals`). `teamView.extras`.
+    Maillot et parquet appliqués aux matchs (`matchDress` dans `buildSide`).
+  - **Fonction nationale du manager** : `GET /api/national/roles?league=&idx=`
+    (mandats et staff ACTIFS par place de club) → puces du profil
+    (`mpLoadNationalRoles`).
+  - **International** : `GET /api/national/player?id=&name=&nat=` = dernière
+    liste de convoqués FIGÉE (A/U21) + sélections (caps) ; tuile de la fiche
+    joueur (`pdpLoadInternational`) et puce du permalien `/j/<code>`.
+  - **Noms** : `NAME_POOLS_EXTRA` + `namePoolOf(key)` (bloc identique dans
+    engine.js et moteurbasket3.html, voir nationality_test). `NAME_POOLS`
+    inchangé car il nomme le staff par hash (`staffIdentity`) et sert à
+    `nationalityFromName`. Tests : `names_variety_test.js`.
+  - Tests : `server/referrals_test.js`, `server/national_extras_test.js`,
+    `national_showcase_ui_test.js`.

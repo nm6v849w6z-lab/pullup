@@ -28,7 +28,7 @@ for (let i = 0; i < N; i++) {
   if (!E.NATION_BY_CODE[id.nationality]) fail(`Nationalité invalide : ${id.nationality}`);
   seen.add(id.nationality);
   if (id.nationality === "fr") fr++;
-  const pool = E.NAME_POOLS[E.NATION_BY_CODE[id.nationality].pool];
+  const pool = E.namePoolOf(E.NATION_BY_CODE[id.nationality].pool); // réservoir enrichi (2026-10-07)
   const last = id.name.split(" ").slice(1).join(" ");
   if (!pool.last.includes(last)) fail(`Nom ${id.name} hors du réservoir de ${id.nationality}`);
 }

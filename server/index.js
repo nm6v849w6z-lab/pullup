@@ -1440,9 +1440,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             return entry ? World.loadLeague(world, id, multiSavePath) : null;
           }) : null;
           if (resolved) {
+            // Sélection nationale actuelle (2026-10-07) : facultative, la
+            // page s'affiche sans si le registre des sélections est indisponible.
+            let international = null;
+            try {
+              const natStore = await NationalTeams.loadStore(multiSavePath);
+              if (natStore) international = require("./nationalExtras.js").playerSelection(natStore, resolved.player.id, resolved.player.name, resolved.player.nationality);
+            } catch (e) { international = null; }
             page = PlayerPage.renderPlayerPage({
               player: resolved.player, team: resolved.team, league: resolved.league,
-              divisionLabel: entry ? World.divisionLabel(entry.level, entry.group) : "", origin, code, lang,
+              divisionLabel: entry ? World.divisionLabel(entry.level, entry.group) : "", origin, code, lang, international,
             });
           }
         } catch (e) {
@@ -3006,7 +3013,25 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           sendJson(res, view.ok ? 200 : (view.status || 400), view);
           return;
         }
+        // Fonctions nationales en cours d'un manager (profil public) et
+        // sélection actuelle d'un joueur (fiche joueur), 2026-10-07.
+        if (req.method === "GET" && route.pathname === "/api/national/roles") {
+          const roles = require("./nationalExtras.js").rolesOf(natStore, route.searchParams.get("league") || ctx.leagueId, Number(route.searchParams.get("idx")));
+          sendJson(res, 200, { ok: true, roles });
+          return;
+        }
+        if (req.method === "GET" && route.pathname === "/api/national/player") {
+          const pid = Number(route.searchParams.get("id"));
+          const pname = String(route.searchParams.get("name") || "").slice(0, 80);
+          const nat = String(route.searchParams.get("nat") || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 3);
+          sendJson(res, 200, require("./nationalExtras.js").playerSelection(natStore, pid, pname, nat));
+          return;
+        }
         const NAT_ACTIONS = {
+          // Vitrine de la sélection (2026-10-07) : message (sélectionneur et
+          // adjoints), personnalisation visuelle (sélectionneur).
+          "/api/national/message": require("./nationalExtras.js").setMessage,
+          "/api/national/visuals": require("./nationalExtras.js").setVisuals,
           "/api/national/candidacy": NationalTeams.runForElection,
           "/api/national/withdraw": NationalTeams.withdrawCandidacy,
           "/api/national/vote": NationalTeams.castVote,
@@ -3021,6 +3046,10 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         if (!out.ok) { sendJson(res, out.status || 400, { ok: false, error: out.error }); return; }
         try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
         if (route.pathname === "/api/national/resign") await persistContext(ctx);
+        if (route.pathname === "/api/national/message" || route.pathname === "/api/national/visuals") {
+          sendJson(res, 200, { ...out, team: NationalTeams.teamView(natStore, body.teamId, me, season, now, ctx.league.calendarStartAt) });
+          return;
+        }
         sendJson(res, 200, { ...out, overview: NationalTeams.overview(natStore, me, season, now) });
         return;
       }

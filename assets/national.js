@@ -61,6 +61,32 @@
     ".nt-tab{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}",
     ".nt-tab.on{border-color:var(--amber);color:var(--amber)}",
     ".nt-hero{border:1px solid var(--line);border-radius:18px;padding:24px 26px;display:flex;align-items:center;gap:24px;background:linear-gradient(100deg,#13306f 0%,#1b2a52 35%,var(--panel) 72%);flex-wrap:wrap}",
+    // Vitrine (2026-10-07) : bannières, logos, message du staff, personnalisation.
+    ".nt-hero{position:relative;overflow:hidden;flex-wrap:nowrap}.nt-hero>*{position:relative}.nt-hero>.nt-hero-text{flex:1 1 auto;min-width:0}",
+    ".nt-hero--flag{background:linear-gradient(100deg,rgba(10,16,32,.86) 0%,rgba(10,16,32,.55) 45%,var(--panel) 85%),var(--nt-flag) center/cover no-repeat}",
+    ".nt-hero--stripes{background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 18px,transparent 18px 44px),linear-gradient(100deg,#13306f 0%,#1b2a52 40%,var(--panel) 80%)}",
+    ".nt-hero--spotlights{background:radial-gradient(ellipse 40% 90% at 18% -10%,rgba(255,236,190,.28),transparent 70%),radial-gradient(ellipse 40% 90% at 62% -10%,rgba(255,236,190,.18),transparent 70%),linear-gradient(180deg,#0e1424,#151d33 60%,var(--panel))}",
+    ".nt-hero--gold{background:linear-gradient(100deg,#6b4a12 0%,#3a2a10 38%,var(--panel) 78%);border-color:rgba(245,161,58,.45)}",
+    ".nt-logo{width:96px;height:96px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}.nt-logo svg{width:100%;height:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}",
+    ".nt-hero-jersey{margin-left:auto;display:flex;gap:10px;align-items:center;flex:0 0 auto}.nt-hero-jersey svg{display:block}",
+    ".nt-msg{border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:12px;background:var(--panel);padding:14px 16px;margin-top:14px}",
+    ".nt-msg-text{white-space:pre-line;font-size:14.5px;line-height:1.55;margin:8px 0 6px;overflow-wrap:anywhere}",
+    ".nt-msg-meta{font-size:12px;color:var(--ink-dim)}",
+    ".nt-msg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}",
+    ".nt-msg textarea{width:100%;box-sizing:border-box;min-height:110px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 11px;font:inherit;font-size:14px;resize:vertical}",
+    ".nt-msg-count{font-size:12px;color:var(--ink-dim);text-align:right}.nt-msg-count.over{color:var(--danger,#e2694f)}",
+    ".nt-msg-preview{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}",
+    ".ntv-box{max-width:760px;width:100%}",
+    ".ntv-kind{margin:14px 0 6px;font-size:11.5px;letter-spacing:.08em;color:var(--ink-dim);font-weight:800;text-transform:uppercase}",
+    ".ntv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}",
+    ".ntv-opt{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);padding:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font:inherit;font-size:12px;text-align:center;min-height:96px}",
+    ".ntv-opt.on{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}",
+    ".ntv-opt[disabled]{cursor:not-allowed;opacity:.55}",
+    ".ntv-opt .ntv-need{font-size:10.5px;color:var(--ink-dim);line-height:1.25}",
+    ".ntv-prev{width:100%;height:52px;border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}.ntv-prev svg{max-height:52px;max-width:100%}",
+    ".ntv-lock{position:absolute;top:6px;right:6px;font-size:11px;z-index:2}",
+    ".ntv-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}",
+    "@media (max-width:820px){.nt-logo{width:64px;height:64px}.nt-hero-jersey{display:none}.nt-hero{flex-wrap:wrap}}",
     ".nt-hero .nat-flag{width:120px;height:80px;border-radius:10px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.2),0 12px 30px -10px #000}",
     ".nt-kicker{font-size:11.5px;letter-spacing:.08em;color:#b8c6ee;font-weight:800;text-transform:uppercase}",
     ".nt-hero h1{font-size:36px;margin:4px 0 10px;color:#fff;line-height:1.1}",
@@ -677,18 +703,149 @@
     });
     return h + "</tbody></table></div>";
   }
+  // --- Vitrine : logo, bannière, message (2026-10-07) ----------------------
+  function V() { return window.HM_NATIONAL_VISUALS || null; }
+  function extrasOf(tv) { return (tv && tv.extras) || {}; }
+  function visualsOf(tv) {
+    var x = extrasOf(tv), Vv = V();
+    return x.visuals || (Vv ? Vv.DEFAULTS : { logo: "flag", banner: "night", jersey: "bleu", court: "nuit" });
+  }
+  var LOGO_PATHS = {
+    shield: '<path d="M50 6 88 20v28c0 24-16 38-38 46C28 86 12 72 12 48V20Z" fill="#1b2a52" stroke="#f5a13a" stroke-width="5"/>',
+    star: '<circle cx="50" cy="50" r="44" fill="#1b2a52" stroke="#f5a13a" stroke-width="5"/><path d="M50 18l9.4 19 21 3-15.2 14.8 3.6 20.9L50 65.8 31.2 75.7l3.6-20.9L19.6 40l21-3Z" fill="#f5a13a"/>',
+    ball: '<circle cx="50" cy="50" r="42" fill="#e08a2e" stroke="#1b1b1b" stroke-width="4"/><path d="M8 50h84M50 8v84M20 20c16 14 16 46 0 60M80 20c-16 14-16 46 0 60" fill="none" stroke="#1b1b1b" stroke-width="4"/>',
+    laurel: '<circle cx="50" cy="50" r="30" fill="#1b2a52" stroke="#f5a13a" stroke-width="4"/><path d="M22 78C8 62 8 38 22 22M78 78c14-16 14-40 0-56" fill="none" stroke="#3fae62" stroke-width="6" stroke-linecap="round"/><path d="M16 64l-8-2M13 50H5M16 36l-8 2M84 64l8-2M87 50h8M84 36l8 2" stroke="#3fae62" stroke-width="5" stroke-linecap="round"/>',
+    crown: '<circle cx="50" cy="50" r="44" fill="#3a2a10" stroke="#f5c84a" stroke-width="5"/><path d="M24 66 20 34l16 12 14-20 14 20 16-12-4 32Z" fill="#f5c84a"/><rect x="24" y="68" width="52" height="7" rx="2" fill="#f5c84a"/>',
+  };
+  // Logo de la sélection : drapeau (par défaut) ou emblème, code du pays
+  // en surimpression (jamais le logo d'un club).
+  function logoSvg(country, id) {
+    if (!LOGO_PATHS[id]) return null;
+    var code = esc(String(country || "").toUpperCase());
+    var label = id === "ball" ? "" : '<text x="50" y="' + (id === "shield" ? 58 : id === "laurel" ? 57 : id === "crown" ? 90 : 92) + '" text-anchor="middle" font-size="' + (id === "shield" || id === "laurel" ? 22 : 13) + '" font-weight="900" fill="#fff" font-family="inherit">' + code + "</text>";
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + LOGO_PATHS[id] + label + "</svg>";
+  }
+  function heroLogoHtml(tv) {
+    var v = visualsOf(tv), svg = logoSvg(tv.team.country, v.logo);
+    return svg ? '<div class="nt-logo" data-nt-logo="' + esc(v.logo) + '">' + svg + "</div>" : flag(tv.team.country);
+  }
+  function flagUrl(country) { return "assets/flags/" + String(country || "").toLowerCase() + ".png"; }
+  function heroAttrs(tv) {
+    var b = visualsOf(tv).banner;
+    return ' class="nt-hero' + (b && b !== "night" ? " nt-hero--" + esc(b) : "") + '" data-nt-banner="' + esc(b || "night") + '"' +
+      (b === "flag" ? ' style="--nt-flag:url(' + esc(flagUrl(tv.team.country)) + ')"' : "");
+  }
+  function jerseyItem(id) { var Vv = V(); return Vv ? Vv.itemOf("jersey", id) : null; }
+  function jerseyPreview(id, size) {
+    var it = jerseyItem(id), f = g("jerseySvgHtml");
+    if (!it || !f) return "";
+    var two = [it.color, it.color === "blanc" ? "noir" : "blanc"];
+    try { return f("A", it.color, size || 64, "home", it.pattern, two); } catch (e) { return ""; }
+  }
+  function courtPreview(id) {
+    var Vv = V(), it = Vv ? Vv.itemOf("court", id) : null, f = g("courtPreviewSvg");
+    if (!it || !f) return "";
+    try { return f(it.wood === "nuit" && !it.paint ? null : { wood: it.wood, paint: it.paint }); } catch (e) { return ""; }
+  }
+  function bannerPreview(country, id) {
+    return '<div class="nt-hero' + (id !== "night" ? " nt-hero--" + esc(id) : "") + '" style="padding:0;width:100%;height:100%;border-radius:7px' + (id === "flag" ? ";--nt-flag:url(" + esc(flagUrl(country)) + ")" : "") + '"></div>';
+  }
+  function roleName(r) { return r === "assistant" ? "adjoint" : "sélectionneur"; }
+  function messageHtml(tv) {
+    var x = extrasOf(tv), msg = x.message, max = x.messageMax || 500;
+    if (ui.msgEdit && x.canEditMessage) {
+      var draft = ui.msgDraft != null ? ui.msgDraft : (msg ? msg.text : "");
+      return '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff · modification</div>' +
+        '<textarea id="ntMsgInput" maxlength="' + esc(max) + '" placeholder="Bienvenue sur la page de la sélection ! Notre objectif cette saison…">' + esc(draft) + "</textarea>" +
+        '<div class="nt-msg-count' + (draft.length > max ? " over" : "") + '" id="ntMsgCount">' + esc(draft.length) + " / " + esc(max) + "</div>" +
+        '<div class="nt-k" style="margin-top:8px">Aperçu</div><div class="nt-msg-preview"><div class="nt-msg-text" id="ntMsgPreview">' + (draft.trim() ? esc(draft.trim()) : '<span class="nt-small">Le message apparaîtra ici.</span>') + "</div></div>" +
+        '<div class="nt-msg-actions"><button type="button" class="nt-btn" data-nt-msg-save>Publier</button><button type="button" class="nt-btn2" data-nt-msg-cancel>Annuler</button>' +
+        (msg ? '<button type="button" class="nt-btn2" data-nt-msg-delete>Supprimer le message</button>' : "") + "</div></section>";
+    }
+    if (!msg) {
+      // Visiteurs : pas de section vide ; staff autorisé : invitation à écrire.
+      return x.canEditMessage ? '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff</div><p class="nt-small" style="margin:8px 0 0">Aucun message pour l\'instant. Présentez la sélection et vos objectifs aux visiteurs.</p><div class="nt-msg-actions"><button type="button" class="nt-btn2" data-nt-msg-edit>Écrire un message</button></div></section>' : "";
+    }
+    return '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff</div><div class="nt-msg-text" data-no-i18n>' + esc(msg.text) + "</div>" +
+      '<div class="nt-msg-meta">' + (msg.by ? '<span data-no-i18n>' + esc(msg.by) + "</span>, <span>" + esc(roleName(msg.role)) + "</span> · " : "") + "<span>modifié le " + esc(dayDate(msg.at)) + "</span></div>" +
+      (x.canEditMessage ? '<div class="nt-msg-actions"><button type="button" class="nt-btn2" data-nt-msg-edit>Modifier le message</button></div>' : "") + "</section>";
+  }
+  // Fenêtre de personnalisation (sélectionneur) : bottom sheet sur mobile
+  // (.upgrade-confirm-overlay, règle UI mobile du projet).
+  function closeVisuals() { var o = document.getElementById("ntVisualsOverlay"); if (o) o.remove(); }
+  function visualsModalHtml(tv) {
+    var Vv = V(), x = extrasOf(tv), st = x.visualStats || {}, pick = ui.visPick || {};
+    var h = '<div class="upgrade-confirm-box ntv-box"><h3>Personnalisation de la sélection</h3><p class="nt-small">Purement visuel : aucun effet sur les matchs. De nouveaux éléments se débloquent avec le parcours de la sélection.</p>';
+    Vv.KINDS.forEach(function (k) {
+      var cur = pick[k] || visualsOf(tv)[k];
+      h += '<div class="ntv-kind">' + esc(Vv.KIND_LABELS[k]) + '</div><div class="ntv-grid">';
+      Vv.CATALOG[k].forEach(function (it) {
+        var open = Vv.isUnlocked(it, st);
+        var prev = k === "logo" ? (logoSvg(tv.team.country, it.id) || flag(tv.team.country)) : k === "banner" ? bannerPreview(tv.team.country, it.id) : k === "jersey" ? jerseyPreview(it.id, 46) : courtPreview(it.id);
+        h += '<button type="button" class="ntv-opt' + (cur === it.id ? " on" : "") + '" data-ntv-kind="' + k + '" data-ntv-id="' + esc(it.id) + '"' + (open ? "" : " disabled") + ' aria-pressed="' + (cur === it.id) + '">' +
+          (open ? "" : '<span class="ntv-lock" aria-label="Verrouillé">🔒</span>') + '<span class="ntv-prev">' + prev + "</span><span>" + esc(it.label) + "</span>" +
+          (open ? "" : '<span class="ntv-need">' + esc(Vv.NEEDS[it.need].label) + "</span>") + "</button>";
+      });
+      h += "</div>";
+    });
+    h += '<p class="nt-err" id="ntvErr"' + (ui.visErr ? "" : " hidden") + ">" + esc(ui.visErr || "") + "</p>";
+    return h + '<div class="ntv-actions"><button type="button" class="nt-btn2" data-ntv-cancel>Annuler</button><button type="button" class="nt-btn" data-ntv-save>Enregistrer</button></div></div>';
+  }
+  function openVisuals() {
+    var tv = ui.team;
+    if (!tv || !V() || !extrasOf(tv).canEditVisuals) return;
+    closeVisuals();
+    ui.visPick = {}; ui.visErr = "";
+    var o = document.createElement("div");
+    o.className = "upgrade-confirm-overlay";
+    o.id = "ntVisualsOverlay";
+    o.innerHTML = visualsModalHtml(tv);
+    o.addEventListener("click", function (e) {
+      if (e.target === o || (e.target.closest && e.target.closest("[data-ntv-cancel]"))) { closeVisuals(); return; }
+      var opt = e.target.closest && e.target.closest("[data-ntv-kind]");
+      if (opt && !opt.disabled) { ui.visPick[opt.dataset.ntvKind] = opt.dataset.ntvId; o.innerHTML = visualsModalHtml(ui.team); return; }
+      if (e.target.closest && e.target.closest("[data-ntv-save]")) saveVisuals(o);
+    });
+    document.body.appendChild(o);
+  }
+  function saveVisuals(o) {
+    if (ui.busy) return;
+    ui.busy = true;
+    var p = api("/api/national/visuals", { teamId: ui.team.team.id, visuals: ui.visPick || {} }).then(function (d) {
+      if (d.team) ui.team = d.team;
+      ui.visErr = ""; closeVisuals(); toast("Personnalisation enregistrée.");
+    }).catch(function (e) { ui.visErr = e.message; if (o.isConnected) o.innerHTML = visualsModalHtml(ui.team); })
+      .then(function () { ui.busy = false; paint(); });
+    window.__lastNational = p;
+    return p;
+  }
+  function saveMessage(text) {
+    if (ui.busy) return Promise.resolve();
+    ui.busy = true;
+    var p = api("/api/national/message", { teamId: ui.team.team.id, text: text }).then(function (d) {
+      if (d.team) ui.team = d.team;
+      ui.msgEdit = false; ui.msgDraft = null; ui.error = "";
+      toast(text ? "Message publié." : "Message supprimé.");
+    }).catch(function (e) { ui.error = e.message; }).then(function () { ui.busy = false; paint(); });
+    window.__lastNational = p;
+    return p;
+  }
   function teamHtml() {
     var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
     var tv = ui.team, now = Date.now();
     if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
     var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["finale", "Phase finale"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
     var h = back + '<div class="nt-tabs">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
-    h += '<div class="nt-hero">' + flag(tv.team.country) + '<div><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
+    h += "<div" + heroAttrs(tv) + ">" + heroLogoHtml(tv) + '<div class="nt-hero-text"><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : ' + esc(honoursSummary(tv)) + "</span>" +
       (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +
       // Phase B : espace du sélectionneur (assets/national-coach.js).
       // Mode Sélection : sélectionneur et membres de son staff.
-      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") + "</div></div>";
+      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") +
+      (extrasOf(tv).canEditVisuals && V() ? ' <button type="button" class="nt-btn2" data-nt-visuals>Personnaliser</button>' : "") + "</div>" +
+      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 84) + "</div></div>";
+    // Le mot du staff : en tête de l'Aperçu, identifiable par les visiteurs.
+    if (ui.teamTab === "apercu" || !ui.teamTab) h += messageHtml(tv);
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
     if (ui.teamTab === "groupe") h += '<div style="margin-top:14px">' + teamGroupeHtml(tv) + "</div>";
     else if (ui.teamTab === "calendrier") h += '<div style="margin-top:14px">' + teamCalendrierHtml(tv) + "</div>";
@@ -709,6 +866,7 @@
     if (sec && sec.classList.contains("hidden")) {
       try { window.showPage("selectionsSection"); window.setActiveTab("selections"); } catch (e) { /* page sans ces fonctions */ }
     }
+    ui.msgEdit = false; ui.msgDraft = null; closeVisuals();
     ui.teamId = id; ui.team = null; ui.teamTab = tab || "apercu"; ui.electionId = null; ui.election = null; ui.error = "";
     paint();
     var p = loadTeam(id).then(paint);
@@ -823,6 +981,13 @@
     if (d.ntOpen) { openElection(d.ntOpen, d.ntRun === "1"); return; }
     if (d.ntTeam) { openTeam(d.ntTeam); return; }
     if (d.ntTab && ui.teamId) { ui.teamTab = d.ntTab; paint(); return; }
+    // Vitrine : message du staff et personnalisation (droits vérifiés par le
+    // serveur ; boutons affichés seulement aux personnes autorisées).
+    if (d.ntVisuals !== undefined && ui.team) { openVisuals(); return; }
+    if (d.ntMsgEdit !== undefined && ui.team) { ui.msgEdit = true; ui.msgDraft = null; paint(); var ta = document.getElementById("ntMsgInput"); if (ta) ta.focus(); return; }
+    if (d.ntMsgCancel !== undefined) { ui.msgEdit = false; ui.msgDraft = null; paint(); return; }
+    if (d.ntMsgSave !== undefined && ui.team) { var inp = document.getElementById("ntMsgInput"); saveMessage(inp ? inp.value.trim() : ""); return; }
+    if (d.ntMsgDelete !== undefined && ui.team) { if (window.confirm(t("Supprimer le message de la sélection ?"))) saveMessage(""); return; }
     if (d.ntMatch) { openMatch(d.ntMatch); return; }
     if (d.ntLive) { openLive(d.ntLive); return; }
     if (d.ntGroupView && ui.teamId) { ui.groupView = d.ntGroupView; paint(); return; }
@@ -874,6 +1039,15 @@
     holder.__ntBound = true;
     holder.addEventListener("click", onClick);
     holder.addEventListener("submit", onSubmit);
+    // Message du staff : compteur et aperçu en direct pendant la saisie.
+    holder.addEventListener("input", function (e) {
+      if (!e.target || e.target.id !== "ntMsgInput") return;
+      var v = e.target.value, max = (extrasOf(ui.team).messageMax || 500);
+      ui.msgDraft = v;
+      var c = document.getElementById("ntMsgCount"), pv = document.getElementById("ntMsgPreview");
+      if (c) { c.textContent = v.length + " / " + max; c.classList.toggle("over", v.length > max); }
+      if (pv) pv.innerHTML = v.trim() ? esc(v.trim()) : '<span class="nt-small">' + esc(t("Le message apparaîtra ici.")) + "</span>";
+    });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
 
@@ -888,5 +1062,5 @@
     if (tab === "selectionneurs") return teamCoachesHtml(tv);
     return teamApercuHtml(tv, Date.now());
   }
-  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml };
+  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml, logoSvg: logoSvg, catLabel: catLabel };
 })();

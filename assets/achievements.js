@@ -71,6 +71,8 @@
   const TIER_NAMES = ["Bronze", "Argent", "Or"];
   // Dessins (trait, viewBox 0 0 24 24).
   const ICONS = {
+    // Badge « Amis » (parrainage, 2026-10-07) : deux silhouettes.
+    users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="16.5" cy="9.5" r="2.6"/><path d="M15.2 14.1c2.6-.3 4.6 1.2 5.3 4.4"/>',
     ball: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5v17M6 6c2.6 2.4 2.6 9.6 0 12M18 6c-2.6 2.4-2.6 9.6 0 12"/>',
     trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>',
     clipboard: '<rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9.5 5V3.5h5V5M9 10h6M9 13.5h6M9 17h3.5"/>',

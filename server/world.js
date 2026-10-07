@@ -498,6 +498,7 @@ function releaseClubToCpu(world, league, idx, now, reason) {
     }
   } catch (e) { /* confort */ }
   team.isHuman = false;
+  team.friendsReferrals = 0; // badge « Amis » : propre au manager (server/referrals.js)
   team.isAdmin = false;
   team.managerLinkToken = null;
   // Le pseudo appartient au manager, pas au club : un club IA n'en a pas.

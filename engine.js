@@ -4597,6 +4597,548 @@ const HOME_NATIONALITY_SHARE = 0.6;
 // 100 % de nationaux au centre de formation (retour utilisateur 2026-09-30,
 // « les joueurs du centre de formation doivent être à 100 % des nationaux »).
 const YOUTH_HOME_NATIONALITY_SHARE = 1;
+// Réservoirs de noms ENRICHIS (2026-10-07 : « enrichir fortement la base
+// des prénoms et noms […] éviter les répétitions ») : ajouts par culture,
+// utilisés pour générer les NOUVEAUX joueurs (namePoolOf). NAME_POOLS reste
+// intact : il sert aussi au nom déterministe du staff (staffIdentity, index
+// par hash) et à nationalityFromName (anciennes sauvegardes) — les modifier
+// renommerait le staff existant. Les joueurs déjà créés gardent leur nom.
+const NAME_POOLS_EXTRA = {
+  fr: {
+    first: [
+    "Alexandre", "Arthur", "Gabriel", "Raphaël", "Jules", "Adam", "Paul", "Mathéo", "Romain", "Thomas",
+      "Nicolas", "Julien", "Guillaume", "Florian", "Benjamin", "Vincent", "Alexis", "Valentin", "Dylan",
+      "Corentin", "Damien", "Jérémy", "Sébastien", "Yann", "Loïc", "Mickaël", "Steven", "Anthony", "Jonathan",
+      "Cédric", "Aurélien", "Fabien", "Pierre", "Jean-Baptiste", "Gaëtan", "Erwan", "Tristan", "Mathias",
+      "Samuel", "Ilyes", "Sofiane", "Nabil", "Mehdi", "Yassine", "Ismaël", "Abdoulaye", "Ousmane", "Cheick",
+      "Seydou", "Lassana", "Youssouf", "Bakary", "Alassane", "Wilfried", "Yohan", "Kylian", "Jessy", "Brice",
+      "Lenny", "Matthias", "Rudy", "Boris", "Nando", "Isaïa", "Sékou", "Hamidou", "Ludovic", "Johan",
+      "Timothée", "Gaël", "Joffrey"],
+    last: [
+    "Dubois", "Richard", "Thomas", "Robert", "Lefebvre", "Leroux", "David", "Bertrand", "Morin", "Mathieu",
+      "Clément", "Gautier", "Dumont", "Lopes", "Muller", "Henry", "Roussel", "Nicolas", "Perrot", "Picard",
+      "Brun", "Fabre", "Rolland", "Aubert", "Giraud", "Joly", "Gaillard", "Roger", "Roche", "Colin", "Vincent",
+      "Lemaire", "Dumas", "Huet", "Barbier", "Brunet", "Schmitt", "Leclerc", "Arnaud", "Meyer", "Gérard",
+      "Rey", "Robin", "Hubert", "Carpentier", "Dufour", "Lebrun", "Baron", "Renaud", "Royer", "Maillard",
+      "Brunel", "Guillot", "Jacquet", "Pons", "Aubry", "Hoarau", "Payet", "Leblanc", "Besson", "Delmas",
+      "Pichon", "Marty", "Prevost", "Bailly", "Lebon", "Tchicamboud", "Diawara", "Sissoko", "Doumbia",
+      "Konaté", "Sylla", "Bakayoko", "Gassama", "Soumaré", "Dembélé", "Kouyaté", "Ba", "Niang", "Seck",
+      "Mendy", "Gomis", "Faye", "Ndour", "Lô", "Ben Saïd", "Bouzid", "Belkacem", "Mansouri", "Cherif", "Hamdi",
+      "Saïdi", "Yahiaoui", "Ouattara", "Kamara", "Valette", "Joseph", "Bonneau", "Desmarais"],
+  },
+  anglo: {
+    first: [
+    "Jordan", "Derrick", "Terrence", "Malik", "Jamal", "Lamar", "Darnell", "Cameron", "Austin", "Connor",
+      "Liam", "Sean", "Patrick", "Declan", "Callum", "Lachlan", "Mitchell", "Josh", "Jake", "Nathan", "Aaron",
+      "Brendan", "Cody", "Garrett", "Tanner", "Travis", "Corey", "Damon", "Keon", "Javon", "Kendrick",
+      "Rashad", "Xavier", "Elijah", "Jerome", "Reggie", "Quentin", "Devin", "Marquis", "Cedric", "Byron",
+      "Desmond", "Kieran", "Rory", "Fergus", "Ciaran", "Oisin", "Hamish", "Angus", "Lewis", "Ethan", "Mason",
+      "Logan", "Hunter", "Bryce", "Grant", "Spencer", "Wesley", "Trevor", "Dwayne", "Kareem", "Tyson",
+      "Jarrett", "Shane", "Owen", "Harrison", "Jamar", "Brady", "Colin", "Keegan"],
+    last: [
+    "Smith", "Brown", "Jones", "Martin", "Lee", "Walker", "Hall", "Allen", "Young", "King", "Scott", "Green",
+      "Baker", "Adams", "Nelson", "Hill", "Campbell", "Roberts", "Phillips", "Evans", "Edwards", "Collins",
+      "Sanders", "Price", "Bell", "Ross", "Ward", "Watson", "Gray", "James", "Foster", "Butler", "Simmons",
+      "Barnes", "Fisher", "Graham", "Sullivan", "Wallace", "West", "Cole", "Jordan", "Owens", "Reynolds",
+      "Ellis", "Gibson", "McDonald", "Marshall", "Gordon", "Freeman", "Wells", "Hamilton", "Ford", "Mason",
+      "Holmes", "Rice", "Robertson", "Hunt", "Black", "Palmer", "Mills", "Grant", "Knight", "Ferguson",
+      "Stone", "Hawkins", "Dunn", "Perkins", "Hudson", "Spencer", "Gardner", "Stephens", "Payne", "Pierce",
+      "Berry", "Matthews", "Arnold", "Wagner", "Willis", "Ray", "Watkins", "Olsen", "Carroll", "Duncan",
+      "Snyder", "Hart", "Cunningham", "Bradley", "Lane", "Fitzgerald", "O'Connor", "Byrne", "Doyle",
+      "McCarthy", "Gallagher", "Ryan", "Kennedy", "Lynch", "Quinn", "Daly", "Brennan", "Thornton", "Fletcher",
+      "Chapman", "Lawson", "McKenzie"],
+  },
+  hisp: {
+    first: [
+    "Miguel", "Juan", "Antonio", "Fernando", "Manuel", "Francisco", "Ricardo", "Eduardo", "Raúl", "Óscar",
+      "Iván", "Rubén", "Adrián", "Víctor", "Guillermo", "Daniel", "Hugo", "Martín", "Gonzalo", "Ignacio",
+      "Joaquín", "Tomás", "Agustín", "Lucas", "Bruno", "Leandro", "Federico", "Patricio", "Esteban",
+      "Cristian", "Héctor", "Ramón", "Alberto", "Enrique", "Julio", "Lorenzo", "Marcelo", "Mauricio",
+      "Rodrigo", "Sebastián", "Felipe", "Benjamín", "Maximiliano", "Thiago", "Valentín", "Xavier", "Jaime",
+      "Íñigo", "Aitor", "Unai", "Jordi", "Pau", "Álex", "Dario", "Kevin", "Brayan", "Jonathan", "Yeison",
+      "Wilmer", "Gerardo", "Arturo", "Ángel", "Alfonso", "Gustavo", "Elías", "Abel", "Nahuel", "Bautista",
+      "Lisandro"],
+    last: [
+    "Alvarez", "Moreno", "Muñoz", "Gutierrez", "Alonso", "Castro", "Ortega", "Rubio", "Molina", "Delgado",
+      "Suarez", "Blanco", "Iglesias", "Garrido", "Cortes", "Santos", "Nuñez", "Marin", "Cabrera", "Reyes",
+      "Aguilar", "Mendez", "Guerrero", "Prieto", "Cano", "Lozano", "Cruz", "Calvo", "Gallego", "Vicente",
+      "Campos", "Vega", "Fuentes", "Carrasco", "Caballero", "Nieto", "Pascual", "Herrero", "Montero",
+      "Hidalgo", "Gimenez", "Lorenzo", "Santana", "Duran", "Ibañez", "Ferrer", "Soler", "Pastor", "Parra",
+      "Rojas", "Mora", "Salazar", "Rios", "Acosta", "Paredes", "Benitez", "Sosa", "Figueroa", "Pineda",
+      "Valencia", "Espinoza", "Escobar", "Peña", "Cardenas", "Ayala", "Zapata", "Maldonado", "Bravo",
+      "Villalobos", "Ochoa", "Arias", "Cordero", "Quiroga", "Saiz", "Aldama", "Garuba", "Barreiro",
+      "Echenique", "Zamora", "Valdés", "Carmona", "Benavides", "Olmedo", "Arroyo", "Villanueva", "Solano",
+      "Peralta", "Bermúdez", "Toledo", "Robles", "Serrano", "Velázquez", "Sepúlveda"],
+  },
+  luso: {
+    first: [
+    "André", "Diogo", "Gonçalo", "Francisco", "Miguel", "Ricardo", "Henrique", "Fábio", "Hugo", "Sérgio",
+      "Márcio", "Paulo", "Vítor", "Rodrigo", "Gabriel", "Felipe", "Matheus", "Guilherme", "Thiago", "Caio",
+      "Renan", "Igor", "Wesley", "Diego", "Marcelo", "Leonardo", "Rafinha", "Yago", "Cristiano", "Danilo",
+      "Alex", "Marquinhos", "Wellington", "Jefferson", "Everton", "Fernando", "Joel", "Hélder", "Ivo",
+      "Carlos", "Luís", "Duarte", "Tomás", "Martim", "Afonso", "Simão", "Daniel", "Emanuel", "Valdir",
+      "Ronaldo", "Fabrício", "Rogério", "Washington", "Cleiton", "Elton", "Raul", "Davi", "Arthur", "Bernardo",
+      "Lorenzo", "Eduardo", "Augusto", "Otávio", "Samuel"],
+    last: [
+    "Martins", "Sousa", "Fernandes", "Gonçalves", "Marques", "Pinto", "Correia", "Teixeira", "Cardoso",
+      "Vieira", "Fonseca", "Moreira", "Lopes", "Soares", "Machado", "Araújo", "Pires", "Batista", "Freitas",
+      "Rocha", "Dias", "Castro", "Campos", "Antunes", "Cunha", "Pinheiro", "Coelho", "Cruz", "Melo", "Borges",
+      "Leite", "Reis", "Matos", "Azevedo", "Brito", "Correa", "Barbosa", "Cavalcanti", "Nascimento", "Moraes",
+      "Ramos", "Moura", "Andrade", "Medeiros", "Farias", "Macedo", "Viana", "Peixoto", "Duarte", "Neves",
+      "Miranda", "Assis", "Bezerra", "Vasconcelos", "Magalhães", "Queiroz", "Sampaio", "Guimarães", "Rezende",
+      "Toledo", "Xavier", "Siqueira", "Prado", "Camargo", "Bastos", "Brandão", "Paiva", "Seixas", "Amaral",
+      "Figueiredo", "Valente", "Simões", "Abreu", "Mota", "Faria", "Dos Santos", "Da Silva", "Do Carmo",
+      "Benite", "Garcia", "Louzada", "Guerra", "Sobral", "Lacerda", "Quintela", "Esteves", "Rangel", "Couto",
+      "Morais", "Tenório", "Gouveia"],
+  },
+  westaf: {
+    first: [
+    "Amadou", "Oumar", "Mamadi", "Sékou", "Alassane", "Bakari", "Yacouba", "Drissa", "Malick", "Pape",
+      "Babacar", "Modou", "Serigne", "Assane", "Ibrahim", "Mohamed", "Lassana", "Daouda", "Moustapha", "Abdou",
+      "Alpha", "Thierno", "Mamady", "Karamoko", "Fodé", "Lansana", "Sidiki", "Salif", "Siaka", "Hamidou",
+      "Idrissa", "Mahamadou", "Ismaël", "Yaya", "Kalidou", "Djibril", "Cheick", "Khadim", "Saliou", "Elhadji",
+      "Mouhamed", "Bassirou", "Mamour", "Ababacar", "Sambou", "Bamba", "Adamo", "Wilfried", "Didier", "Serge",
+      "Romaric", "Habib", "Aboubacar", "Ali", "Brahima", "Tidiane", "Mory", "Kader", "Arouna", "Hassane",
+      "Ousseynou", "Pathé", "Mbaye", "Ansoumane", "Djiby", "Samba", "Ngagne"],
+    last: [
+    "Dramé", "Ba", "Seck", "Niang", "Faye", "Diouf", "Thiam", "Ndour", "Sène", "Mbengue", "Gaye", "Dieng",
+      "Kane", "Badji", "Sané", "Diatta", "Mendy", "Gomis", "Sagna", "Tall", "Wade", "Cissokho", "Samb",
+      "Diagne", "Lo", "Ndao", "Diaw", "Sall", "Ka", "Mboup", "Dembélé", "Doumbia", "Konaté", "Sissoko",
+      "Sylla", "Soumaré", "Kouyaté", "Dioubaté", "Tounkara", "Magassa", "Sacko", "Doucouré", "Maïga",
+      "Sangaré", "Bagayoko", "Konaré", "Ouattara", "Bakayoko", "Kouassi", "Koffi", "Kouamé", "N'Guessan",
+      "Konan", "Zadi", "Gnahoré", "Tapé", "Soro", "Bamogo", "Zongo", "Sawadogo", "Compaoré", "Zoungrana",
+      "Ilboudo", "Nikiéma", "Hounkpatin", "Adjovi", "Agbo", "Dossou", "Houngbédji", "Soumah", "Bangoura",
+      "Bah", "Barry", "Baldé", "Condé", "Kourouma", "Kaba", "Cissoko", "Tandia", "Gassama", "Dabo", "Diaby",
+      "Sakho", "Niakaté", "Fadiga", "Dansoko"],
+  },
+  centraf: {
+    first: [
+    "Arnaud", "Brice", "Cédric", "Fabrice", "Franck", "Guy", "Hugues", "Jean-Marie", "Jean-Pierre",
+      "Jean-Claude", "Joseph", "Loïc", "Marcel", "Martial", "Olivier", "Paul", "Pascal", "Pierre", "Raoul",
+      "Roland", "Samuel", "Stéphane", "Thierry", "Ulrich", "Valéry", "Willy", "Alain", "Aristide", "Blaise",
+      "Boris", "Cyrille", "Désiré", "Éric", "Fiston", "Gédéon", "Gires", "Glody", "Héritier", "Isaac", "Jordy",
+      "Kevin", "Merveille", "Nathan", "Prince", "Russel", "Trésor", "Yves", "Achille", "Benoît", "Bertrand",
+      "Clovis", "Daniel", "Dieudonné", "Elie", "Fréderic", "Gaël", "Gaston", "Innocent", "Jonathan", "Lionel",
+      "Moïse", "Noël", "Parfait", "Romuald", "Sylvain", "Théodore", "Vianney", "Wilfried", "Christ"],
+    last: [
+    "Nkoulou", "Essomba", "Ngono", "Abega", "Atangana", "Ateba", "Bilong", "Ekotto", "Fouda", "Manga",
+      "Mbarga", "Mbida", "Ndzana", "Nguema", "Obiang", "Owona", "Song", "Tchoumi", "Zogo", "Mballa", "Onana",
+      "Ekambi", "Engonga", "Bekale", "Mintsa", "Nzé", "Obame", "Moussavou", "Koumba", "Ndong", "Makaya",
+      "Malonga", "Mabiala", "Bouanga", "Loemba", "Ngoma", "Mavoungou", "Samba", "Tsiba", "Kimbembe", "Mulumba",
+      "Kabasele", "Mpia", "Kasongo", "Mbuyi", "Kanku", "Kabeya", "Lumbala", "Mutombo", "Tshiamala", "Banza",
+      "Kayembe", "Mwamba", "Kapinga", "Muamba", "Bokolo", "Lokonda", "Biyombo", "Mukiele", "Nzinga",
+      "Tshimanga", "Mbuyamba", "Ngalula", "Mukuna", "Kanda", "Ntumba", "Mvuezolo", "Lwamba", "Nshimiyimana",
+      "Uwimana", "Mugisha", "Hakizimana", "Ndayishimiye", "Nkurunziza", "Bizimana", "Twagirayezu",
+      "Mukeshimana", "Ndikumana", "Nzeyimana", "Gatera", "Niyonsaba", "Ishimwe", "Ngoupayou", "Tamba", "Yaba",
+      "Djimrabaye", "Mahamat", "Kossi", "Ndoumbe", "Eboa", "Bassong"],
+  },
+  nigeria: {
+    first: [
+    "Chidi", "Chukwudi", "Ifeanyi", "Nnamdi", "Kelechi", "Chinonso", "Somto", "Ebuka", "Oluwaseun",
+      "Babatunde", "Adewale", "Segun", "Kunle", "Dapo", "Tobi", "Damilola", "Ademola", "Gbenga", "Yemi",
+      "Seyi", "Musa", "Abubakar", "Ahmed", "Nonso", "Ugo", "Chibuzo", "Tochukwu", "Jide", "Bolaji"],
+    last: [
+    "Okoro", "Nwankwo", "Ogunleye", "Afolabi", "Oyelaran", "Adeleke", "Ajayi", "Akinwande", "Bello", "Ibrahim",
+      "Abdullahi", "Okoye", "Nwachukwu", "Uzoma", "Onyeka", "Ogbonna", "Ekwueme", "Agu", "Ani", "Chukwu",
+      "Ezeh", "Ikenna", "Nnaji", "Odum", "Olaniyan", "Oladipo", "Olatunji", "Oshodi", "Adeniyi", "Fashola",
+      "Ogunbanjo", "Adeyinka", "Onuaku", "Aminu", "Diogu", "Nwaba", "Okogie", "Udoh", "Etim"],
+  },
+  sudan: {
+    first: [
+    "Thon", "Bol", "Ajak", "Makur", "Mayen", "Kuany", "Akol", "Dut", "Ater", "Bior", "Malual", "Madut", "Arop",
+      "Aguer", "Achuoth", "Mabor", "Lual", "Yien", "Gatluak", "Peter", "John", "Dau", "Kuir", "Wal", "Mangok"],
+    last: [
+    "Jok", "Thon", "Marial", "Kuol", "Akol", "Dut", "Wal", "Lual", "Mabior", "Atem", "Akot", "Chol", "Madut",
+      "Ayuel", "Bior", "Malual", "Manyang", "Riak", "Aguer", "Mading", "Gai", "Kiir", "Ngor", "Ajang", "Arop",
+      "Lado", "Lomoro", "Wani", "Juuk", "Kuac", "Mawien", "Yak", "Gatkuoth", "Duoth", "Ayom", "Bany"],
+  },
+  arab: {
+    first: [
+    "Mohamed", "Ali", "Hassan", "Hussein", "Khaled", "Mahmoud", "Mustafa", "Ibrahim", "Yassine", "Amine",
+      "Bilal", "Ilyas", "Ismail", "Jamal", "Nabil", "Rachid", "Said", "Sofiane", "Adel", "Bassel", "Fares",
+      "Hadi", "Jad", "Karam", "Majed", "Nader", "Rayan", "Salim", "Tamer", "Wassim", "Yahya", "Zakaria",
+      "Abdelkader", "Abdallah", "Mounir", "Driss", "Hicham", "Othmane", "Achraf", "Badr", "Taha", "Soufiane",
+      "Ayoub", "Reda", "Lotfi", "Riad", "Nizar", "Chadi", "Elie", "Georges", "Jihad", "Marwan", "Rabih",
+      "Sami", "Wael", "Ziyad", "Mazen", "Qais", "Faisal", "Nasser", "Abdulrahman", "Saad", "Hatem", "Aymen",
+      "Seif", "Firas", "Ghassan"],
+    last: [
+    "Bennani", "Alaoui", "Berrada", "Tazi", "El Idrissi", "Chraibi", "Lahlou", "Fassi", "Ziani", "Benjelloun",
+      "Belhadj", "Bouzid", "Brahimi", "Mebarki", "Hamdi", "Saidi", "Bouaziz", "Trabelsi", "Jaziri", "Ben Ali",
+      "Gharbi", "Hammami", "Chebbi", "Jebali", "Mejri", "Ayari", "Abdel Nour", "Farouk", "Hamdy", "Shalaby",
+      "Soliman", "Fathy", "Ezzat", "Abdelaziz", "Ragab", "Ashour", "Sabry", "Zaki", "Abou Chakra", "Haidar",
+      "Karam", "Khoury", "Nassar", "Saad", "Sleiman", "Tannous", "Hayek", "Mouawad", "Aoun", "Frem", "Gemayel",
+      "Nakhle", "Abdallah", "Al Masri", "Al Hashemi", "Qasem", "Hijazi", "Tamimi", "Obeidat", "Zoubi",
+      "Al Kuwari", "Al Mohannadi", "Al Sulaiti", "Abdulla", "Kamel", "Rahmani", "Mansouri", "Boukhari",
+      "Benyahia", "Djebbar", "Lakhdari", "Hamrouni", "Ouali", "Slimani", "Belkacem", "Zerrouki", "Benamar",
+      "Kaddour", "Bensalem", "Rezgui", "Dridi", "Ksouri", "Mrad", "Sfar", "Chaabane", "Khiari", "Lahmar",
+      "Messaoudi", "Yacoubi", "Baccar", "Ghanem", "Sabbagh", "Toumi", "Hamidi"],
+  },
+  haiti: {
+    first: [
+    "Jean-Robert", "Frantz", "Wilner", "Jocelyn", "Emmanuel", "Junior", "Ronald", "Pierre-Richard", "Johnny",
+      "Jonel", "Sony", "Carl", "Marc-Kendy", "Kensly", "Woodley", "Ralph", "Duckens", "Herby", "Wedson",
+      "Sterling", "Kevens", "Jephte", "Vladimir", "Garry", "Didier", "Fritzner", "Jacky", "Ludovic"],
+    last: [
+    "Etienne", "Jacques", "Michel", "François", "Paul", "Alexis", "Celestin", "Dorval", "Thermidor", "Lafleur",
+      "Toussaint", "Dessalines", "Charlemagne", "Philogène", "Exantus", "Fleurimond", "Germain", "Hyppolite",
+      "Jeudi", "Lamour", "Métellus", "Noël", "Paulino", "Remy", "Saintil", "Théodore", "Valcourt", "Belizaire",
+      "Bien-Aimé", "Casimir", "Delva", "Estimé", "Fils-Aimé", "Georges", "Lubin", "Mondésir", "Narcisse",
+      "Placide"],
+  },
+  iran: {
+    first: [
+    "Ali", "Hossein", "Amir", "Mehdi", "Saeed", "Mostafa", "Javad", "Hamid", "Farhad", "Kian", "Navid",
+      "Pouya", "Sina", "Babak", "Kaveh", "Dariush", "Omid", "Siavash", "Arash", "Bahram", "Milad", "Ehsan",
+      "Vahid", "Nima", "Shahin", "Payam", "Sajjad"],
+    last: [
+    "Hosseini", "Ahmadi", "Karimi", "Hashemi", "Moradi", "Sadeghi", "Rahimi", "Ebrahimi", "Ghorbani", "Jafari",
+      "Akbari", "Mousavi", "Rostami", "Farahani", "Tehrani", "Bagheri", "Nazari", "Kamrani", "Davoudi",
+      "Afshar", "Golzar", "Alizadeh", "Hamidi", "Soltani", "Mirzaei", "Shirazi", "Esfahani", "Zarei", "Abbasi",
+      "Fazeli", "Khosravi", "Najafi", "Salehi", "Taheri", "Vaezi", "Arabi", "Kardoust", "Mashayekhi"],
+  },
+  israel: {
+    first: [
+    "Amit", "Gal", "Eyal", "Nadav", "Roy", "Tal", "Yonatan", "Noam", "Ido", "Ariel", "Avi", "Shay", "Yuval",
+      "Oren", "Daniel", "Elad", "Assaf", "Bar", "Ofek", "Raz", "Shon", "Matan", "Nimrod", "Barak", "Yogev",
+      "Gil", "Omer"],
+    last: [
+    "Biton", "Dahan", "Avraham", "Katz", "Shapira", "Goldberg", "Azoulay", "Ohayon", "Malka", "Amar", "Gabay",
+      "Hadad", "Ben-Ami", "Shalom", "Klein", "Rosen", "Weiss", "Segal", "Kaplan", "Ashkenazi", "Yosef",
+      "Elbaz", "Zur", "Golan", "Ben-Haim", "Tzur", "Navon", "Gershon", "Eliyahu", "Sharon", "Oved", "Harari",
+      "Carmi", "Ziv", "Tamari", "Barel", "Shemesh"],
+  },
+  turkish: {
+    first: [
+    "Ahmet", "Ali", "Mustafa", "Murat", "Serkan", "Kaan", "Ersan", "Sinan", "Onuralp", "Ercan", "Tolga",
+      "Volkan", "Yiğit", "Can", "Arda", "Doruk", "Efe", "Ege", "Mert", "Barış", "Onur", "Oğuz", "Cem", "Deniz",
+      "Umut", "Kemal", "Selim", "Tunç", "Batuhan", "Eren", "Emir", "Yusuf", "Okan", "Gökhan", "Semih", "Tarık",
+      "Uğur", "Sertaç", "Sadık", "Şehmus", "Melih", "Hidayet", "Ender", "Kenan", "İlkan", "Berkay", "Erkan",
+      "Sarp", "Hüseyin", "Halil", "İbrahim", "Erdem", "Taner", "Engin", "Koray", "Yunus", "Alper", "Bora",
+      "Orhan", "Rıdvan", "Muhsin", "Erhan", "Tuncay", "Zafer", "Fatih", "Cenk", "Ozan"],
+    last: [
+    "Yıldız", "Yıldırım", "Özdemir", "Aslan", "Kılıç", "Kara", "Koç", "Kurt", "Özkan", "Şimşek", "Polat",
+      "Erdoğan", "Ünal", "Güneş", "Aksoy", "Bulut", "Çetin", "Kaplan", "Tekin", "Yavuz", "Avcı", "Taş", "Akın",
+      "Karaca", "Altun", "Erdem", "Güler", "Bozkurt", "Uçar", "Coşkun", "Keskin", "Sarı", "Önal", "Kalkan",
+      "Ateş", "Duman", "Çakır", "Toprak", "Özer", "Gündoğdu", "Yüksel", "Aydoğan", "Bayram", "Turan", "Işık",
+      "Kocabaş", "Sönmez", "Akbulut", "Tunç", "Uysal", "Ergin", "Acar", "Başaran", "Şen", "Karakaya", "Okur",
+      "Arslanoğlu", "Balbay", "Sipahi", "Ilyasoglu", "Savaş", "Akyüz", "Kurtuluş", "Pekin", "Önder", "Atsür",
+      "Gönlüm", "Akpınar", "Yalçın", "Çolak", "Ekinci", "Karataş", "Demirci", "Aktaş", "Kahraman", "Soylu",
+      "Tatlı", "Ayhan", "Oral", "Alkan", "Elmas", "Durmaz", "Bilgin", "Gürsoy", "Kartal", "Sezer", "Ceylan",
+      "Eroğlu", "Akgül", "Türkmen"],
+  },
+  balkan: {
+    first: [
+    "Milan", "Dušan", "Nenad", "Vladimir", "Uroš", "Vuk", "Ognjen", "Lazar", "Petar", "Đorđe", "Dejan",
+      "Goran", "Zoran", "Darko", "Boban", "Srđan", "Igor", "Željko", "Predrag", "Vlade", "Novica", "Dalibor",
+      "Branko", "Bojan", "Dino", "Ante", "Josip", "Tomislav", "Krešimir", "Hrvoje", "Domagoj", "Mateo", "Roko",
+      "Toni", "Zvonimir", "Damir", "Edin", "Emir", "Adnan", "Mirza", "Amar", "Kenan", "Haris", "Elvir",
+      "Jasmin", "Samir", "Dženan", "Klemen", "Žan", "Jaka", "Rok", "Blaž", "Gašper", "Aljaž", "Žiga", "Nejc",
+      "Vasa", "Mihailo", "Andrija", "Strahinja", "Vanja", "Pavle", "Boris", "Danilo", "Rade", "Slobodan",
+      "Velimir"],
+    last: [
+    "Popović", "Đorđević", "Stojković", "Ilić", "Stanković", "Milošević", "Kostić", "Ristić", "Lazić", "Tomić",
+      "Živković", "Obradović", "Mitrović", "Savić", "Vasić", "Antić", "Đukić", "Radovanović", "Bjelić",
+      "Marinković", "Davidovac", "Milutinov", "Raduljica", "Tepić", "Veselinović", "Lučić", "Babić",
+      "Knežević", "Blažević", "Jurić", "Kovačević", "Marić", "Perić", "Matić", "Grgić", "Šimić", "Pavić",
+      "Planinić", "Zubac", "Bender", "Delaš", "Prkačin", "Rudež", "Kuzmić", "Hodžić", "Begić", "Mehmedović",
+      "Hadžić", "Delić", "Suljić", "Alibegović", "Šehović", "Musić", "Ibrahimović", "Kurtović", "Bašić",
+      "Nakić", "Nachbar", "Vidmar", "Zupan", "Kralj", "Košnik", "Potočnik", "Golob", "Rebec", "Blažič",
+      "Muratović", "Dimitrijević", "Bošnjak", "Gligorović", "Nikolovski", "Stojanovski", "Ivanovski",
+      "Trajkovski", "Ilievski", "Bajramović", "Radonjić", "Dubljević", "Mugoša", "Ivanović", "Pavićević",
+      "Radunović", "Vujačić"],
+  },
+  albanian: {
+    first: [
+    "Blerim", "Agon", "Ardit", "Fatos", "Genc", "Granit", "Ilir", "Liridon", "Mergim", "Albin", "Arlind",
+      "Bujar", "Dardan", "Edon", "Endrit", "Flamur", "Gentian", "Klodian", "Lorik", "Lumbardh", "Shkelzen",
+      "Taulant", "Visar", "Ylber", "Arjan", "Erion", "Altin"],
+    last: [
+    "Rexhepi", "Hasani", "Ahmeti", "Osmani", "Shehu", "Hyseni", "Zeqiri", "Bajrami", "Mustafa", "Syla",
+      "Kastrati", "Limani", "Gjoka", "Dervishi", "Cela", "Kola", "Leka", "Prenga", "Marku", "Gjoni", "Hysa",
+      "Sadiku", "Basha", "Ramadani", "Thaçi", "Begolli", "Halimi", "Kryeziu", "Avdiu", "Musliu", "Rama",
+      "Duka", "Toska", "Mehmeti", "Lika", "Spahiu"],
+  },
+  greek: {
+    first: [
+    "Ioannis", "Konstantinos", "Nikolaos", "Christos", "Michalis", "Spyros", "Stavros", "Theodoros",
+      "Alexandros", "Evangelos", "Apostolos", "Stelios", "Lefteris", "Antonis", "Manolis", "Fotis", "Pavlos",
+      "Petros", "Sotiris", "Charalampos", "Ilias", "Anastasios", "Panos", "Thodoris", "Giorgos", "Yiannis",
+      "Stratos", "Kyriakos", "Lazaros", "Marios", "Achilleas", "Aris", "Angelos", "Babis", "Diamantis",
+      "Efthymios", "Filippos", "Gerasimos", "Iason", "Kleanthis", "Leonidas", "Miltiadis", "Nektarios",
+      "Odysseas", "Orestis", "Paraskevas", "Prodromos", "Rafail", "Savvas", "Sakis", "Takis", "Timotheos",
+      "Vangelis", "Xenofon", "Tasos", "Thanos", "Iraklis", "Periklis", "Christoforos", "Emmanouil", "Dionysis",
+      "Grigoris", "Kosmas", "Minas", "Nikitas", "Rigas", "Stamatis", "Lampros", "Argyris"],
+    last: [
+    "Pappas", "Nikolaidis", "Karagiannis", "Vlachos", "Angelopoulos", "Konstantinidis", "Oikonomou",
+      "Papadakis", "Antoniou", "Makris", "Ioannidis", "Georgiadis", "Papageorgiou", "Theodorou", "Christou",
+      "Athanasiou", "Michailidis", "Pavlidis", "Panagiotopoulos", "Alexiou", "Kostopoulos", "Stavropoulos",
+      "Giannakopoulos", "Dimopoulos", "Kaimakoglou", "Agravanis", "Kalaitzakis", "Charalampopoulos",
+      "Bochoridis", "Kavvadas", "Mavrokefalidis", "Vougioukas", "Tsairelis", "Lountzis", "Gkikas",
+      "Rogkavopoulos", "Kouzeloglou", "Toliopoulos", "Moraitis", "Chougkaz", "Kalampokis", "Sakellariou",
+      "Xanthopoulos", "Lazaridis", "Triantafyllou", "Tsakalidis", "Stergiou", "Kyriakidis", "Raptis",
+      "Galanis", "Kontos", "Floros", "Sotiriou", "Haritonidis", "Kokkinos", "Papoutsis", "Zafeiriou", "Liapis",
+      "Vasileiou", "Petrakis", "Kanellopoulos", "Psarras", "Drakos", "Kotsis", "Delis", "Manolakis", "Sideris",
+      "Tsiolis", "Arvanitis", "Economou", "Kouris", "Lambrou", "Mavridis", "Nikolaou", "Panou", "Rizos",
+      "Samaras", "Tzanis", "Vardakis", "Zervas", "Kostakis", "Livanos", "Gounaris", "Chatzis"],
+  },
+  italian: {
+    first: [
+    "Giovanni", "Giuseppe", "Francesco", "Antonio", "Lorenzo", "Riccardo", "Tommaso", "Federico", "Gabriele",
+      "Davide", "Pietro", "Filippo", "Emanuele", "Michele", "Paolo", "Roberto", "Fabio", "Daniele", "Massimo",
+      "Gianluca", "Claudio", "Giorgio", "Edoardo", "Leonardo", "Mattia", "Christian", "Diego", "Alberto",
+      "Gianmarco", "Achille", "Amedeo", "Ettore", "Giacomo", "Guglielmo", "Jacopo", "Manuel", "Mirko",
+      "Nicola", "Raffaele", "Salvatore", "Sergio", "Valerio", "Vincenzo", "Carlo", "Dario", "Enrico",
+      "Fabrizio", "Gabriel", "Ivan", "Luigi", "Mauro", "Ottavio", "Saverio", "Umberto", "Walter", "Alessio",
+      "Cesare", "Elia", "Flavio", "Gianni", "Marcello", "Pasquale", "Rocco", "Samuele", "Tiziano", "Vittorio",
+      "Brando", "Aldo", "Bruno", "Gino"],
+    last: [
+    "Russo", "Gallo", "Costa", "Fontana", "Caruso", "Mancini", "Rizzo", "Lombardi", "Moretti", "Barbieri",
+      "Ferrara", "Santoro", "Mariani", "Rinaldi", "Caputo", "Ferri", "Fabbri", "Galli", "Martini", "Leone",
+      "Longo", "Gentile", "Martinelli", "Vitale", "Lombardo", "Serra", "Coppola", "De Santis", "D'Angelo",
+      "Marchetti", "Parisi", "Villa", "Conte", "Ferraro", "Bianco", "Valentini", "Pellegrini", "Palumbo",
+      "Sanna", "Farina", "Rizzi", "Monti", "Cattaneo", "Morelli", "Amato", "Silvestri", "Mazza", "Testa",
+      "Grassi", "Pellegrino", "Carbone", "Giuliani", "Benedetti", "Barone", "Marini", "Bellini", "Basile",
+      "Riva", "Donati", "Piras", "Vitali", "Battaglia", "Sartori", "Neri", "Costantini", "Milani", "Pagano",
+      "Ruggiero", "Sala", "De Luca", "Fumagalli", "Bassi", "Orlando", "Messina", "D'Amico", "Bonetti",
+      "Datome", "Procida", "Severini", "Abass", "Cinciarini", "Moraschini", "Biligha", "Tessitori", "Aradori",
+      "Cusin", "Crosariol", "Gigli", "Bortolani"],
+  },
+  malta: {
+    first: [
+    "Joseph", "Mark", "Daniel", "Nicholas", "Andrew", "Ryan", "Jake", "Aiden", "Liam", "Gabriel", "Karl",
+      "Clayton", "Neil", "Ivan", "Keith", "Jeremy", "Christian", "Dylan", "Michael", "Steve", "Adrian", "Owen",
+      "Nathan", "Luca", "Zachary", "Carl"],
+    last: [
+    "Grech", "Attard", "Spiteri", "Azzopardi", "Agius", "Mifsud", "Pace", "Sammut", "Micallef", "Cassar",
+      "Calleja", "Caruana", "Fenech", "Debono", "Saliba", "Cauchi", "Mallia", "Gauci", "Schembri", "Muscat",
+      "Xuereb", "Bonnici", "Bugeja", "Abela", "Zahra", "Grima", "Ellul", "Aquilina", "Pisani", "Psaila",
+      "Tabone", "Formosa", "Busuttil", "Buttigieg", "Cutajar", "Dimech", "Chetcuti", "Gatt"],
+  },
+  dutch: {
+    first: [
+    "Lars", "Daan", "Luuk", "Stijn", "Joris", "Koen", "Tim", "Jeroen", "Wouter", "Mark", "Pieter", "Jasper",
+      "Bart", "Dirk", "Floris", "Gijs", "Hidde", "Jelle", "Joost", "Maarten", "Mats", "Mees", "Milan", "Olaf",
+      "Roel", "Siem", "Teun", "Tijn", "Vincent", "Wessel", "Yannick", "Arnout", "Charlon", "Worthy", "Keye",
+      "Nicolas", "Arthur", "Jonas", "Hans", "Wout", "Kobe", "Senne", "Jens", "Seppe", "Lowie", "Brecht",
+      "Robbe", "Arne", "Mathias", "Ward", "Tibo", "Pieterjan", "Jorn", "Dries", "Siebe", "Jarno", "Matisse",
+      "Emiel", "Quinten", "Thomas", "Maxim", "Dennis", "Jordy", "Kees", "Rik", "Sven", "Tom", "Dimitri",
+      "Rens", "Joep"],
+    last: [
+    "De Vries", "Van Dijk", "Jansen", "Smit", "Meijer", "De Boer", "Bos", "Vos", "Peters", "Hendriks",
+      "Van Leeuwen", "Dijkstra", "Brouwer", "De Graaf", "Kuipers", "Van Beek", "Vermeulen", "Van Dam",
+      "Verhoeven", "Kok", "Jacobs", "Schouten", "Van Wijk", "Post", "Kramer", "Prins", "Blom", "Huisman",
+      "Wouters", "Mertens", "Dubois", "Lambrechts", "Goossens", "Hermans", "Vermeiren", "Michiels",
+      "De Clercq", "Van Damme", "Desmet", "Verbeke", "Vandenberghe", "Coppens", "Martens", "Leclercq", "Cools",
+      "Aerts", "Hendrickx", "Van Hoof", "Pauwels", "Verstraete", "Bogaert", "De Backer", "Gielen",
+      "Timmermans", "Lemmens", "Smeets", "Vandamme", "Tumba", "Lecomte", "Van Loon", "Hoekstra", "Postma",
+      "Bosman", "Groot", "Veenstra", "Kroon", "Driessen", "Koster", "Maas", "Van Oosten", "Hoogland",
+      "Schipper", "Wolters", "Van Rijn", "De Wit", "Molenaar", "Ruiter", "Teeuwen", "Verbruggen", "Geens",
+      "Gillet", "Craenen", "De Ridder", "Dewit", "Bruyninckx", "Vanwijn", "Tabu"],
+  },
+  german: {
+    first: [
+    "Paul", "Leon", "Felix", "Jonas", "Luca", "Tim", "Niklas", "Jan", "Philipp", "Florian", "Tobias",
+      "Sebastian", "Christian", "Fabian", "Julian", "Kevin", "Patrick", "Marcel", "Stefan", "Thomas", "Markus",
+      "Michael", "Alexander", "Benedikt", "Konstantin", "Leonard", "Elias", "Noah", "Ben", "Finn", "Henri",
+      "Jakob", "Karl", "Ludwig", "Matthias", "Nils", "Oliver", "Robin", "Simon", "Timo", "Vincent", "Kilian",
+      "Malte", "Jannik", "Hendrik", "Till", "Lennart", "Anton", "Bastian", "Carsten", "Dirk", "Jens", "Lars",
+      "Sven", "Torsten", "Johann", "Erik", "Tibor", "Ole", "Mats", "Justus", "Linus", "Marvin", "Joshua",
+      "Ariel", "Kenneth", "Malik", "Danilo", "Nelson", "Ismet"],
+    last: [
+    "Meyer", "Wolf", "Schulz", "Koch", "Bauer", "Klein", "Lange", "Schmitt", "Werner", "Krause", "Meier",
+      "Lehmann", "Schmid", "Schulze", "Maier", "Köhler", "Herrmann", "König", "Walter", "Mayer", "Huber",
+      "Kaiser", "Fuchs", "Peters", "Lang", "Scholz", "Möller", "Weiß", "Jung", "Hahn", "Schubert", "Vogel",
+      "Friedrich", "Günther", "Frank", "Berger", "Winkler", "Roth", "Beck", "Lorenz", "Baumann", "Franke",
+      "Albrecht", "Schuster", "Simon", "Ludwig", "Böhm", "Winter", "Kraus", "Martin", "Schumacher", "Krüger",
+      "Vogt", "Stein", "Jäger", "Otto", "Sommer", "Groß", "Seidel", "Heinrich", "Brandt", "Haas", "Schreiber",
+      "Graf", "Dietrich", "Ziegler", "Kuhn", "Pohl", "Engel", "Horn", "Busch", "Bergmann", "Thomas", "Sauer",
+      "Arnold", "Wolff", "Pfeiffer", "Benzing", "Sengfelder", "Giffey", "Lo", "Wimberg", "Kleber", "Barthel",
+      "Saibou", "Schilling", "Ugrai", "Lucic", "Pleiß", "Kramer", "Hollatz", "Osterhage", "Weidemann"],
+  },
+  baltic: {
+    first: [
+    "Mantas", "Paulius", "Lukas", "Marius", "Darius", "Gediminas", "Šarūnas", "Arnas", "Ignas", "Dovydas",
+      "Justas", "Vytautas", "Žygimantas", "Tadas", "Edgaras", "Laurynas", "Matas", "Deividas", "Augustas",
+      "Martynas", "Linas", "Eimantas", "Kęstutis", "Aurimas", "Gintaras", "Rimantas", "Vaidas", "Artūras",
+      "Andrius", "Nojus", "Kipras", "Emilis", "Jānis", "Mārtiņš", "Artūrs", "Edgars", "Kārlis", "Andris",
+      "Rihards", "Roberts", "Aigars", "Uģis", "Raimonds", "Toms", "Klāvs", "Ēriks", "Reinis", "Gints",
+      "Kristers", "Aleksejs", "Arnis", "Kaarel", "Rasmus", "Siim", "Tanel", "Rauno", "Henri", "Kristjan",
+      "Mihkel", "Joonas", "Karl", "Sten", "Kristo", "Matthias", "Hugo", "Gregor", "Andres", "Janari"],
+    last: [
+    "Jankauskas", "Stankevičius", "Vasiliauskas", "Žukauskas", "Butkus", "Paulauskas", "Urbonas",
+      "Kavaliauskas", "Rimkus", "Navickas", "Jonaitis", "Mockus", "Šimkus", "Balčiūnas", "Kairys", "Bružas",
+      "Juškevičius", "Javtokas", "Seibutis", "Birutis", "Giedraitis", "Echodas", "Masiulis", "Tubelis",
+      "Butkevičius", "Dimša", "Milaknis", "Pocius", "Šeškus", "Varnas", "Bendžius", "Lipkevičius",
+      "Kariniauskas", "Ambrazas", "Daunoras", "Rutkauskas", "Vaitkus", "Zabulionis", "Bērziņš", "Kalniņš",
+      "Ozoliņš", "Liepiņš", "Krūmiņš", "Jansons", "Ozols", "Vītols", "Kļaviņš", "Zariņš", "Pētersons",
+      "Freimanis", "Mejeris", "Šmits", "Blūms", "Lomažs", "Žagars", "Grīnvalds", "Šķēle", "Čavars",
+      "Bukovskis", "Dairis", "Kārkliņš", "Kask", "Saar", "Sepp", "Mägi", "Kukk", "Rebane", "Ilves", "Pärn",
+      "Koppel", "Raudsepp", "Kuusk", "Lepik", "Oja", "Kivi", "Lõhmus", "Põder", "Vene", "Kangur", "Dorbek",
+      "Drell", "Jürgens", "Kitsing", "Nurger"],
+  },
+  slavic: {
+    first: [
+    "Piotr", "Paweł", "Michał", "Krzysztof", "Tomasz", "Marcin", "Łukasz", "Kamil", "Szymon", "Adrian",
+      "Dawid", "Bartosz", "Wojciech", "Przemysław", "Grzegorz", "Sebastian", "Maciej", "Filip", "Kacper",
+      "Karol", "Jan", "Jiří", "Petr", "Pavel", "Martin", "Lukáš", "Vojtěch", "Jaroslav", "Patrik", "Matěj",
+      "Šimon", "Adam", "Dominik", "Marek", "Radoslav", "Juraj", "Peter", "Miroslav", "Andrej", "Samuel",
+      "Ladislav", "Branislav", "Mykola", "Andriy", "Bohdan", "Taras", "Yurii", "Vitalii", "Serhii", "Maksym",
+      "Artem", "Viacheslav", "Volodymyr", "Ihor", "Nazar", "Denys", "Kyrylo", "Dimitar", "Nikolay", "Hristo",
+      "Stanimir", "Todor", "Kaloyan", "Aleksandar", "Pavlin", "Yordan", "Bozhidar", "Vasil", "Emil", "Stoyan"],
+    last: [
+    "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Woźniak",
+      "Dąbrowski", "Kozłowski", "Jankowski", "Mazur", "Wojciechowski", "Kwiatkowski", "Krawczyk", "Kaczmarek",
+      "Piotrowski", "Grabowski", "Zając", "Pawłowski", "Michalski", "Król", "Wieczorek", "Jabłoński", "Wróbel",
+      "Nowakowski", "Majewski", "Olszewski", "Stępień", "Szewczyk", "Lampe", "Hrycaniuk", "Kulig", "Michalak",
+      "Waczyński", "Sokołowski", "Dvořák", "Svoboda", "Novák", "Černý", "Procházka", "Kučera", "Krejčí",
+      "Němec", "Pokorný", "Marek", "Pospíšil", "Hájek", "Jelínek", "Král", "Růžička", "Beneš", "Fiala",
+      "Sedláček", "Doležal", "Zeman", "Kolář", "Navrátil", "Čermák", "Vaněk", "Bohačík", "Kriško", "Mokoš",
+      "Krajčovič", "Horváth", "Baláž", "Šimko", "Hudák", "Kováč", "Varga", "Kravchenko", "Kovalenko",
+      "Bondarenko", "Shevchenko", "Tkachenko", "Boyko", "Kovalchuk", "Melnyk", "Lysenko", "Marchenko",
+      "Rudenko", "Savchenko", "Petrenko", "Pustovyi", "Lypovyy", "Herun", "Bobrov", "Kravtsov", "Stoyanov",
+      "Todorov", "Nikolov", "Angelov", "Hristov", "Kolev", "Iliev", "Marinov", "Mladenov", "Yankov",
+      "Atanasov", "Zhelev", "Tsonev"],
+  },
+  romanian: {
+    first: [
+    "Ștefan", "Cristian", "Bogdan", "Florin", "Gabriel", "Adrian", "Marius", "Cosmin", "Ionuț", "Răzvan",
+      "Sorin", "Dragoș", "Cătălin", "Mircea", "Victor", "Tudor", "Lucian", "Ovidiu", "Daniel", "Emil",
+      "Sergiu", "Vasile", "George", "Darius", "Robert", "Nicolae"],
+    last: [
+    "Popa", "Constantin", "Stoica", "Gheorghe", "Matei", "Ciobotaru", "Moldovan", "Lazăr", "Florea", "Barbu",
+      "Toma", "Dinu", "Marin", "Ene", "Iordache", "Nistor", "Tănase", "Mihăilescu", "Diaconu", "Neagu",
+      "Oprea", "Manole", "Nedelcu", "Voicu", "Sima", "Pavel", "Cristea", "Zamfir", "Dobre", "Ungureanu",
+      "Preda", "Vlad", "Lungu", "Cojocaru", "Avram", "Enache", "Badea"],
+  },
+  hungarian: {
+    first: [
+    "Gábor", "László", "István", "Attila", "Balázs", "Tamás", "Gergely", "Norbert", "Krisztián", "Levente",
+      "Máté", "Bálint", "Dániel", "Ákos", "Csaba", "Viktor", "Benedek", "Barnabás", "Kristóf", "Botond",
+      "Zsolt", "Szabolcs", "Ferenc", "Tibor", "András", "Milán"],
+    last: [
+    "Kiss", "Molnár", "Németh", "Farkas", "Balogh", "Papp", "Takács", "Juhász", "Lakatos", "Mészáros", "Oláh",
+      "Simon", "Rácz", "Fekete", "Szilágyi", "Török", "Fehér", "Balázs", "Gál", "Kis", "Szűcs", "Kocsis",
+      "Orsós", "Pintér", "Fodor", "Szalai", "Sipos", "Magyar", "Lukács", "Gulyás", "Biró", "Király", "Katona",
+      "Bogdán", "Jakab", "Somogyi", "Vida", "Váradi"],
+  },
+  georgian: {
+    first: [
+    "Davit", "Nika", "Lasha", "Irakli", "Luka", "Saba", "Giga", "Beka", "Vakhtang", "Zurab", "Shota", "Tamaz",
+      "Archil", "Gela", "Mikheil", "Otar", "Revaz", "Badri", "Merab", "Nodar", "Aleksandre", "Demetre",
+      "Tengiz", "Guram", "Kakha", "Lado", "Koba"],
+    last: [
+    "Tskitishvili", "Sanikidze", "Burjanadze", "Markoishvili", "Kiknadze", "Gogoladze", "Lomidze",
+      "Maisuradze", "Japaridze", "Chikhladze", "Giorgadze", "Abashidze", "Chkheidze", "Nozadze",
+      "Khutsishvili", "Natsvlishvili", "Gogia", "Jgerenaia", "Kharaishvili", "Mchedlidze", "Kobakhidze",
+      "Tsiklauri", "Kvirikashvili", "Shonia", "Gvasalia", "Gogichaishvili", "Dolidze", "Zhvania", "Bakradze",
+      "Lortkipanidze", "Tsereteli", "Gamkrelidze", "Mikadze", "Kurtanidze", "Jorbenadze", "Svanidze"],
+  },
+  armenian: {
+    first: [
+    "Hayk", "Gor", "Arman", "Vahe", "Karen", "Hovhannes", "Ashot", "Gevorg", "Sargis", "Levon", "Artur",
+      "Edgar", "Ruben", "Samvel", "Vardan", "Artyom", "Hrant", "Suren", "Garik", "Mher", "Erik", "Mikayel",
+      "Vazgen", "Khachatur", "Robert"],
+    last: [
+    "Avetisyan", "Karapetyan", "Gevorgyan", "Khachatryan", "Vardanyan", "Mkrtchyan", "Martirosyan",
+      "Hovhannisyan", "Ghazaryan", "Margaryan", "Sahakyan", "Mnatsakanyan", "Galstyan", "Simonyan",
+      "Hambardzumyan", "Aslanyan", "Avagyan", "Arakelyan", "Melkonyan", "Ohanyan", "Danielyan", "Asatryan",
+      "Babayan", "Hovsepyan", "Manukyan", "Zakaryan", "Minasyan", "Davtyan", "Kirakosyan", "Poghosyan",
+      "Stepanyan", "Ghukasyan", "Mikayelyan", "Nazaryan", "Movsisyan", "Aghajanyan", "Torosyan"],
+  },
+  nordic: {
+    first: [
+    "Mikko", "Petteri", "Antti", "Juho", "Teemu", "Jussi", "Ville", "Sami", "Topias", "Olli", "Aleksi",
+      "Joona", "Henri", "Jaakko", "Eetu", "Niklas", "Viktor", "Simon", "Emil", "Johan", "Fredrik", "Henrik",
+      "Magnus", "Mattias", "Linus", "Pontus", "Viggo", "Alfred", "Hugo", "Jakob", "Lucas", "Nils", "Axel",
+      "Kristian", "Mads", "Rasmus", "Kasper", "Mikkel", "Frederik", "Anton", "Christoffer", "Sigurd", "Sindre",
+      "Håkon", "Eirik", "Torbjørn", "Ole", "Even", "Sander", "Martin", "Jón", "Haukur", "Elvar", "Kristófer",
+      "Hörður", "Ægir", "Pavel", "Tobias", "Emanuel", "Daniel", "Isak", "Leo", "Benjamin", "Oliver"],
+    last: [
+    "Korhonen", "Nieminen", "Mäkinen", "Hämäläinen", "Laine", "Heikkinen", "Koskinen", "Järvinen", "Lehtonen",
+      "Lehtinen", "Saarinen", "Salminen", "Heinonen", "Niemi", "Kinnunen", "Salonen", "Turunen", "Lindström",
+      "Kangas", "Valtonen", "Koponen", "Huttunen", "Hiltunen", "Rantanen", "Eriksson", "Larsson", "Olsson",
+      "Persson", "Svensson", "Gustafsson", "Pettersson", "Jonsson", "Lindberg", "Lindgren", "Axelsson",
+      "Bergström", "Lundberg", "Lundqvist", "Mattsson", "Holm", "Sandberg", "Forsberg", "Sjöberg", "Nyberg",
+      "Ström", "Wallin", "Engström", "Nielsen", "Pedersen", "Andersen", "Christensen", "Rasmussen",
+      "Jørgensen", "Madsen", "Kristensen", "Olsen", "Thomsen", "Poulsen", "Johansen", "Møller", "Mortensen",
+      "Lund", "Bakke", "Haugen", "Halvorsen", "Solberg", "Dahl", "Strand", "Lie", "Moen", "Eide", "Aasen",
+      "Nygaard", "Kristiansen", "Sigurðsson", "Gunnarsson", "Stefánsson", "Ólafsson", "Magnússon", "Pálsson",
+      "Helgason", "Björnsson", "Einarsson", "Kárason", "Sorsa", "Kaukiainen", "Huhtala", "Hirvonen", "Lehtola",
+      "Saari"],
+  },
+  chinese: {
+    first: [
+    "Zhiyuan", "Haoran", "Yuxuan", "Zihao", "Junjie", "Tianyu", "Yifan", "Jiahao", "Hongwei", "Qi", "Rui",
+      "Tao", "Bo", "Peng", "Xin", "Long", "Feng", "Gang", "Bin", "Chao", "Dong", "Fei", "Liang", "Qiang",
+      "Yong", "Hui", "Yang", "Shuai", "Xu", "Jie", "Yu", "Chen", "Zhe", "Ziyang", "Mingxuan", "Yuhang",
+      "Haoyu", "Zhenyu", "Xiaolong", "Jiawei", "Yunfei", "Shengli", "Wenbo", "Jinqiu", "Zhelin", "Muqi",
+      "Kaiwen", "Yanpeng", "Xiaochuan", "Jiale", "Junwei", "Zhengyu", "Lingfeng", "Qinghao", "Dahai", "Zeyu",
+      "Yiming", "Bowen", "Ruixiang", "Haotian", "Siyuan", "Chenxi", "Jingyu", "Weiming", "Guangyu", "Yuanhao",
+      "Xinyu"],
+    last: [
+    "Xu", "Ma", "Zhu", "Lin", "He", "Gao", "Luo", "Zheng", "Liang", "Xie", "Song", "Tang", "Han", "Feng",
+      "Deng", "Cao", "Peng", "Zeng", "Xiao", "Tian", "Dong", "Pan", "Yuan", "Cai", "Jiang", "Yu", "Du", "Ye",
+      "Cheng", "Wei", "Su", "Lu", "Ding", "Ren", "Shen", "Jin", "Fan", "Fu", "Bai", "Cui", "Kang", "Mao",
+      "Qiu", "Qin", "Shi", "Gu", "Hou", "Shao", "Meng", "Long", "Wan", "Duan", "Lei", "Qian", "Yin", "Yi",
+      "Chang", "Qiao", "Lai", "Gong", "Wen", "Fang", "Kong", "Xue", "Hao", "Bi", "Niu", "Tan", "Liao", "Zou",
+      "Xiong", "Jia", "Mo", "Gui", "Ji", "Ou", "Sheng", "Lan", "Zhan", "Zhai", "Yan", "Ge", "Ning", "Lv",
+      "Rao", "Zuo"],
+  },
+  japanese: {
+    first: [
+    "Takumi", "Sota", "Yuto", "Riku", "Hiroki", "Shota", "Kazuki", "Tatsuya", "Ryota", "Yusuke", "Naoki",
+      "Kosuke", "Daisuke", "Takeshi", "Kenji", "Hayato", "Sho", "Koki", "Yudai", "Shun", "Ryusei", "Keisuke",
+      "Taiga", "Kotaro", "Masato", "Hiroshi"],
+    last: [
+    "Kato", "Yoshida", "Yamamoto", "Matsumoto", "Inoue", "Kimura", "Hayashi", "Shimizu", "Yamaguchi", "Mori",
+      "Ikeda", "Hashimoto", "Abe", "Ishikawa", "Ogawa", "Fujita", "Okada", "Goto", "Hasegawa", "Murakami",
+      "Kondo", "Ishii", "Saito", "Sakamoto", "Endo", "Aoki", "Fujii", "Nishimura", "Fukuda", "Ota", "Miura",
+      "Fujiwara", "Okamoto", "Matsuda", "Nakano", "Kikuchi", "Takeuchi", "Ueda", "Sugiyama"],
+  },
+  korean: {
+    first: [
+    "Min-jae", "Seo-jun", "Do-yun", "Ha-joon", "Ji-ho", "Jae-won", "Sung-min", "Tae-yang", "Woo-jin",
+      "Hyun-jun", "Jin-woo", "Sang-woo", "Young-ho", "Kyung-min", "Dae-sung", "Seung-woo", "Joon-young",
+      "Chang-min", "Hee-jae", "Yong-jun", "Jong-kyu", "In-seok", "Myung-soo", "Ho-jun", "Gun-woo", "Si-woo"],
+    last: [
+    "Cho", "Jang", "Lim", "Han", "Oh", "Seo", "Shin", "Kwon", "Hwang", "Ahn", "Song", "Jeon", "Hong", "Yoo",
+      "Ko", "Moon", "Yang", "Son", "Bae", "Baek", "Heo", "Nam", "Shim", "Noh", "Ryu", "Jeong", "Cha", "Gu",
+      "Woo", "Min", "Jin", "Na", "Ra", "Yeo", "Byun", "Do"],
+  },
+  filipino: {
+    first: [
+    "Jayson", "Kiefer", "Thirdy", "Jerome", "Ricci", "Calvin", "Scottie", "Jericho", "Arwind", "Japeth",
+      "Gabe", "Terrence", "Chris", "Matthew", "Rey", "Carlo", "Jeron", "Kevin", "Ramon", "Marcio", "Kobe",
+      "Dave", "AJ", "Jamie", "Jose", "Rodel", "Allein"],
+    last: [
+    "Tenorio", "Alapag", "Romeo", "Pringle", "Lassiter", "Belga", "Ganuelas", "Rivero", "Pogoy", "Erram",
+      "Standhardinger", "Mendoza", "Garcia", "Villanueva", "Bautista", "Flores", "Navarro", "Torres", "Rivera",
+      "Aquino", "Domingo", "Mercado", "Pascual", "Manalo", "Magbanua", "Tolentino", "Cabrera", "Salvador",
+      "Galang", "Lacson", "Dimaculangan", "Macapagal", "Sison", "Ocampo", "Valdez", "Soriano", "Del Rosario",
+      "Panganiban"],
+  },
+  indian: {
+    first: [
+    "Amritpal", "Jagdeep", "Gurvinder", "Muin", "Harsh", "Aravind", "Pratham", "Akash", "Rajesh", "Sunil",
+      "Vikram", "Aditya", "Karan", "Rahul", "Siddharth", "Aman", "Nikhil", "Varun", "Abhishek", "Manpreet",
+      "Harpreet", "Yadwinder", "Joginder", "Sahaij", "Pranav", "Anmol", "Rishabh"],
+    last: [
+    "Gill", "Dhillon", "Sandhu", "Sidhu", "Bhullar", "Grewal", "Brar", "Verma", "Gupta", "Joshi", "Nair",
+      "Menon", "Iyer", "Rao", "Pillai", "Yadav", "Chauhan", "Rathore", "Bhatt", "Desai", "Mehta", "Shah",
+      "Kapoor", "Malhotra", "Thakur", "Pandey", "Mishra", "Choudhary", "Jaiswal", "Bains", "Saini", "Rana",
+      "Negi", "Pal", "Raj", "Das", "Bose", "Ghosh"],
+  },
+};
+const NAME_POOL_CACHE = {};
+// Réservoir complet d'une culture : historique + ajouts, sans doublon.
+function namePoolOf(key) {
+  if (NAME_POOL_CACHE[key]) return NAME_POOL_CACHE[key];
+  const base = NAME_POOLS[key] || NAME_POOLS.fr;
+  const extra = NAME_POOLS_EXTRA[key] || { first: [], last: [] };
+  const uniq = list => list.filter((x, i) => list.indexOf(x) === i);
+  NAME_POOL_CACHE[key] = { first: uniq(base.first.concat(extra.first)), last: uniq(base.last.concat(extra.last)) };
+  return NAME_POOL_CACHE[key];
+}
 const FRANCE_FOREIGN_WEIGHT = 12;
 function randomNationality(homeCountry = "fr") {
   if (!homeCountry || homeCountry === "fr" || !NATION_BY_CODE[homeCountry]) {
@@ -4633,7 +5175,7 @@ function nationalityFromName(name) {
 // club français, c'est exactement le tirage historique (France 60 %).
 function generatePlayerIdentity(usedLastNames, homeCountry = "fr") {
   const nationality = randomNationality(homeCountry);
-  const pool = NAME_POOLS[NATION_BY_CODE[nationality].pool] || NAME_POOLS.fr;
+  const pool = namePoolOf(NATION_BY_CODE[nationality].pool);
   const lastName = usedLastNames ? pickUniqueLastName(pool.last, usedLastNames) : pick(pool.last);
   return { name: `${pick(pool.first)} ${lastName}`, nationality };
 }
@@ -11046,7 +11588,7 @@ function generateYouthCandidate(now, recruiterLevel, country = "fr") {
   // Centre de formation : uniquement des jeunes du pays du club.
   const identity = generatePlayerIdentity(null, country);
   if (country && NATION_BY_CODE[country] && rand01() < YOUTH_HOME_NATIONALITY_SHARE && identity.nationality !== country) {
-    const pool = NAME_POOLS[NATION_BY_CODE[country].pool] || NAME_POOLS.fr;
+    const pool = namePoolOf(NATION_BY_CODE[country].pool);
     identity.nationality = country;
     identity.name = `${pick(pool.first)} ${pick(pool.last)}`;
   }
@@ -17725,6 +18267,9 @@ function serializeTeam(team) {
     trigram: team.trigram || null,
     trigramChangedAt: typeof team.trigramChangedAt === "number" ? team.trigramChangedAt : null,
     managerPseudo: team.managerPseudo || null,
+    // Parrainage (2026-10-07, server/referrals.js) : filleuls validés du
+    // manager, recopiés sur son club pour le badge « Amis » du profil.
+    friendsReferrals: Number.isInteger(team.friendsReferrals) && team.friendsReferrals > 0 ? team.friendsReferrals : 0,
     managerPseudoChangedAt: typeof team.managerPseudoChangedAt === "number" ? team.managerPseudoChangedAt : null,
     arenaName: team.arenaName || null,
     // Premium temporaire (voir Team.premiumUntil/hasActivePremium/
@@ -18442,6 +18987,7 @@ function teamFromSave(data) {
   team.trigram = isValidTrigram(data.trigram) ? data.trigram : null;
   team.trigramChangedAt = typeof data.trigramChangedAt === "number" ? data.trigramChangedAt : null;
   team.managerPseudo = isValidManagerPseudo(data.managerPseudo) ? data.managerPseudo : null;
+  team.friendsReferrals = Number.isInteger(data.friendsReferrals) && data.friendsReferrals > 0 ? Math.min(data.friendsReferrals, 999) : 0;
   team.managerPseudoChangedAt = typeof data.managerPseudoChangedAt === "number" ? data.managerPseudoChangedAt : null;
   team.arenaName = typeof data.arenaName === "string" && data.arenaName.trim() ? data.arenaName.trim().slice(0, ARENA_NAME_MAX_LENGTH) : null;
   team.premiumUntil = typeof data.premiumUntil === "number" ? data.premiumUntil : null;
@@ -20956,7 +21502,7 @@ return {
   Player, Team, MatchEngine, CONVOCATION_MAX,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
-  NATIONS, NATION_BY_CODE, NAME_POOLS, nationName, nationalityFromName, generatePlayerIdentity, randomNationality,
+  NATIONS, NATION_BY_CODE, NAME_POOLS, NAME_POOLS_EXTRA, namePoolOf, nationName, nationalityFromName, generatePlayerIdentity, randomNationality,
   potentialHeadroom, growthFactorForAge, declineFactorForAge, YOUNG_PROSPECT_MAX_AGE, SEASON_LENGTH_WEEKS,
   POTENTIAL_TIERS, potentialTierLabel, potentialTierIndex,
   PLAYER_HISTORY_SEASONS, PLAYER_HISTORY_MAX_ENTRIES, PLAYER_HISTORY_ATTRS, playerHistorySnapshot, pushPlayerHistory, playerHistoryEntries,

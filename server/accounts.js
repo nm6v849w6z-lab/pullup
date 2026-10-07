@@ -337,6 +337,8 @@ function takeOverCpuClub(league, clubName) {
   team.achTiers = {};
   team.achLog = [];
   team.achSeenAt = Date.now();
+  // Badge « Amis » : propre au manager, resynchronisé depuis son compte.
+  team.friendsReferrals = 0;
   if (team.feed) {
     try {
       Engine.pushEntry(team.feed, {

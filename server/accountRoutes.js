@@ -37,6 +37,7 @@ const crypto = require("crypto");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
 const World = require("./world.js");
+const Referrals = require("./referrals.js");
 const GeoIp = require("./geoip.js");
 
 // Pays du club à l'inscription (2026-10-01, retour utilisateur : « si mon ip
@@ -335,6 +336,8 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
       await withAccounts(async data => {
         if (Accounts.findByEmail(data, email)) { sendJson(res, 409, { ok: false, code: "email-taken" }); return; }
         const account = await registerAccount(data, { email, passwordHash: Accounts.hashPassword(pw.value), lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: signupCountry(req, b) }, now);
+        // Parrainage : lien /bienvenue?ref=<code> (server/referrals.js).
+        Referrals.attachAtSignup(data, account, b.ref, ipFingerprint(req), now);
         recordIp(account, req, now);
         await Accounts.saveAccounts(data, accountsPath);
         sendJson(res, 200, sessionPayload(account));
@@ -376,6 +379,43 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
           if (await tryAssignClub(account, multiSavePath, now)) await Accounts.saveAccounts(data, accountsPath);
         }
         sendJson(res, 200, { ...sessionPayload(account), account: Accounts.publicView(account) });
+      });
+      return true;
+    }
+
+    // ---------------- Parrainage et badge « Amis » (2026-10-07) ----------------
+    // GET : code, lien, filleuls et avancement ; met à jour les filleuls en
+    // attente (au plus toutes les 10 min) et recopie le nombre de filleuls
+    // validés sur le club du parrain (team.friendsReferrals, badge public).
+    if (p === "/api/account/referral" && req.method === "GET") {
+      const token = getManagerToken(req);
+      if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      await withAccounts(async data => {
+        const account = Accounts.findByManagerToken(data, token);
+        if (!account) { sendJson(res, 404, { ok: false, code: "no-account", error: "Aucun compte n'est rattaché à ce club." }); return; }
+        let dirty = !account.referralCode;
+        Referrals.codeFor(data, account);
+        const world = await World.loadWorld(multiSavePath, now);
+        if (world && Referrals.needsCheck(account, now)) {
+          const findClub = async tok => { const f = await World.findTeamByToken(world, tok, multiSavePath); return f ? f.league.teams[f.teamIndex] : null; };
+          await Referrals.evaluate(data, account, findClub, now);
+          dirty = true;
+        }
+        if (dirty) await Accounts.saveAccounts(data, accountsPath);
+        const out = Referrals.summary(data, account, originFor(req));
+        // Badge public : recopié sur le club du parrain s'il a changé.
+        if (world) {
+          try {
+            const mine = await World.findTeamByToken(world, token, multiSavePath);
+            const team = mine && mine.league.teams[mine.teamIndex];
+            if (team && team.isHuman && (team.friendsReferrals || 0) !== out.validated) {
+              team.friendsReferrals = out.validated;
+              await store.saveMultiLeague(mine.league, multiSavePath);
+              out.synced = true;
+            }
+          } catch (e) { /* badge resynchronisé à la prochaine visite */ }
+        }
+        sendJson(res, 200, out);
       });
       return true;
     }
@@ -680,6 +720,11 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         let account = Accounts.findByDiscordId(data, pending.discordId);
         if (!account) {
           account = await registerAccount(data, { discordId: pending.discordId, discordName: pending.discordName, discordUsername: pending.discordUsername || null, lang: b.lang, detectedLang: I18n.hintFromRequest(req, b.lang), requestedClubName: club.value, requestedCountry: signupCountry(req, b) }, now);
+          // Parrainage (nouveau compte seulement, jamais après coup).
+          if (Referrals.attachAtSignup(data, account, b.ref, ipFingerprint(req), now)) {
+            recordIp(account, req, now);
+            await Accounts.saveAccounts(data, accountsPath);
+          }
         }
         pendingDiscordSignups.delete(b.pending);
         sendJson(res, 200, sessionPayload(account));

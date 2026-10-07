@@ -235,7 +235,7 @@ const PAGE_CSS = `
 `;
 
 // `data` : { player, team, league, divisionLabel, origin, code, lang }.
-function renderPlayerPage({ player, team, league, divisionLabel = "", origin = "", code = "", lang = "fr" }) {
+function renderPlayerPage({ player, team, league, divisionLabel = "", origin = "", code = "", lang = "fr", international = null }) {
   lang = I18n.normLang(lang) || "fr";
   const { t, tf } = translator(lang);
   const overall = Math.round(player.overall());
@@ -260,6 +260,8 @@ function renderPlayerPage({ player, team, league, divisionLabel = "", origin = "
     `<span class="chip">${esc(tf("{0} ans", player.age))}</span>` +
     `<span class="chip">${esc(player.height)} cm</span>` +
     (Number.isInteger(player.number) ? `<span class="chip">n° <b>${player.number}</b></span>` : "") +
+    // Sélection nationale actuelle (server/nationalExtras.js:playerSelection).
+    ((international && international.teams) || []).map(x => `<span class="chip chip-intl" data-intl-cat="${esc(x.cat)}">${esc(t("International"))} · <b>${esc(t(Engine.nationName ? Engine.nationName(x.country) : x.country))}${x.cat === "U21" ? " U21" : ""}</b></span>`).join("") +
     `</div></div>` +
     `<div class="hero-rating"><div class="ring" title="${esc(t("Note globale"))}"><svg width="112" height="112" viewBox="0 0 116 116" aria-hidden="true">` +
     `<circle cx="58" cy="58" r="48" fill="none" stroke="#26334a" stroke-width="9"></circle>` +
