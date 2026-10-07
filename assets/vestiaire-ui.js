@@ -53,6 +53,16 @@
   var STATE_COLOR = { united: C.good, good: C.ok, ok: C.mid, tense: C.warn, crisis: C.bad };
   var GROUP_COLORS = ["#60A5FA", "#38BDF8", "#A78BFA", "#F87171", "#34D399", "#F472B6", "#FBBF24", "#2DD4BF"];
   function levelWord(v) { return v >= 75 ? "Très haut" : v >= 58 ? "Bon" : v >= 42 ? "Moyen" : v >= 25 ? "Bas" : "Très bas"; }
+  // Mode Club (2026-10-07) : les 4 indicateurs (ambiance, cohésion, moral,
+  // confiance) suivent le barème commun du jeu, radarTierColor (rouge ≤ 20,
+  // jaune ≤ 50, blanc ≤ 80, vert au-delà ; attributs, Cohérence du cinq),
+  // avec un mot par palier. Le Mode Sélection garde son rendu.
+  function clubTier(v) {
+    var f = !ctx && g("radarTierColor");
+    if (!f) return null;
+    return { color: f(v), word: v <= 20 ? "Faible" : v <= 50 ? "Moyen" : v <= 80 ? "Bon" : "Élevé" };
+  }
+  function soft(col, pct) { return /^#/.test(col) ? tint(col, pct / 100) : "color-mix(in srgb, " + col + " " + pct + "%, transparent)"; }
   function toneColor(v) { return v >= 75 ? C.good : v >= 58 ? C.ok : v >= 42 ? C.mid : v >= 25 ? C.warn : C.bad; }
   function tint(col, a) {
     var m = /^#([0-9a-f]{6})$/i.exec(col);
@@ -172,6 +182,15 @@
       ".vs-tl .vs-tl-dot{display:flex;flex-direction:column;align-items:center;height:100%}.vs-tl .vs-tl-dot>span:first-child{width:13px;height:13px;margin-top:16px;border-radius:50%}.vs-tl .vs-tl-dot>span:last-child{flex:1;width:2px;min-height:18px;background:var(--vs-line)}",
       ".vs-tl .vs-tl-card{padding:12px 16px;border-radius:14px;background:var(--vs-in);border:1px solid var(--vs-line);display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:15px}",
       ".vs-driver{display:flex;gap:12px;align-items:flex-start}.vs-driver>span{width:10px;height:10px;margin-top:6px;flex:none;border-radius:3px}.vs-driver strong{display:block;font-size:15px}",
+      // Mode Club : même police que les autres pages (pile système du jeu,
+      // var(--display)), titres comme h2.page-title / .lg-panel-title h2,
+      // petits intitulés comme .cal-card-kicker. Mode Sélection inchangé.
+      ".vs-root.vs-club,.vs-root.vs-club .vs-cond,.vs-root.vs-club .vs-eyebrow,.vs-root.vs-club .vs-h2,.vs-root.vs-club .vs-big,.vs-root.vs-club .vs-head h1,.vs-root.vs-club .vs-state,.vs-root.vs-club .vs-table th,.vs-root.vs-club .vs-wk,.vs-root.vs-club .vs-tl .vs-tl-w,.vs-root.vs-club .vs-group h4,.vs-root.vs-club button{font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-stretch:normal}",
+      ".vs-root.vs-club .vs-head h1{font-size:40px;font-weight:800;letter-spacing:-.01em;text-transform:none}",
+      ".vs-root.vs-club .vs-h2{font-size:22px;font-weight:800;text-transform:none;letter-spacing:0}.vs-root.vs-club .vs-group h4{font-size:20px;text-transform:none}",
+      ".vs-root.vs-club .vs-eyebrow,.vs-root.vs-club .vs-table th{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-dim)}",
+      ".vs-root.vs-club .vs-state{font-size:32px;letter-spacing:-.01em}.vs-root.vs-club .vs-big{font-variant-numeric:tabular-nums;letter-spacing:-.01em}",
+      "@media (max-width:720px){.vs-root.vs-club .vs-head h1{font-size:32px}}",
       "@media (max-width:720px){.vs-root{gap:14px}.vs-card{padding:16px;border-radius:14px}.vs-head h1{font-size:34px}.vs-tabs{width:100%}.vs-tabs button{flex:1 1 auto;padding:0 10px;font-size:13px}.vs-ring{width:120px;height:120px}.vs-ring b{font-size:42px}.vs-state{font-size:30px}.vs-tier-name{flex-basis:100%}.vs-grid2{grid-template-columns:1fr}.vs-tl li{grid-template-columns:50px 18px 1fr;gap:8px}}",
     ].join("\n");
     document.head.appendChild(s);
@@ -216,7 +235,8 @@
 
   // --- Vue générale ------------------------------------------------------------
   function overviewHtml(v) {
-    var col = STATE_COLOR[v.state.key] || C.mid;
+    var ct = clubTier(v.state.score);
+    var col = ct ? ct.color : (STATE_COLOR[v.state.key] || C.mid);
     var why = v.problems.length ? v.problems[0].text : v.positives.length ? v.positives[0].text : "Rien à signaler pour l'instant.";
     var trendIc = v.trend.key === "up" ? P.up : v.trend.key === "down" ? P.down : v.trend.key === "flat" ? P.flat : "";
     var fr = v.counts.frustrated;
@@ -227,8 +247,8 @@
       '<span class="vs-pill" style="background:' + tint(fr ? C.warn : C.good, 0.13) + ";color:" + (fr ? C.warn : C.good) + '">' + fr + " joueur" + (fr > 1 ? "s" : "") + " frustré" + (fr > 1 ? "s" : "") + "</span></div></div>" +
       '<div class="vs-lever"><div class="vs-row" style="justify-content:flex-start">' + svgIcon(P.lever, "var(--vs-acc)", 20) + '<p class="vs-eyebrow" style="color:var(--vs-acc)">Levier prioritaire</p></div><p>' + esc(leverText(v)) + "</p></div></section>";
     var pillar = function (label, value, text, shown) {
-      var c = toneColor(value);
-      return '<article class="vs-card vs-pillar"><div class="vs-row"><p class="vs-eyebrow">' + esc(label) + '</p><span class="vs-verdict" style="background:' + tint(c, 0.14) + ";color:" + c + '">' + esc(levelWord(value)) + "</span></div>" +
+      var ct = clubTier(value), c = ct ? ct.color : toneColor(value);
+      return '<article class="vs-card vs-pillar"><div class="vs-row"><p class="vs-eyebrow">' + esc(label) + '</p><span class="vs-verdict" style="background:' + soft(c, 14) + ";color:" + c + '">' + esc(ct ? ct.word : levelWord(value)) + "</span></div>" +
         '<div style="display:flex;align-items:baseline;gap:6px"><b class="vs-big" style="font-size:54px">' + Math.round(shown != null ? shown : value) + '</b><span style="color:var(--vs-faint);font-weight:600">/100</span></div>' +
         seg(value, c) + '<p class="vs-text">' + esc(text) + "</p></article>";
     };
@@ -486,7 +506,7 @@
     var eyebrow = (!ctx && t.week != null ? "Semaine " + esc(t.week) + " · " : "") + view.players.length + " joueur" + (view.players.length > 1 ? "s" : "");
     var head = '<header class="vs-head"><div><p class="vs-eyebrow">' + eyebrow + "</p>" + (ctx ? "" : "<h1>Vestiaire</h1>") + "</div>" + tabs + "</header>";
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
-    holder.innerHTML = '<div class="vs-root">' + head + body + "</div>";
+    holder.innerHTML = '<div class="vs-root' + (ctx ? "" : " vs-club") + '">' + head + body + "</div>";
     // Page du club : le titre est dans l'en-tête (pas de doublon avec celui de la section).
     if (!ctx) { var sec = document.getElementById("vestiaireSection"), pt = sec && sec.querySelector(".page-title"); if (pt) pt.style.display = "none"; }
     holder.__vsCtx = ctx;

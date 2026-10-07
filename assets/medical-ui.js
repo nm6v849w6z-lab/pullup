@@ -66,10 +66,13 @@
     s.id = "medCss";
     s.textContent = [
       ".md-root{--md-card:var(--panel,#111A2C);--md-in:var(--panel-2,#0D1525);--md-line:var(--line,#1E2A42);--md-dim:var(--ink-dim,#9AA6BF);--md-faint:var(--ink-faint,#6F7C96);--md-acc:var(--amber,#F5A524);display:flex;flex-direction:column;gap:24px;color:var(--ink)}",
-      ".md-cond{font-family:'Barlow Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;font-stretch:condensed;font-weight:800;line-height:1}",
+      // Police du Mode Club (pile système du jeu, var(--display)) partout ;
+      // titres comme h2.page-title / .lg-panel-title h2 (2026-10-07).
+      ".md-root,.md-root button{font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif)}",
+      ".md-cond{font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}",
       ".md-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px}",
       ".md-kicker{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--md-acc)}",
-      ".md-head h1{margin:4px 0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:50px;line-height:1;text-transform:uppercase}",
+      ".md-head h1{margin:4px 0;font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.01em}",
       ".md-sub{font-size:15px;color:var(--md-dim)}",
       ".md-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--md-card);border:1px solid var(--md-line);border-radius:14px}",
       ".md-tabs button{min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--md-dim);font:inherit;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer}",
@@ -84,7 +87,7 @@
       ".md-main{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}",
       ".md-panel{flex:999 1 620px;min-width:0;background:var(--md-card);border:1px solid var(--md-line);border-radius:20px;overflow:hidden}",
       ".md-panel-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--md-line)}",
-      ".md-h2{margin:0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:23px;letter-spacing:.04em;text-transform:uppercase}",
+      ".md-h2{margin:0;font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-weight:800;font-size:22px}",
       ".md-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--md-dim)}.md-legend span{display:flex;align-items:center;gap:6px}.md-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}",
       ".md-scroll{overflow-x:auto}.md-table{min-width:600px}",
       ".md-grid{display:grid;grid-template-columns:minmax(210px,2fr) minmax(190px,1.4fr) minmax(170px,1fr);gap:16px;align-items:center;padding:11px 22px}",
@@ -103,7 +106,7 @@
       ".md-bar{flex:1;height:6px;border-radius:999px;background:var(--md-line);overflow:hidden}.md-bar i{display:block;height:100%;border-radius:999px}",
       ".md-tag{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(248,113,113,.14);color:#F87171}",
       ".md-days{font-weight:800;color:#F87171;font-variant-numeric:tabular-nums}.md-back{font-size:12px;color:var(--md-dim)}",
-      ".md-empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 22px;text-align:center}.md-empty b{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:25px;text-transform:uppercase}.md-empty span{font-size:14px;color:var(--md-dim);max-width:380px}",
+      ".md-empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 22px;text-align:center}.md-empty b{font-family:var(--display,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif);font-weight:800;font-size:22px}.md-empty span{font-size:14px;color:var(--md-dim);max-width:380px}",
       ".md-side{flex:1 1 330px;display:flex;flex-direction:column;gap:24px;min-width:0}",
       ".md-card{background:var(--md-card);border:1px solid var(--md-line);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:16px}",
       ".md-staff{display:flex;gap:14px;padding:15px;background:var(--md-in);border:1px solid var(--md-line);border-radius:14px}",
@@ -118,7 +121,7 @@
       ".md-dist{display:flex;flex-direction:column;gap:8px;font-size:13px}.md-dist>div{display:flex;justify-content:space-between}.md-dist span{display:flex;align-items:center;gap:8px;color:var(--md-dim)}.md-dist i{width:10px;height:10px;border-radius:3px;display:inline-block}",
       ".md-tip{font-size:12px;color:var(--md-faint);border-top:1px solid var(--md-line);padding-top:12px;line-height:1.5}",
       ".md-next{font-size:13px;color:var(--md-dim)}.md-next b{color:var(--ink);font-weight:600}",
-      "@media (max-width:720px){.md-root{gap:16px}.md-head h1{font-size:38px}.md-tabs{width:100%}.md-tabs button{flex:1 1 auto;justify-content:center;padding:0 8px;font-size:13px}.md-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.md-kpi{padding:14px}.md-kpi .md-n{font-size:34px}.md-kpi.md-ring{flex-direction:column;align-items:flex-start;gap:8px}.md-kpi.md-ring svg{width:52px;height:52px}",
+      "@media (max-width:720px){.md-root{gap:16px}.md-head h1{font-size:32px}.md-tabs{width:100%}.md-tabs button{flex:1 1 auto;justify-content:center;padding:0 8px;font-size:13px}.md-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.md-kpi{padding:14px}.md-kpi .md-n{font-size:34px}.md-kpi.md-ring{flex-direction:column;align-items:flex-start;gap:8px}.md-kpi.md-ring svg{width:52px;height:52px}",
       ".md-table{min-width:0}.md-grid{grid-template-columns:minmax(0,1fr) 112px;gap:10px;padding:10px 14px}.md-grid>.md-c-fat{display:none}.md-th>.md-c-fat{display:none}.md-group{padding:9px 14px}.md-panel-head{padding:14px}.md-bar{display:none}.md-risk{justify-content:flex-end}.md-c-end{text-align:right}}",
     ].join("\n");
     document.head.appendChild(s);

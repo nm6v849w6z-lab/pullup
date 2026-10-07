@@ -23,6 +23,12 @@ const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log(
   assert(/À surveiller/.test(content.textContent) && /Ce qui va bien/.test(content.textContent) && /Levier prioritaire/.test(content.textContent), "vue générale : points positifs, à surveiller, levier prioritaire");
   assert(content.querySelector(".vs-head h1").textContent === "Vestiaire" && /Semaine \d+ · \d+ joueurs/.test(content.querySelector(".vs-head .vs-eyebrow").textContent), "en-tête : semaine, effectif, titre « Vestiaire »");
   assert(content.querySelectorAll(".vs-pillar").length === 3, "trois jauges (cohésion, moral, confiance)");
+  assert(content.querySelector(".vs-root.vs-club"), "Mode Club : police et barème du Mode Club (classe vs-club)");
+  const tierOk = [...content.querySelectorAll(".vs-pillar")].every(c => {
+    const v = Number(c.querySelector(".vs-big").textContent), w = c.querySelector(".vs-verdict").textContent;
+    return w === (v <= 20 ? "Faible" : v <= 50 ? "Moyen" : v <= 80 ? "Bon" : "Élevé") && c.querySelector(".vs-verdict").getAttribute("style").includes(win.radarTierColor(v));
+  });
+  assert(tierOk, "cohésion, moral, confiance : barème commun radarTierColor (rouge, jaune, blanc, vert)");
   for (const [k, re] of [["hierarchy", /La pyramide du vestiaire/], ["groups", /Comment naissent les groupes/], ["relations", /Carte des relations/], ["evolution", /Journal du vestiaire/]]) {
     content.querySelector(`[data-vs-tab="${k}"]`).click();
     assert(re.test(content.textContent), `vue ${k}`);
