@@ -8961,6 +8961,8 @@
        (même rayon), l'avatar dedans n'est pas arrondi une 2e fois.
      Aucun contour autour d'un avatar joueur (bordure, anneau, ombre en
      anneau, demande du 2026-10-07) : ni sur l'avatar, ni sur son cadre.
+     Seule exception : le petit contour jaune des MVP (MVP du match, de la
+     journée, de la saison et des play-offs).
      Nouveau composant : playerAvatarHtml() seul, ou dans un élément de
      classe `.player-av-frame` (ou ajouter son cadre à la liste ci-dessous).
      Test : player_avatar_shape_test.js.
@@ -8968,6 +8970,7 @@
   :root{--player-av-radius:18% / 16.6%;}
   :root body .player-avatar.player-avatar.player-avatar{border-radius:var(--player-av-radius) !important; overflow:hidden !important; border:0 !important; box-shadow:none !important; outline:0 !important;}
   :root body :is(.player-av-frame, .tm-av, .tp-avatar, .coh-av, .coh2-pair > span, .vs-av, .md-av, .mk-cmp-av, .mk-task-av, .mk-avatar, .hc-av, .compare-avatar, .pdp2-avatar, .sp2-token-av, .hm-live .av, .hs-pav){border:0 !important; box-shadow:none !important; outline:0 !important;}
+  :root body :is(.match-mvp-callout, .lg-mvp-id, .hn-award--mvp) .player-avatar.player-avatar.player-avatar{box-shadow:0 0 0 2px var(--amber) !important;}
   :root body :is(.player-av-frame, .tm-av, .tp-avatar, .coh-av, .coh2-spot, .coh2-pair > span, .vs-av, .md-av, .mk-cmp-av, .mk-task-av, .mk-avatar, .hc-av, .compare-avatar, .pdp2-avatar, .sp2-token-av){border-radius:18% !important; overflow:hidden;}
   :root body :is(.player-av-frame, .tm-av, .tp-avatar, .coh-av, .coh2-spot, .coh2-pair > span, .vs-av, .md-av, .mk-cmp-av, .mk-task-av, .mk-avatar, .hc-av, .compare-avatar, .pdp2-avatar) > .player-avatar.player-avatar.player-avatar{border-radius:0 !important;}
 </style>
@@ -33216,7 +33219,7 @@ function seasonAwardsCardHtml(sa) {
   const by = key => awards.find(a => a.key === key) || null;
   const mine = a => (a && a.teamIdx === myTeamIndex ? " hn-mine" : "");
   const card = (a, label) => a
-    ? `<div class="hn-award${mine(a)}">${hnAvatarHtml(hnAwardRef(a), 44)}<div><small>${escapeHtml(label)}</small><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)} · ${escapeHtml(a.detail || "")}</span></div></div>`
+    ? `<div class="hn-award${mine(a)}${a.key === "mvp" || a.key === "playoffsMvp" ? " hn-award--mvp" : ""}">${hnAvatarHtml(hnAwardRef(a), 44)}<div><small>${escapeHtml(label)}</small><b>${hnNameHtml(hnAwardRef(a))}</b><span>${escapeHtml(a.teamName)} · ${escapeHtml(a.detail || "")}</span></div></div>`
     : "";
   const po = by("playoffsMvp");
   const poCard = po ? card(po, "MVP des play-offs")

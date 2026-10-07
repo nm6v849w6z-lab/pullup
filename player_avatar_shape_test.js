@@ -89,6 +89,9 @@ for (const [name, js] of steps) {
         }
         // terrain 2D : cadre SVG coloré autour de l'avatar
         const g = svg.closest("g.c2d-p"); if (g && g.querySelector(".c2d-frame")) ring = "cadre SVG c2d-frame";
+        // Exception : le petit contour jaune des MVP (match, journée, saison).
+        const mvp = svg.closest(".match-mvp-callout, .lg-mvp-id, .hn-award--mvp");
+        if (mvp) { const bs = getComputedStyle(svg.closest(".player-avatar")).boxShadow; out.push({ shape: /^rgb\(240, 162, 60\) 0px 0px 0px 2px$/.test(bs) ? "MVP contour jaune ok" : "MVP SANS contour jaune (" + bs + ")", sig: "", vis: r.width > 0 }); ring = null; }
         const vis = !!svg.closest("[class]") && r.width>0 && svg.getClientRects().length>0;
         out.push({ shape, sig: clipper ? sig(clipper) : sig(svg.parentElement), vis });
         if (ring) out.push({ shape: "CONTOUR " + ring, sig: "", vis });
@@ -100,7 +103,7 @@ for (const [name, js] of steps) {
 }
 }
 const lines = Object.entries(report).sort().map(([k,v])=>k+"   ["+[...v].slice(0,6).join(", ")+(v.size>6?" …":"")+"]");
-const bad = lines.filter(l => !/^carré r=(1[6-9]|20)% /.test(l));
+const bad = lines.filter(l => !/^carré r=(1[6-9]|20)% |^MVP contour jaune ok/.test(l));
 console.log(lines.join("\n"));
 if (lines.length < 10) fail("trop peu d'avatars trouvés (" + lines.length + " formes) : l'audit ne voit plus les pages");
 if (bad.length) fail("avatars joueurs hors format :\n" + bad.join("\n"));
