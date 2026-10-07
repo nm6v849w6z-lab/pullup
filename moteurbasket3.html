@@ -10162,6 +10162,16 @@ const TRAINING_LABELS = {
 const PHYSICAL_ATTRS = ["speed", "acceleration", "agility", "strength", "vertical", "endurance", "power"];
 const MENTAL_ATTRS = ["decision", "focus", "composure", "anticipation", "determination", "leadership", "discipline", "vision"];
 const FUNDAMENTAL_ATTRS = ATTRS.filter(a => !PHYSICAL_ATTRS.includes(a) && !MENTAL_ATTRS.includes(a));
+// ORDRE D'AFFICHAGE unique des caractéristiques (demande utilisateur du
+// 2026-10-07 : « quelle que soit la page […] le rangement des caracs soit le
+// même ») : fiche joueur, Marché, Effectif, comparateur, entraînement,
+// académie, page publique (server/playerPage.js). Ne sert QU'À l'affichage :
+// les calculs gardent ATTRS / PHYSICAL_ATTRS / MENTAL_ATTRS.
+const DISPLAY_FUNDAMENTALS = ["midRange", "threePoint", "inside", "freeThrow", "pass", "dribble", "shotCreation", "penetration",
+  "defOutside", "defInside", "steal", "rebound", "block"];
+const DISPLAY_PHYSICAL = ["speed", "acceleration", "agility", "vertical", "strength", "power", "endurance"];
+const DISPLAY_MENTAL = ["decision", "vision", "anticipation", "focus", "composure", "determination", "discipline", "leadership"];
+const DISPLAY_ATTRS = DISPLAY_FUNDAMENTALS.concat(DISPLAY_PHYSICAL, DISPLAY_MENTAL);
 
 // mentalAverage(p) : copie mirroir EXACTE de engine.js (voir son grand
 // commentaire au-dessus de PHYSICAL_ATTRS) — valeur "mental" calculée à la
@@ -32939,9 +32949,9 @@ function renderPlayerCompareView() {
   const lastName = p => (p.name || "").split(" ").slice(-1)[0];
 
   const groups = [
-    { label: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
-    { label: "Physique", attrs: PHYSICAL_ATTRS },
-    { label: "Mental", attrs: MENTAL_ATTRS },
+    { label: "Fondamentaux", attrs: DISPLAY_FUNDAMENTALS },
+    { label: "Physique", attrs: DISPLAY_PHYSICAL },
+    { label: "Mental", attrs: DISPLAY_MENTAL },
   ].map(g => ({ ...g, stats: compareGroupStats(g.attrs, playerA, setA, playerB, setB) }));
   const total = groups.reduce((acc, g) => ({
     count: acc.count + g.stats.count, winsA: acc.winsA + g.stats.winsA, winsB: acc.winsB + g.stats.winsB,
@@ -33400,18 +33410,13 @@ function starRatingFromScore(score, max = 99) {
 }
 // Hausses du dernier entraînement (Team.lastTrainingReport.players[id].gains,
 // [{attr, before, after}]) : { attr: +N } pour les seules hausses.
-// Ordre d'affichage des 13 fondamentaux sur la fiche joueur (voir
-// attrBlockHtml dans renderPlayerDetail) : Tir (3 pts, mi-distance, lancer
-// franc, jeu intérieur), création (pénétration, création de tir, dribble,
-// passe), défense (extérieure, interceptions, intérieure, contre), rebond.
-const PDP_FUNDAMENTAL_ORDER = ["threePoint", "midRange", "freeThrow", "inside", "penetration", "shotCreation", "dribble",
-  "pass", "defOutside", "steal", "defInside", "block", "rebound"];
-// Physique : vitesse/explosivité, puis puissance, puis endurance. Mental :
-// lecture du jeu, puis sang-froid, puis caractère.
+// Ordre d'affichage de la fiche joueur : l'ordre unique du jeu
+// (DISPLAY_FUNDAMENTALS / DISPLAY_PHYSICAL / DISPLAY_MENTAL, près d'ATTRS).
+const PDP_FUNDAMENTAL_ORDER = DISPLAY_FUNDAMENTALS;
 const PDP_ATTR_ORDER = {
-  Fondamentaux: PDP_FUNDAMENTAL_ORDER,
-  Physique: ["speed", "acceleration", "agility", "vertical", "strength", "power", "endurance"],
-  Mental: ["decision", "vision", "anticipation", "focus", "composure", "determination", "discipline", "leadership"],
+  Fondamentaux: DISPLAY_FUNDAMENTALS,
+  Physique: DISPLAY_PHYSICAL,
+  Mental: DISPLAY_MENTAL,
 };
 function pdpLastTrainingUps(team, player) {
   const rep = team && team.lastTrainingReport && team.lastTrainingReport.players;
@@ -35612,8 +35617,8 @@ const TDE_ATTR_FAMILIES = [
   { label: "Tir", keys: ["midRange", "threePoint", "inside", "freeThrow"] },
   { label: "Jeu", keys: ["pass", "dribble", "shotCreation", "penetration"] },
   { label: "Défense", keys: ["defOutside", "defInside", "steal", "rebound", "block"] },
-  { label: "Physique", keys: PHYSICAL_ATTRS },
-  { label: "Mental", keys: MENTAL_ATTRS },
+  { label: "Physique", keys: DISPLAY_PHYSICAL },
+  { label: "Mental", keys: DISPLAY_MENTAL },
 ];
 const TDE_LOCK_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>`;
 
@@ -44431,9 +44436,9 @@ function trainingRulesHtml() {
 // Groupes du bilan par joueur (refonte 2026-09-25) et état replié/déplié
 // de chaque joueur (le 1er est déplié par défaut à chaque nouvelle semaine).
 const TRAINING_REPORT_GROUPS = [
-  { name: "Fondamentaux", attrs: FUNDAMENTAL_ATTRS },
-  { name: "Physique", attrs: PHYSICAL_ATTRS },
-  { name: "Mental", attrs: MENTAL_ATTRS },
+  { name: "Fondamentaux", attrs: DISPLAY_FUNDAMENTALS },
+  { name: "Physique", attrs: DISPLAY_PHYSICAL },
+  { name: "Mental", attrs: DISPLAY_MENTAL },
 ];
 let trainingReportOpenKeys = null;
 let trainingReportOpenWeek = null;
@@ -48886,13 +48891,13 @@ const MK_GROUPS = [
   { label: "Tir", keys: ["midRange", "threePoint", "inside", "freeThrow"] },
   { label: "Jeu", keys: ["pass", "dribble", "shotCreation", "penetration"] },
   { label: "Défense", keys: ["defOutside", "defInside", "steal", "rebound", "block"] },
-  { label: "Physique", keys: PHYSICAL_ATTRS },
-  { label: "Mental", keys: MENTAL_ATTRS },
+  { label: "Physique", keys: DISPLAY_PHYSICAL },
+  { label: "Mental", keys: DISPLAY_MENTAL },
 ];
 const MK_BLOCKS = [
   { label: "Fondamentaux", keys: MK_GROUPS.slice(0, 3).flatMap(g => g.keys), two: true },
-  { label: "Physique", keys: PHYSICAL_ATTRS },
-  { label: "Mental", keys: MENTAL_ATTRS },
+  { label: "Physique", keys: DISPLAY_PHYSICAL },
+  { label: "Mental", keys: DISPLAY_MENTAL },
 ];
 const MK_CRIT_MAX = 5;
 const MK_CHEV = `<svg class="mk-chev" width="12" height="12" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>`;
@@ -52429,7 +52434,7 @@ function acTraitsHtml(p) {
 // colonnes de l'ancien tableau à défilement horizontal).
 function acAllAttrsHtml(p) {
   return `<details><summary>Toutes les caractéristiques</summary><div class="ac-all-attrs">` +
-    ATTRS.map(a => `<div class="ac-attr-row"><span>${escapeHtml(TRAINING_LABELS[a] || ATTR_SHORT[a])}</span><b class="${attrColorTier(p.attrs[a])}">${p.attrs[a]}</b></div>`).join("") +
+    DISPLAY_ATTRS.map(a => `<div class="ac-attr-row"><span>${escapeHtml(TRAINING_LABELS[a] || ATTR_SHORT[a])}</span><b class="${attrColorTier(p.attrs[a])}">${p.attrs[a]}</b></div>`).join("") +
     `</div></details>`;
 }
 function acIdentityHtml(p) {

@@ -36,10 +36,10 @@ function translator(lang) {
 }
 
 // Ordre d'affichage des caractéristiques : le même que la fiche joueur du
-// jeu (PDP_ATTR_ORDER, moteurbasket3.html).
+// jeu (DISPLAY_FUNDAMENTALS / DISPLAY_PHYSICAL / DISPLAY_MENTAL, moteurbasket3.html).
 const ATTR_GROUPS = [
-  ["Fondamentaux", ["threePoint", "midRange", "freeThrow", "inside", "penetration", "shotCreation", "dribble",
-    "pass", "defOutside", "steal", "defInside", "block", "rebound"]],
+  ["Fondamentaux", ["midRange", "threePoint", "inside", "freeThrow", "pass", "dribble", "shotCreation", "penetration",
+    "defOutside", "defInside", "steal", "rebound", "block"]],
   ["Physique", ["speed", "acceleration", "agility", "vertical", "strength", "power", "endurance"]],
   ["Mental", ["decision", "vision", "anticipation", "focus", "composure", "determination", "discipline", "leadership"]],
 ];

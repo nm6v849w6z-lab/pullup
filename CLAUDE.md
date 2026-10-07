@@ -26,6 +26,16 @@ bloc « RÈGLE UI MOBILE ».
 téléphone (390×844) ; si un composant partagé est en cause, le corriger à la
 source. Desktop / tablette large : comportement actuel conservé.
 
+## Ordre d'affichage des caractéristiques (2026-10-07)
+
+Partout où des caractéristiques de joueur sont affichées, un SEUL ordre :
+`DISPLAY_FUNDAMENTALS` (mi-distance, 3 pts, intérieur, LF, passe, dribble,
+création, pénétration, déf. extérieure, déf. intérieure, interceptions,
+rebond, contre), puis `DISPLAY_PHYSICAL`, puis `DISPLAY_MENTAL`
+(moteurbasket3.html, près d'`ATTRS` ; copie dans server/playerPage.js).
+Ne jamais afficher dans l'ordre d'`ATTRS` / `PHYSICAL_ATTRS` /
+`MENTAL_ATTRS` (réservés aux calculs).
+
 ## Autres repères
 
 Voir `DEV_NOTES.md` (suivi de développement, repères techniques).
