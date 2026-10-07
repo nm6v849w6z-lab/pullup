@@ -21,6 +21,11 @@ const DAY = 24 * 3600 * 1000;
   assert(side.includes("Sélections"), "menu : entrée « Sélections »");
   win.eval("TAB_HANDLERS.selections()");
   await win.__lastNational;
+  // Onglet Sélections (2026-10-07) : directement la sélection A du pays du
+  // club ; « Toutes les sélections » ouvre la vue d'ensemble.
+  assert(win.HM_NATIONAL.state.teamId === win.eval("(league.country || 'fr')") + "-A" && box().querySelector("[data-nt-country]"), "arrivée sur la sélection A du pays du club");
+  box().querySelector("[data-nt-back]").click();
+  await win.__lastNational;
   assert(doc.querySelectorAll(".nt-table tbody tr").length === 17, "tableau : 17 pays, sélections A et U21");
   assert(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(box().textContent), "aucun emoji (drapeaux en images)");
   assert(doc.querySelectorAll(".nt-table .nat-flag").length >= 17, "drapeaux des pays");
@@ -54,7 +59,7 @@ const DAY = 24 * 3600 * 1000;
   offset += 3 * DAY;
   await win.HM_NATIONAL.openElection(elId);
   assert(/Élu/.test(box().textContent) && box().querySelector(".nt-cand.is-win"), "clôture : élu affiché, barre des voix");
-  win.eval("TAB_HANDLERS.selections()");
+  win.eval("HM_NATIONAL.render({ overview: true })");
   await win.__lastNational;
   assert(/Mon mandat/.test(box().textContent) && box().querySelector("[data-nt-resign]"), "page : bloc « Mon mandat » avec démission");
   const row = box().querySelector(".nt-table tr.is-mine");

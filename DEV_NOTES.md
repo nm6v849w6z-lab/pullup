@@ -143,6 +143,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     accepte une `source` de matchs) ; « Appliquer à ma tactique » écrit le
     plan de match dans la tactique de la sélection (/coach/tactics).
     Tests : server/national_analysis_test.js, national_analysis_ui_test.js.
+  - FAIT (2026-10-07) : rôles cumulables (une entrée m.staff par rôle, même
+    key/mid ; au plus un rôle NT parmi sélectionneur/adjoint/personne
+    aidante + recruteur et/ou scout ; accessOf → { role principal, roles,
+    perms = union } ; « assigned » seulement pour qui n'est QUE scout ; se
+    nommer soi-même = en poste tout de suite). Onglet « Joueurs suivis »
+    (followedOf : attributions aux scouts + m.watchlist/m.watchBy, noms
+    jamais de clé). « Liste des joueurs » (ex-Sélectionnables). Proposition
+    de poste = message de la messagerie (messages.send opts.meta
+    natStaffInvite, envoyé par la route staff/invite) + bouton « Accepter le
+    poste » (national-coach.js msgActionHtml, état lu dans /api/national/me ;
+    respond par `role`, 409 si déjà accepté). Onglet Sélections : arrive sur
+    <pays du club>-A, sélecteur de pays, bascule Équipe A / U21,
+    « Toutes les sélections » = vue d'ensemble (render({ overview: true })).
+    Tests : server/national_multirole_test.js,
+    national_selection_roles_ui_test.js.
   - Reste : traductions des écrans B à E ; pas de classement mondial FIBA
     (le bilan le signale). UI dans des fichiers assets/ séparés (limite 4 Mo
     de la page).

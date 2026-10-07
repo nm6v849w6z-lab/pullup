@@ -3029,6 +3029,16 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             outC = fnC(natStore, me, body || {}, now, coachCtx);
             if (!outC.ok) { sendJson(res, outC.status || 400, { ok: false, error: outC.error }); return; }
             try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
+            // Proposition de poste : message dans la messagerie interne (de
+            // celui qui nomme à l'invité), avec « Accepter le poste ».
+            if (outC.message && outC.message.to) {
+              const msg = outC.message;
+              delete outC.message;
+              try {
+                if (ctx.leagueId && !ctx.league.leagueId) ctx.league.leagueId = ctx.leagueId;
+                await messages.send(ctx.league, ctx.teamIndex, { to: `${msg.to.leagueId}:${msg.to.idx}`, text: msg.text }, now, { meta: msg.meta });
+              } catch (e) { /* confort : la notification du club suffit */ }
+            }
             // Notifications en attente : envoyées au prochain passage du monde.
             // Amical accepté : le monde doit repasser à son heure (gel, match).
             if ((Array.isArray(natStore.outbox) && natStore.outbox.length) || route.pathname.startsWith("/api/national/coach/friendly/")) {

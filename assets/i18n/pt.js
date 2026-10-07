@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_PT = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Lista de jogadores",
+  "Suivi par": "Seguido por",
+  "Joueurs que vous suivez": "Jogadores que você segue",
+  "Joueurs suivis par le staff": "Jogadores seguidos pela comissão técnica",
+  "Plus sélectionnable": "Não é mais convocável",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Você ainda não segue nenhum jogador: os jogadores atribuídos a você aparecerão aqui.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Nenhum jogador seguido: atribua jogadores aos olheiros (página Staff ou ficha do jogador).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Você só vê os jogadores que você mesmo segue.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Um jogador é seguido quando é atribuído a um olheiro (que o segue) ou adicionado aos jogadores seguidos.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Pré-seleção vazia: adicione jogadores (marcar) em Lista de jogadores ou Jogadores seguidos.",
+  "Vos joueurs": "Seus jogadores",
+  "Accepter le poste": "Aceitar o cargo",
+  "Poste accepté": "Cargo aceito",
+  "Proposition expirée ou retirée.": "Proposta expirada ou retirada.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Cargo aceito: você entra na comissão técnica da seleção.",
+  "Proposition refusée.": "Proposta recusada.",
+  "Toutes les sélections": "Todas as seleções",
+  "← Toutes les sélections": "← Todas as seleções",
+  "Équipe A": "Seleção A",
+  "Quitter ce rôle": "Deixar este cargo",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Deixar este cargo na comissão técnica desta seleção?",
+  "Pris par une autre sélection": "Ocupado por outra seleção",
+  "Places complètes": "Vagas esgotadas",
+  "Pays de la sélection": "País da seleção",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "O manager nomeado recebe a proposta nas mensagens (botão « Aceitar o cargo ») e na página Seleções. Uma mesma pessoa pode acumular um cargo do staff NT com recrutador e olheiro; você também pode se nomear recrutador ou olheiro. A comissão termina com o mandato do selecionador.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Montra pública",
   "Voir la page publique": "Ver a página pública",

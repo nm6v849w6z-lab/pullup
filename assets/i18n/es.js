@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ES = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Lista de jugadores",
+  "Suivi par": "Seguido por",
+  "Joueurs que vous suivez": "Jugadores que sigues",
+  "Joueurs suivis par le staff": "Jugadores seguidos por el cuerpo técnico",
+  "Plus sélectionnable": "Ya no seleccionable",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Todavía no sigues a ningún jugador: aquí aparecerán los jugadores que te asignen.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Ningún jugador seguido: asigna jugadores a los ojeadores (página Staff o ficha del jugador).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Solo ves los jugadores que sigues tú mismo.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Un jugador está seguido cuando se asigna a un ojeador (que lo sigue) o se añade a los jugadores seguidos.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Preselección vacía: añade jugadores (marca) desde Lista de jugadores o Jugadores seguidos.",
+  "Vos joueurs": "Tus jugadores",
+  "Accepter le poste": "Aceptar el puesto",
+  "Poste accepté": "Puesto aceptado",
+  "Proposition expirée ou retirée.": "Propuesta caducada o retirada.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Puesto aceptado: te unes al cuerpo técnico de la selección.",
+  "Proposition refusée.": "Propuesta rechazada.",
+  "Toutes les sélections": "Todas las selecciones",
+  "← Toutes les sélections": "← Todas las selecciones",
+  "Équipe A": "Selección A",
+  "Quitter ce rôle": "Dejar este rol",
+  "Quitter ce rôle dans le staff de cette sélection ?": "¿Dejar este rol en el cuerpo técnico de esta selección?",
+  "Pris par une autre sélection": "Ocupado por otra selección",
+  "Places complètes": "Plazas completas",
+  "Pays de la sélection": "País de la selección",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "El mánager nombrado recibe la propuesta en su mensajería (botón « Aceptar el puesto ») y en la página Selecciones. Una misma persona puede combinar un rol del staff NT con reclutador y ojeador; también puedes nombrarte reclutador u ojeador. El cuerpo técnico termina con el mandato del seleccionador.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Escaparate público",
   "Voir la page publique": "Ver la página pública",

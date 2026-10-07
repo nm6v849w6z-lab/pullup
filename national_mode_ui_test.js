@@ -4,7 +4,8 @@
 // haut en mode Club ; environnement séparé (menu latéral propre filtré par
 // rôle, rubriques nationales seulement) ; « Retour au mode Club » à
 // l'intérieur du mode ; postes aux abréviations du jeu ; tableau triable ;
-// Convocations en une seule page ; plus de rubrique « Joueurs suivis ».
+// Convocations en une seule page ; « Liste des joueurs » et onglet
+// « Joueurs suivis » à part (2026-10-07).
 process.env.BASKET_ADMIN_TOKEN = process.env.BASKET_ADMIN_TOKEN || "admintest-mode";
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
@@ -37,8 +38,8 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   await wait(() => doc.body.classList.contains("nc-mode") && doc.getElementById("ncSidebar") && win.HM_NATIONAL_COACH.state.view, "entrée dans le mode");
   await flush(dom); await new Promise(r => setTimeout(r, 300));
   const side = doc.getElementById("ncSidebar").textContent;
-  assert(["Tableau de bord", "Joueurs sélectionnables", "Présélection", "Convoqués", "Tactique", "Vestiaire", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
-  assert(!/Joueurs suivis|Convocations/.test(side), "plus de rubrique « Joueurs suivis » ni de doublon Convocations / Convoqués");
+  assert(["Tableau de bord", "Liste des joueurs", "Joueurs suivis", "Présélection", "Convoqués", "Tactique", "Vestiaire", "Calendrier", "Qualifications", "Compétitions", "Matchs amicaux", "Analyse des adversaires", "Statistiques", "Notifications", "Staff", "Mandat", "Retour au mode Club"].every(x => side.includes(x)), "sélectionneur : toutes les rubriques nationales");
+  assert(!/Joueurs sélectionnables|Convocations/.test(side), "« Joueurs sélectionnables » renommé « Liste des joueurs », pas de doublon Convocations / Convoqués");
   // Barre du haut (2026-10-07) : plus de « Retour au mode Club » (menu de
   // gauche), recherche du club, prochain adversaire et type de match.
   assert(!doc.getElementById("ncModeBtn") && /Retour au mode Club/.test(doc.getElementById("ncSidebar").textContent), "barre du haut : plus de « Retour au mode Club » (il reste dans le menu de gauche)");
@@ -61,7 +62,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   assert(/France A/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : la sélection");
   const content = () => doc.getElementById("nationalContent");
   assert(/Prochain match/.test(content().textContent) && !/Budget|Donnez vos ordres/.test(content().textContent), "tableau de bord de la sélection, rien du club");
-  for (const nav of ["joueurs", "preselection", "convocations", "tactique", "calendrier", "amicaux", "analyse", "staff", "notifications", "mandat"]) {
+  for (const nav of ["joueurs", "suivis", "preselection", "convocations", "tactique", "calendrier", "amicaux", "analyse", "staff", "notifications", "mandat"]) {
     doc.querySelector(`#ncSidebar [data-nc-nav="${nav}"]`).click();
     await wait(() => doc.querySelector(`.nc-side-link.on[data-nc-nav="${nav}"]`), "rubrique " + nav);
   }
@@ -164,16 +165,16 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   // serveur, nationalCoach.PERMS / APPOINT).
   const { PERMS, APPOINT } = require("./server/nationalCoach.js");
   const asRole = (role) => {
-    st.view.perms = PERMS[role]; st.view.role = role; st.view.appoint = APPOINT[role] || []; st.nav = "dashboard";
+    st.view.perms = PERMS[role]; st.view.role = role; st.view.roles = [role]; st.view.appoint = APPOINT[role] || []; st.nav = "dashboard";
     doc.querySelector("#ncSidebar [data-nc-nav]").click();
     return doc.getElementById("ncSidebar").textContent;
   };
   const sideRec = asRole("recruiter");
-  assert(/Joueurs sélectionnables/.test(sideRec) && /Joueurs suivis/.test(sideRec) && /Staff/.test(sideRec) && !/Tableau de bord|Tactique|Matchs amicaux|Convoqués|Mandat|Analyse des adversaires/.test(sideRec), "recruteur (DTN) : joueurs, joueurs suivis, staff (scouts)");
+  assert(/Liste des joueurs/.test(sideRec) && /Joueurs suivis/.test(sideRec) && !/Présélection/.test(sideRec) && /Staff/.test(sideRec) && !/Tableau de bord|Tactique|Matchs amicaux|Convoqués|Mandat|Analyse des adversaires/.test(sideRec), "recruteur (DTN) : joueurs, joueurs suivis, staff (scouts)");
   doc.querySelector('#ncSidebar [data-nc-nav="staff"]').click();
   assert(/DTN/.test(content().textContent) && !/Staff NT|Adjoints|Personnes aidantes/.test(content().textContent) && [...content().querySelectorAll("[data-nc-staff-invite]")].every(b => b.dataset.ncRole === "scout"), "recruteur : page Staff limitée à la DTN, ne nomme que des scouts");
   const sideScout = asRole("scout");
-  assert(/Mes joueurs attribués/.test(sideScout) && !/Tableau de bord|Joueurs sélectionnables|Tactique|Staff|Convoqués/.test(sideScout), "scout : uniquement ses joueurs attribués");
+  assert(/Mes joueurs attribués/.test(sideScout) && /Joueurs suivis/.test(sideScout) && !/Tableau de bord|Liste des joueurs|Présélection|Tactique|Staff|Convoqués/.test(sideScout), "scout : ses joueurs attribués et ses joueurs suivis");
   const sideHelp = asRole("helper");
   assert(/Tactique/.test(sideHelp) && /Convoqués/.test(sideHelp) && !/Matchs amicaux|Staff|Mandat|Statistiques/.test(sideHelp), "personne aidante : roster et ordres en consultation, pas d'administration");
   doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();

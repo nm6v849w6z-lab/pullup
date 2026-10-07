@@ -40,6 +40,32 @@
      (joueurs, sponsors fictifs de marque, divisions I, II.1…) restent tels
      quels ; les nombres suivent l'usage italien (1.234 ; 12,5). */
 window.HM_I18N_IT = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Elenco giocatori",
+  "Suivi par": "Seguito da",
+  "Joueurs que vous suivez": "Giocatori che segui",
+  "Joueurs suivis par le staff": "Giocatori seguiti dallo staff",
+  "Plus sélectionnable": "Non più convocabile",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Non segui ancora nessun giocatore: qui compariranno i giocatori che ti vengono assegnati.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Nessun giocatore seguito: assegna giocatori agli scout (pagina Staff o scheda del giocatore).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Vedi solo i giocatori che segui personalmente.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Un giocatore è seguito quando è assegnato a uno scout (che lo segue) o aggiunto ai giocatori seguiti.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Preselezione vuota: aggiungi giocatori (spunta) da Elenco giocatori o Giocatori seguiti.",
+  "Vos joueurs": "I tuoi giocatori",
+  "Accepter le poste": "Accetta l'incarico",
+  "Poste accepté": "Incarico accettato",
+  "Proposition expirée ou retirée.": "Proposta scaduta o ritirata.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Incarico accettato: entri nello staff della nazionale.",
+  "Proposition refusée.": "Proposta rifiutata.",
+  "Toutes les sélections": "Tutte le nazionali",
+  "← Toutes les sélections": "← Tutte le nazionali",
+  "Équipe A": "Nazionale A",
+  "Quitter ce rôle": "Lascia questo ruolo",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Lasciare questo ruolo nello staff di questa nazionale?",
+  "Pris par une autre sélection": "Già in un'altra nazionale",
+  "Places complètes": "Posti esauriti",
+  "Pays de la sélection": "Paese della nazionale",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "Il manager nominato riceve la proposta nei messaggi (pulsante « Accetta l'incarico ») e nella pagina Nazionali. Una stessa persona può cumulare un ruolo dello staff NT con reclutatore e scout; puoi anche nominare te stesso reclutatore o scout. Lo staff termina con il mandato del CT.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Vetrina pubblica",
   "Voir la page publique": "Vedi la pagina pubblica",

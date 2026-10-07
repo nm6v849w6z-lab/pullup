@@ -59,7 +59,8 @@ assert.ok(invite(nantes, brest, "scout").ok, "le recruteur nomme un scout"); acc
 assert.ok(invite(lyon, metz, "scout").ok, "le sélectionneur nomme un scout"); accept(metz);
 assert.strictEqual(invite(lille, reims, "scout").status, 403, "une personne aidante ne nomme personne");
 assert.strictEqual(invite(brest, reims, "scout").status, 403, "un scout ne nomme personne");
-assert.ok(!invite(lyon, nice, "scout").ok, "déjà dans le staff");
+assert.ok(!invite(lyon, nice, "assistant").ok, "déjà adjoint");
+assert.ok(!invite(lyon, nice, "helper").ok, "un seul rôle du staff NT (adjoint ou personne aidante) ; recruteur et scout se cumulent (voir national_multirole_test.js)");
 const inv = C.staffOf(st, brest.key);
 const rec = M().staff.find(s => s.mid === mid(nantes));
 assert.deepStrictEqual(inv.staffRoles.map(r => [r.role, r.by]), [["scout", rec.pseudo || rec.clubName]], "nommé par le recruteur");

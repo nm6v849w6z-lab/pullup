@@ -22,6 +22,13 @@
   // PERMS / APPOINT) : staff NT (sélectionneur, adjoints, personnes
   // aidantes) et DTN (recruteurs, scouts).
   var ROLE_LABEL = { coach: "Sélectionneur", assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" };
+  // Rôles cumulables (2026-10-07) : toutes les casquettes, « Adjoint ·
+  // Recruteur · Scout ».
+  function rolesLabel(v, fallback) {
+    var rs = (v && v.roles && v.roles.length) ? v.roles : [(v && v.role) || fallback || "coach"];
+    return rs.map(function (r) { return ROLE_LABEL[r] || r; }).join(" · ");
+  }
+  function hasRole(v) { var rs = (v && (v.roles || [v.role])) || []; for (var i = 1; i < arguments.length; i++) if (rs.indexOf(arguments[i]) >= 0) return true; return false; }
   var ui = { teamId: null, view: null, tab: "joueurs", pos: "", filter: "", shown: 50, gid: null, error: "", busy: false, replaceOut: null, tq: null, tqMatch: null,
     sort: { key: "gen", dir: -1 }, nav: "dashboard", opp: null, frOpp: "", frAt: "", frVenue: "home", staffQ: "" };
 
@@ -188,6 +195,13 @@
   function condColor(c) { return c >= 80 ? "#4FD18B" : c >= 60 ? "var(--amber)" : "#E2694F"; }
   function effColor(e) { return e >= 15 ? "#4FD18B" : e >= 7 ? "var(--amber)" : "#E2694F"; }
   function teamLab(id) { return window.HM_NATIONAL && window.HM_NATIONAL.teamLabelOf ? window.HM_NATIONAL.teamLabelOf(id) : id; }
+  // Nom cliquable → fiche joueur existante (showPlayerDetail /
+  // showForeignPlayerDetail, voir onClick data-nc-profile).
+  function profileBtn(x, label, bold) {
+    var txt = bold ? "<b>" + esc(label) + "</b>" : esc(label);
+    if (!x || !x.club) return txt;
+    return '<button type="button" class="nc-nm player-link" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '">' + txt + "</button>";
+  }
 
   // --- Tableau des joueurs (Sélectionnables, Présélection, Suivis) ---------
   // Même rendu que l'Effectif (en-têtes triables, cases colorées des
@@ -278,16 +292,17 @@
     return '<div class="cal-toolbar">' + f("data-nc-pos", "", !ui.pos, "Tous les postes") +
       POS.map(function (p) { return f("data-nc-pos", p, ui.pos === p, posShort(p)); }).join("") +
       f("data-nc-filter", "dispo", ui.filter === "dispo", "Disponibles") + f("data-nc-filter", "u23", ui.filter === "u23", "23 ans et moins") +
-      (v.watchlist.length ? f("data-nc-filter", "suivis", ui.filter === "suivis", "Suivis") : "") + "</div>";
+      ((v.followed || []).length ? f("data-nc-filter", "suivis", ui.filter === "suivis", "Suivis") : "") + "</div>";
   }
   function joueursHtml(v) {
     var list = ((v.pool && v.pool.players) || []).filter(function (x) {
-      return (!ui.pos || x.position === ui.pos) && (ui.filter !== "dispo" || !x.injuryUntil) && (ui.filter !== "u23" || x.age <= 23) && (ui.filter !== "suivis" || inList(v.watchlist, x));
+      return (!ui.pos || x.position === ui.pos) && (ui.filter !== "dispo" || !x.injuryUntil) && (ui.filter !== "u23" || x.age <= 23) && (ui.filter !== "suivis" || inList(followedRefs(v), x));
     });
     var empty = can("assigned") ? "Aucun joueur ne vous est attribué pour l'instant : le sélectionneur, un adjoint ou un recruteur vous en confiera." : "Aucun joueur.";
     return '<div class="nc-card">' + filtersHtml(v) + playersTableHtml(list, v, { limit: true, empty: empty }) +
       '<p class="nc-small">' + (can("assigned") ? "Vous ne voyez que les joueurs qui vous sont attribués." : "Caractéristiques et état physique : visibles du staff de la sélection seulement, jamais le salaire, le contrat ni le potentiel.") + "</p></div>";
   }
+  function followedRefs(v) { return ((v && v.followed) || []).map(function (e) { return e.ref; }); }
   function refsToPlayers(list) {
     var pm = poolByKey();
     return list.map(function (r) { return pm[key(r)] || null; }).filter(Boolean);
@@ -298,16 +313,35 @@
     var names = miss.map(function (r) { return esc(r.n); }).join(", ");
     return '<p class="nc-small">' + (miss.length > 1 ? miss.length + " joueurs de la liste ne sont plus sélectionnables : " + names + "." : "1 joueur de la liste n'est plus sélectionnable : " + names + ".") + "</p>";
   }
-  // Présélection : la liste de travail centrale (présélection + joueurs suivis).
+  // Présélection : la liste de travail centrale.
   function preselectionHtml(v) {
-    var h = '<div class="nc-stack">';
-    if (can("preselectView")) {
-      h += '<div class="nc-card"><div class="nc-sec"><span>Présélection</span><span>' + v.preselection.length + " / " + v.limits.preselection + "</span></div>" +
-        playersTableHtml(refsToPlayers(v.preselection), v, { empty: can("preselect") ? "Présélection vide : ajoutez des joueurs (coche) depuis Joueurs sélectionnables ou depuis vos joueurs suivis ci-dessous." : "Présélection vide pour l'instant." }) + missingNote(v.preselection) + "</div>";
+    return '<div class="nc-stack"><div class="nc-card"><div class="nc-sec"><span>Présélection</span><span>' + v.preselection.length + " / " + v.limits.preselection + "</span></div>" +
+      playersTableHtml(refsToPlayers(v.preselection), v, { empty: can("preselect") ? "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis." : "Présélection vide pour l'instant." }) + missingNote(v.preselection) + "</div></div>";
+  }
+  // Joueurs suivis (onglet à part, 2026-10-07) : serveur = followedOf.
+  // Un scout (sans autre rôle) ne reçoit que les joueurs qu'il suit ; les
+  // autres voient tous les joueurs suivis et qui les suit.
+  function suivisHtml(v) {
+    var pm = poolByKey(), list = v.followed || [], own = can("assigned");
+    var rows = list.map(function (e) { return { e: e, x: pm[key(e.ref)] || null }; })
+      .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? genOf(b.x) : 0) - (a.x ? genOf(a.x) : 0); });
+    var who = function (e) {
+      if (!e.by.length) return '<span class="nc-club">Staff</span>';
+      return '<span class="nc-chips" style="justify-content:flex-start">' + e.by.map(function (b) {
+        return '<span class="nc-chip" style="padding:3px 9px">' + esc(b.mine ? "Vous" : (b.name || "Membre du staff")) + (b.role ? ' <span class="nc-club">· ' + esc(ROLE_LABEL[b.role] || b.role) + "</span>" : "") + "</span>";
+      }).join("") + "</span>";
+    };
+    var h = '<div class="nc-card"><div class="nc-sec"><span>' + (own ? "Joueurs que vous suivez" : "Joueurs suivis par le staff") + "</span><span>" + list.length + "</span></div>";
+    if (!rows.length) h += '<p class="nc-club">' + (own ? "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici." : "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).") + "</p>";
+    else {
+      h += '<div class="nc-scroll"><table class="nc-table nc-followed"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th>' + (own ? "" : '<th class="l">Suivi par</th>') + (can("preselect") ? "<th></th>" : "") + "</tr></thead><tbody>" + rows.map(function (r) {
+        var x = r.x, e = r.e;
+        return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + (x ? profileBtn(x, x.name, true) : "<b>" + esc(e.ref.n) + "</b>") + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : '<div class="nc-club">Plus sélectionnable</div>') + "</td>" +
+          "<td>" + (x ? esc(x.age) : "–") + "</td><td>" + (x ? '<span class="nc-gen">' + esc(genOf(x)) + "</span>" : "–") + "</td><td>" + (x ? (x.injuryUntil ? statusTag("injured", x) : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') : "–") + "</td>" +
+          (own ? "" : '<td class="l">' + who(e) + "</td>") + (can("preselect") ? '<td style="white-space:nowrap">' + (x ? actionsHtml(x, v) : "") + "</td>" : "") + "</tr>";
+      }).join("") + "</tbody></table></div>";
     }
-    h += '<div class="nc-card"><div class="nc-sec"><span>Joueurs suivis</span><span>' + v.watchlist.length + " / " + v.limits.watchlist + "</span></div>" +
-      playersTableHtml(refsToPlayers(v.watchlist), v, { empty: "Aucun joueur suivi." }) + missingNote(v.watchlist) + "</div>";
-    return h + "</div>";
+    return h + '<p class="nc-small">' + (own ? "Vous ne voyez que les joueurs que vous suivez vous-même." : "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.") + "</p></div>";
   }
 
   // --- Convocations (page unique : convoqués, ajout, remplacement) -------
@@ -344,7 +378,7 @@
     else {
       h += '<div class="nc-scroll"><table class="nc-table"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th><th>Disponibilité</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
         var x = r.x, c = r.c;
-        return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l"><b>' + esc(c.ref.n) + "</b>" + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + (x ? esc(x.age) : "–") + "</td><td>" + (x ? '<span class="nc-gen">' + esc(genOf(x)) + "</span>" : "–") + "</td>" +
+        return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + profileBtn(x, c.ref.n, true) + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + (x ? esc(x.age) : "–") + "</td><td>" + (x ? '<span class="nc-gen">' + esc(genOf(x)) + "</span>" : "–") + "</td>" +
           "<td>" + (x && !x.injuryUntil ? '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>' : "–") + "</td><td>" + statusTag(c.status, x) + "</td><td style=\"white-space:nowrap\">" +
           (edit ? '<button type="button" class="nc-ic" data-nc-conv="0" data-nc-p="' + esc(c.ref.p) + '" data-nc-n="' + esc(c.ref.n) + '" title="Retirer">' + icon("cross") + "</button>" :
             can("convoke") && cur.frozen && !cur.past && c.status !== "ok" ? '<button type="button" class="nc-btn2" data-nc-replace="' + esc(key(c.ref)) + '">Remplacer</button>' : "") + "</td></tr>";
@@ -360,7 +394,7 @@
       h += '<div class="nc-sec"><span>Présélection non convoquée</span><span>' + pre.length + "</span></div>";
       if (!pre.length) h += '<p class="nc-club">' + (v.preselection.length ? "Toute la présélection est convoquée." : "Présélection vide.") + "</p>";
       pre.forEach(function (x) {
-        h += '<div class="nc-slot">' + posBadge(x.position) + '<span class="nc-grow">' + esc(x.name) + ' <span class="nc-club">· GEN ' + esc(genOf(x)) + " · " + esc(x.club.name) + "</span></span>" + (x.injuryUntil ? statusTag("injured", x) : "") +
+        h += '<div class="nc-slot">' + posBadge(x.position) + '<span class="nc-grow">' + profileBtn(x, x.name) + ' <span class="nc-club">· GEN ' + esc(genOf(x)) + " · " + esc(x.club.name) + "</span></span>" + (x.injuryUntil ? statusTag("injured", x) : "") +
           (edit ? '<button type="button" class="nc-ic" data-nc-conv="1" data-nc-p="' + esc(x.p) + '" data-nc-n="' + esc(x.n) + '" title="Convoquer"' + (conv.length >= v.limits.convocation ? " disabled" : "") + ">" + icon("plus") + "</button>" : "") + "</div>";
       });
     }
@@ -729,7 +763,7 @@
           (list.length ? list.map(function (s) {
             return '<div class="nc-slot-wrap"><div class="nc-slot"><span class="nc-grow"><b>' + esc(s.pseudo || s.clubName) + '</b> <span class="nc-club">· ' + esc(s.clubName || "") + (s.byName ? " · nommé par " + esc(s.byName) : "") + "</span></span>" +
               (s.status === "active" ? '<span class="nc-tag ok">En poste</span>' : '<span class="nc-tag mid">Invitation envoyée</span>') +
-              (appoint.indexOf(role) >= 0 ? '<button type="button" class="nc-btn2" data-nc-staff-remove="' + esc(s.mid) + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>" +
+              (appoint.indexOf(role) >= 0 ? '<button type="button" class="nc-btn2" data-nc-staff-remove="' + esc(s.mid) + '" data-nc-role="' + role + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>" +
               (role === "scout" && (can("assign") || s.status === "active") ? assignHtml(v, s) : "") + "</div>";
           }).join("") : '<p class="nc-club">Personne pour l\'instant.</p>') + "</div>";
       });
@@ -739,18 +773,27 @@
     var q = ui.staffQ.trim().toLowerCase();
     var mgrs = (v.managers || []).filter(function (m) { return !q || String(m.pseudo || "").toLowerCase().indexOf(q) >= 0 || String(m.clubName || "").toLowerCase().indexOf(q) >= 0; });
     mgrs.sort(function (a, b) { return (a.busy - b.busy) || String(a.pseudo || a.clubName).localeCompare(String(b.pseudo || b.clubName), "fr"); });
-    var taken = {}; staff.forEach(function (s) { taken[s.mid] = 1; });
     var count = function (role) { return staff.filter(function (s) { return s.role === role; }).length; };
+    // Rôles cumulables : un seul rôle du staff NT (sélectionneur, adjoint,
+    // personne aidante), recruteur et scout en plus de n'importe quel rôle.
+    var NT_ROLES = ["coach", "assistant", "helper"];
+    var blocked = function (m, role) {
+      var rs = m.roles || [];
+      if (rs.indexOf(role) >= 0) return "déjà " + INVITE_LABEL[role].toLowerCase();
+      if ((role === "assistant" || role === "helper") && rs.some(function (r) { return NT_ROLES.indexOf(r) >= 0; })) return "déjà dans le staff NT";
+      return "";
+    };
     h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>Nommer un manager</span><span>' + (v.managers || []).length + " managers</span></div>" +
       '<input type="search" class="nc-in" data-nc-staff-q="1" placeholder="Rechercher un manager ou un club" value="' + esc(ui.staffQ) + '" style="width:100%;max-width:420px;margin-bottom:10px">' +
       (mgrs.length ? mgrs.slice(0, 25).map(function (m) {
-        var off = m.busy || taken[m.mid];
-        return '<div class="nc-fr">' + flag(m.country) + '<div class="nc-grow"><b>' + esc(m.pseudo || m.clubName) + '</b><br><span class="nc-club">' + esc(m.clubName || "") + (m.division ? " · " + esc(m.division) : "") + (m.busy ? " · déjà sélectionneur ou dans un staff" : taken[m.mid] ? " · déjà dans le staff" : "") + "</span></div>" +
+        var rs = (m.roles || []).map(function (r) { return ROLE_LABEL[r] || r; });
+        return '<div class="nc-fr">' + flag(m.country) + '<div class="nc-grow"><b>' + esc(m.pseudo || m.clubName) + '</b><br><span class="nc-club">' + esc(m.clubName || "") + (m.division ? " · " + esc(m.division) : "") + (m.busy ? " · déjà sélectionneur ou dans le staff d'une autre sélection" : rs.length ? " · ici : " + esc(rs.join(", ")) : "") + "</span></div>" +
           appoint.map(function (role) {
-            return '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="' + role + '"' + (off || count(role) >= (max[role] || 0) ? " disabled" : "") + ">" + esc(INVITE_LABEL[role]) + "</button>";
+            var why = m.busy ? "Pris par une autre sélection" : blocked(m, role);
+            return '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="' + role + '"' + (why || count(role) >= (max[role] || 0) ? ' disabled title="' + esc(why || "Places complètes") + '"' : "") + ">" + esc(INVITE_LABEL[role]) + "</button>";
           }).join("") + "</div>";
       }).join("") : '<p class="nc-club">Aucun manager trouvé.</p>') +
-      '<p class="nc-small">Le manager nommé reçoit une notification et accepte depuis la page Sélections. Le staff prend fin avec le mandat du sélectionneur.</p></div>';
+      '<p class="nc-small">Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.</p></div>';
     return h;
   }
 
@@ -885,7 +928,7 @@
   var NAV = [
     ["dashboard", "Tableau de bord", "dashboard"],
     ["#", "Joueurs"],
-    ["joueurs", "Joueurs sélectionnables", "view"], ["preselection", "Présélection", "watch"], ["convocations", "Convoqués", "convocView"],
+    ["joueurs", "Liste des joueurs", "view"], ["suivis", "Joueurs suivis", "watch"], ["preselection", "Présélection", "preselectView"], ["convocations", "Convoqués", "convocView"],
     ["#", "Sélection"],
     ["tactique", "Tactique", "tacticsView"], ["vestiaire", "Vestiaire", "tacticsView"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
     ["amicaux", "Matchs amicaux", "friendlies"], ["analyse", "Analyse des adversaires", "analysis"], ["stats", "Statistiques", "stats"],
@@ -1006,7 +1049,7 @@
       for (var j = i + 1; j < NAV.length && NAV[j][0] !== "#"; j++) if (navAllowed(NAV[j])) return true;
       return false;
     }) : [];
-    if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.teamId ? teamLab(m.teamId) : "") + '</b><div class="nc-club">' + esc(ROLE_LABEL[role] || role) + "</div></div></div>" + navs.map(function (n) {
+    if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.teamId ? teamLab(m.teamId) : "") + '</b><div class="nc-club">' + esc(v ? rolesLabel(v) : (m.roles || [role]).map(function (r) { return ROLE_LABEL[r] || r; }).join(" · ")) + "</div></div></div>" + navs.map(function (n) {
       if (n[0] === "#") return '<div class="nc-side-label">' + esc(n[1]) + "</div>";
       var badge = n[0] === "notifications" && v && v.unread ? '<span class="nc-badge">' + v.unread + "</span>" :
         n[0] === "convocations" && curGathering() ? '<span class="nc-club">' + curGathering().players.length + "</span>" :
@@ -1016,7 +1059,7 @@
     var left = document.querySelector(".topbar-left");
     if (left && !document.getElementById("ncTopTitle")) { var tt = document.createElement("div"); tt.id = "ncTopTitle"; left.appendChild(tt); }
     var top = document.getElementById("ncTopTitle");
-    if (top && v) top.innerHTML = flag(v.team.country) + "<div><b>" + esc(teamLab(v.team.id)) + "</b><span>" + esc(ROLE_LABEL[role] || "") + (role === "coach" ? "" : " · sélectionneur : " + esc(coachName(v))) + "</span></div>";
+    if (top && v) top.innerHTML = flag(v.team.country) + "<div><b>" + esc(teamLab(v.team.id)) + "</b><span>" + esc(rolesLabel(v)) + (role === "coach" ? "" : " · sélectionneur : " + esc(coachName(v))) + "</span></div>";
   }
   function coachName(v) { var m = v && v.mandate; return m ? (m.pseudo || (m.clubName ? "Manager de " + m.clubName : "Sélectionneur")) : ""; }
   function isFinalsPeriod() {
@@ -1065,11 +1108,10 @@
     if (typeof h === "function") h();
     setTimeout(syncDashButton, 0);
   }
-  // Libellés selon le rôle : un scout ne voit que ses joueurs attribués,
-  // la DTN n'a que ses joueurs suivis (pas de présélection).
+  // Libellés selon le rôle : un scout (sans autre rôle) ne voit que ses
+  // joueurs attribués.
   function navLabel(n) {
     if (n[0] === "joueurs" && can("assigned")) return "Mes joueurs attribués";
-    if (n[0] === "preselection" && !can("preselectView")) return "Joueurs suivis";
     return n[1];
   }
   function firstNav() { var n = NAV.filter(function (x) { return x[0] !== "#" && navAllowed(x); })[0]; return n ? n[0] : "dashboard"; }
@@ -1088,6 +1130,7 @@
     var poolMissing = '<div class="nc-card"><p class="nc-club">Vivier en cours de préparation (calculé au prochain passage du monde, quelques minutes au plus).</p></div>';
     if (nav === "joueurs") return titleHtml(nav) + err + (v.pool ? joueursHtml(v) : poolMissing);
     if (nav === "preselection") return titleHtml(nav) + err + (v.pool ? preselectionHtml(v) : poolMissing);
+    if (nav === "suivis") return titleHtml(nav) + err + (v.pool ? suivisHtml(v) : poolMissing);
     if (nav === "convocations") return titleHtml(nav) + err + convocationsHtml(v);
     if (nav === "tactique") return err + tactiqueHtml(v);
     if (nav === "vestiaire") return titleHtml(nav) + err + '<div id="ncVestiaire"><p class="vs-empty">Chargement du vestiaire…</p></div>';
@@ -1120,12 +1163,12 @@
     var rank = tv && tv.qualif && tv.qualif.group ? (tv.qualif.group.standings.filter(function (s) { return s.teamId === v.team.id; })[0] || {}).rank : null;
     var seasonNo = v.mandate ? Math.min(2, Math.max(1, v.season - v.mandate.fromSeason + 1)) : 1;
     var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="nc-k">' + k + '</div><div class="nc-v">' + val + '</div><div class="nc-s">' + sub + "</div></button>"; };
-    var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(ROLE_LABEL[v.role] || "") + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(teamLab(v.team.id)) + "</h1></div></div>";
+    var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(rolesLabel(v)) + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(teamLab(v.team.id)) + "</h1></div></div>";
     h += '<div class="nc-dash">';
     h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Qualifications" + (tv && tv.qualif && tv.qualif.group ? " · " + tv.qualif.group.label : "") : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
     if (can("calendar")) h += kpi("Qualifications", rank ? rank + (rank === 1 ? "er" : "e") + " du groupe" : "–", tv && tv.qualif && tv.qualif.group ? esc(tv.qualif.group.label) + " · " + esc(tv.qualif.group.continent) : "Groupes à venir", "qualifications");
     if (can("convocView")) h += kpi("Convoqués", (cur ? cur.players.length : 0) + " / " + v.limits.convocation, cur ? esc(gTitleText(cur)) + (cur.frozen ? " · liste figée" : " · liste ouverte jusqu'au " + esc(when(cur.freezeAt))) : "Aucun rassemblement à venir", "convocations");
-    h += kpi("Joueurs suivis", v.watchlist.length, can("preselectView") ? v.preselection.length + " en présélection" : "Joueurs sélectionnables", can("watch") ? "preselection" : "joueurs");
+    if (can("watch")) h += kpi("Joueurs suivis", (v.followed || []).length, can("preselectView") ? v.preselection.length + " en présélection" : can("assigned") ? "Vos joueurs" : "Liste des joueurs", "suivis");
     if (can("mandate")) h += kpi("Mandat", "Saison " + seasonNo + " / 2", "Saisons " + esc(v.mandate.fromSeason) + " à " + esc(v.mandate.toSeason) + (r.played ? " · " + r.wins + " V – " + r.losses + " D" : ""), "mandat");
     if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : "", "amicaux");
     h += kpi("Dernier résultat", last ? esc(teamLab(last.home)) + " " + esc(last.scoreHome) + " – " + esc(last.scoreAway) + " " + esc(teamLab(last.away)) : "–", last ? esc(when(last.at)) : "Aucun match joué", "calendrier");
@@ -1138,7 +1181,7 @@
     h += '<div class="nc-two" style="margin-top:16px">';
     if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
     if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? gTitleText(cur) : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
-      (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + esc(c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div>";
+      (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + profileBtn(poolByKey()[key(c.ref)] || null, c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div>";
     return h + "</div>";
   }
   // Vitrine publique (2026-10-07) : aperçu de la page publique, message du
@@ -1339,7 +1382,7 @@
     var r = { p: Number(player.id), n: player.name }, x = poolByKey()[key(r)];
     if (!x || ownClubPlayer(x)) return "";
     var v = ui.view, list = ((v.notes || {})[key(r)] || []).slice().sort(function (a, b) { return b.at - a.at; });
-    var canMod = v.role === "coach" || v.role === "assistant";
+    var canMod = hasRole(v, "coach", "assistant");
     var h = '<section class="pdp2-card nc-notes" data-nc-notes="' + esc(r.p + "|" + r.n) + '"><div class="pdp2-head"><h3>Notes de la sélection</h3><span class="pdp2-meta">' + esc(teamLab(v.team.id)) + " · visibles du staff seulement</span></div>";
     h += '<div class="nc-notes-form"><textarea class="nc-in" data-nc-note-text="1" maxlength="600" rows="3" placeholder="Votre commentaire sur ce joueur (niveau, comportement, disponibilité…)"></textarea>' +
       '<button type="button" class="pdp2-btn pdp2-btn--accent" data-nc-note-add="1" data-nc-p="' + esc(r.p) + '" data-nc-n="' + esc(r.n) + '">Ajouter la note</button></div>';
@@ -1490,7 +1533,7 @@
     if (d.ncStaffInvite) { post("/api/national/coach/staff/invite", { mid: d.ncStaffInvite, role: d.ncRole }, "Invitation envoyée."); return; }
     if (d.ncStaffRemove) {
       if (!window.confirm(t("Retirer ce membre du staff ?"))) return;
-      post("/api/national/coach/staff/remove", { mid: d.ncStaffRemove }, "Staff mis à jour.");
+      post("/api/national/coach/staff/remove", { mid: d.ncStaffRemove, role: d.ncRole || undefined }, "Staff mis à jour.");
     }
   }
   function onChange(e) {
@@ -1563,14 +1606,59 @@
   // bord (et mode retrouvé après un rechargement).
   function bootMode() {
     return api("/api/national/me").then(function (d) {
-      mine = (d.mandates || []).map(function (m) { return Object.assign({ role: "coach" }, m); })
-        .concat((d.staffRoles || []).map(function (s) { return { teamId: s.teamId, label: s.label, country: s.country, role: s.role, unread: 0 }; }));
+      // Rôles cumulables : une entrée par sélection, toutes ses casquettes.
+      mine = (d.mandates || []).map(function (m) { return Object.assign({ role: "coach", roles: ["coach"] }, m); });
+      (d.staffRoles || []).forEach(function (s) {
+        var cur = myMandate(s.teamId);
+        if (cur) { if (cur.roles.indexOf(s.role) < 0) cur.roles.push(s.role); return; }
+        mine.push({ teamId: s.teamId, label: s.label, country: s.country, role: s.role, roles: [s.role], unread: 0 });
+      });
       ensureModeCss();
       syncModeButton();
       var saved = lsGet();
       if (saved && myMandate(saved)) { if (ui.mode !== saved) enterMode(saved); }
       else { if (saved) lsSet(null); if (ui.mode) exitMode(); }
     }).catch(function () { /* hors ligne ou monde absent */ });
+  }
+  // --- Proposition de poste dans la messagerie (demande du 2026-10-07) ----
+  // Le serveur envoie, de la part de celui qui nomme, un message portant
+  // meta = { kind: "natStaffInvite", teamId, role, label } ; ici le bouton
+  // « Accepter le poste » (même route que la page Sélections :
+  // /api/national/coach/staff/respond) et l'état réel de la proposition,
+  // lu dans /api/national/me (invitations en attente, rôles en cours).
+  var natMsg = { at: 0, invites: null, roles: null, busy: false, loading: null };
+  function natMsgRefresh(force) {
+    if (natMsg.loading) return natMsg.loading;
+    if (!force && natMsg.invites && Date.now() - natMsg.at < 20000) return Promise.resolve();
+    natMsg.loading = api("/api/national/me").then(function (d) { natMsg.invites = d.staffInvites || []; natMsg.roles = (d.staffRoles || []).concat((d.mandates || []).map(function (m) { return { teamId: m.teamId, role: "coach" }; })); natMsg.at = Date.now(); })
+      .catch(function () { natMsg.invites = natMsg.invites || []; natMsg.roles = natMsg.roles || []; })
+      .then(function () { natMsg.loading = null; if (g("renderMsgThread")) window.renderMsgThread({ keepScroll: true }); });
+    return natMsg.loading;
+  }
+  function msgActionHtml(meta) {
+    if (!meta || meta.kind !== "natStaffInvite") return "";
+    var head = '<div class="nc-msg-act" style="margin:6px 0 2px;padding:10px 12px;border:1px solid rgba(240,162,60,.35);border-radius:12px;background:rgba(240,162,60,.07);max-width:420px">' +
+      '<div style="font-size:12px;color:var(--ink-dim);margin-bottom:8px">' + flag(String(meta.teamId).split("-")[0]) + " " + esc(teamLab(meta.teamId)) + " · " + esc(ROLE_LABEL[meta.role] || meta.role) + "</div>";
+    if (!natMsg.invites) { natMsgRefresh(); return head + '<span class="nc-club">Chargement…</span></div>'; }
+    natMsgRefresh();
+    var same = function (x) { return x.teamId === meta.teamId && x.role === meta.role; };
+    var attrs = ' data-nc-msg-team="' + esc(meta.teamId) + '" data-nc-msg-role="' + esc(meta.role) + '"';
+    if (natMsg.invites.some(same)) return head + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="nc-btn" data-nc-msg-accept' + attrs + (natMsg.busy ? " disabled" : "") + ">Accepter le poste</button>" +
+      '<button type="button" class="nc-btn2" data-nc-msg-decline' + attrs + (natMsg.busy ? " disabled" : "") + ">Refuser</button></div></div>";
+    if (natMsg.roles.some(same)) return head + '<span class="nc-tag ok">Poste accepté</span> <button type="button" class="nc-btn2" data-nc-enter="' + esc(meta.teamId) + '">Mode Sélection</button></div>';
+    return head + '<span class="nc-club">Proposition expirée ou retirée.</span></div>';
+  }
+  function onMsgAction(b) {
+    if (natMsg.busy) return null;
+    var d = b.dataset, accept = d.ncMsgAccept !== undefined;
+    natMsg.busy = true;
+    if (g("renderMsgThread")) window.renderMsgThread({ keepScroll: true });
+    var p = api("/api/national/coach/staff/respond", { teamId: d.ncMsgTeam, role: d.ncMsgRole, accept: accept })
+      .then(function () { toast(accept ? "Poste accepté : vous rejoignez le staff de la sélection." : "Proposition refusée."); bootMode(); })
+      .catch(function (e) { toast(e.message); })
+      .then(function () { natMsg.busy = false; return natMsgRefresh(true); });
+    window.__lastNationalCoach = p;
+    return p;
   }
   function bind() {
     var holder = document.getElementById("nationalContent");
@@ -1580,6 +1668,8 @@
     // Menu latéral du mode (hors de #nationalContent) et bouton d'entrée du
     // tableau de bord / de la page Sélections.
     document.addEventListener("click", function (e) {
+      var msgAct = e.target.closest && e.target.closest("[data-nc-msg-accept],[data-nc-msg-decline]");
+      if (msgAct) { e.preventDefault(); e.stopPropagation(); onMsgAction(msgAct); return; }
       var enter = e.target.closest && e.target.closest("[data-nc-enter]");
       if (enter) { e.preventDefault(); e.stopPropagation(); ensureModeCss(); enterMode(enter.dataset.ncEnter); return; }
       if (ui.mode && e.target.closest && e.target.closest("#ncSidebar")) onModeClick(e);
@@ -1617,7 +1707,7 @@
   })(0);
   window.HM_NATIONAL_COACH = {
     enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: function () { return bootMode(); },
-    dashButtonHtml: dashButtonHtml, state: ui, navKey: navKey, restoreNav: restoreNav, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
+    dashButtonHtml: dashButtonHtml, state: ui, msgActionHtml: msgActionHtml, navKey: navKey, restoreNav: restoreNav, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
     // Ancien point d'entrée (« Gérer la sélection ») : ouvre le mode.
     open: function (id) { bind(); return enterMode(id); },
   };

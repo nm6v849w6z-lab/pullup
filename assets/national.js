@@ -58,6 +58,13 @@
     ".nt-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}.nt-bar i{display:block;height:100%;background:var(--amber)}",
     ".nt-err{color:var(--danger,#e2694f);font-size:13px;margin:8px 0}",
     ".nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px}",
+    // Choix de la sélection (2026-10-07) : pays + bascule Équipe A / U21.
+    ".nt-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 6px}.nt-switch .nt-grow{flex:1}",
+    ".nt-country{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ink-dim)}.nt-country .nat-flag{width:24px;height:16px;border-radius:3px;object-fit:cover}",
+    ".nt-country select{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font:inherit;font-size:13.5px;font-weight:700;max-width:220px}",
+    ".nt-seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--panel-2)}.nt-seg button{border:0;background:transparent;color:var(--ink-dim);font:inherit;font-size:13px;font-weight:800;padding:6px 14px;border-radius:999px;cursor:pointer}.nt-seg button.on{background:var(--amber);color:#1A0F02}",
+    ".nt-invite-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px}",
+    "@media(max-width:600px){.nt-switch{gap:8px}.nt-country select{max-width:170px}}",
     ".nt-tab{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}",
     ".nt-tab.on{border-color:var(--amber);color:var(--amber)}",
     ".nt-hero{border:1px solid var(--line);border-radius:18px;padding:24px 26px;display:flex;align-items:center;gap:24px;background:linear-gradient(100deg,#13306f 0%,#1b2a52 35%,var(--panel) 72%);flex-wrap:wrap}",
@@ -234,12 +241,12 @@
       (meInfo.staffInvites || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>Invitation · " + esc(roleLab[s.role] || s.role) + " de " + esc(s.label) + "</b></div>" +
           '<p class="nt-small">Proposée par ' + esc(s.by || s.coach) + ". " + esc(roleDesc[s.role] || "") + "</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '">Accepter</button><button type="button" class="nt-btn2" data-nt-staff-decline="' + esc(s.teamId) + '">Refuser</button></div></div>';
+          '<div class="nt-row"><button type="button" class="nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Accepter le poste</button><button type="button" class="nt-btn2" data-nt-staff-decline="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Refuser</button></div></div>';
       });
       (meInfo.staffRoles || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>" + esc(roleLab[s.role] || s.role) + " · " + esc(s.label) + "</b></div>" +
           '<p class="nt-small">Sélectionneur : ' + esc(s.coach) + "</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélection</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '">Quitter le staff</button></div></div>';
+          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélection</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Quitter ce rôle</button></div></div>';
       });
       h += "</div>";
     }
@@ -298,7 +305,7 @@
   // --- Page d'une élection --------------------------------------------------
   function electionHtml() {
     var el = ui.election, now = Date.now();
-    var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
+    var back = '<button type="button" class="lg-back" data-nt-back>← Toutes les sélections</button>';
     if (!el) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de l'élection…") + "</p>";
     var t = teamById(el.teamId) || { countryName: el.country, cat: el.cat };
     var me = el.me || {};
@@ -852,8 +859,28 @@
     save: function (text) { return saveMessage(text); },
     openVisuals: function (tv, onUpdate) { showcaseBind(tv, onUpdate); openVisuals(); },
   };
+  // Barre de choix de la sélection (demande du 2026-10-07) : sélecteur de
+  // pays et bascule Équipe A / U21 (même pays), plus la vue d'ensemble
+  // (élections, mandats, toutes les sélections).
+  function switchHtml(id) {
+    var p = String(id || "").split("-"), c = p[0], cat = p[1] === "U21" ? "U21" : "A";
+    var nm = function (x) { return t(g("nationName") ? window.nationName(x) : x); };
+    var opts = COUNTRIES.slice().sort(function (a, b) { return nm(a).localeCompare(nm(b), "fr"); })
+      .map(function (x) { return '<option value="' + esc(x) + '"' + (x === c ? " selected" : "") + ">" + esc(nm(x)) + "</option>"; }).join("");
+    return '<div class="nt-switch"><label class="nt-country">' + flag(c) + '<select data-nt-country aria-label="Pays de la sélection">' + opts + "</select></label>" +
+      '<div class="nt-seg" role="tablist" aria-label="Catégorie">' + [["A", "Équipe A"], ["U21", "U21"]].map(function (x) {
+        return '<button type="button" role="tab" aria-selected="' + (cat === x[0]) + '" class="' + (cat === x[0] ? "on" : "") + '" data-nt-cat="' + x[0] + '">' + x[1] + "</button>";
+      }).join("") + '</div><span class="nt-grow"></span><button type="button" class="nt-btn2" data-nt-back>Toutes les sélections</button></div>';
+  }
+  // Proposition de poste en attente : rappel sur la page de la sélection.
+  function inviteNoteHtml() {
+    var inv = ui.overview && ui.overview.me && ui.overview.me.staffInvites || [];
+    if (!inv.length) return "";
+    return '<div class="nt-card is-mine nt-invite-note"><b>' + (inv.length > 1 ? inv.length + " propositions de poste en attente" : "Proposition de poste : " + esc(({ assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" })[inv[0].role] || inv[0].role) + " · " + esc(inv[0].label)) + "</b>" +
+      '<span class="nt-grow"></span><button type="button" class="nt-btn2" data-nt-back>Répondre</button></div>';
+  }
   function teamHtml() {
-    var back = '<button type="button" class="lg-back" data-nt-back>← Sélections nationales</button>';
+    var back = switchHtml(ui.teamId) + inviteNoteHtml();
     var tv = ui.team, now = Date.now();
     if (!tv) return back + '<p class="training-empty">' + (ui.error ? esc(ui.error) : "Chargement de la sélection…") + "</p>";
     var tabs = [["apercu", "Aperçu"], ["groupe", "Groupe"], ["calendrier", "Calendrier"], ["qualifications", "Qualifications"], ["finale", "Phase finale"], ["selectionneurs", "Sélectionneurs"], ["palmares", "Palmarès"]];
@@ -956,11 +983,31 @@
   function loadElection(id) {
     return api("/api/national/election?id=" + encodeURIComponent(id)).then(function (d) { ui.election = d.election; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
   }
-  function render() {
+  // Pays de la sélection « maison » : celui du championnat du club.
+  function homeCountry() {
+    var c = myCountry();
+    if (!c) { try { c = (typeof league !== "undefined" && league && league.country) || null; } catch (e) { c = null; } }
+    return c && COUNTRIES.indexOf(c) >= 0 ? c : null;
+  }
+  // Onglet « Sélections nationales » (demande du 2026-10-07) : directement
+  // la sélection A du pays du club ; `opts.overview` = vue d'ensemble
+  // (élections, mandats, invitations, toutes les sélections).
+  function render(opts) {
     ensureCss();
-    ui.electionId = null; ui.election = null; ui.formOpen = false; ui.teamId = null; ui.team = null;
+    ui.electionId = null; ui.election = null; ui.formOpen = false;
+    var home = !(opts && opts.overview) && homeCountry();
+    if (home) {
+      var p0 = Promise.all([openTeam(home + "-A"), loadOverview()]).then(paint);
+      window.__lastNational = p0;
+      return p0;
+    }
+    ui.teamId = null; ui.team = null;
     paint();
-    var p = loadOverview().then(paint);
+    var p = loadOverview().then(function () {
+      var c = !(opts && opts.overview) && homeCountry();
+      if (c) return openTeam(c + "-A");
+      paint();
+    });
     window.__lastNational = p;
     return p;
   }
@@ -1014,7 +1061,8 @@
     if (d.ntLive) { openLive(d.ntLive); return; }
     if (d.ntGroupView && ui.teamId) { ui.groupView = d.ntGroupView; paint(); return; }
     if (d.ntPlayer) { var q = d.ntPlayer.split("|"); openPlayer(q[0], Number(q[1]), q[2]); return; }
-    if (d.ntBack !== undefined) { render(); return; }
+    if (d.ntBack !== undefined) { render({ overview: true }); return; }
+    if (d.ntCat && ui.teamId) { var cc = ui.teamId.split("-")[0]; if (ui.teamId !== cc + "-" + d.ntCat) openTeam(cc + "-" + d.ntCat, ui.teamTab); return; }
     if (d.ntClub) { var p = d.ntClub.split("|"); openClub(p[0], Number(p[1])); return; }
     if (d.ntShowForm !== undefined) { ui.formOpen = true; paint(); return; }
     if (d.ntCancelForm !== undefined) { ui.formOpen = false; paint(); return; }
@@ -1030,9 +1078,9 @@
     }
     if (d.ntStaffAccept || d.ntStaffDecline || d.ntStaffLeave) {
       var tid = d.ntStaffAccept || d.ntStaffDecline || d.ntStaffLeave;
-      if (d.ntStaffLeave && !window.confirm(t("Quitter le staff de cette sélection ?"))) return;
+      if (d.ntStaffLeave && !window.confirm(t("Quitter ce rôle dans le staff de cette sélection ?"))) return;
       var path = d.ntStaffLeave ? "/api/national/coach/staff/remove" : "/api/national/coach/staff/respond";
-      act(path, { teamId: tid, accept: !!d.ntStaffAccept }, d.ntStaffAccept ? "Vous rejoignez le staff de la sélection." : d.ntStaffLeave ? "Vous avez quitté le staff." : "Invitation refusée.").then(function () {
+      act(path, { teamId: tid, role: d.ntStaffRole || undefined, accept: !!d.ntStaffAccept }, d.ntStaffAccept ? "Vous rejoignez le staff de la sélection." : d.ntStaffLeave ? "Vous avez quitté le staff." : "Invitation refusée.").then(function () {
         // Bouton du mode Sélection (tableau de bord) mis à jour.
         if (window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.boot) window.HM_NATIONAL_COACH.boot();
         return loadOverview().then(paint);
@@ -1061,6 +1109,12 @@
     holder.__ntBound = true;
     holder.addEventListener("click", onClick);
     holder.addEventListener("submit", onSubmit);
+    // Sélecteur de pays : même catégorie (A / U21), même onglet.
+    holder.addEventListener("change", function (e) {
+      if (!e.target || !e.target.matches || !e.target.matches("[data-nt-country]") || document.body.classList.contains("nc-mode")) return;
+      var cat = String(ui.teamId || "").split("-")[1] === "U21" ? "U21" : "A";
+      window.__lastNational = openTeam(e.target.value + "-" + cat, ui.teamTab);
+    });
     // Message du staff : compteur et aperçu en direct pendant la saisie.
     holder.addEventListener("input", function (e) {
       if (!e.target || e.target.id !== "ntMsgInput") return;
@@ -1084,5 +1138,5 @@
     if (tab === "selectionneurs") return teamCoachesHtml(tv);
     return teamApercuHtml(tv, Date.now());
   }
-  window.HM_NATIONAL = { render: function () { bind(); return render(); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml, logoSvg: logoSvg, catLabel: catLabel, showcase: showcase };
+  window.HM_NATIONAL = { render: function (opts) { bind(); return render(opts); }, openElection: function (id) { bind(); return openElection(id); }, openTeam: function (id, tab) { bind(); return openTeam(id, tab); }, searchHtml: searchHtml, searchTeams: searchTeams, state: ui, teamHtml: teamHtml, sectionHtml: sectionHtml, openMatch: openMatch, openLive: openLive, liveBtnHtml: liveBtnHtml, liveMatchOf: liveMatchOf, teamLabelOf: teamLabelOf, overviewHtml: overviewHtml, electionHtml: electionHtml, logoSvg: logoSvg, catLabel: catLabel, showcase: showcase };
 })();

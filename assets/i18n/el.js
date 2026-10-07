@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_EL = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Λίστα παικτών",
+  "Suivi par": "Παρακολουθείται από",
+  "Joueurs que vous suivez": "Παίκτες που παρακολουθείτε",
+  "Joueurs suivis par le staff": "Παίκτες που παρακολουθεί το επιτελείο",
+  "Plus sélectionnable": "Δεν είναι πλέον διαθέσιμος",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Δεν παρακολουθείτε ακόμη κανέναν παίκτη: εδώ θα εμφανιστούν οι παίκτες που σας ανατίθενται.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Κανένας παίκτης υπό παρακολούθηση: αναθέστε παίκτες στους σκάουτ (σελίδα Επιτελείο ή καρτέλα παίκτη).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Βλέπετε μόνο τους παίκτες που παρακολουθείτε εσείς.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Ένας παίκτης παρακολουθείται όταν ανατίθεται σε σκάουτ (που τον παρακολουθεί) ή προστίθεται στους παρακολουθούμενους.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Κενή προεπιλογή: προσθέστε παίκτες (τικ) από τη Λίστα παικτών ή τους Παρακολουθούμενους.",
+  "Vos joueurs": "Οι παίκτες σας",
+  "Accepter le poste": "Αποδοχή της θέσης",
+  "Poste accepté": "Η θέση έγινε αποδεκτή",
+  "Proposition expirée ou retirée.": "Η πρόταση έληξε ή αποσύρθηκε.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Η θέση έγινε αποδεκτή: εντάσσεστε στο επιτελείο της εθνικής.",
+  "Proposition refusée.": "Η πρόταση απορρίφθηκε.",
+  "Toutes les sélections": "Όλες οι εθνικές ομάδες",
+  "← Toutes les sélections": "← Όλες οι εθνικές ομάδες",
+  "Équipe A": "Εθνική Α",
+  "Quitter ce rôle": "Αποχώρηση από τον ρόλο",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Αποχώρηση από αυτόν τον ρόλο στο επιτελείο της εθνικής;",
+  "Pris par une autre sélection": "Σε άλλη εθνική ομάδα",
+  "Places complètes": "Δεν υπάρχουν θέσεις",
+  "Pays de la sélection": "Χώρα εθνικής ομάδας",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "Ο διορισμένος μάνατζερ λαμβάνει την πρόταση στα μηνύματά του (κουμπί «Αποδοχή της θέσης») και στη σελίδα Εθνικές ομάδες. Ένα άτομο μπορεί να συνδυάσει ρόλο στο επιτελείο NT με ρόλο ανιχνευτή και σκάουτ· μπορείτε επίσης να ορίσετε τον εαυτό σας ανιχνευτή ή σκάουτ. Το επιτελείο λήγει με τη θητεία του ομοσπονδιακού προπονητή.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Δημόσια βιτρίνα",
   "Voir la page publique": "Δείτε τη δημόσια σελίδα",

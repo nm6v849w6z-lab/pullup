@@ -42,14 +42,14 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   check(navOn() === "joueurs" && /Mes joueurs attribués/.test(doc.getElementById("ncSidebar").textContent), "scout : « Mes joueurs attribués »");
   // Coach : deux rubriques de plus pour remonter l'historique.
   st.view.perms = PERMS.coach; st.view.role = "coach";
-  doc.querySelector('#ncSidebar [data-nc-nav="preselection"]').click(); await tick();
+  doc.querySelector('#ncSidebar [data-nc-nav="suivis"]').click(); await tick();
   doc.querySelector('#ncSidebar [data-nc-nav="staff"]').click(); await tick();
   check(navOn() === "staff", "rubrique Staff");
 
   const back = async () => { doc.getElementById("topbarBackBtn").click(); await tick(); await tick(); };
   check(!doc.getElementById("topbarBackBtn").classList.contains("hidden"), "« ‹ Retour » visible dans la barre du haut");
   await back();
-  check(visible("selectionsSection") && doc.body.classList.contains("nc-mode") && navOn() === "preselection", "Retour : rubrique précédente du mode (Présélection)");
+  check(visible("selectionsSection") && doc.body.classList.contains("nc-mode") && navOn() === "suivis", "Retour : rubrique précédente du mode (Joueurs suivis)");
   await back();
   check(visible("selectionsSection") && navOn() === "joueurs" && !visible("effectifSection"), "Retour : « Mes joueurs attribués », jamais l'Effectif du club");
   // Fiche joueur ouverte depuis le mode : Retour ramène au mode.

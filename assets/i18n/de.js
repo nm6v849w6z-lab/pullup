@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_DE = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Spielerliste",
+  "Suivi par": "Beobachtet von",
+  "Joueurs que vous suivez": "Spieler, die Sie beobachten",
+  "Joueurs suivis par le staff": "Vom Stab beobachtete Spieler",
+  "Plus sélectionnable": "Nicht mehr nominierbar",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Sie beobachten noch keine Spieler: Ihnen zugewiesene Spieler erscheinen hier.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Keine beobachteten Spieler: Weisen Sie Scouts Spieler zu (Seite Stab oder Spielerseite).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Sie sehen nur die Spieler, die Sie selbst beobachten.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Ein Spieler wird beobachtet, wenn er einem Scout zugewiesen (der ihn beobachtet) oder zu den beobachteten Spielern hinzugefügt wird.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Vorauswahl leer: Spieler (Haken) über Spielerliste oder Beobachtete Spieler hinzufügen.",
+  "Vos joueurs": "Ihre Spieler",
+  "Accepter le poste": "Posten annehmen",
+  "Poste accepté": "Posten angenommen",
+  "Proposition expirée ou retirée.": "Angebot abgelaufen oder zurückgezogen.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Posten angenommen: Sie gehören jetzt zum Stab der Nationalmannschaft.",
+  "Proposition refusée.": "Angebot abgelehnt.",
+  "Toutes les sélections": "Alle Nationalmannschaften",
+  "← Toutes les sélections": "← Alle Nationalmannschaften",
+  "Équipe A": "A-Nationalmannschaft",
+  "Quitter ce rôle": "Diese Rolle aufgeben",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Diese Rolle im Stab dieser Nationalmannschaft aufgeben?",
+  "Pris par une autre sélection": "Bei einer anderen Nationalmannschaft",
+  "Places complètes": "Keine Plätze frei",
+  "Pays de la sélection": "Land der Nationalmannschaft",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "Der ernannte Manager erhält das Angebot in seinen Nachrichten (Schaltfläche „Posten annehmen“) und auf der Seite Nationalmannschaften. Eine Person kann eine NT-Stabsrolle mit Rekrutierer und Scout kombinieren; Sie können sich auch selbst zum Rekrutierer oder Scout ernennen. Der Stab endet mit der Amtszeit des Nationaltrainers.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Öffentliches Schaufenster",
   "Voir la page publique": "Öffentliche Seite ansehen",

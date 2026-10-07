@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_ZH = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "球员名单",
+  "Suivi par": "关注者",
+  "Joueurs que vous suivez": "你关注的球员",
+  "Joueurs suivis par le staff": "教练组关注的球员",
+  "Plus sélectionnable": "不再具备入选资格",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "你暂未关注任何球员：分配给你的球员将显示在这里。",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "暂无关注球员：请将球员分配给球探（教练组页面或球员页面）。",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "你只能看到自己关注的球员。",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "球员被分配给球探（由其关注）或加入关注名单后即为被关注。",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "预选名单为空：从球员名单或关注球员中添加（勾选）球员。",
+  "Vos joueurs": "你的球员",
+  "Accepter le poste": "接受职位",
+  "Poste accepté": "已接受职位",
+  "Proposition expirée ou retirée.": "邀请已过期或已撤回。",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "已接受职位：你加入了国家队教练组。",
+  "Proposition refusée.": "已拒绝邀请。",
+  "Toutes les sélections": "所有国家队",
+  "← Toutes les sélections": "← 所有国家队",
+  "Équipe A": "成年队",
+  "Quitter ce rôle": "退出该职务",
+  "Quitter ce rôle dans le staff de cette sélection ?": "确定退出该国家队教练组中的这一职务？",
+  "Pris par une autre sélection": "已在其他国家队任职",
+  "Places complètes": "名额已满",
+  "Pays de la sélection": "国家队所属国家",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "被任命的经理会在消息中（“接受职位”按钮）以及国家队页面收到邀请。同一人可同时担任国家队教练组职务、招募员和球探；你也可以任命自己为招募员或球探。教练组随主教练任期结束而解散。",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "公开展示",
   "Voir la page publique": "查看公开页面",

@@ -4,6 +4,32 @@
    liste les clés présentes dans en.js mais absentes ici (à traduire après un
    merge). Les accords français collés à un mot (« joueur{1} ») sont omis. */
 window.HM_I18N_LT = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Žaidėjų sąrašas",
+  "Suivi par": "Stebi",
+  "Joueurs que vous suivez": "Jūsų stebimi žaidėjai",
+  "Joueurs suivis par le staff": "Štabo stebimi žaidėjai",
+  "Plus sélectionnable": "Nebegali būti šaukiamas",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "Kol kas nestebite nė vieno žaidėjo: čia atsiras jums priskirti žaidėjai.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "Nėra stebimų žaidėjų: priskirkite žaidėjus skautams (Štabo puslapis arba žaidėjo kortelė).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "Matote tik pačių stebimus žaidėjus.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "Žaidėjas stebimas, kai priskiriamas skautui (jis jį stebi) arba įtraukiamas į stebimus.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Išankstinis sąrašas tuščias: pridėkite žaidėjų (pažymėkite) iš Žaidėjų sąrašo arba Stebimų žaidėjų.",
+  "Vos joueurs": "Jūsų žaidėjai",
+  "Accepter le poste": "Priimti pareigas",
+  "Poste accepté": "Pareigos priimtos",
+  "Proposition expirée ou retirée.": "Pasiūlymas pasibaigė arba atšauktas.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Pareigos priimtos: prisijungiate prie rinktinės štabo.",
+  "Proposition refusée.": "Pasiūlymas atmestas.",
+  "Toutes les sélections": "Visos rinktinės",
+  "← Toutes les sélections": "← Visos rinktinės",
+  "Équipe A": "A rinktinė",
+  "Quitter ce rôle": "Palikti šį vaidmenį",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Palikti šį vaidmenį šios rinktinės štabe?",
+  "Pris par une autre sélection": "Užimtas kitos rinktinės",
+  "Places complètes": "Vietų nebėra",
+  "Pays de la sélection": "Rinktinės šalis",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "Paskirtas vadybininkas pasiūlymą gauna žinutėse (mygtukas „Priimti pareigas“) ir Rinktinių puslapyje. Tas pats asmuo gali derinti NT štabo vaidmenį su verbuotoju ir skautu; taip pat galite paskirti save verbuotoju ar skautu. Štabas baigia darbą kartu su treneriu.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Viešoji vitrina",
   "Voir la page publique": "Žiūrėti viešą puslapį",

@@ -59909,6 +59909,8 @@ function msgMessagesHtml(t) {
     const seen = lastMine && m.id === lastMine.id && t.readByOtherUntil >= m.at;
     html += `<div class="msg-row${m.mine ? " mine" : ""}">` +
       `<div class="msg-bubble" data-no-i18n>${escapeHtml(m.text)}</div>` +
+      // Proposition de poste en sélection : bouton « Accepter le poste » (assets/national-coach.js).
+      (m.meta && !m.mine && window.HM_NATIONAL_COACH && window.HM_NATIONAL_COACH.msgActionHtml ? window.HM_NATIONAL_COACH.msgActionHtml(m.meta) : "") +
       `<div class="msg-meta"><span>${escapeHtml(time)}</span>` +
       (seen ? `<span>Vu</span>` : "") +
       (!m.mine ? `<button type="button" class="msg-report-link" data-msg-report="${m.id}">Signaler</button>` : "") +

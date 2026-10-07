@@ -2,6 +2,32 @@
    français tel qu'affiché ({0}, {player}… = parties variables), valeur =
    anglais. Généré puis relu ; on peut l'éditer à la main. */
 window.HM_I18N_EN = {
+  // Mode Sélection : liste, joueurs suivis, rôles cumulables, proposition de poste, pays / A-U21 (2026-10-07).
+  "Liste des joueurs": "Player list",
+  "Suivi par": "Followed by",
+  "Joueurs que vous suivez": "Players you follow",
+  "Joueurs suivis par le staff": "Players followed by the staff",
+  "Plus sélectionnable": "No longer eligible",
+  "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici.": "You are not following any players yet: players assigned to you will appear here.",
+  "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).": "No followed players: assign players to scouts (Staff page or player page).",
+  "Vous ne voyez que les joueurs que vous suivez vous-même.": "You only see the players you follow yourself.",
+  "Un joueur est suivi quand il est attribué à un scout (il le suit) ou ajouté aux joueurs suivis.": "A player is followed when assigned to a scout (who follows him) or added to the followed players.",
+  "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis.": "Preselection empty: add players (tick) from Player list or Followed players.",
+  "Vos joueurs": "Your players",
+  "Accepter le poste": "Accept the position",
+  "Poste accepté": "Position accepted",
+  "Proposition expirée ou retirée.": "Offer expired or withdrawn.",
+  "Poste accepté : vous rejoignez le staff de la sélection.": "Position accepted: you join the national team staff.",
+  "Proposition refusée.": "Offer declined.",
+  "Toutes les sélections": "All national teams",
+  "← Toutes les sélections": "← All national teams",
+  "Équipe A": "A team",
+  "Quitter ce rôle": "Leave this role",
+  "Quitter ce rôle dans le staff de cette sélection ?": "Leave this role in this national team's staff?",
+  "Pris par une autre sélection": "Taken by another national team",
+  "Places complètes": "No places left",
+  "Pays de la sélection": "National team country",
+  "Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.": "The appointed manager receives the offer in their messages (“Accept the position” button) and on the National teams page. One person can combine an NT staff role with recruiter and scout; you can also appoint yourself recruiter or scout. The staff ends with the head coach's term.",
   // Vitrine publique dans le mode Sélection (2026-10-07).
   "Vitrine publique": "Public showcase",
   "Voir la page publique": "View the public page",

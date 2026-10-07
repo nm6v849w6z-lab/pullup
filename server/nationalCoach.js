@@ -483,15 +483,42 @@ function migrateStaff(m) {
   m.staffV = 2;
   return m;
 }
+// Rôles cumulables (demande du 2026-10-07) : une même personne peut avoir
+// plusieurs casquettes dans une sélection — au plus UN rôle du staff NT
+// (sélectionneur, adjoint ou personne aidante), plus recruteur et/ou scout
+// (ex. adjoint + recruteur + scout, sélectionneur + recruteur + scout).
+// Une entrée m.staff par rôle (même key, même mid). Droits = UNION des
+// droits de ses rôles (PERMS) ; la restriction du scout (« assigned » :
+// seulement ses joueurs) ne s'applique qu'à qui n'a AUCUN autre rôle.
+const ROLE_ORDER = ["coach", "assistant", "helper", "recruiter", "scout"];
+const NT_STAFF = ["assistant", "helper"];
+function sortRoles(roles) { return roles.slice().sort((a, b) => ROLE_ORDER.indexOf(a) - ROLE_ORDER.indexOf(b)); }
+function permsOf(roles) {
+  const set = new Set();
+  roles.forEach(r => (PERMS[r] || []).forEach(p => set.add(p)));
+  if (roles.some(r => r !== "scout")) set.delete("assigned");
+  return [...set];
+}
 function accessOf(store, me, teamId) {
   const m = migrateStaff(NT().activeMandate(store, teamId));
   if (!m || !me) return null;
-  if (m.key === me.key) return { m, role: "coach" };
-  const s = (m.staff || []).find(x => x.key === me.key && x.status === "active");
-  return s ? { m, role: s.role, mid: s.mid } : null;
+  const roles = m.key === me.key ? ["coach"] : [];
+  let mid = null;
+  (m.staff || []).forEach(x => {
+    if (x.key !== me.key || x.status !== "active") return;
+    mid = x.mid;
+    if (!roles.includes(x.role)) roles.push(x.role);
+  });
+  if (!roles.length) return null;
+  const sorted = sortRoles(roles);
+  // `role` = rôle principal (le plus élevé), pour l'affichage et les règles
+  // qui en dépendent (message de la vitrine, personnalisation).
+  return { m, role: sorted[0], roles: sorted, perms: permsOf(sorted), mid: mid || NT().managerMid(me.key) };
 }
-function can(a, perm) { return !!(a && PERMS[a.role] && PERMS[a.role].includes(perm)); }
-function canAppoint(a, role) { return !!(a && (APPOINT[a.role] || []).includes(role)); }
+function hasRole(a, ...roles) { return !!(a && a.roles && a.roles.some(r => roles.includes(r))); }
+function can(a, perm) { return !!(a && a.perms && a.perms.includes(perm)); }
+function canAppoint(a, role) { return !!(a && a.roles && a.roles.some(r => (APPOINT[r] || []).includes(role))); }
+function appointableBy(a) { return STAFF_ROLES.filter(r => canAppoint(a, r)); }
 // Mandat si `me` a le droit `perm` sur cette sélection.
 function coachMandate(store, me, teamId, perm) {
   const a = accessOf(store, me, teamId);
@@ -533,7 +560,7 @@ function setNote(store, me, body, now, ctx) {
     const n = list.find(x => x.id === Number(body.remove));
     if (!n) return fail("Note introuvable.", 404);
     // Sa propre note, ou modération par le sélectionneur / un adjoint.
-    if (n.by !== me.key && a.role !== "coach" && a.role !== "assistant") return fail("Vous ne pouvez supprimer que vos notes.", 403);
+    if (n.by !== me.key && !hasRole(a, "coach", "assistant")) return fail("Vous ne pouvez supprimer que vos notes.", 403);
     m.notes[k] = list.filter(x => x !== n);
     if (!m.notes[k].length) delete m.notes[k];
     return { ok: true };
@@ -561,14 +588,52 @@ function setListMember(store, me, body, now, ctx) {
   m[list] = Array.isArray(m[list]) ? m[list] : [];
   if (body.on === false) {
     m[list] = m[list].filter(x => !sameRef(x, r));
+    if (list === "watchlist" && m.watchBy) delete m.watchBy[refKey(r)];
     return { ok: true, [list]: m[list] };
   }
-  if (hasRef(m[list], r)) return { ok: true, [list]: m[list] };
+  // Joueurs suivis : qui suit (onglet « Joueurs suivis », 2026-10-07).
+  const follow = () => {
+    if (list !== "watchlist") return;
+    m.watchBy = m.watchBy || {};
+    const by = m.watchBy[refKey(r)] = m.watchBy[refKey(r)] || [];
+    if (!by.some(x => x.mid === a.mid)) by.push({ mid: a.mid, name: actorName(store, a, me), role: a.role, at: now });
+  };
+  if (hasRef(m[list], r)) { follow(); return { ok: true, [list]: m[list] }; }
   if (!poolMap(ctx.pool).has(refKey(r))) return fail("Ce joueur n'est pas sélectionnable pour cette sélection.");
   const max = list === "watchlist" ? LIMITS.watchlist : LIMITS.preselection;
   if (m[list].length >= max) return fail(list === "watchlist" ? `${max} joueurs suivis au maximum.` : `Présélection : ${max} joueurs au maximum.`);
   m[list].push(r);
+  follow();
   return { ok: true, [list]: m[list] };
+}
+// Onglet « Joueurs suivis » (demande du 2026-10-07) : un joueur est suivi
+// par un membre du staff quand il est attribué à un scout (m.assign, le
+// scout le suit) ou ajouté aux joueurs suivis (m.watchlist, auteur dans
+// m.watchBy). Un scout (sans autre rôle) ne voit que les joueurs qu'il suit
+// lui-même ; les autres membres qui ont accès aux joueurs suivis
+// (sélectionneur, adjoints, recruteurs, personnes aidantes) les voient tous,
+// avec qui les suit. Jamais de clé de manager : nom, rôle, « moi ».
+function followedOf(m, a) {
+  const byKey = new Map();
+  const add = (r, who) => {
+    const k = refKey(r);
+    let e = byKey.get(k);
+    if (!e) { e = { ref: { p: r.p, n: r.n }, by: [] }; byKey.set(k, e); }
+    if (who && !e.by.some(b => b.mid === who.mid && b.role === who.role)) e.by.push(who);
+  };
+  const staffName = id => { const s = (m.staff || []).find(x => x.mid === id); return s ? (s.pseudo || s.clubName || null) : null; };
+  Object.entries(m.assign || {}).forEach(([id, refs]) => refs.forEach(r => add(r, { mid: id, name: staffName(id), role: "scout" })));
+  (m.watchlist || []).forEach(r => {
+    const by = (m.watchBy || {})[refKey(r)] || [];
+    add(r, null);
+    by.forEach(x => add(r, { mid: x.mid, name: x.name || null, role: x.role || null }));
+  });
+  let list = [...byKey.values()];
+  if (can(a, "assigned")) {
+    const mine = new Set(assignedOf(m, a.mid).map(refKey));
+    list = list.filter(e => mine.has(refKey(e.ref)));
+  }
+  return list.map(e => ({ ref: e.ref, by: e.by.map(b => ({ name: b.name, role: b.role, mine: b.mid === a.mid })) }));
 }
 // Liste des convoqués d'un rassemblement, avant le gel.
 function setConvocation(store, me, body, now, ctx) {
@@ -765,18 +830,19 @@ function coachView(store, me, teamId, now, ctx) {
   const { refs } = tacticsRoster(store, m, team, ctx);
   const nidPlayers = refs.map(r => ({ nid: nidOf(m, r), ref: r }));
   const NF = require("./nationalFriendlies.js");
-  const perms = PERMS[role];
+  const perms = access.perms;
   // Scout : uniquement ses joueurs attribués (vivier, joueurs suivis).
   const mine = can(access, "assigned") ? new Set(assignedOf(m, access.mid).map(refKey)) : null;
   const only = list => mine ? (list || []).filter(r => mine.has(refKey(r))) : (list || []);
   const tacticsSeen = can(access, "tactics") || can(access, "tacticsView");
   return {
-    ok: true, now, season: ctx.season, role, perms,
+    ok: true, now, season: ctx.season, role, roles: access.roles, perms,
     team: { id: team.id, country: team.country, cat: team.cat, label: NT().teamLabel(team.id) },
     mandate: NT().publicMandate(m),
     limits: LIMITS,
     pool: pool && can(access, "view") ? { at: pool.at, eligible: mine ? mine.size : pool.eligible, players: mine ? pool.players.filter(x => mine.has(refKey(x))) : pool.players } : null,
     preselection: can(access, "preselectView") ? (m.preselection || []) : [], watchlist: can(access, "watch") ? only(m.watchlist) : [],
+    followed: can(access, "watch") ? followedOf(m, access) : [],
     gatherings: can(access, "convocView") ? gatherings : [], currentGid: can(access, "convocView") && cur ? cur.gid : null,
     tactics: tacticsSeen ? (m.tactics || defaultOrders()) : null, tacticsPlayers: tacticsSeen ? nidPlayers : [],
     // Ordres par match : matchs à venir (adversaire, compétition, verrou,
@@ -795,7 +861,7 @@ function coachView(store, me, teamId, now, ctx) {
     // des scouts pour ceux qui les gèrent, ses propres joueurs pour un scout.
     staff: can(access, "staffView") ? publicStaff(m) : [],
     staffMax: STAFF_MAX,
-    appoint: APPOINT[role] || [],
+    appoint: appointableBy(access),
     assign: can(access, "assign") ? Object.fromEntries(Object.entries(m.assign || {}).map(([k, v]) => [k, v.slice()])) : mine ? { [access.mid]: assignedOf(m, access.mid) } : {},
     assignMax: LIMITS.assign,
     // Notes sur les joueurs : staff de la sélection seulement, jamais sur
@@ -804,7 +870,7 @@ function coachView(store, me, teamId, now, ctx) {
     notes: notesFor(m, access, me, pool),
     // Annuaire des managers à inviter (si ce membre peut nommer) : déjà
     // sélectionneur ou déjà dans un staff = pas invitable.
-    managers: (APPOINT[role] || []).length ? managersFor(store, m) : [],
+    managers: appointableBy(access).length ? managersFor(store, m) : [],
     friendlies: can(access, "friendlies") ? NF.viewFor(store, team, ctx.season, ctx.calendarStartAt, now) : null,
     // Analyse des adversaires : prochain adversaire (ou celui demandé).
     analysis: can(access, "analysis") ? analysisOf(store, team, ctx.season, ctx.calendarStartAt, now, ctx.opp) : null,
@@ -915,10 +981,14 @@ function analysisOf(store, team, season, calendarStartAt, now, oppId) {
   };
   return base;
 }
+// Rôles cumulables : le sélectionneur et les membres de CE staff restent
+// dans l'annuaire (`roles` : leurs casquettes ici, invitations comprises) ;
+// `busy` = pris par une AUTRE sélection (sélectionneur ou staff actif).
 function managersFor(store, m) {
   const busy = new Set();
-  (store.mandates || []).filter(x => !x.endedAt).forEach(x => { busy.add(x.key); (x.staff || []).forEach(s => { if (s.status === "active") busy.add(s.key); }); });
-  return (store.managerIndex || []).filter(x => x.key !== m.key).map(x => ({ mid: x.mid, pseudo: x.pseudo, clubName: x.clubName, country: x.country, division: x.division, busy: busy.has(x.key) }));
+  (store.mandates || []).filter(x => !x.endedAt && x !== m).forEach(x => { busy.add(x.key); (x.staff || []).forEach(s => { if (s.status === "active") busy.add(s.key); }); });
+  const here = key => sortRoles((key === m.key ? ["coach"] : []).concat((m.staff || []).filter(s => s.key === key).map(s => s.role)));
+  return (store.managerIndex || []).map(x => ({ mid: x.mid, pseudo: x.pseudo, clubName: x.clubName, country: x.country, division: x.division, busy: busy.has(x.key), roles: here(x.key) }));
 }
 
 // --- Staff de la sélection (refonte du 2026-10-07) --------------------------
@@ -947,9 +1017,26 @@ function staffOf(store, key) {
   return { staffRoles: roles, staffInvites: invites };
 }
 function actorName(store, a, me) {
-  if (a.role === "coach") return a.m.pseudo || (a.m.clubName ? `Manager de ${a.m.clubName}` : "Le sélectionneur");
+  if (hasRole(a, "coach")) return a.m.pseudo || (a.m.clubName ? `Manager de ${a.m.clubName}` : "Le sélectionneur");
   const s = (a.m.staff || []).find(x => x.key === me.key);
   return (s && (s.pseudo || s.clubName)) || "Un membre du staff";
+}
+// Sélectionneur ou staff actif d'une AUTRE sélection que `m`.
+function takenElsewhere(store, key, m) {
+  if (NT().mandatesOfKey(store, key).some(x => x !== m)) return "coach";
+  return staffOf(store, key).staffRoles.some(r => r.teamId !== m.teamId) ? "staff" : null;
+}
+// Proposition de poste (demande du 2026-10-07) : en plus de la
+// notification du club, un message dans la messagerie interne, de la part
+// de celui qui nomme, avec le bouton « Accepter le poste » (meta lue par le
+// navigateur, acceptation par staffRespond). Envoyé par la route (index.js).
+function inviteMessage(store, m, target, role, byName) {
+  const label = NT().teamLabel(m.teamId);
+  return {
+    to: target.ref,
+    text: `Proposition de poste : ${STAFF_LABEL[role]} de ${label}.\n${byName} vous propose de devenir ${STAFF_LABEL[role]} de ${label}. Acceptez le poste ci-dessous ou depuis la page Sélections.`,
+    meta: { kind: "natStaffInvite", teamId: m.teamId, role, label },
+  };
 }
 function staffInvite(store, me, body, now) {
   const role = STAFF_ROLES.includes(body && body.role) ? body.role : null;
@@ -959,50 +1046,74 @@ function staffInvite(store, me, body, now) {
   const m = a.m;
   const target = (store.managerIndex || []).find(x => x.mid === body.mid);
   if (!target) return fail("Manager introuvable.");
-  if (target.key === m.key) return fail("C'est le sélectionneur.");
+  const name = target.pseudo || target.clubName;
+  const isCoach = target.key === m.key;
   m.staff = Array.isArray(m.staff) ? m.staff : [];
-  if (m.staff.some(s => s.key === target.key)) return fail(`${target.pseudo || target.clubName} fait déjà partie du staff (ou est invité).`);
+  const here = m.staff.filter(s => s.key === target.key);
+  if (here.some(s => s.role === role)) return fail(`${name} est déjà ${STAFF_LABEL[role]} (ou invité à l'être).`);
+  // Au plus un rôle du staff NT (sélectionneur, adjoint, personne aidante) ;
+  // recruteur et scout se cumulent avec n'importe quel rôle.
+  if (NT_STAFF.includes(role) && isCoach) return fail("C'est le sélectionneur.");
+  if (NT_STAFF.includes(role) && here.some(s => NT_STAFF.includes(s.role))) return fail(`${name} a déjà un rôle dans le staff NT : un seul parmi adjoint et personne aidante (recruteur et scout se cumulent).`);
   if (m.staff.filter(s => s.role === role).length >= STAFF_MAX[role]) return fail(`${STAFF_MAX[role]} ${STAFF_PLURAL[role]} au maximum.`);
-  if (NT().mandatesOfKey(store, target.key).length) return fail("Ce manager est déjà sélectionneur.");
-  if (staffOf(store, target.key).staffRoles.length) return fail("Ce manager fait déjà partie du staff d'une autre sélection.");
+  const elsewhere = takenElsewhere(store, target.key, m);
+  if (elsewhere === "coach") return fail("Ce manager est déjà sélectionneur.");
+  if (elsewhere) return fail("Ce manager fait déjà partie du staff d'une autre sélection.");
   const byName = actorName(store, a, me);
-  m.staff.push({ key: target.key, mid: target.mid, ref: target.ref, pseudo: target.pseudo, clubName: target.clubName, role, status: "invited", at: now, by: me.key, byName });
+  // Se donner soi-même une casquette (ex. le sélectionneur se nomme scout) :
+  // en poste tout de suite, rien à accepter.
+  const self = target.key === me.key;
+  m.staff.push({ key: target.key, mid: target.mid, ref: target.ref, pseudo: target.pseudo, clubName: target.clubName, role, status: self ? "active" : "invited", at: now, since: self ? now : undefined, by: me.key, byName });
+  if (self) return { ok: true, staff: publicStaff(m) };
   queueNotice(store, target.ref, {
-    key: `nat_staff_inv_${m.id}_${target.mid}`, title: `${NT().teamLabel(m.teamId)} : invitation dans le staff`,
-    text: `${byName} vous propose de devenir ${STAFF_LABEL[role]} de ${NT().teamLabel(m.teamId)}. Répondez depuis la page Sélections.`,
+    key: `nat_staff_inv_${m.id}_${target.mid}_${role}`, title: `${NT().teamLabel(m.teamId)} : invitation dans le staff`,
+    text: `${byName} vous propose de devenir ${STAFF_LABEL[role]} de ${NT().teamLabel(m.teamId)}. Répondez depuis votre messagerie ou la page Sélections.`,
   });
-  return { ok: true, staff: publicStaff(m) };
+  return { ok: true, staff: publicStaff(m), message: inviteMessage(store, m, target, role, byName) };
 }
+// Réponse à une proposition : `role` choisit l'invitation (plusieurs
+// casquettes proposées) ; sans `role`, la première en attente. Une fois
+// acceptée, plus rien à accepter (pas d'acceptation multiple).
 function staffRespond(store, me, body, now) {
   const m = migrateStaff(NT().activeMandate(store, body && body.teamId));
-  const s = m && me && (m.staff || []).find(x => x.key === me.key && x.status === "invited");
-  if (!s) return fail("Aucune invitation en attente pour cette sélection.", 404);
+  const role = body && STAFF_ROLES.includes(body.role) ? body.role : null;
+  const s = m && me && (m.staff || []).find(x => x.key === me.key && x.status === "invited" && (!role || x.role === role));
+  if (!s) {
+    const done = m && me && role && (m.staff || []).some(x => x.key === me.key && x.status === "active" && x.role === role);
+    return fail(done ? "Vous avez déjà accepté ce poste." : "Aucune invitation en attente pour cette sélection.", done ? 409 : 404);
+  }
   if (body.accept) {
-    if (NT().mandatesOfKey(store, me.key).length) return fail("Vous êtes sélectionneur : impossible de rejoindre un staff.");
-    if (staffOf(store, me.key).staffRoles.length) return fail("Vous faites déjà partie du staff d'une autre sélection.");
+    const elsewhere = takenElsewhere(store, me.key, m);
+    if (elsewhere === "coach") return fail("Vous êtes sélectionneur d'une autre sélection : impossible de rejoindre ce staff.");
+    if (elsewhere) return fail("Vous faites déjà partie du staff d'une autre sélection.");
     s.status = "active"; s.since = now;
-    coachFeed(m, { key: `staff_ok_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} rejoint votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
+    coachFeed(m, { key: `staff_ok_${s.mid}_${s.role}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} rejoint votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
   } else {
     m.staff = m.staff.filter(x => x !== s);
-    coachFeed(m, { key: `staff_no_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} décline son invitation`, text: `Rôle proposé : ${STAFF_LABEL[s.role]}.` });
+    coachFeed(m, { key: `staff_no_${s.mid}_${s.role}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} décline son invitation`, text: `Rôle proposé : ${STAFF_LABEL[s.role]}.` });
   }
   return { ok: true, ...staffOf(store, me.key) };
 }
 // Retrait par un membre qui peut nommer ce rôle (APPOINT), ou départ
-// volontaire (sans mid, ou son propre mid).
+// volontaire (sans mid, ou son propre mid). `role` : une seule casquette
+// (sans `role` : toutes celles que l'on peut retirer).
 function staffRemove(store, me, body, now) {
   const m = migrateStaff(NT().activeMandate(store, body && body.teamId));
   if (!m || !me) return fail("Sélection sans sélectionneur.", 404);
-  const self = (m.staff || []).find(x => x.key === me.key);
-  const leaving = self && (body.mid == null || body.mid === self.mid);
+  const role = body && STAFF_ROLES.includes(body.role) ? body.role : null;
+  const mineAll = (m.staff || []).filter(x => x.key === me.key);
+  const leaving = mineAll.length && (body.mid == null || body.mid === mineAll[0].mid);
   const a = accessOf(store, me, m.teamId);
-  const s = leaving ? self : (m.staff || []).find(x => x.mid === body.mid);
-  if (!s) return fail(a ? "Membre du staff introuvable." : "Vous ne faites pas partie de ce staff.", a ? 404 : 403);
-  if (!leaving && !canAppoint(a, s.role)) return fail(s.role === "assistant" ? "Seul le sélectionneur retire un adjoint." : `Vous ne pouvez pas retirer un ${STAFF_LABEL[s.role]}.`, 403);
-  m.staff = m.staff.filter(x => x !== s);
-  if (m.assign) delete m.assign[s.mid];
-  if (!leaving) queueNotice(store, s.ref, { key: `nat_staff_out_${m.id}_${s.mid}_${now}`, title: `${NT().teamLabel(m.teamId)} : fin de votre rôle`, text: `${actorName(store, a, me)} a mis fin à votre rôle de ${STAFF_LABEL[s.role]}.` });
-  else coachFeed(m, { key: `staff_left_${s.mid}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} quitte votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
+  const pick = (leaving ? mineAll : (m.staff || []).filter(x => x.mid === body.mid)).filter(x => !role || x.role === role);
+  if (!pick.length) return fail(a ? "Membre du staff introuvable." : "Vous ne faites pas partie de ce staff.", a ? 404 : 403);
+  const out = leaving ? pick : pick.filter(x => canAppoint(a, x.role));
+  if (!out.length) return fail(pick[0].role === "assistant" ? "Seul le sélectionneur retire un adjoint." : `Vous ne pouvez pas retirer un ${STAFF_LABEL[pick[0].role]}.`, 403);
+  m.staff = m.staff.filter(x => !out.includes(x));
+  out.forEach(s => {
+    if (s.role === "scout" && m.assign && !m.staff.some(x => x.mid === s.mid && x.role === "scout")) delete m.assign[s.mid];
+    if (!leaving) queueNotice(store, s.ref, { key: `nat_staff_out_${m.id}_${s.mid}_${s.role}_${now}`, title: `${NT().teamLabel(m.teamId)} : fin de votre rôle`, text: `${actorName(store, a, me)} a mis fin à votre rôle de ${STAFF_LABEL[s.role]}.` });
+    else if (s.key !== m.key) coachFeed(m, { key: `staff_left_${s.mid}_${s.role}_${now}`, kind: "staff", at: now, title: `${s.pseudo || s.clubName} quitte votre staff`, text: `Rôle : ${STAFF_LABEL[s.role]}.` });
+  });
   return { ok: true, staff: publicStaff(m), ...staffOf(store, me.key) };
 }
 // Attribuer (on) ou retirer un joueur du vivier à un scout actif.

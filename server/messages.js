@@ -183,6 +183,14 @@ function cleanText(raw) {
     .trim();
 }
 
+// Actions jointes à un message (liste fermée, valeurs courtes).
+const META_KINDS = ["natStaffInvite"];
+function cleanMeta(meta) {
+  if (!meta || !META_KINDS.includes(meta.kind)) return null;
+  const str = v => String(v == null ? "" : v).slice(0, 60);
+  return { kind: meta.kind, teamId: str(meta.teamId), role: str(meta.role), label: str(meta.label) };
+}
+
 function unreadIn(conv, me) {
   const lastRead = (conv.lastReadAt && conv.lastReadAt[me]) || 0;
   return conv.messages.filter(m => m.from !== me && m.at > lastRead).length;
@@ -279,7 +287,7 @@ function threadView(league, me, other, data) {
   return {
     ok: true,
     with: { teamIndex: other.teamIndex, who: other.who, leagueId: other.leagueId || null, name: other.name, manager: other.manager || null, blocked: isBlocked(data, me, otherKey) },
-    messages: conv ? conv.messages.map(m => ({ id: m.id, mine: m.from === me, text: m.text, at: m.at })) : [],
+    messages: conv ? conv.messages.map(m => (m.meta ? { id: m.id, mine: m.from === me, text: m.text, at: m.at, meta: m.meta } : { id: m.id, mine: m.from === me, text: m.text, at: m.at })) : [],
     // Dernier message de MOI que l'autre a déjà lu (accusé de lecture discret).
     readByOtherUntil: conv && conv.lastReadAt ? conv.lastReadAt[otherKey] || 0 : 0,
   };
@@ -375,7 +383,11 @@ function createService(filePath, opts = {}) {
       });
     },
 
-    async send(league, teamIndex, body, now) {
+    // `opts.meta` (messages du jeu envoyés au nom d'un manager, ex. une
+    // proposition de poste en sélection, voir nationalCoach.inviteMessage) :
+    // données structurées pour le bouton d'action ; pas de limite anti-spam
+    // (ce n'est pas une saisie), blocages respectés.
+    async send(league, teamIndex, body, now, opts = {}) {
       const me = keyForTeamIndex(league, teamIndex);
       const other = await resolveOther(league, me, body && body.to, await loadData(filePath), loadLeague, true);
       if (other.error) return { status: 400, body: { ok: false, error: other.error } };
@@ -386,7 +398,8 @@ function createService(filePath, opts = {}) {
         const data = await loadData(filePath);
         if (isBlocked(data, me, other.key)) return { status: 400, body: { ok: false, error: "Vous avez bloqué ce manager. Débloquez-le pour lui écrire." } };
         if (isBlocked(data, other.key, me)) return { status: 403, body: { ok: false, error: "Ce manager ne reçoit pas vos messages." } };
-        const rateError = checkRate(me, now);
+        const meta = cleanMeta(opts.meta);
+        const rateError = meta ? null : checkRate(me, now);
         if (rateError) return { status: 429, body: { ok: false, error: rateError } };
         const ck = conversationKey(me, other.key);
         const conv = data.conversations[ck] || (data.conversations[ck] = { participants: [me, other.key], messages: [], lastReadAt: {} });
@@ -394,6 +407,7 @@ function createService(filePath, opts = {}) {
         // non-lus fiables même pour deux envois dans la même milliseconde).
         const lastAt = conv.messages.length ? conv.messages[conv.messages.length - 1].at : 0;
         const msg = { id: data.nextId++, from: me, text, at: Math.max(now, lastAt + 1) };
+        if (meta) msg.meta = meta;
         conv.messages.push(msg);
         if (conv.messages.length > MAX_MESSAGES_PER_CONVERSATION) conv.messages.splice(0, conv.messages.length - MAX_MESSAGES_PER_CONVERSATION);
         // Écrire vaut lecture de la conversation pour l'expéditeur.
