@@ -16,7 +16,7 @@ const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log(
   assert(win.HM_VESTIAIRE && win.HM_VESTIAIRE_UI, "modules vestiaire chargés");
   doc.querySelector('.sidebar-link[data-tab="vestiaire"]').click();
   const sec = doc.getElementById("vestiaireSection");
-  assert(!sec.classList.contains("hidden"), "page Dynamique de groupe affichée");
+  assert(!sec.classList.contains("hidden"), "page Vestiaire affichée");
   const content = doc.getElementById("vestiaireContent");
   assert(/Cohésion/.test(content.textContent) && /Moral/.test(content.textContent) && /Confiance/.test(content.textContent), "vue générale : cohésion, moral, confiance");
   assert(content.querySelector(".vs-state").textContent.trim().length > 3, "vue générale : état du vestiaire");
