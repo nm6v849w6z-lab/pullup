@@ -780,6 +780,16 @@ points réellement ouverts.
 
 ## Repères techniques (pour ne pas perdre de temps à re-découvrir)
 
+- **Avatar joueur : format unique (2026-10-07, règle permanente)** : carré
+  aux coins arrondis à 18 % de la largeur (référence fiche Joueur /
+  Effectif, `playerAvatarHtml`), JAMAIS de cercle. Bloc « AVATAR JOUEUR :
+  FORMAT UNIQUE » à la fin du grand `<style>` de moteurbasket3.html :
+  `.player-avatar` seul porte la forme ; dans un cadre (liste `:is(...)`,
+  ou classe `.player-av-frame` pour tout nouveau composant) c'est le cadre
+  qui la porte. Modules à part alignés (vestiaire-ui, medical-ui,
+  live.css, showPlayer.css, court2d). Test : `player_avatar_shape_test.js`
+  (statique + audit Chromium de toutes les pages, ordinateur et 390 px).
+
 - **Possession du ballon dans le direct (audit du 2026-10-07)** : SOURCE DE
   VÉRITÉ = le moteur. Chaque événement de jeu porte `possession` (équipe qui
   a le ballon PENDANT l'action) et `possessionAfter` (APRÈS), posés par

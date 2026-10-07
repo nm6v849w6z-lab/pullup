@@ -171,8 +171,8 @@
 .hm-live .ld-val{font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
 
 /* Avatars joueurs (SVG du jeu) */
-.hm-live .av{flex:none;width:40px;height:43px;border-radius:9px;overflow:hidden;background:var(--panel2);display:grid;place-items:center;line-height:0}
-.hm-live .av.sm{width:30px;height:32px;border-radius:7px}
+.hm-live .av{flex:none;width:40px;height:43px;border-radius:18% / 16.6%;overflow:hidden;background:var(--panel2);display:grid;place-items:center;line-height:0}
+.hm-live .av.sm{width:30px;height:32px}
 .hm-live .av svg{width:100%;height:100%;display:block}
 .hm-live .av .player-avatar{width:100% !important;height:100% !important;border-radius:0 !important}
 .hm-live .av-txt{font-size:12px;font-weight:800;color:var(--muted);line-height:1}

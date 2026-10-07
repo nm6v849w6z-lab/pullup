@@ -211,7 +211,7 @@ export function createCourt2D(host, opts = {}) {
     if (av) {
       const cid = uid + "-c" + (++clipSeq);
       const cp = el("clipPath", { id: cid }, defs);
-      el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "9" }, cp);
+      el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "6.8" }, cp);   // même arrondi que les avatars du jeu (18 % de la largeur)
       av.setAttribute("width", "38"); av.setAttribute("height", "41");
       av.setAttribute("x", "-19"); av.setAttribute("y", "-30");
       av.classList.add("c2d-av");
@@ -223,7 +223,7 @@ export function createCourt2D(host, opts = {}) {
         wrap.innerHTML = "";
         el("image", { href: url, x: "-19", y: "-30", width: "38", height: "41", class: "c2d-av", preserveAspectRatio: "xMidYMid slice" }, wrap);
       });
-      el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "9", fill: "none", stroke: colors[t], "stroke-width": "2.5", class: "c2d-frame" }, g);
+      el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "6.8", fill: "none", stroke: colors[t], "stroke-width": "2.5", class: "c2d-frame" }, g);
     } else {
       el("circle", { r: "12", cy: "-8", fill: colors[t], stroke: "#0b1220", "stroke-width": "2" }, g);
       el("text", { y: "-4", "text-anchor": "middle", class: "c2d-ini" }, g).textContent = initials(p.name);
@@ -829,8 +829,9 @@ export function createCourt2D(host, opts = {}) {
           if (av) {
             const cid = uid + "-m" + (++clipSeq);
             const cp = el("clipPath", { id: cid }, defs);
-            el("rect", { x: "4", y: "3", width: "30", height: "38", rx: "6" }, cp);
-            av.setAttribute("width", "30"); av.setAttribute("height", "38"); av.setAttribute("x", "4"); av.setAttribute("y", "3");
+            // Proportions et arrondi des avatars du jeu (120:130, 18 %).
+            el("rect", { x: "2", y: "3.5", width: "34", height: "37", rx: "6.1" }, cp);
+            av.setAttribute("width", "34"); av.setAttribute("height", "37"); av.setAttribute("x", "2"); av.setAttribute("y", "3.5");
             const wrap = el("g", { "clip-path": `url(#${cid})` }, m); wrap.appendChild(av);
           }
         }

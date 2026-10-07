@@ -126,7 +126,7 @@
       ".vs-btn{min-height:36px;border:1px solid var(--vs-line);background:var(--vs-card);color:var(--ink);border-radius:10px;padding:0 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
       ".vs-btn:hover{border-color:var(--vs-acc)}",
       ".vs-empty{color:var(--vs-dim);font-size:14px;margin:0}",
-      ".vs-av{width:34px;height:34px;border-radius:50%;background:var(--vs-in);display:inline-grid;place-items:end center;overflow:hidden;flex:none;font-weight:700;font-size:12px;box-sizing:border-box}",
+      ".vs-av{width:34px;height:34px;border-radius:18%;background:var(--vs-in);display:inline-grid;place-items:end center;overflow:hidden;flex:none;font-weight:700;font-size:12px;box-sizing:border-box}",
       ".vs-av .player-avatar{width:30px!important;height:33px!important;border-radius:0!important}",
       ".vs-av.vs-av-ini{place-items:center}",
       ".vs-person{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;background:var(--vs-in);border:1px solid var(--vs-line);border-radius:999px;min-width:0}",

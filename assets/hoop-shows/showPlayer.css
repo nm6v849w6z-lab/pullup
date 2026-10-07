@@ -134,7 +134,7 @@
 .hs-crest { flex: none; display: inline-grid; place-items: center; border-radius: 50%; overflow: hidden; line-height: 0; }
 .hs-crest svg, .hs-crest img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .hs-crest-txt { background: var(--hs-line-strong); color: #fff; font-weight: 800; line-height: 1; }
-.hs-pav { flex: none; display: inline-block; border-radius: 10px; overflow: hidden; line-height: 0; background: var(--hs-card-2); }
+.hs-pav { flex: none; display: inline-block; border-radius: 18% / 16.6%; overflow: hidden; line-height: 0; background: var(--hs-card-2); }
 .hs-pav svg { width: 100%; height: 100%; display: block; }
 .hs-pav .player-avatar { width: 100% !important; height: 100% !important; border-radius: 0 !important; }
 .hs-pav-txt { display: inline-grid; place-items: center; color: var(--hs-light); font-weight: 800; line-height: 1; }
@@ -230,7 +230,7 @@
    façon « lower third » TV (bloc ambre, nom en capitales, ligne de stats). */
 .hs-bottom-band { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .hs-lower-third { display: flex; align-items: stretch; min-width: 0; max-width: 470px; border-radius: 12px; overflow: hidden; background: rgba(10, 16, 28, .85); border: 1px solid var(--hs-line-strong); box-shadow: inset 4px 0 0 var(--hs-accent); padding: 6px 14px 6px 10px; gap: 12px; animation: hs-lt-in .5s .15s ease both; }
-.hs-lower-third .hs-pav { align-self: center; margin-left: 4px; border-radius: 8px; }
+.hs-lower-third .hs-pav { align-self: center; margin-left: 4px; }
 .hs-lt-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; gap: 1px; }
 .hs-lt-kicker { align-self: flex-start; font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: var(--hs-accent); color: var(--hs-accent-ink); }
 .hs-lt-name { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

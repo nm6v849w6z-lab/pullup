@@ -2360,7 +2360,7 @@
   .mk-tab .n{margin-left:6px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
   .mk-tasks{display:flex; flex-direction:column; gap:10px;}
   .mk-task{display:grid; grid-template-columns:48px minmax(0,1fr) auto auto auto; align-items:center; gap:16px; background:var(--bg); border-radius:14px; padding:12px 16px;}
-  .mk-task-av{width:48px; height:48px; border-radius:12px; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; background:var(--panel-2);}
+  .mk-task-av{width:48px; height:48px; border-radius:18%; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; background:var(--panel-2);}
   .mk-task-av--staff{align-items:center; color:var(--muted);}
   /* Enchère automatique (voir setAutoBidFor) : état actif + bouton Arrêter. */
   .mk-auto-on{margin-top:8px; font-size:13px; color:var(--muted);}
@@ -2507,7 +2507,7 @@
     .mk-lst.is-expanded .mk-lst-deal{border-top:1px solid var(--line);}
   }
   .mk-cmp-hd{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:10px; align-items:center;}
-  .mk-cmp-av{width:44px; height:44px; border-radius:50%; overflow:hidden; background:var(--panel-2);}
+  .mk-cmp-av{width:44px; height:44px; border-radius:18%; overflow:hidden; background:var(--panel-2);}
   .mk-cmp-av .player-avatar{width:44px !important; height:48px !important;}
   .mk-cmp-nm{font-weight:800; font-size:15px; line-height:1.2;}
   .mk-cmp-nm a, .mk-cmp-nm .player-link{color:var(--ink);}
@@ -3186,11 +3186,11 @@
   .coh2-map{display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
   .coh2-courtwrap{position:relative; width:100%; max-width:320px; align-self:center;}
   .coh2-court{display:block; width:100%; height:auto; color:var(--ink);}
-  .coh2-spot{position:absolute; width:40px; height:40px; transform:translate(-50%,-50%); border-radius:50%; border:3px solid var(--coh-ring); background:var(--panel); overflow:hidden; display:grid; place-items:end center; box-shadow:0 4px 10px rgba(0,0,0,.35);}
+  .coh2-spot{position:absolute; width:40px; height:40px; transform:translate(-50%,-50%); border-radius:18%; border:3px solid var(--coh-ring); background:var(--panel); overflow:hidden; display:grid; place-items:end center; box-shadow:0 4px 10px rgba(0,0,0,.35);}
   .coh2-spot .player-avatar{width:36px !important; height:39px !important; border-radius:0 !important; margin-top:4px;}
   .coh2-spot--pos{place-items:center; font-size:13px; font-weight:900; color:var(--ink); width:36px; height:36px;}
   .coh2-ini{font-size:12px; font-weight:800; align-self:center;}
-  .coh-av{width:34px; height:34px; border-radius:50%; overflow:hidden; display:grid; place-items:end center; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); flex:none;}
+  .coh-av{width:34px; height:34px; border-radius:18%; overflow:hidden; display:grid; place-items:end center; background:color-mix(in srgb, var(--ink-dim) 16%, transparent); flex:none;}
   .coh-av .player-avatar{width:32px !important; height:35px !important; border-radius:0 !important;}
   .coh2 .coh-slot .rl b{color:var(--amber); font-weight:900;}
   .coh2-k{font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:800;}
@@ -3201,7 +3201,7 @@
   .coh2-legend .dot{width:9px; height:9px; border-radius:50%; border:2px solid var(--coh-ok);}
   .coh2-conf{display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.03));}
   .coh2-pair{display:flex; flex:none;}
-  .coh2-pair > span{width:32px; height:32px; border-radius:50%; overflow:hidden; display:grid; place-items:end center; font-size:12px; font-weight:800; background:color-mix(in srgb, var(--ink-dim) 22%, var(--panel)); border:2px solid var(--panel);}
+  .coh2-pair > span{width:32px; height:32px; border-radius:18%; overflow:hidden; display:grid; place-items:end center; font-size:12px; font-weight:800; background:color-mix(in srgb, var(--ink-dim) 22%, var(--panel)); border:2px solid var(--panel);}
   .coh2-pair .player-avatar{width:28px !important; height:31px !important; border-radius:0 !important;}
   .coh2-pair > span + span{margin-left:-9px; background:color-mix(in srgb, var(--ink-dim) 32%, var(--panel));}
   .coh2-conf-txt{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0;}
@@ -5945,7 +5945,7 @@
     background:none; border:none; color:var(--ink); cursor:pointer; text-align:left; font:inherit; border-radius:12px;
   }
   .tp-rp-toggle:focus-visible{outline:2px solid var(--amber); outline-offset:-2px;}
-  .tp-avatar{width:36px; height:36px; border-radius:50%; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--ink-dim); flex:none;}
+  .tp-avatar{width:36px; height:36px; border-radius:18%; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--ink-dim); flex:none;}
   .tp-avatar--img{width:40px; height:40px; overflow:hidden; align-items:flex-end; border:1px solid var(--line);}
   .tp-rp-name{font-weight:700; font-size:15px;}
   .tp-pill{font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap;}
@@ -6053,7 +6053,7 @@
   .tm-slots{display:flex; flex-direction:column; gap:10px;}
   .tm-slot{display:grid; grid-template-columns:auto minmax(0,1.1fr) minmax(0,1.4fr) auto auto; gap:12px; align-items:start; padding:12px 14px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; position:relative;}
   .tm-slot > .tm-av{align-self:center;}
-  .tm-av{width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--line); color:var(--ink); flex:none; overflow:hidden;}
+  .tm-av{width:38px; height:38px; border-radius:18%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:var(--line); color:var(--ink); flex:none; overflow:hidden;}
   .tm-av.coach{background:rgba(240,162,60,.16); color:var(--amber);}
   .tm-av.team{background:rgba(51,180,161,.14); color:var(--ok);}
   .tm-av--img{align-items:flex-end; border:1px solid var(--line);}
@@ -6222,7 +6222,7 @@
   .tm-slot-id{display:flex; align-items:center; gap:12px; flex:1 1 190px; min-width:0;}
   .tm-slot-txt{display:flex; flex-direction:column; gap:3px; min-width:0;}
   #trainingSection .tm-slot .tm-av{width:42px; height:42px; border:2px solid var(--tg); box-sizing:border-box; align-self:center;}
-  #trainingSection .tm-slot .tm-av .player-avatar{width:38px !important; height:38px !important;}
+  #trainingSection .tm-slot .tm-av .player-avatar{width:38px !important; height:41px !important;}
   #trainingSection .tm-who{display:flex; align-items:baseline; align-self:stretch; gap:8px; flex-wrap:wrap; min-width:0;}
   #trainingSection .tm-who b{display:inline; flex:0 1 auto; min-width:0; font-size:16px; white-space:normal;}
   #trainingSection .tm-who .player-link, #trainingSection .tr-who .player-link{text-align:left;}
@@ -6356,8 +6356,8 @@
   #trainingSection .tr-kpi.up .tr-kpi-v b{color:var(--tg);}
   #trainingSection .tr-kpi.zero .tr-kpi-v b{color:var(--ink-faint);}
   #trainingSection .tr-kpi .tr-kpi-who{display:inline-flex; align-items:center; gap:8px; padding:4px 10px 4px 4px; border-radius:999px; background:var(--tin); border:1px solid var(--line); font-size:14px; font-weight:600; color:var(--ink); min-width:0; max-width:100%;}
-  #trainingSection .tr-kpi .tr-kpi-who .tm-av{display:inline-flex; width:28px; height:28px; flex:none; border:2px solid var(--tg); box-sizing:content-box; align-items:flex-end; justify-content:center; overflow:hidden; border-radius:50%;}
-  #trainingSection .tr-kpi .tr-kpi-who .tm-av .player-avatar{width:28px !important; height:28px !important; border-radius:0 !important;}
+  #trainingSection .tr-kpi .tr-kpi-who .tm-av{display:inline-flex; width:28px; height:28px; flex:none; border:2px solid var(--tg); box-sizing:content-box; align-items:flex-end; justify-content:center; overflow:hidden; border-radius:18%;}
+  #trainingSection .tr-kpi .tr-kpi-who .tm-av .player-avatar{width:28px !important; height:30px !important;}
   #trainingSection .tr-kpi .tr-kpi-who > span:last-child{display:inline; font-size:14px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   #trainingSection .tr-sec{gap:18px;}
   #trainingSection .tr-sec > .tm-h{justify-content:space-between;}
@@ -8240,7 +8240,7 @@
   .hc-tag.g{background:rgba(232,197,71,.16); color:#e8c547;} .hc-tag.a{background:rgba(240,162,60,.15); color:var(--amber);} .hc-tag.b{background:rgba(111,182,255,.14); color:#6FB6FF;}
   .hc-tag.r{background:rgba(226,105,79,.15); color:var(--danger);} .hc-tag.v{background:rgba(180,140,255,.15); color:#b48cff;}
   .hc-leg{display:grid; grid-template-columns:46px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line);} .hc-leg:first-child{border-top:0;}
-  .hc-av{width:46px; height:46px; border-radius:50%; background:var(--panel-2); display:grid; place-items:center; font-weight:900; color:var(--ink-dim); overflow:hidden;}
+  .hc-av{width:46px; height:46px; border-radius:18%; background:var(--panel-2); display:grid; place-items:center; font-weight:900; color:var(--ink-dim); overflow:hidden;}
   .hc-tier{font-size:11px; font-weight:800; padding:4px 9px; border-radius:999px; white-space:nowrap;}
   .hc-tier.t3{background:linear-gradient(90deg,#8a6a12,#e8c547); color:#1a1202;} .hc-tier.t2{background:rgba(240,162,60,.18); color:var(--amber);} .hc-tier.t1{background:rgba(111,182,255,.14); color:#6FB6FF;}
   .hc-riv{padding:12px 0; border-top:1px solid var(--line);} .hc-riv:first-child{border-top:0;}
@@ -8949,6 +8949,24 @@
   .ach-toast-txt small{color:#9aa8bd;}
   .ach-toast-x{position:absolute; top:8px; right:10px; background:none; border:0; color:#9aa8bd; font-size:14px; cursor:pointer;}
   @media (max-width:640px){ .ach-grid2{grid-template-columns:minmax(0,1fr);} }
+  /* =====================================================================
+     AVATAR JOUEUR : FORMAT UNIQUE (règle globale, 2026-10-07)
+     Référence : fiche Joueur et Effectif (playerAvatarHtml) — avatar aux
+     proportions 120:130, carré aux coins arrondis, rayon = 18 % de la
+     largeur ; JAMAIS de cercle.
+     - Avatar seul (Effectif…) : `.player-avatar` porte la forme (la valeur
+       en ligne de playerAvatarHtml et les surcharges locales cèdent).
+     - Avatar dans un cadre (conteneur dédié qui le recadre : Entraînement,
+       Ordres, Tactiques, Vestiaire, Marché…) : le CADRE porte la forme
+       (même rayon), l'avatar dedans n'est pas arrondi une 2e fois.
+     Nouveau composant : playerAvatarHtml() seul, ou dans un élément de
+     classe `.player-av-frame` (ou ajouter son cadre à la liste ci-dessous).
+     Test : player_avatar_shape_test.js.
+     ===================================================================== */
+  :root{--player-av-radius:18% / 16.6%;}
+  :root body .player-avatar.player-avatar.player-avatar{border-radius:var(--player-av-radius) !important; overflow:hidden !important;}
+  :root body :is(.player-av-frame, .tm-av, .tp-avatar, .coh-av, .coh2-spot, .coh2-pair > span, .vs-av, .md-av, .mk-cmp-av, .mk-task-av, .mk-avatar, .hc-av, .compare-avatar, .pdp2-avatar, .sp2-token-av){border-radius:18% !important; overflow:hidden;}
+  :root body :is(.player-av-frame, .tm-av, .tp-avatar, .coh-av, .coh2-spot, .coh2-pair > span, .vs-av, .md-av, .mk-cmp-av, .mk-task-av, .mk-avatar, .hc-av, .compare-avatar, .pdp2-avatar) > .player-avatar.player-avatar.player-avatar{border-radius:0 !important;}
 </style>
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
