@@ -357,7 +357,7 @@
       training: ["block", "defInside"],
     },
     interior_scorer: {
-      name: "Interior Scorer", positions: ["Pivot", "Ailier fort"],
+      name: "Scoreur intérieur", positions: ["Pivot", "Ailier fort"],
       essential: ["inside"], important: ["power", "strength"], secondary: ["freeThrow"],
       min: { inside: [68, 58] },
       desc: "Marque principalement dans la raquette.",
@@ -375,7 +375,7 @@
       training: ["threePoint"],
     },
     rebounder: {
-      name: "Rebounder", positions: ["Pivot", "Ailier fort"],
+      name: "Aspirateur", positions: ["Pivot", "Ailier fort"],
       essential: ["rebound"], important: ["strength", "vertical"], secondary: ["determination"],
       min: { rebound: [68, 58] },
       desc: "Spécialiste du rebond.",

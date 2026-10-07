@@ -20336,7 +20336,9 @@ function pdpRoleRowHtml(player, fullyVisible) {
   if (hist.length && hist[hist.length - 1].role !== prof.primary.role || hist.length >= 2) {
     const steps = hist.concat(hist.length && hist[hist.length - 1].role === prof.primary.role ? [] : [{ name: prof.primary.name, age: player.age }]);
     h += `<div><div class="pdp-role-sub">Évolution du rôle</div><div class="pdp-role-evo">` +
-      steps.map(x => `<b><span>${escapeHtml(x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div></div>`;
+      // Nom actuel du rôle (renommages : « Aspirateur », « Scoreur
+      // intérieur »), l'historique enregistré gardant l'ancien libellé.
+      steps.map(x => `<b><span>${escapeHtml((x.role && R.ROLES[x.role] && R.ROLES[x.role].name) || x.name)}</span></b>${x.age ? ` <small>(${x.age} ans)</small>` : ""}`).join(" → ") + `</div></div>`;
   }
   const progs = (prof.role.training || []).map(k => TRAINING_LABELS[k] || k).filter(Boolean);
   // Sur une seule ligne : « POUR PROGRESSER DANS CE RÔLE : A et B ».
