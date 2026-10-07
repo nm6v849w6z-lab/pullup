@@ -1,19 +1,22 @@
 // =====================================================================
-// Onglet « Vestiaire » (Dynamique de groupe, 2026-10-06) : rendu de la vue
-// calculée par assets/vestiaire.js (window.HM_VESTIAIRE.buildView) sur le
-// club du manager (teamA). Aucune logique de jeu ici : uniquement de
-// l'affichage et des liens vers les actions QUI EXISTENT déjà (fiche joueur,
-// où se trouvent discussion / contrat / mise en vente ; Tactiques pour la
-// compo et les rôles ; Entraînement pour le tutorat).
-// Lecture : situation → problèmes → groupes → joueurs → détails.
+// Onglet « Vestiaire » (2026-10-06, refonte visuelle du 2026-10-07 d'après
+// les maquettes « Vestiaire — refonte » : Vue générale, Hiérarchie,
+// Groupes, Relations, Évolution) : rendu de la vue calculée par
+// assets/vestiaire.js (window.HM_VESTIAIRE.buildView) sur le club du
+// manager (teamA). Aucune logique de jeu ici : uniquement de l'affichage et
+// des liens vers les actions QUI EXISTENT déjà (fiche joueur, où se
+// trouvent discussion / contrat / mise en vente ; Tactiques pour la compo
+// et les rôles ; Entraînement pour le tutorat).
+// Couleurs : fonds et textes du thème du jeu (clair / sombre), accents des
+// maquettes (vert = bien, ambre = moyen, rouge = problème).
 // =====================================================================
 (function () {
   "use strict";
-  var state = { tab: "overview" };
+  var state = { tab: "overview", allRows: false };
   // Contexte d'affichage : null = club du manager (teamA). Le mode
   // Sélectionneur passe sa propre équipe (même vue, même calcul, voir
   // assets/national-coach.js:vestiaireMount) : { holder, team, recent,
-  // link(p), playerAttrs(p) }.
+  // link(p), playerAttrs(p), noTalk, lineupAttrs }.
   var ctx = null;
   function g(name) { return typeof window[name] === "function" ? window[name] : null; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -40,19 +43,36 @@
   }
   function flag(code) { var f = g("nationFlagHtml"); return f && code ? f(code) : ""; }
   function pos(position) { var f = g("effPosBadgeHtml"); return f ? f(position) : esc(position || ""); }
+  function nation(code) { var f = g("nationName"); return code ? (f ? f(code) : String(code).toUpperCase()) : ""; }
+  function initials(name) { return String(name || "").split(/\s+/).filter(Boolean).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase(); }
+  function lastName(name) { var s = String(name || "").split(" "); return s.length > 1 ? s.slice(1).join(" ") : s[0]; }
 
-  var MOOD_COLOR = { happy: "var(--vs-good)", content: "var(--vs-ok)", neutral: "var(--vs-mid)", frustrated: "var(--vs-warn)", unhappy: "var(--vs-bad)" };
-  var STATE_COLOR = { united: "var(--vs-good)", good: "var(--vs-ok)", ok: "var(--vs-mid)", tense: "var(--vs-warn)", crisis: "var(--vs-bad)" };
+  // Couleurs des maquettes.
+  var C = { good: "#34D399", ok: "#A3E635", mid: "#FBBF24", warn: "#FB923C", bad: "#F87171", purple: "#A78BFA", blue: "#60A5FA" };
+  var MOOD_COLOR = { happy: C.good, content: C.ok, neutral: C.mid, frustrated: C.warn, unhappy: C.bad };
+  var STATE_COLOR = { united: C.good, good: C.ok, ok: C.mid, tense: C.warn, crisis: C.bad };
+  var GROUP_COLORS = ["#60A5FA", "#38BDF8", "#A78BFA", "#F87171", "#34D399", "#F472B6", "#FBBF24", "#2DD4BF"];
   function levelWord(v) { return v >= 75 ? "Très haut" : v >= 58 ? "Bon" : v >= 42 ? "Moyen" : v >= 25 ? "Bas" : "Très bas"; }
-  function toneColor(v) { return v >= 75 ? "var(--vs-good)" : v >= 58 ? "var(--vs-ok)" : v >= 42 ? "var(--vs-mid)" : v >= 25 ? "var(--vs-warn)" : "var(--vs-bad)"; }
+  function toneColor(v) { return v >= 75 ? C.good : v >= 58 ? C.ok : v >= 42 ? C.mid : v >= 25 ? C.warn : C.bad; }
+  function tint(col, a) {
+    var m = /^#([0-9a-f]{6})$/i.exec(col);
+    if (!m) return "rgba(255,255,255,.08)";
+    var n = parseInt(m[1], 16);
+    return "rgba(" + (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+  }
 
-  var ICON = {
-    up: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16l6-6 4 4 6-7"/><path d="M15 7h5v5"/></svg>',
-    down: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8l6 6 4-4 6 7"/><path d="M15 17h5v-5"/></svg>',
-    flat: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    warn: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>',
-    dot: '<svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>',
+  function svgIcon(path, col, size, sw) { return '<svg viewBox="0 0 24 24" width="' + (size || 18) + '" height="' + (size || 18) + '" fill="none" stroke="' + (col || "currentColor") + '" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + "</svg>"; }
+  var P = {
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    lever: '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+    up: '<path d="M4 16l6-6 4 4 6-7"/><path d="M15 7h5v5"/>',
+    down: '<path d="M4 8l6 6 4-4 6 7"/><path d="M15 17h5v-5"/>',
+    flat: '<path d="M4 12h16"/>',
+    trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
   };
 
   function ensureCss() {
@@ -60,209 +80,391 @@
     var s = document.createElement("style");
     s.id = "vsCss";
     s.textContent = [
-      "#vestiaireSection{--vs-good:#3fbf7f;--vs-ok:#8ccf5b;--vs-mid:#d6b84a;--vs-warn:#e8913a;--vs-bad:#e2694f;--vs-card:var(--panel,#151d2c);--vs-line:var(--line,#24304a);}",
-      ".vs-card{background:var(--vs-card);border:1px solid var(--vs-line);border-radius:14px;padding:16px;margin-bottom:14px;}",
-      ".vs-card h3{margin:0 0 10px;font-size:15px;color:var(--ink-dim);font-weight:600;}",
-      ".vs-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}",
-      ".vs-hero-ring{flex:none;}",
-      ".vs-hero-main{flex:1 1 240px;min-width:0;}",
-      ".vs-state{font-size:24px;font-weight:800;margin:0;}",
-      ".vs-why{margin:6px 0 0;color:var(--ink-dim);font-size:14.5px;line-height:1.4;}",
-      ".vs-trend{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.06);margin-top:8px;}",
-      ".vs-gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}",
-      ".vs-gauge{background:rgba(255,255,255,.03);border:1px solid var(--vs-line);border-radius:12px;padding:12px;}",
-      ".vs-gauge-top{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:13px;color:var(--ink-dim);}",
-      ".vs-gauge-word{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 8px;}",
-      ".vs-bar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}",
-      ".vs-bar>span{display:block;height:100%;border-radius:99px;}",
-      ".vs-gauge small{display:block;color:var(--ink-dim);font-size:12px;margin-top:7px;line-height:1.35;}",
-      ".vs-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}",
-      ".vs-list{list-style:none;margin:0;padding:0;}",
-      ".vs-list li{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--vs-line);font-size:14px;line-height:1.35;}",
-      ".vs-list li:first-child{border-top:0;}",
-      ".vs-list .vs-ico{flex:none;margin-top:2px;}",
-      ".vs-list .vs-act{margin-left:auto;flex:none;}",
-      ".vs-btn{border:1px solid var(--vs-line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 10px;font-size:12.5px;cursor:pointer;white-space:nowrap;}",
-      ".vs-btn:hover{border-color:var(--amber,#f0a330);}",
-      ".vs-empty{color:var(--ink-dim);font-size:14px;margin:0;}",
-      ".vs-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--vs-line);border-radius:999px;padding:4px 10px 4px 8px;font-size:13.5px;margin:3px;}",
-      ".vs-chip .player-link{font-size:13.5px;}",
-      ".vs-mood{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none;}",
-      ".vs-tier{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--vs-line);}",
-      ".vs-tier:first-of-type{border-top:0;}",
-      ".vs-tier-name{font-weight:700;font-size:14px;padding-top:6px;}",
-      ".vs-tier-name small{display:block;color:var(--ink-dim);font-weight:400;font-size:12px;}",
-      ".vs-table{width:100%;border-collapse:collapse;font-size:13.5px;}",
-      ".vs-table th{font-size:12px;color:var(--ink-dim);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--vs-line);}",
-      ".vs-table td{padding:8px;border-bottom:1px solid var(--vs-line);vertical-align:middle;}",
-      ".vs-table .vs-reasons{color:var(--ink-dim);font-size:12.5px;white-space:normal;}",
-      ".vs-wrap{overflow-x:auto;}",
-      ".vs-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}",
-      ".vs-group h4{margin:0;font-size:16px;}",
-      ".vs-group .vs-status{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;}",
-      ".vs-group-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}",
-      ".vs-bonds{color:var(--ink-dim);font-size:12.5px;margin:4px 0 8px;}",
-      ".vs-graph{display:block;width:100%;max-width:560px;margin:0 auto;}",
-      ".vs-graph text{font-size:11px;fill:var(--ink);}",
-      ".vs-legend{display:flex;gap:14px;justify-content:center;font-size:12.5px;color:var(--ink-dim);margin-top:6px;flex-wrap:wrap;}",
-      ".vs-legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px;}",
-      ".vs-chart{display:block;width:100%;height:auto;}",
-      ".vs-chart text{font-size:10px;fill:var(--ink-dim);}",
-      ".vs-log li .vs-week{color:var(--ink-dim);font-size:12px;flex:none;width:58px;}",
-      "@media (max-width:720px){.vs-gauges{gap:8px;}.vs-gauge{padding:10px 9px;}.vs-gauge small{display:none;}.vs-gauge-word{font-size:14.5px;}.vs-two{grid-template-columns:1fr;}.vs-tier{grid-template-columns:1fr;gap:4px;}.vs-state{font-size:20px;}.vs-hide-m{display:none;}}",
+      ".vs-root{--vs-card:var(--panel,#121826);--vs-in:var(--panel-2,#0E1420);--vs-line:var(--line,#222B3E);--vs-dim:var(--ink-dim,#A3ACBF);--vs-faint:var(--ink-faint,#8A94A8);--vs-acc:var(--amber,#F59E0B);display:flex;flex-direction:column;gap:18px;color:var(--ink)}",
+      ".vs-root .vs-cond{font-family:'Barlow Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;font-stretch:condensed}",
+      ".vs-card{background:var(--vs-card);border:1px solid var(--vs-line);border-radius:18px;padding:22px;box-sizing:border-box;min-width:0}",
+      ".vs-eyebrow{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:700;color:var(--vs-faint);margin:0}",
+      ".vs-h2{margin:0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:28px;text-transform:uppercase;line-height:1.05}",
+      ".vs-h3{margin:0;font-size:18px;font-weight:700}",
+      ".vs-big{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;line-height:1}",
+      ".vs-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}",
+      ".vs-head h1{margin:2px 0 0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:42px;text-transform:uppercase;line-height:1}",
+      ".vs-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--vs-card);border:1px solid var(--vs-line);border-radius:14px}",
+      ".vs-tabs button{min-height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--vs-dim);font:inherit;font-weight:600;font-size:14px;cursor:pointer}",
+      ".vs-tabs button:hover{color:var(--ink);background:var(--vs-in)}.vs-tabs button.active{background:var(--vs-acc);color:#1A1205}",
+      ".vs-hero{display:flex;flex-wrap:wrap;gap:28px;align-items:center}",
+      ".vs-ring{position:relative;width:156px;height:156px;flex:none}.vs-ring>div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}",
+      ".vs-ring b{font-size:56px}.vs-ring small{font-size:12px;color:var(--vs-faint);font-weight:600}",
+      ".vs-hero-main{flex:1 1 300px;display:flex;flex-direction:column;gap:9px;min-width:0}",
+      ".vs-state{margin:0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:38px;line-height:1.05}",
+      ".vs-why{margin:0;font-size:16px;color:var(--vs-dim);line-height:1.5;max-width:540px}",
+      ".vs-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}",
+      ".vs-pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--vs-in);color:var(--vs-dim)}",
+      ".vs-lever{flex:1 1 280px;max-width:420px;background:var(--vs-in);border:1px solid var(--vs-line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:9px}",
+      ".vs-lever p{margin:0;font-size:15px;line-height:1.55}",
+      ".vs-grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}",
+      ".vs-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}",
+      ".vs-pillar{display:flex;flex-direction:column;gap:12px}",
+      ".vs-row{display:flex;justify-content:space-between;align-items:center;gap:10px}",
+      ".vs-verdict{font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}",
+      ".vs-seg{position:relative;height:10px;border-radius:999px;background:var(--vs-in);overflow:hidden}.vs-seg>i{display:block;height:100%;border-radius:999px}",
+      ".vs-seg::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),var(--vs-card) calc(10% - 2px) 10%)}",
+      ".vs-text{margin:0;font-size:14px;line-height:1.5;color:var(--vs-dim)}",
+      ".vs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}",
+      ".vs-li{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--vs-in);border-radius:12px;font-size:15px}",
+      ".vs-ic{width:28px;height:28px;flex:none;border-radius:8px;display:grid;place-items:center}",
+      ".vs-alert{padding:16px;border-radius:14px;display:flex;gap:14px;align-items:flex-start}",
+      ".vs-alert strong{display:block;font-size:15px;margin-bottom:4px}.vs-alert .vs-act{margin-left:auto;flex:none;align-self:center}",
+      ".vs-btn{min-height:36px;border:1px solid var(--vs-line);background:var(--vs-card);color:var(--ink);border-radius:10px;padding:0 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}",
+      ".vs-btn:hover{border-color:var(--vs-acc)}",
+      ".vs-empty{color:var(--vs-dim);font-size:14px;margin:0}",
+      ".vs-av{width:34px;height:34px;border-radius:50%;background:var(--vs-in);display:inline-grid;place-items:end center;overflow:hidden;flex:none;font-weight:700;font-size:12px;box-sizing:border-box}",
+      ".vs-av .player-avatar{width:30px!important;height:33px!important;border-radius:0!important}",
+      ".vs-av.vs-av-ini{place-items:center}",
+      ".vs-person{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;background:var(--vs-in);border:1px solid var(--vs-line);border-radius:999px;min-width:0}",
+      ".vs-person>div{display:flex;flex-direction:column;min-width:0}.vs-person small{font-size:12px;color:var(--vs-faint)}",
+      ".vs-person .player-link,.vs-chip .player-link{font-weight:600;font-size:14px}",
+      ".vs-chips{display:flex;flex-wrap:wrap;gap:8px}",
+      ".vs-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--vs-card);border:1px solid var(--vs-line);font-size:14px}",
+      ".vs-chip .vs-av{width:30px;height:30px}.vs-chip .vs-av .player-avatar{width:27px!important;height:29px!important}",
+      ".vs-gchip{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:10px;background:var(--vs-in);border:1px solid var(--vs-line);color:var(--ink);font:inherit;font-size:14px;font-weight:500;cursor:pointer}",
+      ".vs-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}",
+      ".vs-wk{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:700;font-size:14px;padding:6px 10px;border-radius:8px;background:var(--vs-in);color:var(--vs-dim);white-space:nowrap}",
+      ".vs-pyr{display:flex;flex-direction:column;gap:10px;align-items:center}",
+      ".vs-tier{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:13px 16px;border-radius:16px;background:var(--vs-in);border:1px solid var(--vs-line);box-sizing:border-box}",
+      ".vs-tier-name{display:flex;align-items:center;gap:12px;flex:0 0 210px}.vs-tier-name strong{display:block;font-size:15px}.vs-tier-name small{font-size:12px;color:var(--vs-faint)}",
+      ".vs-rank{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex:none}",
+      ".vs-legend{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;font-size:13px;color:var(--vs-dim)}.vs-legend span{display:inline-flex;align-items:center;gap:8px}",
+      ".vs-ring-dot{width:12px;height:12px;border-radius:50%;border:2px solid;box-sizing:border-box}",
+      ".vs-moodbar{display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px}",
+      ".vs-wrap{overflow-x:auto}",
+      ".vs-table{width:100%;border-collapse:collapse;min-width:760px}",
+      ".vs-table th{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:700;color:var(--vs-faint);text-align:left;padding:0 12px 10px}",
+      ".vs-table td{padding:11px 12px;border-top:1px solid var(--vs-line);font-size:14px;vertical-align:middle}",
+      ".vs-table .vs-reasons{color:var(--vs-dim);font-size:13px;white-space:normal;max-width:300px}",
+      ".vs-who{display:flex;align-items:center;gap:12px}.vs-who>div{display:flex;flex-direction:column}.vs-who small{font-size:12px;color:var(--vs-faint)}",
+      ".vs-infl{display:flex;align-items:center;gap:10px}.vs-infl>span:first-child{width:90px;height:6px;border-radius:999px;background:var(--vs-in);overflow:hidden}.vs-infl i{display:block;height:100%;background:var(--vs-acc)}",
+      ".vs-mood{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-weight:600;font-size:13px;white-space:nowrap}",
+      ".vs-more{align-self:center;min-height:44px;padding:0 22px;border-radius:12px;border:1px solid var(--vs-line);background:var(--vs-card);color:var(--ink);font:inherit;font-weight:600;font-size:14px;cursor:pointer}",
+      ".vs-kpi{display:flex;flex-direction:column;gap:6px}.vs-kpi b{font-size:42px}.vs-kpi b small{font-size:21px;color:var(--vs-faint)}",
+      ".vs-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}",
+      ".vs-group{padding:0;overflow:hidden;display:flex;flex-direction:column}.vs-group>i{display:block;height:6px}",
+      ".vs-group>div{padding:20px;display:flex;flex-direction:column;gap:14px;flex:1}",
+      ".vs-group h4{margin:0;font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:800;font-size:24px;line-height:1.05;text-transform:uppercase}",
+      ".vs-stack{display:flex;align-items:center}.vs-stack .vs-av{width:44px;height:44px;margin-right:-10px;border:3px solid var(--vs-card)}.vs-stack .vs-av .player-avatar{width:38px!important;height:41px!important}",
+      ".vs-members{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}.vs-members li{display:flex;align-items:center;gap:8px}",
+      ".vs-bond{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;background:var(--vs-in);color:var(--vs-dim)}",
+      ".vs-gfoot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--vs-line)}",
+      ".vs-bar6{height:6px;border-radius:999px;background:var(--vs-in);overflow:hidden}.vs-bar6>i{display:block;height:100%}",
+      ".vs-solo{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}",
+      ".vs-solo>div{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;background:var(--vs-in);border:1px solid var(--vs-line)}.vs-solo small{display:block;font-size:12px;color:var(--vs-faint)}",
+      ".vs-split{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}.vs-split>.vs-main{flex:999 1 600px;min-width:0}.vs-split>.vs-side{flex:1 1 320px;display:flex;flex-direction:column;gap:18px;min-width:0}",
+      ".vs-fig{margin:0;background:var(--vs-in);border:1px solid var(--vs-line);border-radius:14px;padding:8px}",
+      ".vs-graph{display:block;width:100%;height:auto}.vs-graph text{font-size:12px;font-weight:600;fill:var(--ink)}.vs-graph text.dim{fill:var(--vs-faint);font-weight:500;font-size:11px}.vs-graph text.zone{font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px}",
+      ".vs-graph g[data-player-id],.vs-graph g[data-nc-profile]{cursor:pointer}",
+      ".vs-pair{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;background:var(--vs-in)}.vs-pair>div:last-child{display:flex;flex-direction:column;min-width:0;font-size:14px}.vs-pair small{font-size:12px;color:var(--vs-faint)}",
+      ".vs-pair .vs-duo{display:flex;flex:none}.vs-pair .vs-duo .vs-av{width:32px;height:32px;border:2px solid var(--vs-card)}.vs-pair .vs-duo .vs-av+.vs-av{margin-left:-8px}",
+      ".vs-calm{display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;border:1px dashed var(--vs-line);font-size:14px;color:var(--vs-dim);line-height:1.5}",
+      ".vs-chart{display:block;width:100%;height:auto}.vs-chart text{font-size:12px;fill:var(--vs-faint)}",
+      ".vs-tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}",
+      ".vs-tl li{display:grid;grid-template-columns:62px 22px 1fr;gap:12px;align-items:start}",
+      ".vs-tl .vs-tl-w{font-family:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;font-stretch:condensed;font-weight:700;font-size:15px;color:var(--vs-dim);padding-top:14px}",
+      ".vs-tl .vs-tl-dot{display:flex;flex-direction:column;align-items:center;height:100%}.vs-tl .vs-tl-dot>span:first-child{width:13px;height:13px;margin-top:16px;border-radius:50%}.vs-tl .vs-tl-dot>span:last-child{flex:1;width:2px;min-height:18px;background:var(--vs-line)}",
+      ".vs-tl .vs-tl-card{padding:12px 16px;border-radius:14px;background:var(--vs-in);border:1px solid var(--vs-line);display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:15px}",
+      ".vs-driver{display:flex;gap:12px;align-items:flex-start}.vs-driver>span{width:10px;height:10px;margin-top:6px;flex:none;border-radius:3px}.vs-driver strong{display:block;font-size:15px}",
+      "@media (max-width:720px){.vs-root{gap:14px}.vs-card{padding:16px;border-radius:14px}.vs-head h1{font-size:34px}.vs-tabs{width:100%}.vs-tabs button{flex:1 1 auto;padding:0 10px;font-size:13px}.vs-ring{width:120px;height:120px}.vs-ring b{font-size:42px}.vs-state{font-size:30px}.vs-tier-name{flex-basis:100%}.vs-grid2{grid-template-columns:1fr}.vs-tl li{grid-template-columns:50px 18px 1fr;gap:8px}}",
     ].join("\n");
     document.head.appendChild(s);
   }
 
-  function ring(score, color) {
-    var r = 34, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, score));
-    return '<svg class="vs-hero-ring" viewBox="0 0 84 84" width="84" height="84" aria-hidden="true">' +
-      '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>' +
-      '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + (c * v / 100).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 42 42)"/>' +
-      '<text x="42" y="48" text-anchor="middle" font-size="20" font-weight="800" fill="currentColor">' + Math.round(v) + '</text></svg>';
+  // --- Composants -------------------------------------------------------------
+  function teamPlayer(p) { var t = myTeam(); return t && Array.isArray(t.players) ? t.players.find(function (x) { return String(x.id) === String(p.id); }) : null; }
+  // Avatar du joueur (même visage que partout dans le jeu), initiales à défaut.
+  function avatar(p, ring, size) {
+    var f = g("playerAvatarHtml"), real = teamPlayer(p);
+    var st = ring ? ' style="box-shadow:0 0 0 2px ' + ring + '"' : "";
+    if (f && real) { try { return '<span class="vs-av"' + st + ">" + f(real, myTeam(), size || 30) + "</span>"; } catch (e) { /* initiales */ } }
+    return '<span class="vs-av vs-av-ini"' + st + ">" + esc(initials(p.name)) + "</span>";
   }
-  // `shown` : valeur affichée si différente de l'échelle de la barre (alchimie
-  // 40-100 : la barre et le mot suivent sa position dans CETTE plage).
-  function gauge(label, value, hint, shown) {
-    return '<div class="vs-gauge"><div class="vs-gauge-top"><span>' + esc(label) + '</span><span>' + Math.round(shown != null ? shown : value) + '/100</span></div>' +
-      '<div class="vs-gauge-word">' + esc(levelWord(value)) + '</div>' +
-      '<div class="vs-bar"><span style="width:' + Math.max(2, Math.min(100, value)) + '%;background:' + toneColor(value) + '"></span></div>' +
-      '<small>' + esc(hint) + '</small></div>';
-  }
+  function chip(p) { return '<span class="vs-chip">' + avatar(p, MOOD_COLOR[p.mood]) + link(p) + "</span>"; }
+  function moodPill(p) { var c = MOOD_COLOR[p.mood] || C.mid; return '<span class="vs-mood" style="background:' + tint(c, 0.13) + ";color:" + c + '"><span class="vs-dot" style="background:' + c + '"></span>' + esc(p.label) + "</span>"; }
+  function seg(v, col) { return '<div class="vs-seg"><i style="width:' + Math.max(2, Math.min(100, v)) + "%;background:" + col + '"></i></div>'; }
   function actionBtn(item, v) {
     var pid = item.player != null ? item.player : (item.players && item.players[0]);
     var p = pid != null ? v.players.find(function (x) { return String(x.id) === String(pid); }) : null;
-    if (item.action === "talk" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + '>' + (ctx && ctx.noTalk ? "Voir le joueur" : "Lui parler") + '</button>';
-    if (item.action === "profile" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + '>Voir le joueur</button>';
-    if (item.action === "lineup") return '<button type="button" class="vs-btn" ' + ((ctx && ctx.lineupAttrs) || 'data-tab="tactiques"') + '>Revoir les rôles</button>';
+    if (item.action === "talk" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + ">" + (ctx && ctx.noTalk ? "Voir le joueur" : "Lui parler") + "</button>";
+    if (item.action === "profile" && p) return '<button type="button" class="vs-btn" ' + playerAttrs(p) + ">Voir le joueur</button>";
+    if (item.action === "lineup") return '<button type="button" class="vs-btn" ' + ((ctx && ctx.lineupAttrs) || 'data-tab="tactiques"') + ">Revoir les rôles</button>";
     return "";
   }
-  // Infobulle : libellé du moral (« Mitigé »…), traduit par la page — jamais la clé interne.
-  function moodDot(key, label) { return '<span class="vs-mood" style="background:' + (MOOD_COLOR[key] || "var(--vs-mid)") + '"' + (label ? ' title="' + esc(label) + '"' : "") + '></span>'; }
-  function chip(p) { return '<span class="vs-chip">' + moodDot(p.mood, p.label) + link(p) + '</span>'; }
+  function ringSvg(score, col) {
+    var r = 64, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, score));
+    return '<div class="vs-ring"><svg viewBox="0 0 156 156" width="100%" height="100%" aria-hidden="true">' +
+      '<circle cx="78" cy="78" r="' + r + '" fill="none" stroke="var(--vs-in)" stroke-width="13"/>' +
+      '<circle cx="78" cy="78" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round" stroke-dasharray="' + (c * v / 100).toFixed(1) + " " + c.toFixed(1) + '" transform="rotate(-90 78 78)"/>' +
+      '<circle cx="78" cy="78" r="49" fill="none" stroke="var(--vs-line)" stroke-width="1"/></svg>' +
+      '<div><b class="vs-big">' + Math.round(v) + "</b><small>sur 100</small></div></div>";
+  }
+  // Levier prioritaire : la jauge la plus basse dit quoi faire.
+  function leverText(v) {
+    if (v.counts.frustrated >= 2 && v.mood < v.cohesion) return "Plusieurs joueurs sont frustrés : parlez-leur (fiche du joueur) et revoyez les rôles et le temps de jeu dans les Tactiques.";
+    var low = [["cohesion", v.cohesion], ["mood", v.mood], ["confidence", v.confidence]].sort(function (a, b) { return a[1] - b[1]; })[0][0];
+    if (low === "cohesion") return "La cohésion se construit en jouant et en gagnant ensemble. Évitez de chambouler l'effectif dans les semaines qui viennent.";
+    if (low === "mood") return "Le moral dépend de la place de chacun : temps de jeu, rôle, contrat. Commencez par les joueurs influents qui ne sont pas satisfaits.";
+    return "La confiance revient avec les résultats : gardez un cinq stable et appuyez-vous sur vos leaders pour enchaîner les victoires.";
+  }
 
+  // --- Vue générale ------------------------------------------------------------
   function overviewHtml(v) {
+    var col = STATE_COLOR[v.state.key] || C.mid;
     var why = v.problems.length ? v.problems[0].text : v.positives.length ? v.positives[0].text : "Rien à signaler pour l'instant.";
-    var trendIcon = v.trend.key === "up" ? ICON.up : v.trend.key === "down" ? ICON.down : v.trend.key === "flat" ? ICON.flat : "";
+    var trendIc = v.trend.key === "up" ? P.up : v.trend.key === "down" ? P.down : v.trend.key === "flat" ? P.flat : "";
+    var fr = v.counts.frustrated;
+    var hero = '<section class="vs-card vs-hero">' + ringSvg(v.state.score, col) +
+      '<div class="vs-hero-main"><p class="vs-eyebrow">Ambiance du vestiaire</p><p class="vs-state" style="color:' + col + '">' + esc(v.state.label) + "</p>" +
+      '<p class="vs-why">' + esc(why) + "</p>" +
+      '<div class="vs-pills"><span class="vs-pill">' + (trendIc ? svgIcon(trendIc, null, 15, 2.4) : "") + esc(v.trend.label) + "</span>" +
+      '<span class="vs-pill" style="background:' + tint(fr ? C.warn : C.good, 0.13) + ";color:" + (fr ? C.warn : C.good) + '">' + fr + " joueur" + (fr > 1 ? "s" : "") + " frustré" + (fr > 1 ? "s" : "") + "</span></div></div>" +
+      '<div class="vs-lever"><div class="vs-row" style="justify-content:flex-start">' + svgIcon(P.lever, "var(--vs-acc)", 20) + '<p class="vs-eyebrow" style="color:var(--vs-acc)">Levier prioritaire</p></div><p>' + esc(leverText(v)) + "</p></div></section>";
+    var pillar = function (label, value, text, shown) {
+      var c = toneColor(value);
+      return '<article class="vs-card vs-pillar"><div class="vs-row"><p class="vs-eyebrow">' + esc(label) + '</p><span class="vs-verdict" style="background:' + tint(c, 0.14) + ";color:" + c + '">' + esc(levelWord(value)) + "</span></div>" +
+        '<div style="display:flex;align-items:baseline;gap:6px"><b class="vs-big" style="font-size:54px">' + Math.round(shown != null ? shown : value) + '</b><span style="color:var(--vs-faint);font-weight:600">/100</span></div>' +
+        seg(value, c) + '<p class="vs-text">' + esc(text) + "</p></article>";
+    };
+    var pillars = '<section class="vs-grid3">' +
+      pillar("Cohésion", v.cohesion, "L'alchimie du groupe (de 40 à 100) : se construit en jouant et en gagnant ensemble, s'abîme quand l'effectif change.") +
+      pillar("Moral", v.mood, v.counts.satisfied + " satisfait" + (v.counts.satisfied > 1 ? "s" : "") + ", " + fr + " frustré" + (fr > 1 ? "s" : "") + ". Les joueurs influents pèsent plus.") +
+      pillar("Confiance", v.confidence, "Portée par les derniers résultats.") + "</section>";
+    var good = v.positives.length ? v.positives.map(function (x) {
+      return '<li class="vs-li"><span class="vs-ic" style="background:' + tint(C.good, 0.14) + '">' + svgIcon(P.check, C.good, 16, 2.5) + "</span><span>" + esc(x.text) + "</span></li>";
+    }).join("") : '<li class="vs-li"><span class="vs-empty">Pas encore de point fort marquant.</span></li>';
+    var alerts = v.problems.length ? v.problems.map(function (x) {
+      var c = x.sev >= 3 ? C.bad : C.mid;
+      return '<div class="vs-alert" style="background:' + tint(c, 0.08) + ";border:1px solid " + tint(c, 0.3) + '">' + svgIcon(P.warn, c, 22) + "<div><strong>" + esc(x.text) + "</strong></div>" + (actionBtn(x, v) ? '<span class="vs-act">' + actionBtn(x, v) + "</span>" : "") + "</div>";
+    }).join("") : '<div class="vs-calm">' + svgIcon(P.shield, C.good, 24) + "<span>Aucune tension notable dans le vestiaire.</span></div>";
     var leaders = v.players.filter(function (p) { return p.level === "leader"; });
-    var hero = '<div class="vs-card"><div class="vs-hero">' + ring(v.state.score, STATE_COLOR[v.state.key]) +
-      '<div class="vs-hero-main"><p class="vs-state" style="color:' + STATE_COLOR[v.state.key] + '">' + esc(v.state.label) + '</p>' +
-      '<p class="vs-why">' + esc(why) + '</p>' +
-      '<span class="vs-trend">' + trendIcon + esc(v.trend.label) + '</span></div></div></div>';
-    var gauges = '<div class="vs-card"><div class="vs-gauges">' +
-      gauge("Cohésion", v.cohesion, "L'alchimie du groupe (de 40 à 100) : se construit en jouant et en gagnant ensemble, s'abîme quand l'effectif change.") +
-      gauge("Moral", v.mood, v.counts.satisfied + " satisfait" + (v.counts.satisfied > 1 ? "s" : "") + ", " + v.counts.frustrated + " frustré" + (v.counts.frustrated > 1 ? "s" : "") + ". Les joueurs influents pèsent plus.") +
-      gauge("Confiance", v.confidence, "Portée par les derniers résultats.") + '</div></div>';
-    var pos = v.positives.length ? v.positives.map(function (x) { return '<li><span class="vs-ico" style="color:var(--vs-good)">' + ICON.plus + '</span><span>' + esc(x.text) + '</span></li>'; }).join("") : '<li><span class="vs-empty">Pas encore de point fort marquant.</span></li>';
-    var neg = v.problems.length ? v.problems.map(function (x) { return '<li><span class="vs-ico" style="color:' + (x.sev >= 3 ? "var(--vs-bad)" : "var(--vs-warn)") + '">' + ICON.warn + '</span><span>' + esc(x.text) + '</span><span class="vs-act">' + actionBtn(x, v) + '</span></li>'; }).join("") : '<li><span class="vs-empty">Aucune tension notable.</span></li>';
-    var two = '<div class="vs-two"><div class="vs-card"><h3>Ce qui va bien</h3><ul class="vs-list">' + pos + '</ul></div>' +
-      '<div class="vs-card"><h3>Alertes</h3><ul class="vs-list">' + neg + '</ul></div></div>';
-    var who = '<div class="vs-card"><h3>Qui mène le groupe</h3>' + (leaders.length ? leaders.map(chip).join("") : '<p class="vs-empty">Aucun leader naturel : un joueur d\'expérience au fort leadership changerait la donne.</p>') +
-      (v.groups.length ? '<p class="vs-why">' + v.groups.length + ' groupe' + (v.groups.length > 1 ? "s" : "") + ' dans le vestiaire : ' + v.groups.map(function (gr) { return esc(gr.name); }).join(", ") + '.</p>' : "") + '</div>';
-    return hero + gauges + two + who + logCard(v, 6, "Derniers événements");
-  }
-
-  function logCard(v, n, title) {
+    var lead = '<div style="margin-top:auto;display:flex;flex-direction:column;gap:12px;padding-top:4px"><p class="vs-eyebrow">Qui mène le groupe</p>' +
+      (leaders.length ? '<div class="vs-chips">' + leaders.map(function (p) { return '<div class="vs-person">' + avatar(p, MOOD_COLOR[p.mood]) + "<div>" + link(p) + "<small>Leader · " + esc(p.label) + "</small></div></div>"; }).join("") + "</div>"
+        : '<p class="vs-empty">Aucun leader naturel : un joueur d\'expérience au fort leadership changerait la donne.</p>') + "</div>";
+    var two = '<section class="vs-grid2"><article class="vs-card" style="display:flex;flex-direction:column;gap:14px"><div class="vs-row"><h3 class="vs-h3">Ce qui va bien</h3><b class="vs-big" style="font-size:22px;color:' + C.good + '">' + v.positives.length + "</b></div>" +
+      '<ul class="vs-list">' + good + "</ul></article>" +
+      '<article class="vs-card" style="display:flex;flex-direction:column;gap:14px"><div class="vs-row"><h3 class="vs-h3">À surveiller</h3><b class="vs-big" style="font-size:22px;color:' + (v.problems.length ? C.mid : "var(--vs-faint)") + '">' + v.problems.length + "</b></div>" + alerts + lead + "</article></section>";
+    var last = (v.log || [])[0];
     var V = window.HM_VESTIAIRE;
-    var items = (v.log || []).slice(0, n);
-    var body = items.length ? items.map(function (e) {
-      var tone = V.EVENT_TONE[e.t] || 0;
-      var col = tone > 0 ? "var(--vs-good)" : tone < 0 ? "var(--vs-bad)" : "var(--ink-dim)";
-      return '<li><span class="vs-week">Sem. ' + esc(e.w) + '</span><span class="vs-ico" style="color:' + col + '">' + ICON.dot + '</span><span>' + esc(V.eventText(e)) + '</span></li>';
-    }).join("") : '<li><span class="vs-empty">Le journal se remplit au fil des semaines (arrivées, départs, places de titulaire, blessures, séries...).</span></li>';
-    return '<div class="vs-card"><h3>' + esc(title) + '</h3><ul class="vs-list vs-log">' + body + '</ul></div>';
+    var lastHtml = last ? '<div class="vs-row" style="justify-content:flex-start;gap:14px"><span class="vs-wk">SEM. ' + esc(last.w) + '</span><span style="font-size:15px;font-weight:600">' + esc(V.eventText(last)) + "</span>" + toneMark(last) + "</div>" : '<p class="vs-empty">Le journal se remplit au fil des semaines.</p>';
+    var bottom = '<section class="vs-card" style="display:flex;flex-wrap:wrap;gap:22px;align-items:center;justify-content:space-between">' +
+      '<div style="display:flex;flex-direction:column;gap:10px;flex:1 1 420px"><p class="vs-eyebrow">' + (v.groups.length ? v.groups.length + " groupe" + (v.groups.length > 1 ? "s" : "") + " dans le vestiaire" : "Groupes") + "</p>" +
+      (v.groups.length ? '<div class="vs-chips">' + v.groups.map(function (gr, i) { return '<button type="button" class="vs-gchip" data-vs-tab="groups"><span class="vs-dot" style="background:' + GROUP_COLORS[i % GROUP_COLORS.length] + '"></span>' + esc(gr.name) + "</button>"; }).join("") + "</div>" : '<p class="vs-empty">Pas encore de groupe marqué.</p>') + "</div>" +
+      '<div style="display:flex;flex-direction:column;gap:10px;flex:0 1 380px"><p class="vs-eyebrow">Dernier événement</p>' + lastHtml + "</div></section>";
+    return hero + pillars + two + bottom;
+  }
+  function toneMark(e) {
+    var V = window.HM_VESTIAIRE, tone = V.EVENT_TONE[e.t] || 0;
+    var col = tone > 0 ? C.good : tone < 0 ? C.bad : "var(--vs-faint)";
+    if ((e.t === "big-win" || e.t === "big-loss") && e.x != null) return '<b class="vs-big" style="margin-left:auto;font-size:24px;color:' + col + '">' + (e.t === "big-win" ? "+" : "−") + esc(e.x) + "</b>";
+    return '<span style="margin-left:auto;color:' + col + '">' + svgIcon(tone > 0 ? P.up : tone < 0 ? P.down : P.flat, col, 18, 2.4) + "</span>";
   }
 
+  // --- Hiérarchie --------------------------------------------------------------
+  var TIER_HINT = { leader: "Donnent le ton", cadre: "Relais du coach", important: "Comptent sur le terrain", member: "Font partie du groupe", young: "Doivent trouver leur place", marginal: "En marge du groupe" };
+  var TIER_W = { leader: "56%", cadre: "68%", important: "84%", member: "100%", young: "100%", marginal: "100%" };
+  var ROW_LIMIT = 9;
   function hierarchyHtml(v) {
     var V = window.HM_VESTIAIRE;
-    var hint = { leader: "Donnent le ton", cadre: "Relais du coach", important: "Comptent sur le terrain", member: "Font partie du groupe", young: "Doivent trouver leur place", marginal: "En marge du groupe" };
+    var rank = 0;
     var tiers = Object.keys(V.LEVELS).map(function (k) {
       var ps = v.players.filter(function (p) { return p.level === k; });
       if (!ps.length) return "";
-      return '<div class="vs-tier"><div class="vs-tier-name">' + esc(V.LEVELS[k].label) + '<small>' + esc(hint[k]) + '</small></div><div>' + ps.map(chip).join("") + '</div></div>';
+      rank++;
+      var top = k === "leader";
+      return '<div class="vs-tier" style="max-width:' + TIER_W[k] + (top ? ";background:" + tint("#F59E0B", 0.07) + ";border-color:" + tint("#F59E0B", 0.3) : "") + '">' +
+        '<div class="vs-tier-name"><span class="vs-rank vs-big" style="' + (top ? "background:var(--vs-acc);color:#1A1205" : "background:var(--vs-line);color:var(--ink)") + '">' + rank + "</span><div><strong>" + esc(V.LEVELS[k].label) + "</strong><small>" + esc(TIER_HINT[k] || "") + "</small></div></div>" +
+        '<div class="vs-chips" style="flex:1 1 300px">' + ps.map(chip).join("") + "</div></div>";
     }).join("");
-    var rows = v.players.map(function (p) {
+    var moods = V.MOOD_LEVELS || [];
+    var counts = moods.map(function (m) { return { m: m, n: v.players.filter(function (p) { return p.mood === m.key; }).length }; }).filter(function (x) { return x.n; });
+    var legend = '<div class="vs-legend">' + moods.map(function (m) { return '<span><span class="vs-ring-dot" style="border-color:' + MOOD_COLOR[m.key] + '"></span>' + esc(m.label) + "</span>"; }).join("") + "</div>";
+    var pyramid = '<section class="vs-card" style="display:flex;flex-direction:column;gap:22px"><div class="vs-row" style="flex-wrap:wrap;align-items:baseline"><h2 class="vs-h2">La pyramide du vestiaire</h2><p class="vs-text">Du haut vers le bas : qui donne le ton, qui suit</p></div>' +
+      (tiers ? '<div class="vs-pyr">' + tiers + "</div>" + legend : '<p class="vs-empty">Effectif vide.</p>') + "</section>";
+    var sat = v.counts.satisfied, fr = v.counts.frustrated;
+    var bar = '<div style="display:flex;flex-direction:column;gap:8px;flex:0 1 380px;min-width:240px"><div class="vs-moodbar">' +
+      counts.map(function (x) { return '<div style="flex:' + x.n + ";background:" + MOOD_COLOR[x.m.key] + '" title="' + esc(x.n + " " + x.m.label.toLowerCase()) + '"></div>'; }).join("") + "</div>" +
+      '<div class="vs-row" style="font-size:13px;color:var(--vs-dim)"><span><b style="color:var(--ink)">' + sat + "</b> satisfait" + (sat > 1 ? "s" : "") + "</span><span><b style=\"color:var(--ink)\">" + fr + "</b> frustré" + (fr > 1 ? "s" : "") + "</span></div></div>";
+    var all = state.allRows || v.players.length <= ROW_LIMIT + 2;
+    var list = all ? v.players : v.players.slice(0, ROW_LIMIT);
+    var rows = list.map(function (p) {
       var reasons = (p.reasons || []).map(function (r) { return esc(r.text); }).join(" · ");
-      return '<tr><td>' + flag(p.nationality) + ' ' + link(p) + '</td><td class="vs-hide-m">' + pos(p.position) + '</td><td>' + esc(p.levelLabel) + '</td>' +
-        '<td><div class="vs-bar" style="width:70px" title="' + p.influence + '/100"><span style="width:' + p.influence + '%;background:var(--amber,#f0a330)"></span></div></td>' +
-        '<td>' + moodDot(p.mood, p.label) + ' ' + esc(p.label) + '</td><td class="vs-reasons vs-hide-m">' + reasons + '</td></tr>';
+      return "<tr><td><div class=\"vs-who\">" + avatar(p) + "<div>" + link(p) + "<small>" + flag(p.nationality) + " " + esc(nation(p.nationality)) + "</small></div></div></td><td>" + pos(p.position) + "</td><td style=\"color:var(--vs-dim)\">" + esc(p.levelLabel) + "</td>" +
+        '<td><div class="vs-infl" title="' + p.influence + '/100"><span><i style="width:' + p.influence + '%"></i></span><span style="font-size:13px;color:var(--vs-dim)">' + p.influence + "</span></div></td>" +
+        "<td>" + moodPill(p) + '</td><td class="vs-reasons">' + (reasons || "—") + "</td></tr>";
     }).join("");
-    return '<div class="vs-card"><h3>Hiérarchie du vestiaire</h3>' + (tiers || '<p class="vs-empty">Effectif vide.</p>') + '</div>' +
-      '<div class="vs-card"><h3>Qui est satisfait, qui est frustré</h3><div class="vs-wrap"><table class="vs-table"><thead><tr><th>Joueur</th><th class="vs-hide-m">Poste</th><th>Statut</th><th>Influence</th><th>Moral</th><th class="vs-hide-m">Pourquoi</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<p class="vs-why">L\'influence vient du leadership, du temps de jeu, de l\'ancienneté, de l\'âge, du niveau et du vécu au club. Pour agir : la fiche du joueur (discussion, contrat), les Tactiques (rôles et temps de jeu), l\'Entraînement (tutorat).</p></div>';
+    var table = '<section class="vs-card" style="display:flex;flex-direction:column;gap:20px"><div class="vs-row" style="flex-wrap:wrap;gap:20px"><h2 class="vs-h2">Qui est satisfait, qui est frustré</h2>' + bar + "</div>" +
+      '<div class="vs-wrap"><table class="vs-table"><thead><tr><th>Joueur</th><th>Poste</th><th>Statut</th><th>Influence</th><th>Moral</th><th>Pourquoi</th></tr></thead><tbody>' + rows + "</tbody></table></div>" +
+      (all ? "" : '<button type="button" class="vs-more" data-vs-all="1">Afficher les ' + (v.players.length - ROW_LIMIT) + " autres joueurs</button>") +
+      '<p class="vs-text">L\'influence vient du leadership, du temps de jeu, de l\'ancienneté, de l\'âge, du niveau et du vécu au club. Pour agir : la fiche du joueur (discussion, contrat), les Tactiques (rôles et temps de jeu), l\'Entraînement (tutorat).</p></section>';
+    return pyramid + table;
   }
 
+  // --- Groupes -----------------------------------------------------------------
+  function groupColor(v, id) { var i = v.groups.findIndex(function (x) { return x.id === id; }); return GROUP_COLORS[(i < 0 ? 0 : i) % GROUP_COLORS.length]; }
   function groupsHtml(v) {
     var byId = {}; v.players.forEach(function (p) { byId[String(p.id)] = p; });
-    var cards = v.groups.map(function (gr) {
-      var col = gr.status.key === "frustrated" ? "var(--vs-bad)" : gr.status.key === "tight" ? "var(--vs-good)" : "var(--vs-mid)";
-      return '<div class="vs-card vs-group"><div class="vs-group-head"><h4>' + esc(gr.name) + '</h4><span class="vs-status" style="color:' + col + ';border:1px solid ' + col + '">' + esc(gr.status.label) + '</span></div>' +
-        '<p class="vs-bonds">Liés par : ' + esc(gr.bonds.join(", ") || "affinités") + '</p>' +
-        gr.ids.map(function (id) { return byId[id] ? chip(byId[id]) : ""; }).join("") +
-        '<p class="vs-bonds" style="margin-top:8px">Moral du groupe : ' + esc(levelWord(gr.mood).toLowerCase()) + '</p></div>';
-    }).join("");
+    var inGroups = v.players.filter(function (p) { return p.group; }).length;
     var alone = v.players.filter(function (p) { return !p.group; });
-    return (cards ? '<div class="vs-groups">' + cards + '</div>' : '<div class="vs-card"><p class="vs-empty">Pas encore de groupe marqué : les affinités se créent avec le temps passé ensemble.</p></div>') +
-      (alone.length ? '<div class="vs-card"><h3>Hors des groupes</h3>' + alone.map(chip).join("") + '<p class="vs-why">Pas forcément un problème : un joueur isolé et frustré, en revanche, mérite qu\'on s\'en occupe.</p></div>' : "");
+    var isolated = alone.filter(function (p) { return p.mood === "frustrated" || p.mood === "unhappy"; }).length;
+    var kpi = function (label, val, col) { return '<div class="vs-card vs-kpi"><p class="vs-eyebrow">' + esc(label) + '</p><b class="vs-big"' + (col ? ' style="color:' + col + '"' : "") + ">" + val + "</b></div>"; };
+    var kpis = '<section class="vs-grid3" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">' + kpi("Groupes formés", v.groups.length) + kpi("Joueurs dans un groupe", inGroups + "<small>/" + v.players.length + "</small>") +
+      kpi("Indépendants", alone.length) + kpi("Isolés et frustrés", isolated, isolated ? C.bad : C.good) + "</section>";
+    var cards = v.groups.map(function (gr, i) {
+      var col = GROUP_COLORS[i % GROUP_COLORS.length];
+      var stCol = gr.status.key === "frustrated" ? C.bad : col;
+      var ms = gr.ids.map(function (id) { return byId[id]; }).filter(Boolean);
+      var mc = toneColor(gr.mood);
+      return '<article class="vs-card vs-group"><i style="background:' + col + '"></i><div>' +
+        '<div class="vs-row" style="align-items:flex-start"><h4>' + esc(gr.name) + '</h4><span class="vs-verdict" style="border:1px solid ' + stCol + ";color:" + stCol + ';white-space:nowrap">' + esc(gr.status.label) + "</span></div>" +
+        '<div class="vs-stack">' + ms.slice(0, 5).map(function (p) { return avatar(p, col, 38); }).join("") + '<span style="margin-left:22px;font-size:13px;color:var(--vs-faint)">' + ms.length + " joueurs</span></div>" +
+        '<ul class="vs-members">' + ms.map(function (p) { return '<li><span class="vs-dot" style="width:7px;height:7px;background:' + (MOOD_COLOR[p.mood] || C.mid) + '"></span>' + link(p) + "</li>"; }).join("") + "</ul>" +
+        (gr.bonds.length ? '<div class="vs-chips" style="gap:6px">' + gr.bonds.map(function (b) { return '<span class="vs-bond">' + esc(b) + "</span>"; }).join("") + "</div>" : "") +
+        '<div class="vs-gfoot"><div class="vs-row" style="font-size:13px"><span style="color:var(--vs-faint)">Moral du groupe</span><b style="color:' + mc + '">' + esc(levelWord(gr.mood)) + "</b></div>" +
+        '<div class="vs-bar6"><i style="width:' + Math.max(3, Math.min(100, gr.mood)) + "%;background:" + mc + '"></i></div></div></div></article>';
+    }).join("");
+    var explain = '<article class="vs-card" style="border-style:dashed;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:10px"><p class="vs-eyebrow">Comment naissent les groupes</p>' +
+      '<p class="vs-text" style="font-size:15px">Même nationalité, même génération, du temps passé ensemble : les affinités se créent d\'elles-mêmes. Un groupe soudé et heureux tire le moral vers le haut.</p></article>';
+    var groups = '<section class="vs-groups">' + (cards || '<article class="vs-card"><p class="vs-empty">Pas encore de groupe marqué : les affinités se créent avec le temps passé ensemble.</p></article>') + explain + "</section>";
+    var solo = alone.length ? '<section class="vs-card" style="display:flex;flex-direction:column;gap:16px"><div class="vs-row" style="flex-wrap:wrap;align-items:baseline"><h2 class="vs-h2" style="font-size:24px">Hors des groupes</h2>' +
+      '<p class="vs-text" style="max-width:560px">Pas forcément un problème. Un joueur isolé <em>et</em> frustré, en revanche, mérite qu\'on s\'en occupe.</p></div>' +
+      '<div class="vs-solo">' + alone.map(function (p) { return "<div>" + avatar(p, MOOD_COLOR[p.mood]) + "<div>" + link(p) + "<small>" + esc(p.label) + "</small></div></div>"; }).join("") + "</div></section>" : "";
+    return kpis + groups + solo;
   }
 
+  // --- Relations ---------------------------------------------------------------
+  // Carte : chaque groupe dans sa zone (couleur du groupe), les indépendants
+  // au centre ; taille = influence, contour = moral, anneau = leader.
   function graphSvg(v) {
-    var ps = v.players; var n = ps.length;
+    var ps = v.players, n = ps.length;
     if (n < 2) return "";
-    var W = 520, H = 440, cx = W / 2, cy = H / 2, R = 165;
-    var at = {};
-    ps.forEach(function (p, i) { var a = -Math.PI / 2 + 2 * Math.PI * i / n; at[String(p.id)] = { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), a: a, p: p }; });
+    var W = 760, H = 500, cx = 380, cy = 250;
+    var at = {}, zones = "", zc = [];
+    var k = v.groups.length;
+    v.groups.forEach(function (gr, i) {
+      var m = gr.ids.length, r = 40 + 25 * Math.sqrt(m);
+      var a = -Math.PI * 0.75 + 2 * Math.PI * i / Math.max(1, k);
+      // Un seul groupe : à gauche, les indépendants occupent le reste.
+      var zx = k === 1 ? 210 : cx + 255 * Math.cos(a), zy = k === 1 ? cy : cy + 150 * Math.sin(a);
+      zx = Math.max(r + 6, Math.min(W - r - 6, zx)); zy = Math.max(r + 24, Math.min(H - r - 22, zy));
+      zc.push({ x: zx, y: zy, r: r });
+      var col = GROUP_COLORS[i % GROUP_COLORS.length];
+      zones += '<circle cx="' + zx.toFixed(1) + '" cy="' + zy.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + col + '" fill-opacity=".07" stroke="' + col + '" stroke-opacity=".4" stroke-dasharray="4 6"/>' +
+        '<text class="zone" x="' + zx.toFixed(1) + '" y="' + (zy - r - 8).toFixed(1) + '" text-anchor="middle" style="fill:' + col + '">' + esc(gr.name.replace(/^(Le clan|Les|La|Le) /, "")) + "</text>";
+      gr.ids.forEach(function (id, j) {
+        var b = 2 * Math.PI * j / m - Math.PI / 2;
+        var rr = m === 1 ? 0 : r * 0.58;
+        at[id] = { x: zx + rr * Math.cos(b), y: zy + rr * Math.sin(b), grouped: true };
+      });
+    });
+    // Indépendants : cases libres d'une grille (hors des zones), les plus
+    // proches du centre de l'espace restant d'abord.
+    var solo = ps.filter(function (p) { return !at[String(p.id)]; });
+    var hx = k === 1 ? 520 : cx, cells = [];
+    var sx = k ? 82 : 116, sy = k ? 64 : 84, row = 0;
+    for (var gy = 50; gy <= H - 40; gy += sy, row++) for (var gx = 50; gx <= W - 50; gx += sx) {
+      var ox = gx + (row % 2 ? sx / 2 : 0);
+      if (ox > W - 40) continue;
+      if (zc.some(function (z) { return Math.hypot(ox - z.x, gy - z.y) < z.r + 34; })) continue;
+      cells.push({ x: ox, y: gy, d: Math.hypot((ox - hx) * 0.8, gy - cy) });
+    }
+    cells.sort(function (a, b) { return a.d - b.d; });
+    solo.forEach(function (p, i) {
+      var c = cells[i] || { x: 40 + (i * 53) % (W - 80), y: H - 30 };
+      at[String(p.id)] = { x: c.x, y: c.y, grouped: false };
+    });
     var lines = v.relations.map(function (r) {
-      var A = at[String(r.a)], B = at[String(r.b)]; if (!A || !B) return "";
-      var col = r.kind === "good" ? "var(--vs-good)" : r.kind === "tension" ? "var(--vs-bad)" : "rgba(255,255,255,.25)";
-      var w = Math.max(1, Math.min(5, Math.abs(r.v) * 4));
-      return '<line x1="' + A.x.toFixed(1) + '" y1="' + A.y.toFixed(1) + '" x2="' + B.x.toFixed(1) + '" y2="' + B.y.toFixed(1) + '" stroke="' + col + '" stroke-width="' + w.toFixed(1) + '" stroke-opacity=".8"' + (r.kind === "tension" ? ' stroke-dasharray="5 4"' : "") + '/>';
+      var A = at[String(r.a)], B = at[String(r.b)]; if (!A || !B || r.kind === "neutral") return "";
+      var col = r.kind === "good" ? C.good : C.bad;
+      return '<line x1="' + A.x.toFixed(1) + '" y1="' + A.y.toFixed(1) + '" x2="' + B.x.toFixed(1) + '" y2="' + B.y.toFixed(1) + '" stroke="' + col + '" stroke-width="' + (r.kind === "good" ? 3 : 2.5) + '" stroke-linecap="round" stroke-opacity=".8"' + (r.kind === "tension" ? ' stroke-dasharray="6 5"' : "") + "/>";
     }).join("");
-    var nodes = Object.keys(at).map(function (id) {
-      var o = at[id]; var p = o.p;
-      var lx = cx + (R + 20) * Math.cos(o.a), ly = cy + (R + 20) * Math.sin(o.a);
-      var anchor = Math.abs(Math.cos(o.a)) < 0.2 ? "middle" : Math.cos(o.a) > 0 ? "start" : "end";
-      var name = String(p.name || "").split(" ").slice(-1)[0];
-      var rr = 6 + p.influence / 14;
-      return '<g ' + playerAttrs(p) + ' style="cursor:pointer"><circle cx="' + o.x.toFixed(1) + '" cy="' + o.y.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="' + (MOOD_COLOR[p.mood] || "#888") + '" stroke="#0d1320" stroke-width="2"/>' +
-        '<text x="' + lx.toFixed(1) + '" y="' + (ly + 4).toFixed(1) + '" text-anchor="' + anchor + '">' + esc(name) + '</text></g>';
+    var nodes = ps.map(function (p) {
+      var o = at[String(p.id)], rr = 8 + p.influence / 11;
+      var col = MOOD_COLOR[p.mood] || C.mid;
+      return "<g " + playerAttrs(p) + "><title>" + esc(p.name + " · " + p.levelLabel + " · " + p.label) + "</title>" +
+        '<circle cx="' + o.x.toFixed(1) + '" cy="' + o.y.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="' + (o.grouped ? "var(--vs-line)" : "var(--vs-card)") + '" stroke="' + col + '" stroke-width="3"/>' +
+        (p.level === "leader" ? '<circle cx="' + o.x.toFixed(1) + '" cy="' + o.y.toFixed(1) + '" r="' + (rr + 7).toFixed(1) + '" fill="none" stroke="#F59E0B" stroke-opacity=".7" stroke-width="1.5"/>' : "") +
+        '<text x="' + o.x.toFixed(1) + '" y="' + (o.y + rr + 14).toFixed(1) + '" text-anchor="middle"' + (o.grouped || p.level === "leader" ? "" : ' class="dim"') + ">" + esc(lastName(p.name)) + "</text></g>";
     }).join("");
-    return '<svg class="vs-graph" viewBox="-40 0 ' + (W + 80) + ' ' + H + '" role="img" aria-label="Carte des relations">' + lines + nodes + '</svg>' +
-      '<div class="vs-legend"><span><i style="background:var(--vs-good)"></i>Bonne entente</span><span><i style="background:var(--vs-bad)"></i>Tension</span><span>Taille = influence · couleur = moral</span></div>';
+    var good = v.relations.filter(function (r) { return r.kind === "good"; }).length, bad = v.relations.filter(function (r) { return r.kind === "tension"; }).length;
+    return '<figure class="vs-fig"><svg class="vs-graph" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Carte des relations : ' + good + " bonne" + (good > 1 ? "s" : "") + " entente" + (good > 1 ? "s" : "") + ", " + bad + " tension" + (bad > 1 ? "s" : "") + '">' + zones + lines + nodes + "</svg></figure>" +
+      '<div class="vs-legend" style="justify-content:flex-start"><span><span style="width:22px;height:3px;border-radius:2px;background:' + C.good + '"></span>Bonne entente</span><span><span style="width:22px;border-top:3px dashed ' + C.bad + '"></span>Tension</span>' +
+      '<span><span class="vs-ring-dot" style="width:14px;height:14px;border:1.5px solid #F59E0B"></span>Leader</span><span><span class="vs-ring-dot" style="width:14px;height:14px;border:2px dashed var(--vs-line)"></span>Zone de groupe</span></div>';
   }
   function relationsHtml(v) {
     var byId = {}; v.players.forEach(function (p) { byId[String(p.id)] = p; });
-    function item(r) {
+    function pair(r) {
       var a = byId[String(r.a)], b = byId[String(r.b)]; if (!a || !b) return "";
-      return '<li><span class="vs-ico" style="color:' + (r.kind === "tension" ? "var(--vs-bad)" : "var(--vs-good)") + '">' + ICON.dot + '</span><span>' + link(a) + ' et ' + link(b) + '<br><small style="color:var(--ink-dim)">' + esc(r.why.join(", ")) + '</small></span></li>';
+      var col = r.kind === "tension" ? C.bad : (a.group && a.group === b.group ? groupColor(v, a.group) : C.good);
+      return '<li class="vs-pair"><div class="vs-duo">' + avatar(a, col) + avatar(b, col) + "</div><div><span>" + link(a) + " &amp; " + link(b) + "</span><small>" + esc(r.why.join(", ")) + "</small></div></li>";
     }
-    var good = v.relations.filter(function (r) { return r.kind === "good"; }).slice(0, 8);
-    var bad = v.relations.filter(function (r) { return r.kind === "tension"; }).slice(0, 8);
-    return '<div class="vs-card"><h3>Carte des relations</h3>' + (graphSvg(v) || '<p class="vs-empty">Pas assez de joueurs.</p>') + '</div>' +
-      '<div class="vs-two"><div class="vs-card"><h3>Bonnes ententes</h3><ul class="vs-list">' + (good.map(item).join("") || '<li><span class="vs-empty">Aucune pour l\'instant.</span></li>') + '</ul></div>' +
-      '<div class="vs-card"><h3>Tensions</h3><ul class="vs-list">' + (bad.map(item).join("") || '<li><span class="vs-empty">Aucune tension.</span></li>') + '</ul></div></div>';
+    var good = v.relations.filter(function (r) { return r.kind === "good"; }), bad = v.relations.filter(function (r) { return r.kind === "tension"; });
+    var map = '<section class="vs-card vs-main" style="display:flex;flex-direction:column;gap:14px"><div class="vs-row" style="flex-wrap:wrap;align-items:baseline"><h2 class="vs-h2">Carte des relations</h2><p class="vs-text" style="font-size:13px">Taille = influence · contour = moral</p></div>' +
+      (graphSvg(v) || '<p class="vs-empty">Pas assez de joueurs.</p>') + "</section>";
+    var side = '<aside class="vs-side"><section class="vs-card" style="display:flex;flex-direction:column;gap:14px"><div class="vs-row"><h3 class="vs-h3">Bonnes ententes</h3><b class="vs-big" style="font-size:22px;color:' + C.good + '">' + good.length + "</b></div>" +
+      (good.length ? '<ul class="vs-list">' + good.slice(0, 8).map(pair).join("") + "</ul>" : '<p class="vs-empty">Aucune pour l\'instant : les affinités se créent avec le temps passé ensemble.</p>') + "</section>" +
+      '<section class="vs-card" style="display:flex;flex-direction:column;gap:14px"><div class="vs-row"><h3 class="vs-h3">Tensions</h3><b class="vs-big" style="font-size:22px;color:' + (bad.length ? C.bad : "var(--vs-faint)") + '">' + bad.length + "</b></div>" +
+      (bad.length ? '<ul class="vs-list">' + bad.slice(0, 8).map(pair).join("") + "</ul>" : '<div class="vs-calm">' + svgIcon(P.shield, C.good, 26) + "<span>Aucun conflit dans le vestiaire. Les tensions apparaîtront ici dès qu'elles se déclarent.</span></div>") + "</section></aside>";
+    return '<div class="vs-split">' + map + side + "</div>";
   }
 
-  function chartSvg(hist) {
-    if (hist.length < 2) return '<p class="vs-empty">La courbe apparaît après deux semaines d\'entraînement.</p>';
-    var W = 560, H = 200, L = 30, B = 22, T = 10, Rt = 10;
-    var n = hist.length;
-    function x(i) { return L + (W - L - Rt) * i / (n - 1); }
-    function y(v) { return T + (H - T - B) * (1 - v / 100); }
-    function path(key, f) { return hist.map(function (h, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(f ? f(h) : h[key]).toFixed(1); }).join(" "); }
-    var grid = [0, 25, 50, 75, 100].map(function (v) { return '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="rgba(255,255,255,.07)"/><text x="' + (L - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '</text>'; }).join("");
-    var labels = hist.map(function (h, i) { return (i === 0 || i === n - 1 || i % 4 === 0) ? '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">J' + h.w + '</text>' : ""; }).join("");
-    var cohesion = function (h) { return Math.max(0, Math.min(100, h.chem)); };
-    return '<svg class="vs-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Évolution du vestiaire">' + grid + labels +
-      '<path d="' + path("score") + '" fill="none" stroke="var(--amber,#f0a330)" stroke-width="2.6"/>' +
-      '<path d="' + path(null, cohesion) + '" fill="none" stroke="var(--vs-good)" stroke-width="1.6" stroke-dasharray="4 3"/>' +
-      '<path d="' + path("mood") + '" fill="none" stroke="#6aa8ff" stroke-width="1.6" stroke-dasharray="2 3"/></svg>' +
-      '<div class="vs-legend"><span><i style="background:var(--amber,#f0a330)"></i>État général</span><span><i style="background:var(--vs-good)"></i>Cohésion</span><span><i style="background:#6aa8ff"></i>Moral</span></div>';
+  // --- Évolution ---------------------------------------------------------------
+  var SERIES = [["score", "Ambiance", "#F59E0B"], ["chem", "Cohésion", C.purple], ["mood", "Moral", C.good]];
+  function chartSvg(v) {
+    var hist = v.history || [];
+    var W = 1000, H = 280, L = 50, R = 20, T = 30, B = 30;
+    var n = hist.length, slots = Math.max(n + 4, 10);
+    function x(i) { return L + 30 + (W - L - R - 60) * i / (slots - 1); }
+    function y(val) { return T + (H - T - B) * (1 - Math.max(0, Math.min(100, val)) / 100); }
+    var grid = [100, 75, 50, 25, 0].map(function (val) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(val) + '" y2="' + y(val) + '" stroke="var(--vs-line)"/><text x="' + (L - 12) + '" y="' + (y(val) + 4) + '" text-anchor="end">' + val + "</text>"; }).join("");
+    var lastX = n ? x(n - 1) : x(0);
+    var future = '<rect x="' + lastX + '" y="' + T + '" width="' + (W - R - lastX) + '" height="' + (H - T - B) + '" fill="#F59E0B" fill-opacity=".04"/><line x1="' + lastX + '" x2="' + lastX + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--vs-line)" stroke-dasharray="4 5"/>' +
+      (slots - n >= 3 ? '<text x="' + ((lastX + W - R) / 2) + '" y="' + (T + (H - T - B) / 2) + '" text-anchor="middle" style="font-size:14px">Semaines à venir</text>' : "");
+    var labels = "";
+    for (var i = 0; i < slots; i++) {
+      var w = n ? hist[0].w + i : i + 1;
+      if (i < n) w = hist[i].w;
+      if (slots > 14 && i % 2 && i !== n - 1) continue;
+      labels += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle"' + (i === n - 1 ? ' style="fill:var(--ink);font-weight:700"' : "") + ">S" + esc(w) + "</text>";
+    }
+    var paths = SERIES.map(function (s) {
+      if (n < 2) return "";
+      var d = hist.map(function (h, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(s[0] === "chem" ? h.chem : h[s[0]]).toFixed(1); }).join(" ");
+      return '<path d="' + d + '" fill="none" stroke="' + s[2] + '" stroke-width="' + (s[0] === "score" ? 3 : 2) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    }).join("");
+    var now = { score: v.state.score, chem: v.cohesion, mood: v.mood, conf: v.confidence };
+    var px = lastX;
+    var dots = '<circle cx="' + px + '" cy="' + y(now.mood) + '" r="6" fill="' + C.good + '"/><circle cx="' + px + '" cy="' + y(now.conf) + '" r="6" fill="' + C.blue + '"/><circle cx="' + px + '" cy="' + y(now.chem) + '" r="6" fill="' + C.purple + '"/>' +
+      '<circle cx="' + px + '" cy="' + y(now.score) + '" r="16" fill="#F59E0B" fill-opacity=".18"/><circle cx="' + px + '" cy="' + y(now.score) + '" r="8" fill="#F59E0B" stroke="var(--vs-in)" stroke-width="3"/>' +
+      '<rect x="' + (px - 90) + '" y="' + (y(now.score) - 44) + '" width="72" height="28" rx="8" fill="#F59E0B"/><text x="' + (px - 54) + '" y="' + (y(now.score) - 24) + '" text-anchor="middle" class="vs-cond" style="fill:#1A1205;font-weight:800;font-size:17px">' + now.score + "</text>";
+    return '<figure class="vs-fig" style="padding:12px 8px 4px"><svg class="vs-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Ambiance ' + now.score + ", cohésion " + now.chem + ", moral " + now.mood + ", confiance " + now.conf + '">' + grid + future + labels + paths + dots + "</svg></figure>";
   }
+  var EVENT_ICON = { "big-win": P.trophy, "win-streak": P.trophy, "big-loss": P.down, "loss-streak": P.down, arrival: P.user, youth: P.user, departure: P.user, injury: P.warn, conflict: P.bolt, request: P.warn };
   function evolutionHtml(v) {
-    var last = v.history[v.history.length - 1];
-    var sat = last ? '<p class="vs-why">Cette semaine : ' + last.sat + ' joueurs satisfaits, ' + last.frus + ' frustrés sur ' + last.n + '.</p>' : "";
-    return '<div class="vs-card"><h3>Évolution sur les dernières semaines</h3>' + chartSvg(v.history) + sat + '</div>' + logCard(v, 20, "Journal du vestiaire");
+    var V = window.HM_VESTIAIRE, n = (v.history || []).length;
+    var sub = n >= 2 ? "Ambiance, cohésion et moral semaine après semaine ; la confiance (résultats récents) est indiquée pour cette semaine." : n === 1 ? "Premier relevé enregistré. La courbe se dessine à partir de deux semaines d'entraînement." : "La courbe se dessine à partir de deux semaines d'entraînement.";
+    var legend = '<div class="vs-legend" style="justify-content:flex-start;gap:16px">' + SERIES.concat([["conf", "Confiance", C.blue]]).map(function (s) { return '<span><span style="width:18px;height:3px;border-radius:2px;background:' + s[2] + '"></span>' + esc(s[1]) + "</span>"; }).join("") + "</div>";
+    var chart = '<section class="vs-card" style="display:flex;flex-direction:column;gap:16px"><div class="vs-row" style="flex-wrap:wrap;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:6px"><h2 class="vs-h2">Évolution de l\'ambiance</h2><p class="vs-text">' + esc(sub) + "</p></div>" + legend + "</div>" + chartSvg(v) +
+      (n ? '<p class="vs-text">Cette semaine : ' + v.counts.satisfied + " joueurs satisfaits, " + v.counts.frustrated + " frustrés sur " + v.counts.players + ".</p>" : "") + "</section>";
+    var items = (v.log || []).slice(0, 20);
+    var tl = items.length ? '<ol class="vs-tl">' + items.map(function (e, i) {
+      var tone = V.EVENT_TONE[e.t] || 0, col = tone > 0 ? C.good : tone < 0 ? C.bad : "var(--vs-faint)";
+      return '<li><span class="vs-tl-w">SEM. ' + esc(e.w) + '</span><div class="vs-tl-dot"><span style="background:' + col + ";box-shadow:0 0 0 4px " + (tone ? tint(tone > 0 ? C.good : C.bad, 0.18) : "transparent") + '"></span>' + (i < items.length - 1 ? "<span></span>" : "") + "</div>" +
+        '<div class="vs-tl-card">' + svgIcon(EVENT_ICON[e.t] || (tone > 0 ? P.up : tone < 0 ? P.down : P.flat), col, 20) + '<strong style="flex:1;font-weight:600">' + esc(V.eventText(e)) + "</strong>" + ((e.t === "big-win" || e.t === "big-loss") ? toneMark(e) : "") + "</div></li>";
+    }).join("") + "</ol>" : '<p class="vs-empty">Le journal se remplit au fil des semaines (arrivées, départs, places de titulaire, blessures, séries...).</p>';
+    var journal = '<section class="vs-card vs-main" style="display:flex;flex-direction:column;gap:16px"><h2 class="vs-h2" style="font-size:24px">Journal du vestiaire</h2>' + tl +
+      '<p class="vs-text" style="font-size:13px">Les prochains matchs, transferts et changements de rôle s\'ajouteront ici.</p></section>';
+    var drivers = [["Cohésion", C.purple, "Monte quand on joue et gagne ensemble, baisse quand l'effectif change."], ["Moral", C.good, "Suit la satisfaction de chacun (temps de jeu, rôle, contrat) ; les joueurs influents pèsent plus."], ["Confiance", C.blue, "Portée par les derniers résultats."]];
+    var aside = '<aside class="vs-card vs-side" style="gap:16px"><h2 class="vs-h2" style="font-size:24px">Ce qui fait bouger les jauges</h2>' + drivers.map(function (d) {
+      return '<div class="vs-driver"><span style="background:' + d[1] + '"></span><div><strong>' + esc(d[0]) + '</strong><span class="vs-text">' + esc(d[2]) + "</span></div></div>";
+    }).join("") + "</aside>";
+    return chart + '<div class="vs-split">' + journal + aside + "</div>";
   }
 
   var TABS = [["overview", "Vue générale"], ["hierarchy", "Hiérarchie"], ["groups", "Groupes"], ["relations", "Relations"], ["evolution", "Évolution"]];
@@ -275,19 +477,25 @@
     if (!V || !t) { holder.innerHTML = '<p class="vs-empty">Chargement du vestiaire…</p>'; return null; }
     var view;
     try { view = V.buildView(t, { now: Date.now(), recent: recent(), nationName: g("nationName") }); } catch (e) { holder.innerHTML = '<p class="vs-empty">Vestiaire indisponible pour le moment.</p>'; return null; }
-    // Même forme de menu que le Calendrier et la Coupe (.cal-toolbar / .cal-filter).
-    var tabs = '<div class="cal-toolbar vs-tabs" role="tablist" aria-label="Vues du vestiaire">' + TABS.map(function (x) {
+    var tabs = '<nav class="vs-tabs" role="tablist" aria-label="Sections du vestiaire">' + TABS.map(function (x) {
       var on = state.tab === x[0];
-      return '<button type="button" role="tab" class="cal-filter' + (on ? " active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + '</button>';
-    }).join("") + '</div>';
+      return '<button type="button" role="tab" class="' + (on ? "active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + "</button>";
+    }).join("") + "</nav>";
+    // En-tête des maquettes : semaine et effectif, titre, onglets. Le mode
+    // Sélection a déjà son titre de page (pas de second « Vestiaire »).
+    var eyebrow = (!ctx && t.week != null ? "Semaine " + esc(t.week) + " · " : "") + view.players.length + " joueur" + (view.players.length > 1 ? "s" : "");
+    var head = '<header class="vs-head"><div><p class="vs-eyebrow">' + eyebrow + "</p>" + (ctx ? "" : "<h1>Vestiaire</h1>") + "</div>" + tabs + "</header>";
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
-    holder.innerHTML = tabs + body;
+    holder.innerHTML = '<div class="vs-root">' + head + body + "</div>";
+    // Page du club : le titre est dans l'en-tête (pas de doublon avec celui de la section).
+    if (!ctx) { var sec = document.getElementById("vestiaireSection"), pt = sec && sec.querySelector(".page-title"); if (pt) pt.style.display = "none"; }
     holder.__vsCtx = ctx;
     if (!holder.__vsBound) {
       holder.__vsBound = true;
       holder.addEventListener("click", function (e) {
         var tb = e.target.closest("[data-vs-tab]");
-        if (tb) { state.tab = tb.getAttribute("data-vs-tab"); render(holder.__vsCtx || null); return; }
+        if (tb) { state.tab = tb.getAttribute("data-vs-tab"); state.allRows = false; render(holder.__vsCtx || null); return; }
+        if (e.target.closest("[data-vs-all]")) { state.allRows = true; render(holder.__vsCtx || null); }
       });
     }
     return view;
