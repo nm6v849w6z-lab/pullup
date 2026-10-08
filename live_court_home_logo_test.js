@@ -84,14 +84,19 @@ if (ariaLabel.includes(awayTeamName) && awayTeamName !== homeTeamName) {
 }
 console.log(`✅ Le logo type au centre du terrain correspond bien à l'équipe qui reçoit ("${homeTeamName}"), jamais à la visiteuse.`);
 
-// Positionné bien au centre du terrain (rond central de la vue live :
-// cx=470, cy=250, rayon 52 → translate(418,198)).
+// Positionné au centre ET à la taille du rond central (2026-10-08 : « le
+// cercle du logo doit épouser exactement le rond central », r = 60) :
+// l'anneau de l'écusson (r 55 dans sa viewBox de 120) tombe sur la ligne.
 const g = logoGroup.querySelector("g");
 if (!g) throw new Error("❌ Le logo devrait être positionné via un <g transform=\"translate(...)\">.");
 const transform = g.getAttribute("transform") || "";
-if (!/translate\(418,198\)/.test(transform)) {
-  throw new Error(`❌ Le logo devrait être centré sur le rond central (cx=470,cy=250), transform obtenu : "${transform}".`);
+const tm = /translate\(([\d.]+),([\d.]+)\)/.exec(transform);
+const lw = Number(nestedSvg.getAttribute("width"));
+if (!tm || Math.abs(+tm[1] + lw / 2 - 470) > 0.01 || Math.abs(+tm[2] + lw / 2 - 250) > 0.01) {
+  throw new Error(`❌ Le logo devrait être centré sur le rond central (cx=470,cy=250), transform obtenu : "${transform}" (largeur ${lw}).`);
 }
+const ringR = 55 * lw / 120;
+if (Math.abs(ringR - 60) > 0.01) throw new Error(`❌ L'anneau du logo doit épouser le rond central (r 60), obtenu r ${ringR.toFixed(2)}.`);
 console.log("✅ Le logo est bien centré sur le rond central du terrain.");
 
 // flush() AVANT de fermer cette fenêtre : sans ça, une sauvegarde encore en

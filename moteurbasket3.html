@@ -9051,8 +9051,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-16">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-16">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-17">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-17">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -38355,6 +38355,12 @@ function arenaCourtLogo(team) {
   return { svg: defaultTeamLogoSvg(team, 120) };
 }
 
+// Logo au rond central (2026-10-08) : `r` = rayon du ROND CENTRAL (60,
+// COURT_CENTER_R) — le cercle du logo l'épouse exactement dans le direct
+// 2D, la carte des tirs et l'aperçu Personnalisation : logo importé
+// découpé à ce rayon, écusson par défaut (anneau r 55 de 120) agrandi
+// pour que son anneau tombe sur la ligne.
+const COURT_CENTER_R = 60;
 function liveCourtHomeLogoSvg(team, cx, cy, r) {
   const size = r * 2;
   const x = cx - r, y = cy - r;
@@ -38365,7 +38371,8 @@ function liveCourtHomeLogoSvg(team, cx, cy, r) {
       `preserveAspectRatio="xMidYMid slice" clip-path="url(#hmLiveCourtLogoClip)">` +
       `<title>Logo de ${escapeHtml(team.name)}</title></image></g>`;
   }
-  return `<g transform="translate(${x},${y})">${defaultTeamLogoSvg(team, size)}</g>`;
+  const h = r * 60 / 55;
+  return `<g transform="translate(${cx - h},${cy - h})">${defaultTeamLogoSvg(team, h * 2)}</g>`;
 }
 
 // Les `n` derniers résultats RÉELLEMENT joués d'une équipe (championnat +
@@ -44926,7 +44933,7 @@ async function spectateMountLiveView(state) {
   };
   if (live.tacticsUsed) { teams[live.isHome ? "A" : "B"].tactics = live.tacticsUsed.home || null; teams[live.isHome ? "B" : "A"].tactics = live.tacticsUsed.away || null; }
   const dress = { meta: null, courtLogo: "", arenaSponsor: null, courtStyle: null, referees: hmLiveReferees(live.seed != null ? live.seed : live.kickoffAt) };
-  try { dress.courtLogo = homeObj ? liveCourtHomeLogoSvg(homeObj, 470, 250, 52).replace(/liveCourtLogoClip/g, "spectateCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
+  try { dress.courtLogo = homeObj ? liveCourtHomeLogoSvg(homeObj, 470, 250, COURT_CENTER_R).replace(/liveCourtLogoClip/g, "spectateCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
   try { dress.arenaSponsor = homeObj ? sponsorNameForSlot(homeObj, "salle") : null; } catch (e) { /* rien */ }
   dress.arena = hmLiveArena(homeObj);
   // Parquet Premium du club qui reçoit ; une sélection nationale n'en a pas (repli neutre).
@@ -45155,7 +45162,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-16";
+const HM_LIVE_ASSET_VERSION = "20261008-17";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45744,7 +45751,7 @@ function hmLiveDress() {
   const awayTeam = m.isHome ? teamB : teamA;
   const d = { avatars: new Map(), logos: ["", ""], colors: hmLiveColors(homeTeam, awayTeam), courtLogo: "", meta: null };
   try { d.logos = [homeTeam, awayTeam].map(t => (t ? teamLogoHtml(t, 76) : "")); } catch (e) { /* écusson générique */ }
-  try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, 52) : ""; } catch (e) { /* pas de logo */ }
+  try { d.courtLogo = homeTeam ? liveCourtHomeLogoSvg(homeTeam, 470, 250, COURT_CENTER_R) : ""; } catch (e) { /* pas de logo */ }
   try { d.meta = hmLiveMeta(); } catch (e) { d.meta = null; }
   // Sponsors (voir le bloc SPONSORS côté moteur) : sponsor maillot de
   // CHAQUE club (bandeau) et sponsor salle du club qui REÇOIT (panneaux LED
@@ -55464,7 +55471,7 @@ function courtPreviewSvg(style) {
     return `<rect x="${flip ? 750 : 0}" y="170" width="190" height="160" ${ln}/><circle cx="${X(190)}" cy="250" r="60" ${ln}/>` +
       `<path d="M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470" ${ln}/>`;
   };
-  const logo = (() => { try { return liveCourtHomeLogoSvg(teamA, 470, 250, 52).replace(/hmLiveCourtLogoClip/g, "persoCourtLogoClip"); } catch (e) { return ""; } })();
+  const logo = (() => { try { return liveCourtHomeLogoSvg(teamA, 470, 250, COURT_CENTER_R).replace(/hmLiveCourtLogoClip/g, "persoCourtLogoClip"); } catch (e) { return ""; } })();
   return `<svg class="sl-court-svg" viewBox="0 0 940 500" role="img" aria-label="Aperçu du parquet" style="background:${w.floor}">` +
     planks + keys + `<rect x="2" y="2" width="936" height="496" rx="4" ${ln}/><line x1="470" y1="2" x2="470" y2="498" stroke="${w.line}" stroke-width="3"/>` +
     `<circle cx="470" cy="250" r="60" ${ln}/>${half(false)}${half(true)}<g opacity=".85">${logo}</g></svg>`;

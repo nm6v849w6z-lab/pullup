@@ -13,7 +13,7 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-16";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-17";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -368,9 +368,10 @@ export function createStaging(api, getCfg) {
           for (const t of [0, 1]) byTeam(t).forEach((sp, i) => {
             const bx = api.BENCH[t].x;
             if (ph.kind === "timeout") {
-              // Regroupement en demi-cercle autour du coach, devant le banc.
-              const a = Math.PI * (1.12 + i * 0.19);
-              hold(sp, bx + Math.cos(a) * 6.6, COACH_Y + Math.sin(a) * 5.6, 1.8, late);
+              // Regroupement en demi-cercle autour du coach, devant le banc
+              // (géométrie partagée avec le terrain et les remplaçants : court2d.js:huddlePos).
+              const hp = api.huddlePos ? api.huddlePos(t, i, 5, 0) : { x: bx + Math.cos(Math.PI * (1.12 + i * 0.19)) * 6.6, y: COACH_Y + Math.sin(Math.PI * (1.12 + i * 0.19)) * 5.6 };
+              hold(sp, hp.x, hp.y, 1.8, late);
             } else {
               const p = api.parkLine(t, i);
               hold(sp, p.x, p.y, 1.4, late);

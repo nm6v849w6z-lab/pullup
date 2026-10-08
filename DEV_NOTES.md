@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-08) — Live 2D : pub du parquet, logo au rond
+  central, panneaux LED, ballon libre, remplaçants au temps mort**.
+  (1) `format.js:floorAdInk(floor)` : encre de la pub (claire / sombre,
+  celle qui contraste le plus) avec l'opacité donnant un contraste ≥ 1,85 ;
+  direct 2D (`drawFloor`) et carte des tirs (parquet du club) ; le cartouche
+  d'un sponsor garde ses couleurs. (2) `COURT_CENTER_R = 60` :
+  `liveCourtHomeLogoSvg(team, 470, 250, COURT_CENTER_R)` — logo importé
+  découpé à r 60, écusson par défaut agrandi (anneau r 55/120 → 60) ;
+  mêmes chaînes pour le direct 2D, la carte des tirs et l'aperçu
+  Personnalisation. (3) Panneaux LED : emplacements égaux, texte resserré
+  (textLength) si trop long, découpé à SON panneau (clipPath) — le dernier
+  texte du haut débordait sous le panneau de droite. (4) Ballon libre
+  (`fly(..., land)`, `LOOSE`, `looseStep`, `looseAt`) : tir raté, contre,
+  lancer manqué, sortie → rebonds décroissants (restitution 0,6), roulement
+  avec frottement, le rebondeur va où sera le ballon (prise à 700 ms).
+  (5) `huddlePos(team, i, n, ring)` : anneau 0 = les cinq (comme avant
+  dans staging.js, qui l'utilise), anneau 1 = remplaçants en demi-cercle
+  derrière ; `moveBench` (même mouvement `steer`) pendant
+  S.stoppage timeout (levés 0,5 s après le sifflet, rassis 0,9 s avant la
+  reprise), positions gardées si le banc est redessiné (changement).
+  Bug corrigé au passage : `.c2d-under svg` étirait le logo du rond
+  central (svg imbriqué) → `.c2d-under>svg`. Test :
+  `live_court2d_ball_bench_test.js`.
+
 - **🟢 LIVRÉ (2026-10-08) — Musiques des séquences** (fichiers fournis,
   tels quels) : `assets/audio/music/emission.mp3` = fond des émissions
   d'avant-match ET de mi-temps (openHoopShow → HMMusic.play, closeHoopShow
