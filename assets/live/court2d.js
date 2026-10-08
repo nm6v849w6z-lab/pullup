@@ -258,6 +258,9 @@ export function createCourt2D(host, opts = {}) {
   // Mise en scène (staging.js, 2026-10-08) : coachs SOUS les joueurs (premier
   // enfant du calque, jamais retrié), animateurs des shows AU-DESSUS.
   const coachLayer = el("g", { class: "stg-coaches" }, layer);
+  // Priorité 3 (2026-10-08) : traînée des passes et arc des tirs, sous le
+  // ballon ; une trace par vol, effacée en fondu à l'arrivée.
+  const trailG = el("g", { class: "c2d-trails" }, layer);
   const ballG = el("g", { class: "c2d-ball" }, layer);
   el("ellipse", { cx: "0", cy: "8", rx: "9", ry: "3.6", fill: "rgba(0,0,0,.35)", class: "c2d-ball-sh" }, ballG);
   const ballBody = el("g", {}, ballG);
@@ -477,9 +480,9 @@ export function createCourt2D(host, opts = {}) {
     ball.holder = sp ? sp.id : null; ball.flight = null;
     return true;
   }
-  function fly(to, ms, height, done) {
+  function fly(to, ms, height, done, kind = "") {
     ball.holder = null;
-    ball.flight = { from: { x: ball.x, y: ball.y }, to, t: 0, ms, h: height, done, target: null };
+    ball.flight = { from: { x: ball.x, y: ball.y }, to, t: 0, ms, h: height, done, target: null, kind };
   }
   // Passe vers un joueur : la cible suit le receveur PENDANT le vol (plus de
   // position figée au départ qui devient fausse quand il se déplace).
@@ -491,9 +494,9 @@ export function createCourt2D(host, opts = {}) {
     const own = ownerTeam(), h = sprites.get(ball.holder);
     if (!h || h.leaving || (own !== null && h.team !== own)) { if (onUpdate) audit.releases++; else audit.corrections++; ball.holder = null; }
   }
-  function flyTo(sp, ms, height, done) {
+  function flyTo(sp, ms, height, done, kind = "") {
     if (!sp) return;
-    fly({ x: sp.x, y: sp.y }, ms, height, done);
+    fly({ x: sp.x, y: sp.y }, ms, height, done, kind);
     ball.flight.target = sp.id;
   }
   // Passe de `from` à `to` (même équipe) : depuis le porteur réel ; si le
@@ -507,7 +510,7 @@ export function createCourt2D(host, opts = {}) {
     if (src && src.team !== to.team) return;
     if (ball.flight) return;
     const dist = Math.hypot(to.x - ball.x, to.y - ball.y);
-    flyTo(to, Math.max(140, Math.min(lob ? 520 : 320 + dist * 6, maxMs)), lob ? 7 : 2.5, () => giveBall(to));
+    flyTo(to, Math.max(140, Math.min(lob ? 520 : 320 + dist * 6, maxMs)), lob ? 7 : 2.5, () => giveBall(to), "pass");
   }
   const later = (ms, fn) => { const id = setTimeout(fn, Math.max(0, ms)); timers.push(id); return id; };
   function busy(sp, ms) { if (!sp) return; sp.busy = true; later(ms, () => { sp.busy = false; }); }
@@ -520,7 +523,13 @@ export function createCourt2D(host, opts = {}) {
   function say(text) { caption.innerHTML = text; caption.classList.add("show"); }
   function flash(sp, text, cls = "") {
     if (!sp) return;
-    sp.stat.textContent = text; sp.stat.setAttribute("class", "c2d-stat " + cls); sp.stat.setAttribute("opacity", "1");
+    sp.stat.textContent = text;
+    // Points marqués (« +2 », « +3 », « +1 ») : plus gros, couleur de
+    // l'équipe, montent en flottant puis s'effacent (priorité 3).
+    const pts = cls === "good" && /^\+\d$/.test(text);
+    sp.stat.setAttribute("class", "c2d-stat " + cls);
+    if (pts) { void sp.stat.getBoundingClientRect(); sp.stat.setAttribute("class", `c2d-stat ${cls} pts t${sp.team}`); }
+    sp.stat.setAttribute("opacity", "1");
     later(1600, () => sp.stat.setAttribute("opacity", "0"));
   }
   // Onde au cercle sur un PANIER seulement (un tir manqué n'a plus de
@@ -536,6 +545,29 @@ export function createCourt2D(host, opts = {}) {
     later(1500, () => g.remove());
   }
   const blockLabel = () => { try { const t = typeof window !== "undefined" && window.hmI18n && window.hmI18n.t ? window.hmI18n.t("Contre") : "Contre"; return String(t || "Contre").toUpperCase(); } catch (e) { return "CONTRE"; } };
+  // Trace du vol en cours : points échantillonnés à chaque image (position
+  // dessinée du ballon, hauteur comprise : le tir dessine son arc), au plus
+  // 40 ; à l'arrivée (ou vol interrompu), fondu CSS puis suppression.
+  let trail = null;
+  function traceTrail(f) {
+    if (!trail || trail.flight !== f) {
+      endTrail();
+      const shot = f.kind.startsWith("shot");
+      const cls = shot ? `c2d-trail shot t${f.kind.slice(4)}` : "c2d-trail pass";
+      trail = { flight: f, pts: [], path: el("path", { class: cls, fill: "none" }, trailG) };
+    }
+    const x = (ball.x + ballOff.x) * PX, y = (ball.y + ballOff.y) * PX - ball.z * 4;
+    const last = trail.pts[trail.pts.length - 1];
+    if (last && Math.hypot(last[0] - x, last[1] - y) < 3) return;
+    trail.pts.push([x, y]); if (trail.pts.length > 40) trail.pts.shift();
+    trail.path.setAttribute("d", "M" + trail.pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L"));
+  }
+  function endTrail() {
+    if (!trail) return;
+    const path = trail.path; trail = null;
+    path.classList.add("fade");
+    setTimeout(() => path.remove(), 1000);
+  }
   function rimFx(team, made) {
     if (!made) return;
     const r = RIM[team];
@@ -726,7 +758,7 @@ export function createCourt2D(host, opts = {}) {
       if (sh && ball.flight && ball.flight.target === sh.id) { ball.flight.done = null; giveBall(sh); const h = sprites.get(sh.id); if (h) { ball.x = h.x; ball.y = h.y; } }
       if (sh) jump(sh, drive ? 0.9 : 1.15);
       if (defender && na.quality !== "ouvert") later(120, () => jump(defender, 1.1));
-      fly({ x: rim.x, y: rim.y }, flightMs, flightH);
+      fly({ x: rim.x, y: rim.y }, flightMs, flightH, null, "shot" + offT);
       plan.fired = true; firedAt = na.airAt;
     });
   }
@@ -873,7 +905,7 @@ export function createCourt2D(host, opts = {}) {
         if (handler && ball.holder !== handler.id && !ball.flight) giveBall(handler);
         if (assister && assister !== handler && assister !== shooter) { later(delay, () => pass(handler, assister)); delay += 420; }
         if (shooter && (handler !== shooter || assister)) { later(delay, () => pass(assister || handler, shooter)); delay += 450; }
-        later(delay + 250, () => fly({ x: rim.x, y: rim.y }, e.zone === "three" ? 700 : 520, e.zone === "paint" ? 4 : 8, finish));
+        later(delay + 250, () => fly({ x: rim.x, y: rim.y }, e.zone === "three" ? 700 : 520, e.zone === "paint" ? 4 : 8, finish, "shot" + offT));
         break;
       }
       case "freeThrow": {
@@ -1206,6 +1238,7 @@ export function createCourt2D(host, opts = {}) {
       sp.g.classList.toggle("has-ball", has);
       sp.carrier.setAttribute("opacity", has ? "1" : "0");
     }
+    if (trail && trail.flight !== ball.flight) endTrail();
     if (ball.flight) {
       const f = ball.flight; f.t = Math.min(1, f.t + (dt * 1000) / f.ms);
       if (f.target) { const tg = sprites.get(f.target); if (tg) f.to = { x: tg.x + (tg.team === 0 ? 2.2 : -2.2), y: tg.y + 0.3 }; }
@@ -1232,6 +1265,7 @@ export function createCourt2D(host, opts = {}) {
     const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime"));
     if (hideBall !== ballHidden) { ballHidden = hideBall; ballG.setAttribute("opacity", hideBall ? "0" : "1"); }
     ballBody.setAttribute("transform", `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`);
+    if (ball.flight && ball.flight.kind && !reducedMotion && !hideBall) traceTrail(ball.flight);
     // Chrono des 24 s : descend depuis le début de la possession.
     if (S && S.status === "live") {
       // Source unique : state.shotClock (calculé par le client depuis la
@@ -1250,7 +1284,7 @@ export function createCourt2D(host, opts = {}) {
       const zy = sp => (sp.id === ball.holder ? 1e4 : sp.y + (sp.oy || 0));
       const ordered = [...sprites.values(), ...refs].sort((a, b) => zy(a) - zy(b));
       const key = ordered.map(sp => sp.id).join("|");
-      if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.appendChild(sp.g)); layer.appendChild(ballG); layer.appendChild(fxG); }
+      if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.appendChild(sp.g)); layer.appendChild(trailG); layer.appendChild(ballG); layer.appendChild(fxG); }
     }
   }
   // ---------- mise en scène (staging.js) ----------

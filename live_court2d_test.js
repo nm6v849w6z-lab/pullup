@@ -70,6 +70,10 @@ const S = {
   S.events.push({ id: 1, team: 0, type: "made", kind: "shot", quarter: 1, clock: 585, made: true, zone: "mid",
     text: "Ben Moro ajuste son tir à mi-distance.", score: [2, 0], shot: { x: 78, y: 18 },
     actors: { shooter: "Gotham:Ben Moro", assister: "Gotham:Ali Kane" } });
+  // Priorité 3 : on relève les traces créées (passe, arc du tir).
+  const trailsSeen = new Set();
+  const trailObs = new window.MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains("c2d-trail")) trailsSeen.add(n.getAttribute("class")); })));
+  trailObs.observe(host, { childList: true, subtree: true });
   S.teams[0].score = 2; S.possession = 1; S.teams[0].players[1].pts = 2;
   court.update(S, [1]);
   await sleep(150);
@@ -89,11 +93,17 @@ const S = {
   const stat = moro.querySelector(".c2d-stat");
   if (stat.textContent !== "+2") fail(`« +2 » attendu au-dessus du tireur après le panier, obtenu « ${stat.textContent} ».`);
   console.log("✅ Panier : le tireur va à l'endroit du tir et le +2 s'affiche.");
+  if (!/\bpts\b/.test(stat.getAttribute("class")) || !/\bt0\b/.test(stat.getAttribute("class"))) fail(`le « +2 » doit flotter aux couleurs de l'équipe (classes pts t0), obtenu « ${stat.getAttribute("class")} ».`);
+  if (![...trailsSeen].some(c => /pass/.test(c))) fail("la passe décisive doit laisser une traînée (.c2d-trail.pass).");
+  if (![...trailsSeen].some(c => /shot t0/.test(c))) fail("le tir doit dessiner son arc aux couleurs de l'équipe (.c2d-trail.shot.t0).");
+  console.log("✅ Priorité 3 : traînée de la passe, arc du tir et « +2 » flottant aux couleurs de l'équipe.");
 
   await sleep(2200);
   const holder2 = host.querySelector(".c2d-p.has-ball");
   if (!holder2 || !holder2.dataset.id.startsWith("Rennes:")) fail(`après un panier encaissé, Rennes doit remettre en jeu et avoir le ballon, obtenu ${holder2 && holder2.dataset.id}.`);
   console.log("✅ Remise en jeu : le ballon passe à l'équipe qui a encaissé.");
+  trailObs.disconnect();
+  if (host.querySelector(".c2d-trail.shot")) fail("l'arc du tir doit s'effacer après l'arrivée du ballon.");
 
   // v2 (2026-09-30, style BuzzerBeater) : bande des médaillons (les cinq en
   // jeu avec pts/rb/pd) et chrono des 24 s.

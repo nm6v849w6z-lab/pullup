@@ -47,8 +47,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   lecture seule, paliers de 5, ~6 Ko par match) → `ev.fat` → `hmLive.fat` /
   adapter `st.fat` → `players[].fatigue`. Matchs déjà calculés : pas de barre.
   Version des fichiers du live : 20261008-4.
-  RESTE : priorité 3 (traînée de passe, arc de tir ; « +2/+3 » existe déjà ;
-  PAS de marqueurs de tirs) — reportée à plus tard (ordre validé).
+  PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`
+  (groupe `.c2d-trails` sous le ballon) — chaque vol porte un `kind` :
+  "pass" (traînée blanche pointillée) ou "shot0/1" (arc du tir, hauteur
+  comprise, couleur de l'équipe) ; fondu puis suppression à l'arrivée ;
+  rien si prefers-reduced-motion. « +1/+2/+3 » : classe `.pts tN`, plus
+  gros, couleur de l'équipe, monte en flottant (c2dPtsFloat). PAS de
+  marqueurs de tirs (décision utilisateur). Test : live_court2d_test.
   MISE EN SCÈNE FAITE (bêta liveShows, en prod pour Gotham Knights + BC Dia
   via la liste par défaut de server/featureFlags.js) :
   - Drapeaux : `server/featureFlags.js` (store « featureflags »),

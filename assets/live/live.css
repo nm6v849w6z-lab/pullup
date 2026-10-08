@@ -641,3 +641,14 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   .stg-coach-in,.stg-dancer *,.stg-mascot-in *,.stg-spot,.stg-intro{animation:none!important;transition:none!important}
 }
+
+/* Priorité 3 (2026-10-08) : traînée des passes, arc des tirs, points flottants. */
+.c2d-trail{stroke-linecap:round;stroke-linejoin:round;pointer-events:none;transition:opacity .7s ease-out .25s}
+.c2d-trail.pass{stroke:#fff;stroke-width:3px;stroke-opacity:.75;stroke-dasharray:5 6}
+.c2d-trail.shot{stroke-width:3.6px;stroke-opacity:.85;stroke-dasharray:2 7}
+.c2d-trail.shot.t0{stroke:var(--c0,#ff7a7f)}.c2d-trail.shot.t1{stroke:var(--c1,#6aa8ff)}
+.c2d-trail.fade{opacity:0}
+.c2d-stat.pts{font-size:19px;stroke-width:4px;transform-box:fill-box;transform-origin:center;animation:c2dPtsFloat 1.6s cubic-bezier(.2,.8,.3,1) forwards}
+.c2d-stat.pts.t0{fill:var(--c0,#ff7a7f)}.c2d-stat.pts.t1{fill:var(--c1,#6aa8ff)}
+@keyframes c2dPtsFloat{0%{transform:translateY(4px) scale(.5);opacity:0}18%{transform:translateY(-4px) scale(1.3);opacity:1}60%{transform:translateY(-14px) scale(1);opacity:1}100%{transform:translateY(-26px) scale(1);opacity:0}}
+@media (prefers-reduced-motion: reduce){.c2d-stat.pts{animation:none}}
