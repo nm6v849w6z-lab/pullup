@@ -463,6 +463,15 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d-clock.low .c2d-clock-val{fill:#FF7A7F;animation:c2dBlink .5s steps(2,start) infinite}
 @keyframes c2dBlink{to{opacity:.35}}
 .c2d-carrier{transition:opacity .2s}
+/* Priorité 1 terrain (2026-10-08) : halo pulsant du porteur, étiquettes
+   réduites / masquées quand deux jetons se touchent (court2d declutter). */
+.c2d-p.has-ball .c2d-carrier-ring,.c2d-p.has-ball .c2d-carrier-glow{transform-box:fill-box;transform-origin:center;animation:c2dCarrier 1.3s ease-in-out infinite}
+@keyframes c2dCarrier{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.14);opacity:.65}}
+.c2d-lab{transition:opacity .18s,transform .18s;transform-box:fill-box;transform-origin:center top}
+.c2d-lab.lab-sm{transform:scale(.8)}
+.c2d-lab.lab-off{opacity:0}
+.c2d-hoops{pointer-events:none}
+@media (prefers-reduced-motion:reduce){.c2d-p.has-ball .c2d-carrier-ring,.c2d-p.has-ball .c2d-carrier-glow{animation:none}}
 .c2d-light{pointer-events:none}
 /* Commentaires du présentateur dans le fil (2026-09-30). */
 .hm-live .feed li.quote{grid-template-columns:auto 1fr;align-items:center;gap:10px;background:rgba(245,161,58,.06);border-left:3px solid var(--accent,#F5A13A)}

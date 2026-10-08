@@ -155,8 +155,28 @@ export function createCourt2D(host, opts = {}) {
     el("circle", { cx: X(190), cy: "250", r: "60" }, lines);
     el("path", { d: `M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470` }, lines);
     el("path", { d: `M${X(52)} 210 A40 40 0 0 ${sw} ${X(52)} 290` }, lines);
-    el("line", { x1: X(40), y1: "220", x2: X(40), y2: "280", stroke: "#e9e9e9", "stroke-width": "5" }, lines);
-    el("circle", { cx: X(52), cy: "250", r: "8", stroke: "#F5A13A", "stroke-width": "3", class: "c2d-rim" }, lines);
+  });
+  // Paniers vus de dessus (2026-10-08) : ombre douce, support derrière la
+  // ligne de fond, planche, cercle et filet — un dégradé radial pour
+  // l'ombre (pas de filtre : aucun coût par image).
+  const hoopSh = el("radialGradient", { id: uid + "-hs", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#000", "stop-opacity": ".42" }, hoopSh);
+  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": "0" }, hoopSh);
+  const hoopsG = el("g", { class: "c2d-hoops" }, floor);
+  [false, true].forEach(flip => {
+    const X = x => (flip ? 940 - x : x), RX = (x, w) => (flip ? 940 - x - w : x);
+    const g = el("g", { class: "c2d-hoop" }, hoopsG);
+    el("ellipse", { cx: X(50), cy: "262", rx: "34", ry: "24", fill: `url(#${uid}-hs)` }, g);
+    el("rect", { x: RX(-40, 24), y: "234", width: "24", height: "32", rx: "5", fill: "#1d2533", stroke: "#0b1018", "stroke-width": "1.5" }, g);
+    el("rect", { x: RX(-18, 54), y: "245", width: "54", height: "10", rx: "3", fill: "#3a4457", stroke: "#0b1018", "stroke-width": "1" }, g);
+    el("rect", { x: RX(34, 7), y: "213", width: "7", height: "74", rx: "2", fill: "#f4f6f9", stroke: "#9aa3b2", "stroke-width": "1.2" }, g);
+    el("rect", { x: RX(41, 4), y: "247", width: "4", height: "6", fill: "#8b94a3" }, g);
+    el("circle", { cx: X(52), cy: "250", r: "8.6", fill: "rgba(255,255,255,.22)" }, g);
+    const net = el("g", { stroke: "rgba(255,255,255,.85)", "stroke-width": ".9", fill: "none" }, g);
+    el("circle", { cx: X(52), cy: "250", r: "4.2" }, net);
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, c = Math.cos(a), sn = Math.sin(a); el("line", { x1: (X(52) + c * 4.2).toFixed(1), y1: (250 + sn * 4.2).toFixed(1), x2: (X(52) + c * 8.4).toFixed(1), y2: (250 + sn * 8.4).toFixed(1) }, net); }
+    el("circle", { cx: X(52), cy: "250", r: "10.4", fill: "none", stroke: "rgba(0,0,0,.35)", "stroke-width": "1" }, g);
+    el("circle", { cx: X(52), cy: "250", r: "9", fill: "none", stroke: "#F5A13A", "stroke-width": "2.8", class: "c2d-rim" }, g);
   });
   const logoG = el("g", { class: "c2d-logo", opacity: ".8" }, floor);
   const adTop = el("text", { x: "470", y: "50", class: "c2d-ad", "text-anchor": "middle" }, floor);
@@ -202,14 +222,16 @@ export function createCourt2D(host, opts = {}) {
   // --- calques animés ---
   const layer = el("g", { transform: `translate(${PAD} ${PAD + HEAD})`, class: "c2d-players" }, svg);
   const ballG = el("g", { class: "c2d-ball" }, layer);
-  el("ellipse", { cx: "0", cy: "6", rx: "7", ry: "3", fill: "rgba(0,0,0,.35)", class: "c2d-ball-sh" }, ballG);
+  el("ellipse", { cx: "0", cy: "8", rx: "9", ry: "3.6", fill: "rgba(0,0,0,.35)", class: "c2d-ball-sh" }, ballG);
   const ballBody = el("g", {}, ballG);
   const ballGrad = el("radialGradient", { id: uid + "-bl", cx: "35%", cy: "30%", r: "70%" }, defs);
   el("stop", { offset: "0", "stop-color": "#ffb76b" }, ballGrad);
   el("stop", { offset: ".6", "stop-color": "#e8892e" }, ballGrad);
   el("stop", { offset: "1", "stop-color": "#b85f17" }, ballGrad);
-  el("circle", { r: "7", fill: `url(#${uid}-bl)`, stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
-  el("path", { d: "M-7 0h14M0 -7v14M-4.5 -5.3c2.6 2.4 2.6 8.2 0 10.6M4.5 -5.3c-2.6 2.4-2.6 8.2 0 10.6", fill: "none", stroke: "#4a2308", "stroke-width": "1" }, ballBody);
+  // Ballon plus gros (2026-10-08 : « minuscule et caché ») : rayon 9.5,
+  // posé sur le bord du jeton du porteur (voir tick).
+  el("circle", { r: "9.5", fill: `url(#${uid}-bl)`, stroke: "#4a2308", "stroke-width": "1.4" }, ballBody);
+  el("path", { d: "M-9.5 0h19M0 -9.5v19M-6.1 -7.2c3.5 3.3 3.5 11.1 0 14.4M6.1 -7.2c-3.5 3.3-3.5 11.1 0 14.4", fill: "none", stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
   const fxG = el("g", { class: "c2d-fx" }, layer);
   const caption = document.createElement("div");
   caption.className = "c2d-caption";
@@ -246,7 +268,12 @@ export function createCourt2D(host, opts = {}) {
     const g = el("g", { class: "c2d-p t" + t, "data-id": p.id }, layer);
     el("ellipse", { cx: "0", cy: "12", rx: "13", ry: "5", fill: "rgba(0,0,0,.38)", class: "c2d-sh" }, g);
     const ring = el("ellipse", { cx: "0", cy: "12", rx: "17", ry: "7", fill: "none", stroke: "#F5A13A", "stroke-width": "2", class: "c2d-ring", opacity: "0" }, g);
-    const carrier = el("ellipse", { cx: "0", cy: "12", rx: "19", ry: "8", fill: "none", stroke: "#fff", "stroke-width": "1.6", "stroke-dasharray": "4 3", class: "c2d-carrier", opacity: "0" }, g);
+    // Porteur de balle (2026-10-08) : halo pulsant aux couleurs de son équipe
+    // sous le jeton (animation CSS, coupée si prefers-reduced-motion).
+    const carrier = el("g", { class: "c2d-carrier", opacity: "0" }, g);
+    el("ellipse", { cx: "0", cy: "6", rx: "38", ry: "18", fill: colors[t], "fill-opacity": ".18", class: "c2d-carrier-glow" }, carrier);
+    el("ellipse", { cx: "0", cy: "6", rx: "31", ry: "13.5", fill: colors[t], "fill-opacity": ".35", stroke: colors[t], "stroke-width": "3.2", class: "c2d-carrier-ring" }, carrier);
+    el("ellipse", { cx: "0", cy: "6", rx: "31", ry: "13.5", fill: "none", stroke: "#fff", "stroke-opacity": ".6", "stroke-width": "1.1", class: "c2d-carrier-ring" }, carrier);
     let av = null;
     if (p.avatar) {
       const tpl = document.createElement("template");
@@ -280,7 +307,7 @@ export function createCourt2D(host, opts = {}) {
     const w = Math.max(30, txt.textContent.length * 6.6 + 10);
     lab.insertBefore(el("rect", { x: -w / 2, y: "17", width: w, height: "13", rx: "4", fill: colors[t], class: "c2d-plate" }), txt);
     const stat = el("text", { y: "-36", "text-anchor": "middle", class: "c2d-stat", opacity: "0" }, g);
-    const sp = { id: p.id, team: t, g, ring, carrier, stat, x: 47, y: t ? 30 : 20, tx: 47, ty: 25, speed: 1, slot: SLOT[p.pos] ?? 2, name: p.name, avatar: p.avatar };
+    const sp = { id: p.id, team: t, g, ring, carrier, stat, lab, labState: "", labHalf: w / 2 / PX, ox: 0, oy: 0, x: 47, y: t ? 30 : 20, tx: 47, ty: 25, speed: 1, slot: SLOT[p.pos] ?? 2, name: p.name, avatar: p.avatar };
     sprites.set(p.id, sp);
     return sp;
   }
@@ -305,7 +332,7 @@ export function createCourt2D(host, opts = {}) {
     el("rect", { x: "-14", y: "15", width: "28", height: "11", rx: "3.5", fill: "#6b7280", class: "c2d-plate" }, lab);
     el("text", { y: "23.5", "text-anchor": "middle", "data-no-i18n": "1" }, lab).textContent = "ARB";
     const home = [{ x: 47, y: 48 }, { x: 42, y: 48 }, { x: 52, y: 48 }][i];
-    return { id: "ref" + i, g, x: home.x, y: home.y, tx: home.x, ty: home.y, speed: 1, moving: false };
+    return { id: "ref" + i, g, lab, labState: "", labHalf: 1.4, ref: true, ox: 0, oy: 0, x: home.x, y: home.y, tx: home.x, ty: home.y, speed: 1, moving: false };
   }
   function syncRefs(list) {
     if (refs.length || !Array.isArray(list)) return;
@@ -672,7 +699,7 @@ export function createCourt2D(host, opts = {}) {
   // doit PAS « remettre de l'ordre » (ballon rendu au meneur + formation),
   // sinon il coupe la chorégraphie — c'était le cas de la remise en jeu et
   // de l'entre-deux (retour utilisateur 2026-10-01).
-  let sceneUntil = 0, firstUpdate = true, lastSort = 0, sortKey = "";
+  let sceneUntil = 0, firstUpdate = true, lastSort = 0, sortKey = "", lastSortHolder = null;
   const scene = ms => { sceneUntil = Math.max(sceneUntil, performance.now() + ms); };
   const holdFor = e => (e.kind === "shot" || e.kind === "rebound") ? (e.made ? 3000 : 2000)
     : e.kind === "freeThrow" ? ((e.made || 0) > 0 ? 2800 : 2000)
@@ -967,6 +994,73 @@ export function createCourt2D(host, opts = {}) {
     });
   }
 
+  // ---------- anti-chevauchement (rendu seulement) ----------
+  // 2026-10-08 : les jetons trop proches s'écartent légèrement À L'ÉCRAN
+  // (sp.ox / sp.oy, en pieds) sans toucher aux positions de la scène
+  // (sp.x / sp.y, ballon, possession) ; le porteur ne bouge pas, les
+  // arbitres cèdent la place en premier. Étiquettes : réduites quand deux
+  // jetons se touchent, masquées pour celui de derrière quand ils se
+  // chevauchent (jamais pour le porteur).
+  const GAP_X = 4.0, GAP_Y = 5.0, OFF_MAX = 4.5;
+  const ballOff = { x: 0, y: 0 };
+  function declutter(dt) {
+    const list = [];
+    for (const sp of sprites.values()) if (!sp.leaving) list.push(sp);
+    for (const r of refs) list.push(r);
+    for (const a of list) { a.fx = 0; a.fy = 0; a.near = 9; a.nearFront = false; }
+    // Relaxation en 4 passes (un groupe de 5-6 jetons s'ouvre en éventail).
+    for (let pass = 0; pass < 4; pass++) {
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i];
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j];
+          let dx = b.x + b.fx - a.x - a.fx, dy = b.y + b.fy - a.y - a.fy;
+          const dn = Math.hypot(dx / GAP_X, dy / GAP_Y);
+          if (dn >= 1) continue;
+          if (dn < 1e-3) { dx = 0.5; dy = 0.2; }
+          // Pousse le long de l'axe, au prorata du recouvrement (en pieds).
+          const len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+          const need = (1 - dn) * Math.hypot(ux * GAP_X, uy * GAP_Y) * 0.5;
+          const wa = a.id === ball.holder ? 0 : a.ref ? 1.6 : 1, wb = b.id === ball.holder ? 0 : b.ref ? 1.6 : 1, w = wa + wb || 1;
+          a.fx -= ux * need * 2 * wa / w; a.fy -= uy * need * 2 * wa / w;
+          b.fx += ux * need * 2 * wb / w; b.fy += uy * need * 2 * wb / w;
+        }
+      }
+    }
+    const k = Math.min(1, dt * 7);
+    for (const a of list) {
+      let fx = a.fx, fy = a.fy; const m = Math.hypot(fx, fy);
+      if (m > OFF_MAX) { fx *= OFF_MAX / m; fy *= OFF_MAX / m; }
+      a.ox += (fx - a.ox) * k; a.oy += (fy - a.oy) * k;
+    }
+    // Étiquettes, sur les positions affichées.
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      for (let j = i + 1; j < list.length; j++) {
+        const b = list[j];
+        const dn = Math.hypot((b.x + b.ox - a.x - a.ox) / GAP_X, (b.y + b.oy - a.y - a.oy) / GAP_Y);
+        if (dn < a.near) { a.near = dn; }
+        if (dn < b.near) { b.near = dn; }
+        // Celui de devant (plus bas à l'écran) ou le porteur garde son nom.
+        const aFront = a.id === ball.holder || (b.id !== ball.holder && a.y + a.oy >= b.y + b.oy);
+        const back = aFront ? b : a, front = aFront ? a : b;
+        if (dn < 0.95 || labelUnder(back, front)) back.nearFront = true;
+      }
+    }
+    for (const a of list) {
+      const st = a.id === ball.holder ? "" : a.nearFront ? "off" : a.near < 1.15 ? "sm" : "";
+      if (st !== a.labState) { a.labState = st; a.lab.classList.toggle("lab-off", st === "off"); a.lab.classList.toggle("lab-sm", st === "sm"); }
+    }
+  }
+
+  // L'étiquette du nom de « back » (sous son jeton, de +1,7 à +3 pieds)
+  // passe-t-elle sous l'avatar de « front » (de -3 à +1,1 pied) ?
+  function labelUnder(back, front) {
+    const bx = back.x + back.ox, by = back.y + back.oy, fx = front.x + front.ox, fy = front.y + front.oy;
+    if (front.id !== ball.holder && fy < by) return false;
+    return Math.abs(fx - bx) < back.labHalf + 1.9 && fy - 3.0 < by + 3.0 && fy + 1.1 > by + 1.7;
+  }
+
   // ---------- boucle d'animation ----------
   function tick(nowP) {
     raf = requestAnimationFrame(tick);
@@ -1016,8 +1110,11 @@ export function createCourt2D(host, opts = {}) {
     for (const r of refs) {
       const d = Math.hypot(r.tx - r.x, r.ty - r.y);
       if (d > 0.05) { const k = Math.min(1, 14 * r.speed * dt / d); r.x += (r.tx - r.x) * k; r.y += (r.ty - r.y) * k; r.moving = true; } else r.moving = false;
+    }
+    declutter(dt);
+    for (const r of refs) {
       const bob = r.moving ? Math.sin(nowP / 95) * 1 : 0;
-      r.g.setAttribute("transform", `translate(${(r.x * PX).toFixed(1)} ${(r.y * PX + bob).toFixed(1)})`);
+      r.g.setAttribute("transform", `translate(${((r.x + r.ox) * PX).toFixed(1)} ${((r.y + r.oy) * PX + bob).toFixed(1)})`);
     }
     for (const [id, sp] of sprites) {
       if (sp.leaving && nowP > sp.leaveAt) { sp.g.remove(); sprites.delete(id); continue; }
@@ -1031,14 +1128,14 @@ export function createCourt2D(host, opts = {}) {
       const bob = sp.moving ? Math.sin(nowP / 90) * 1.2 : 0;
       let lift = 0, scale = 1;
       if (sp.jump) { sp.jump.t += dt / 0.55; if (sp.jump.t >= 1) sp.jump = null; else { const k = Math.sin(sp.jump.t * Math.PI); lift = -k * 14 * sp.jump.h; scale = 1 + k * 0.12 * sp.jump.h; } }
-      sp.g.setAttribute("transform", `translate(${(sp.x * PX).toFixed(1)} ${(sp.y * PX + bob + lift).toFixed(1)})${scale !== 1 ? ` scale(${scale.toFixed(3)})` : ""}`);
+      sp.g.setAttribute("transform", `translate(${((sp.x + sp.ox) * PX).toFixed(1)} ${((sp.y + sp.oy) * PX + bob + lift).toFixed(1)})${scale !== 1 ? ` scale(${scale.toFixed(3)})` : ""}`);
       const has = ball.holder === id;
       sp.g.classList.toggle("has-ball", has);
       sp.carrier.setAttribute("opacity", has ? "1" : "0");
     }
     if (ball.flight) {
       const f = ball.flight; f.t = Math.min(1, f.t + (dt * 1000) / f.ms);
-      if (f.target) { const tg = sprites.get(f.target); if (tg) f.to = { x: tg.x + (tg.team === 0 ? 1.6 : -1.6), y: tg.y + 0.6 }; }
+      if (f.target) { const tg = sprites.get(f.target); if (tg) f.to = { x: tg.x + (tg.team === 0 ? 2.2 : -2.2), y: tg.y + 0.3 }; }
       const k = ease(f.t);
       ball.x = lerp(f.from.x, f.to.x, k); ball.y = lerp(f.from.y, f.to.y, k);
       ball.z = Math.sin(f.t * Math.PI) * f.h;
@@ -1046,13 +1143,18 @@ export function createCourt2D(host, opts = {}) {
     } else if (ball.holder) {
       const h = sprites.get(ball.holder);
       // Dribble continu tant qu'il a le ballon (un peu plus bas et plus vite à l'arrêt).
-      if (h) { ball.x = h.x + (h.team === 0 ? 1.6 : -1.6); ball.y = h.y + 0.6; ball.z = Math.abs(Math.sin(nowP / (h.moving ? 110 : 95))) * (h.moving ? 1.2 : 0.9); }
+      // Posé sur le bord du jeton (côté attaque), à hauteur des mains.
+      if (h) { ball.x = h.x + (h.team === 0 ? 2.2 : -2.2); ball.y = h.y + 0.3; ball.z = Math.abs(Math.sin(nowP / (h.moving ? 110 : 95))) * (h.moving ? 1.2 : 0.9); }
     }
     // Garde-fou : jamais de porteur dans l'équipe qui n'a pas le ballon selon
     // le moteur (ex. scène encore en retard sur le fil) — le ballon est
     // libéré, la resynchronisation le rend à la bonne équipe.
     enforcePossession();
-    ballG.setAttribute("transform", `translate(${(ball.x * PX).toFixed(1)} ${(ball.y * PX).toFixed(1)})`);
+    // Le ballon suit le décalage d'affichage de son porteur (anti-chevauchement).
+    const hb = !ball.flight && ball.holder ? sprites.get(ball.holder) : null;
+    const kb = Math.min(1, dt * 9);
+    ballOff.x += ((hb ? hb.ox : 0) - ballOff.x) * kb; ballOff.y += ((hb ? hb.oy : 0) - ballOff.y) * kb;
+    ballG.setAttribute("transform", `translate(${((ball.x + ballOff.x) * PX).toFixed(1)} ${((ball.y + ballOff.y) * PX).toFixed(1)})`);
     ballBody.setAttribute("transform", `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`);
     // Chrono des 24 s : descend depuis le début de la possession.
     if (S && S.status === "live") {
@@ -1065,9 +1167,12 @@ export function createCourt2D(host, opts = {}) {
     }
     // Ordre de superposition (le plus bas devant) : 4 fois par seconde, et
     // seulement si l'ordre a changé.
-    if (nowP - lastSort > 250) {
+    if (nowP - lastSort > 250 || ball.holder !== lastSortHolder) {
+      lastSortHolder = ball.holder;
       lastSort = nowP;
-      const ordered = [...sprites.values(), ...refs].sort((a, b) => a.y - b.y);
+      // Le porteur de balle passe toujours au premier plan.
+      const zy = sp => (sp.id === ball.holder ? 1e4 : sp.y + (sp.oy || 0));
+      const ordered = [...sprites.values(), ...refs].sort((a, b) => zy(a) - zy(b));
       const key = ordered.map(sp => sp.id).join("|");
       if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.appendChild(sp.g)); layer.appendChild(ballG); layer.appendChild(fxG); }
     }
@@ -1135,6 +1240,10 @@ export function createCourt2D(host, opts = {}) {
       setHolderPosition(x, y) { const h = sprites.get(ball.holder); if (h) { h.x = h.tx = x; h.y = h.ty = y; h.busy = false; crossed = false; } },
       resetPossessionClock(offsetMs) { possStart = now() + offsetMs; sceneUntil = 0; },
       holderTarget() { const h = sprites.get(ball.holder); return h ? { x: h.tx, y: h.ty } : null; },
+      // Place un joueur (ou un arbitre « refN ») et le fige 10 s : captures et
+      // test de l'anti-chevauchement.
+      placeAt(id, x, y) { const sp = sprites.get(id) || refs.find(r => r.id === id); if (!sp) return; sp.x = sp.tx = x; sp.y = sp.ty = y; if (!sp.ref) busy(sp, 10000); },
+      layout() { const out = {}; for (const sp of [...sprites.values(), ...refs]) out[sp.id] = { x: sp.x + sp.ox, y: sp.y + sp.oy, sx: sp.x, sy: sp.y, lab: sp.labState }; return { holder: ball.holder, sprites: out }; },
     },
     destroy() { cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
   };

@@ -227,6 +227,40 @@ const S = {
   if (!refPos.every(p => p && p[1] > 44)) fail("les arbitres rejoignent la table de marque pendant le temps mort.");
   console.log("✅ Temps mort : chaque équipe à son banc, arbitres à la table.");
 
+  // Priorité 1 terrain (2026-10-08) : paniers vus de dessus, ballon plus
+  // gros, halo du porteur aux couleurs de son équipe, anti-chevauchement
+  // de RENDU (positions de scène inchangées), porteur au premier plan.
+  if (host.querySelectorAll(".c2d-hoop").length !== 2) fail("deux paniers vus de dessus attendus (.c2d-hoop).");
+  if (host.querySelectorAll(".c2d-hoop .c2d-rim").length !== 2) fail("chaque panier doit avoir son cercle (.c2d-rim).");
+  const ballR = host.querySelector(".c2d-ball circle");
+  if (!ballR || +ballR.getAttribute("r") < 9) fail("ballon plus gros attendu (rayon ≥ 9).");
+  const ringT0 = host.querySelector('.c2d-p.t0 .c2d-carrier-ring');
+  if (!ringT0 || ringT0.getAttribute("stroke") !== "#F26B1D") fail("halo du porteur aux couleurs de son équipe attendu.");
+  await sleep(4000);   // fin du temps mort
+  const dbg = court.debug();
+  const ids = [...host.querySelectorAll(".c2d-p")].map(g => g.dataset.id);
+  const holderId = dbg.holder || ids[0];
+  const crowd = ids.filter(id => id !== holderId).slice(0, 4);
+  court.test.placeAt(holderId, 60, 25);
+  crowd.forEach((id, i) => court.test.placeAt(id, 60 + (i % 2 ? 0.4 : -0.4), 25 + (i < 2 ? 0.3 : -0.3)));
+  await sleep(900);
+  const lay = court.test.layout();
+  const pts = [holderId, ...crowd].map(id => lay.sprites[id]);
+  if (!pts.every(p => p && p.sx >= 59 && p.sx <= 61)) fail("l'anti-chevauchement ne doit pas toucher aux positions de scène.");
+  let minD = 99;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) minD = Math.min(minD, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+  if (minD < 1.8) fail(`jetons encore empilés à l'écran (écart minimal ${minD.toFixed(2)} pied).`);
+  if (lay.holder === holderId) {
+    const h = lay.sprites[holderId];
+    if (Math.hypot(h.x - h.sx, h.y - h.sy) > 0.01) fail("le porteur ne doit pas être déplacé par l'anti-chevauchement.");
+    if (h.lab === "off") fail("le nom du porteur ne doit jamais être masqué.");
+    await sleep(300);
+    const layerKids = [...host.querySelector(".c2d-players").children].filter(g => g.classList.contains("c2d-p") || g.classList.contains("c2d-ref"));
+    if (layerKids[layerKids.length - 1].dataset.id !== holderId) fail("le porteur doit passer au premier plan.");
+  }
+  if (!pts.some(p => p.lab === "off" || p.lab === "sm")) fail("dans un groupe serré, des étiquettes doivent être réduites ou masquées.");
+  console.log(`✅ Paniers, ballon, halo du porteur ; anti-chevauchement (écart min ${minD.toFixed(1)} pied), étiquettes réduites, porteur devant.`);
+
   court.destroy();
   if (host.innerHTML !== "") fail("destroy() doit vider le conteneur.");
   console.log("✅ Tous les tests du terrain 2D sont passés.");

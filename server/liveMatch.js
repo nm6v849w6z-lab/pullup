@@ -60,7 +60,7 @@ const { MATCH_BROADCAST_DURATION_MS } = require("./calendar.js");
 // ne changent RIEN au déroulé du match lui-même (score, événements) déjà
 // entièrement déterminé par Engine.MatchEngine.
 const HALFTIME_BREAK_MS = 10 * 60 * 1000; // pause après le 2e quart-temps
-const QUARTER_BREAK_MS = 4 * 60 * 1000; // pause après le 1er et le 3e quart-temps
+const QUARTER_BREAK_MS = 2 * 60 * 1000; // pause après le 1er et le 3e quart-temps (2 min, retour utilisateur 2026-10-08)
 const OVERTIME_BREAK_MS = 2 * 60 * 1000; // courte pause avant chaque prolongation
 const TIMEOUT_BREAK_MS = 60 * 1000; // temps mort simulé par le moteur (voir schedulePlayback)
 

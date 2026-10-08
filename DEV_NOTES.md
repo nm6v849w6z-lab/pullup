@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🔵 EN COURS (2026-10-08) — Terrain 2D (rendu) puis mise en scène du
+  live (coach, entrée des joueurs, shows)**. Décisions utilisateur : bêta
+  `liveShows` par club (Gotham Knights + BC Dia, comme `live2d`) ;
+  personnalisation du coach ouverte à tous, proposée en dernière étape du
+  tutoriel de première partie ; pub non premium = interstitiel H5 existant
+  (cache le show) ; PAS de stats sous les portraits du haut, PAS de
+  marqueurs de tirs ✕/○, jetons restent carrés arrondis ; pause fin
+  Q1/Q3 ramenée de 4 à 2 min. Ordre : terrain priorité 1 (anti-chevauchement,
+  porteur mis en évidence, paniers vus de dessus) → mise en scène.
+  Priorité 1 terrain FAITE (court2d.js / live.css, rendu seul) :
+  anti-chevauchement `declutter()` (décalage d'affichage sp.ox/oy, 4 passes,
+  porteur fixe, arbitres cèdent en premier, positions de scène inchangées),
+  étiquettes `lab-sm` / `lab-off` (nom caché sous un jeton de devant via
+  `labelUnder`), porteur toujours devant (tri z), halo pulsant aux couleurs
+  de l'équipe (`.c2d-carrier-ring`, coupé si reduced-motion), ballon r 9.5
+  posé sur le bord du jeton, paniers vus de dessus (`.c2d-hoop` : ombre,
+  support, planche, cercle, filet). Crochets de test `placeAt` / `layout`.
+  `QUARTER_BREAK_MS` 2 min. Version des fichiers du live : 20261008-3.
+  RESTE : priorité 2 (parquet, ombres, jetons n° de maillot, HUD score /
+  quart / chrono, fautes, fatigue — PAS de stats PTS/REB/AST), priorité 3
+  (traînée de passe, arc de tir, « +2/+3 » existe déjà — PAS de marqueurs
+  de tirs), puis mise en scène.
+
 - **🟡 EN BÊTA EN PROD (2026-10-08) — live 2D v2, activé pour Gotham
   Knights et BC Dia seulement** (poussé 79b1fce, drapeaux posés en prod le
   2026-10-08, `betaFeatures:["live2d"]`, ligue fr-1). Sans bêta : carte des
