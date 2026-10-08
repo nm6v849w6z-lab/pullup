@@ -13794,9 +13794,11 @@ const AvatarGen = (function () {
           strands(hc, 'M52 12 Q64 10 76 17 Q82 22 84 32 M54 18 Q66 17 78 26 M56 24 Q66 23 74 30', 1.1);
         break;
       case 'slick':
+        // Pas de bande sombre sous la ligne des cheveux ni de mèche qui
+        // descend sur la peau (retour utilisateur 2026-10-08 : « enlève le
+        // trait noir sur le front »).
         front = `<path d="M36 46 Q33 12 60 9 Q87 12 84 46 Q80 27 60 25 Q40 27 36 46Z" fill="${hc}" ${LW}/>` +
-          `<path d="M38 44 Q40 32 60 30 Q80 32 82 44 Q78 34 60 32 Q42 34 38 44Z" fill="${hd}"/>` +
-          strands(hc, 'M42 30 Q47 17 56 11 M50 27 Q54 15 61 10 M60 25 L62 10 M69 27 Q68 15 65 10 M78 30 Q73 17 66 11 M46 40 Q48 24 55 14', 1);
+          strands(hc, 'M42 30 Q47 17 56 11 M50 27 Q54 15 61 10 M60 25 L62 10 M69 27 Q68 15 65 10 M78 30 Q73 17 66 11', 1);
         break;
       case 'wavy':
         front = `<path d="M34 54 Q27 20 46 10 Q60 3 76 10 Q94 19 86 54 Q88 42 81 36 Q74 29 65 32 Q60 27 54 31 Q46 27 41 34 Q37 40 34 54Z" fill="${hc}" ${LW}/>` +
