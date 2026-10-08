@@ -41,8 +41,10 @@ const S = {
   status: "live", quarter: 2, clock: 400, possession: 0,
   teams: [mkTeam("Gotham", ["Ali Kane", "Ben Moro", "Cal Ito", "Dan Vidal", "Eli Nakamura", "Fab Roux", "Gus Lee"]),
           mkTeam("Rennes", ["Hal Novak", "Ian Brooks", "Jo Wright", "Kai Ferreira", "Leo Ramos", "Max Silva", "Ned Diallo"])],
-  shots: [], events: [], referees: [0, 1, 2].map(i => ({ id: "ref" + i, avatar: avatar("ref" + i) })),
+  shots: [], events: [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: Date.now() - 120000, text: "" }], referees: [0, 1, 2].map(i => ({ id: "ref" + i, avatar: avatar("ref" + i) })),
 };
+// Match en cours : l'entre-deux du moteur a déjà été diffusé (avant lui,
+// personne n'a le ballon — voir live_court2d_clock_test.js).
 let nextId = 1;
 const ev = (o) => { const e = { id: nextId++, quarter: S.quarter, clock: S.clock, text: "", airAt: clock(), ...o }; S.events.push(e); return e; };
 const made = (team, shooter, assister) => ev({ team, type: "made", kind: "shot", made: true, zone: "mid", shot: { x: team === 0 ? 78 : 16, y: 18 }, possessionTeam: team, possessionAfter: 1 - team, actors: { shooter, assister } });

@@ -9050,8 +9050,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-14">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-14">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-15">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-15">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -29062,6 +29062,17 @@ function updateLiveClockTick() {
   }
   if (prevIdx === -1) { liveState.shotClock = null; badge.classList.add("off"); return; } // avant le coup d'envoi
   const prev = liveTickEvents[prevIdx];
+  // Chrono (2026-10-08, « le chrono démarre au chargement du live ») : il
+  // ne tourne qu'à partir du premier VRAI événement de jeu de la période —
+  // l'entre-deux du moteur (`tipoff`) au 1er quart —, jamais sur le simple
+  // marqueur « Début du quart-temps » (diffusé 2,2 s plus tôt, à l'instant
+  // même du chargement d'une rediffusion). Même règle que
+  // assets/live/adapter.js:tick.
+  if (prev.type === "quarterStart") {
+    liveState.clock = prev.clockSec; clockEl.textContent = secondsToClockStr(prev.clockSec);
+    liveState.shotClock = null; badge.classList.add("off");
+    return;
+  }
 
   // Retour utilisateur : "quand l'entre-deux est remporté, [...] le chrono
   // et le chrono des 24 doit tourner dès ce moment-là (pas à partir du
@@ -29087,7 +29098,8 @@ function updateLiveClockTick() {
   while (
     runStartIdx > 0 &&
     liveTickEvents[runStartIdx - 1].quarter === prev.quarter &&
-    liveTickEvents[runStartIdx - 1].clockSec === prev.clockSec
+    liveTickEvents[runStartIdx - 1].clockSec === prev.clockSec &&
+    liveTickEvents[runStartIdx - 1].type !== "quarterStart"
   ) runStartIdx--;
   const runStart = liveTickEvents[runStartIdx];
 
@@ -45139,7 +45151,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-14";
+const HM_LIVE_ASSET_VERSION = "20261008-15";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {

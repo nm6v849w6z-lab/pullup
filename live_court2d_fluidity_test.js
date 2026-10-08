@@ -35,8 +35,10 @@ const S = {
   status: "live", quarter: 2, clock: 400, possession: 0,
   teams: [mkTeam("Gotham", ["Ali Kane", "Ben Moro", "Cal Ito", "Dan Vidal", "Eli Nakamura", "Fab Roux", "Gus Lee"]),
           mkTeam("Rennes", ["Hal Novak", "Ian Brooks", "Jo Wright", "Kai Ferreira", "Leo Ramos", "Max Silva", "Ned Diallo"])],
-  shots: [], events: [], referees: [0, 1, 2].map(i => ({ id: "ref" + i, avatar: avatar("ref" + i) })),
+  shots: [], events: [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: Date.now() - 120000, text: "" }], referees: [0, 1, 2].map(i => ({ id: "ref" + i, avatar: avatar("ref" + i) })),
 };
+// Match en cours : l'entre-deux du moteur a déjà été diffusé (avant lui,
+// personne n'a le ballon — voir live_court2d_clock_test.js).
 
 // Enregistre l'état du mouvement d'un jeton à chaque image.
 function record(court, id, ms) {

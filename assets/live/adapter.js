@@ -264,8 +264,12 @@ export function createLiveAdapter(opts) {
     for (let i = 0; i < evs.length; i++) { if (evs[i].airAt <= now) prevIdx = i; else break; }
     if (prevIdx < 0) { st.shotClock = null; return; }
     const prev = evs[prevIdx], prevSec = clockSeconds(prev.clock);
+    // Le chrono ne démarre qu'au premier vrai événement de jeu de la période
+    // (l'entre-deux `tipoff` du moteur au 1er quart), jamais sur le marqueur
+    // « Début du quart-temps » (2026-10-08).
+    if (prev.type === "quarterStart") { st.clock = prevSec; st.shotClock = null; return; }
     let runStart = prevIdx;
-    while (runStart > 0 && evs[runStart - 1].quarter === prev.quarter && clockSeconds(evs[runStart - 1].clock) === prevSec) runStart--;
+    while (runStart > 0 && evs[runStart - 1].quarter === prev.quarter && clockSeconds(evs[runStart - 1].clock) === prevSec && evs[runStart - 1].type !== "quarterStart") runStart--;
     let nextDiff = null;
     for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (clockSeconds(evs[i].clock) !== prevSec) { nextDiff = evs[i]; break; } }
     if (!nextDiff) { st.shotClock = null; return; }

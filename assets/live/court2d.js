@@ -1383,6 +1383,22 @@ export function createCourt2D(host, opts = {}) {
   // et un seul écouteur, retirés à destroy().
   let suspended = false, resyncCount = 0, throttled = false;
   let lastStatus = null;   // dernier statut vu par update() (fin du match → commentaire)
+  // Temps du match (2026-10-08, « le chrono démarre au chargement » et « le
+  // live part en vrille quand on avance le temps ») :
+  //  - `gameOn` : l'entre-deux du moteur (premier vrai événement de jeu,
+  //    `tipoff`) a été diffusé. Avant : personne n'a le ballon, personne
+  //    ne se promène, le chrono des 24 s reste figé — même si la page est
+  //    ouverte depuis longtemps ou que le temps a été avancé.
+  //  - `tl` : signature du fil reçu (nombre d'événements, dernier vu) et
+  //    horloges au dernier état ; un fil reconstruit ou décalé (curseur de
+  //    rediffusion, ±30 s), une horloge de diffusion qui bondit par rapport
+  //    au temps réellement écoulé dans la page, une rafale d'événements =
+  //    SAUT : recalage sur l'état du moteur (resync), rien n'est rejoué en
+  //    accéléré.
+  let gameOn = false, jumps = 0;
+  let tl = null;
+  const isGameEvent = e => e && e.kind && e.kind !== "quarterStart" && e.kind !== "quote" && e.kind !== "timeout";
+  const evSig = e => (e ? `${e.id}@${e.airAt || 0}:${e.kind}` : "");
   function clearChoreo() {
     timers.forEach(clearTimeout); timers.clear();
     drainTimer = 0; queue.length = 0; plan = null;
@@ -1415,16 +1431,22 @@ export function createCourt2D(host, opts = {}) {
     // Arrêt de jeu en cours selon le moteur (temps mort, pause) : tout le
     // monde au banc ; sinon jeu en cours ; hors direct : au banc.
     stopUntil = live && st && st.endsAt > tNow ? performance.now() + (st.endsAt - tNow) : live ? 0 : performance.now() + 3600e3;
-    const inPlay = live && performance.now() >= stopUntil;
+    const inPlay = live && gameOn && performance.now() >= stopUntil;
     ball.holder = null;
     if (inPlay) {
       formation();
-      for (const sp of sprites.values()) { sp.x = sp.tx; sp.y = sp.ty; sp.moving = false; }
+      // (un joueur tenu par la mise en scène — entrée, regroupement, banc —
+      // n'est jamais déplacé d'office : c'est elle qui le guide)
+      for (const sp of sprites.values()) { if (sp.stage) continue; sp.x = sp.tx; sp.y = sp.ty; sp.moving = false; }
       const h = handlerOf(possession);
       if (h) { giveBall(h); ball.x = h.x; ball.y = h.y; }
       crossed = !!h && inFront(h.team, h.x);
+    } else if (live && !gameOn && performance.now() >= stopUntil) {
+      // Avant l'entre-deux : alignés autour du rond central, ballon au centre.
+      for (const sp of sprites.values()) { if (sp.stage) continue; const dir = sp.team === 0 ? -1 : 1; sp.x = sp.tx = 47 + dir * (8 + sp.slot * 2); sp.y = sp.ty = 25 + (sp.slot - 2) * 5; sp.moving = false; }
+      ball.x = 47; ball.y = 25;
     } else {
-      for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); sp.x = sp.tx = p.x; sp.y = sp.ty = p.y; sp.moving = false; }
+      for (const sp of sprites.values()) { if (sp.stage) continue; const p = parkLine(sp.team, sp.slot); sp.x = sp.tx = p.x; sp.y = sp.ty = p.y; sp.moving = false; }
       ball.x = 47; ball.y = 25;
     }
     possStart = tNow;
@@ -1434,7 +1456,7 @@ export function createCourt2D(host, opts = {}) {
     for (const r of refs) { r.x = r.tx; r.y = r.ty; r.ox = 0; r.oy = 0; r.moving = false; }
     ballOff.x = 0; ballOff.y = 0;
     ballFix.x = 0; ballFix.y = 0; ballPrev = null; ball.drib = 0; ball.dribOf = null;
-    for (const sp of sprites.values()) { halt(sp); sp.nextDrift = 0; }
+    for (const sp of sprites.values()) { if (!sp.stage) halt(sp); sp.nextDrift = 0; }
     for (const r of refs) halt(r);
   }
   let resyncing = false;
@@ -1745,7 +1767,8 @@ export function createCourt2D(host, opts = {}) {
     // de changement de cible simultané des dix joueurs) et une vitesse
     // calée sur la distance (il arrive à peu près quand la cible suivante
     // tombe : mouvement continu plutôt que « sprint, arrêt, sprint »).
-    if (S && S.status === "live" && nowP > sceneUntil) {
+    // (jamais pendant un arrêt de jeu : temps mort, fin de quart — chacun reste au banc)
+    if (S && S.status === "live" && gameOn && nowP > sceneUntil && performance.now() >= stopUntil) {
       const rim = RIM[possession];
       for (const sp of sprites.values()) {
         if (sp.leaving || sp.busy || sp.stage || nowP < (sp.nextDrift || 0)) continue;
@@ -1882,7 +1905,7 @@ export function createCourt2D(host, opts = {}) {
     if (S && S.status === "live") {
       // Source unique : state.shotClock (calculé par le client depuis la
       // timeline du moteur) ; repli sur le chrono chorégraphique sinon.
-      const left = typeof S.shotClock === "number" ? S.shotClock : S.shotClock === null ? null : Math.max(0, SHOT_CLOCK - (now() - possStart) / 1000);
+      const left = !gameOn ? null : typeof S.shotClock === "number" ? S.shotClock : S.shotClock === null ? null : Math.max(0, SHOT_CLOCK - (now() - possStart) / 1000);
       const txt = left === null ? "24" : left < 5 ? left.toFixed(1) : String(Math.ceil(left));
       if (clockTxt.textContent !== txt) clockTxt.textContent = txt;
       const low = left !== null && left < 5;
@@ -1935,6 +1958,18 @@ export function createCourt2D(host, opts = {}) {
       drawArena(colors[0], state.arena || null, (state.teams[0] && (state.teams[0].name || state.teams[0].short)) || "HOOP MANAGER", colors[1]);
       const lk = (state.courtLogo || "") + "|" + (state.arenaSponsor || "");
       if (lk !== logoKey) { logoKey = lk; logoG.innerHTML = state.courtLogo || ""; adTop.textContent = adBot.textContent = (state.arenaSponsor || "HOOP MANAGER").toUpperCase(); }
+      // Temps du match : entre-deux diffusé ? saut dans le fil ?
+      const evAll = state.events || [];
+      let jump = false;
+      if (tl && !firstUpdate) {
+        if (evAll.length < tl.n || evSig(evAll[tl.n - 1]) !== tl.sig) jump = true;          // fil reconstruit / décalé
+        // Horloge de diffusion qui avance (ou recule) plus vite que le temps
+        // réellement écoulé dans la page : le temps a été déplacé.
+        if (Math.abs((now() - tl.now) - (performance.now() - tl.at)) > 2500) jump = true;
+        if (newEvents.length > 3) jump = true;                                                   // rafale (reconnexion, avance rapide)
+      }
+      tl = { n: evAll.length, sig: evSig(evAll[evAll.length - 1]), now: now(), at: performance.now() };
+      if (jump || !gameOn) gameOn = evAll.some(isGameEvent);
       const before = sprites.size;
       syncRefs(state.referees);
       syncRoster();
@@ -1949,7 +1984,7 @@ export function createCourt2D(host, opts = {}) {
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
       // désigne qui le récupère — pas de meneur choisi ici.
       const looseByEngine = lastPlayed && lastPlayed.kind === "shot" && !lastPlayed.made;
-      if ((sprites.size !== before || ball.holder == null) && !newEvents.length && state.status === "live" && quiet && !looseByEngine) {
+      if ((sprites.size !== before || ball.holder == null) && !newEvents.length && state.status === "live" && gameOn && quiet && !looseByEngine) {
         if (state.possession === 0 || state.possession === 1) possession = state.possession;
         if (ball.holder == null) giveBall(handlerOf(possession));
         formation();
@@ -1973,8 +2008,9 @@ export function createCourt2D(host, opts = {}) {
       const tNow = now();
       const evs = state.events.filter(e => fresh.includes(e.id));
       const stale = evs.filter(e => e.airAt && tNow - e.airAt > STALE_EVENT_MS);
-      if (suspended || stale.length) {
+      if (suspended || stale.length || jump) {
         evs.forEach(e => { if (e.kind !== "quote") lastPlayed = e; });
+        if (jump) { jumps++; for (let i = evAll.length - 1; i >= 0; i--) if (evAll[i].kind !== "quote") { lastPlayed = evAll[i]; break; } }
         if (!suspended) resync();
         if (stage) { try { stage.update(state, []); } catch (e) { /* jamais bloquant */ } }
         return;
@@ -2003,7 +2039,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
-        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(),
+        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps,
         staging: stage ? stage.debug() : null };
     },
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de

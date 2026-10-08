@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-08) — Live 2D : chrono à l'entre-deux, sauts de
+  temps**. Causes : (1) l'interpolation du chrono (adapter.js:tick et
+  moteurbasket3.html:updateLiveClockTick) s'ancrait sur le premier
+  événement à 10:00, le MARQUEUR « Début du quart-temps » (diffusé à K,
+  2,2 s avant l'entre-deux `tipoff` du moteur ; à l'instant même du
+  chargement d'une rediffusion) ; (2) le curseur de rediffusion (±30 s,
+  glissière : shiftReplayTimeline + enterLiveMatch / adapter.reset)
+  reconstruit le fil avec des horaires décalés en GARDANT le terrain, qui
+  ne s'en apercevait pas : plan de possession, minuteries et file de
+  l'ancien fil continuaient ; en arrière, les actions déjà vues n'étaient
+  plus animées. Correctifs : le marqueur quarterStart ne lance jamais le
+  chrono (premier vrai événement de la période = tipoff au Q1) ;
+  court2d.js : `gameOn` (avant l'entre-deux : pas de porteur, pas de jeu
+  sans ballon, 24 s figé, alignement au rond central au recalage) ;
+  détection de SAUT (`tl` : fil raccourci / dernier événement changé,
+  horloge de diffusion qui bondit de > 2,5 s par rapport à
+  performance.now, rafale > 3 événements) → resync(), rien n'est rejoué ;
+  jeu sans ballon coupé pendant un arrêt de jeu (bug révélé : après un
+  recalage en plein temps mort, les joueurs quittaient le banc).
+  debug() : gameOn, jumps. Test : `live_court2d_clock_test.js` (match réel
+  du moteur, adaptateur → terrain, avant-match, entre-deux, avances
+  légère / importante / successives, curseur avant / arrière, pendant une
+  animation, onglet avant / après l'entre-deux).
+
 - **🟢 LIVRÉ (2026-10-08) — Live 2D : fluidité (audit + correctifs
   mesurés)**. Causes trouvées : (1) le navigateur repeignait TOUTE la salle
   à chaque image (un seul SVG : parquet, tribunes, ~660 spectateurs dont

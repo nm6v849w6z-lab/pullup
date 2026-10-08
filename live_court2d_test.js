@@ -36,8 +36,10 @@ const S = {
   status: "live", quarter: 1, clock: 600, possession: 0,
   teams: [mkTeam("Gotham", ["Ali Kane", "Ben Moro", "Cal Ito", "Dan Vidal", "Eli Nakamura", "Fab Roux", "Gus Lee"], POS),
           mkTeam("Rennes", ["Hal Novak", "Ian Brooks", "Jo Wright", "Kai Ferreira", "Leo Ramos", "Max Silva", "Ned Diallo"], POS)],
-  shots: [], events: [],
+  shots: [], events: [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: Date.now() - 120000, text: "" }],
 };
+// Match en cours : l'entre-deux du moteur a déjà été diffusé (avant lui,
+// personne n'a le ballon — voir live_court2d_clock_test.js).
 
 (async () => {
   const host = window.document.getElementById("host");

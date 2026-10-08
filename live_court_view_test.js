@@ -163,11 +163,18 @@ for (let i = 1; i < allLiveEvents.length; i++) {
   if (ev.clock !== firstEvent.clock) { nextDiffAfterTipoff = ev; break; }
 }
 if (!nextDiffAfterTipoff) throw new Error("❌ Impossible de trouver un événement au chrono différent après l'entre-deux (match trop court ?).");
-// Un instant tout proche du tout début de la diffusion (10% du chemin vers
-// le prochain chrono différent) — même s'il tombe AVANT un événement
-// intermédiaire à chrono identique (l'entre-deux...), le chrono affiché doit
-// déjà avoir bougé, pas être figé à 10:00.
-clock.now = firstEvent.airAt + (nextDiffAfterTipoff.airAt - firstEvent.airAt) * 0.1;
+// Retour utilisateur (2026-10-08, « le chrono démarre au chargement du
+// live ») : le marqueur « Début du 1er quart-temps » ne lance PAS le
+// chrono — entre lui et l'entre-deux, 10:00 figé et pas de 24 s ; le chrono
+// démarre à l'entre-deux (tipoff) et défile dès l'instant qui suit.
+clock.now = (firstEvent.airAt + tipoffEvent.airAt) / 2;
+dom.window.eval("updateLiveClockTick()");
+if (doc.getElementById("clockDisplay").textContent !== "10:00" || !shotBadge.classList.contains("off")) {
+  throw new Error(`❌ Entre le marqueur de quart-temps et l'entre-deux, le chrono doit rester à 10:00 sans 24 s — obtenu "${doc.getElementById("clockDisplay").textContent}".`);
+}
+console.log("✅ Avant l'entre-deux (marqueur de quart-temps seul) : chrono figé à 10:00, pas de 24 s.");
+// 10 % du chemin entre l'entre-deux et le prochain chrono différent.
+clock.now = tipoffEvent.airAt + (nextDiffAfterTipoff.airAt - tipoffEvent.airAt) * 0.1;
 dom.window.eval("updateLiveClockTick()");
 const clockJustAfterTipoff = doc.getElementById("clockDisplay").textContent;
 if (clockStrToSeconds(clockJustAfterTipoff) >= 600) {
