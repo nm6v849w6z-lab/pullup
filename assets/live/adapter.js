@@ -316,7 +316,7 @@ export function createLiveAdapter(opts) {
       quarter: st.quarter, clock: st.final ? 0 : st.clock, shotClock: st.final ? null : st.shotClock,
       possession: st.final ? null : st.possession, halftimeResumeIn: half,
       timeout: st.final ? null : activeTimeout(live.pauses, now),
-      meta: dress.meta || null, courtLogo: dress.courtLogo || "", arenaSponsor: dress.arenaSponsor || null, courtStyle: dress.courtStyle || null,
+      meta: dress.meta || null, courtLogo: dress.courtLogo || "", arenaSponsor: dress.arenaSponsor || null, courtStyle: dress.courtStyle || null, referees: dress.referees || null,
       teams: teamsOut, shots: st.shots, events: st.events, nextAction: st.final ? null : nextAction(now),
     };
   }
