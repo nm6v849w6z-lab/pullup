@@ -118,7 +118,9 @@ const mkTeam = (key, color) => ({ name: key, short: key.slice(0, 3).toUpperCase(
   const sub = host.querySelector(".stg-card-sub").textContent;
   if (!/#1\d/.test(sub)) fail(`la carte montre le numéro et le poste, obtenu « ${sub} ».`);
   // Fin de l'entrée : mise en place pour l'entre-deux, au centre.
-  NOW = S.kickoffAt - 1500; await go(1200);
+  // (1,6 s : depuis la fluidité du 2026-10-08, les joueurs accélèrent et
+  // freinent au lieu de partir à pleine vitesse — ~0,3 s de plus.)
+  NOW = S.kickoffAt - 1500; await go(1600);
   const jumpers = [S.teams[0].players[4], S.teams[1].players[4]].map(p => pos(p.id));
   if (!jumpers.every(q => q && Math.abs(q.sx - 47) < 3 && Math.abs(q.sy - 25) < 2)) fail(`les pivots se placent au centre pour l'entre-deux : ${JSON.stringify(jumpers)}.`);
   // Coup d'envoi : la mise en scène lâche tout, à l'heure exacte (jamais de retard).
