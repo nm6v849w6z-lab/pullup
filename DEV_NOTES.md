@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-08) — Musiques des séquences** (fichiers fournis,
+  tels quels) : `assets/audio/music/emission.mp3` = fond des émissions
+  d'avant-match ET de mi-temps (openHoopShow → HMMusic.play, closeHoopShow
+  → stop : toutes les sorties passent par là — Quitter, Voir le match, fin ;
+  pub sonore de la régie : HMMusic.duck) ; `entree-joueurs.mp3` = entrée
+  des joueurs du direct 2D (staging.js, phase « intro », bêta live2d
+  seulement, bail renouvelé toutes les 400 ms : s'arrête au coup d'envoi,
+  page quittée, vue détruite). Module `assets/audio/music.js` (global
+  HMMusic) : une musique à la fois (la précédente finit son fondu avant),
+  fondus 1,5 s / 0,9 s (0,4 s en passage) par Web Audio (iPhone), silence
+  onglet masqué, lecture bloquée → premier toucher ; l'émission ouverte
+  garde la main sur l'entrée. Serveur : requêtes partielles (Range) pour
+  les fichiers audio (Safari). Test : `music_sequences_test.js`.
+
 - **🟢 LIVRÉ (2026-10-08) — Live 2D : chrono à l'entre-deux, sauts de
   temps**. Causes : (1) l'interpolation du chrono (adapter.js:tick et
   moteurbasket3.html:updateLiveClockTick) s'ancrait sur le premier

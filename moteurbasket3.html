@@ -9040,6 +9040,7 @@
      un bouton (openHoopShow), donc son chargement différé ne change rien
      en pratique. -->
 <script src="assets/hoop-shows/showPlayer.js?v=20261003-1" defer></script>
+<script src="assets/audio/music.js?v=1" defer></script>
 <!-- Couche mobile (voir le commentaire PWA plus haut) : APRÈS la grande
      feuille de style, pour que ses règles @media(max-width:768px) l'emportent
      à spécificité égale ; defer pour la même raison que showPlayer.js. -->
@@ -9050,8 +9051,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-15">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-15">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-16">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-16">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -42040,6 +42041,7 @@ async function openHoopShow(kind, lp) {
   section.classList.remove("hidden");
   document.documentElement.classList.add("hoop-show-open");
   hoopShowOpenKind = kind;
+  if (window.HMMusic) HMMusic.play("emission"); // musique de fond (avant-match et mi-temps)
   hoopShowPlayer = HoopShowPlayer.mount(mount, show, Object.assign(hoopShowDressOpts(), {
     premium: teamA.hasActivePremium(Date.now()),
     now: () => Date.now(),
@@ -42179,6 +42181,7 @@ function enterPrematchLive() {
 }
 
 function closeHoopShow() {
+  if (window.HMMusic) HMMusic.stop("emission");
   if (hoopShowPlayer) { hoopShowPlayer.destroy(); hoopShowPlayer = null; }
   document.getElementById("hoopShowSection").classList.add("hidden");
   document.documentElement.classList.remove("hoop-show-open");
@@ -42205,7 +42208,8 @@ function hoopShowOnAd({ element, slot }) {
   // directement au segment suivant plutôt que d'afficher un écran vide.
   if (hmAdsEnabled()) {
     if (element) element.innerHTML = `<div class="hoop-show-ad-block"><span>Page de pub</span></div>`;
-    return hmAdsShowBreak(`hoopshow-${slot || "break"}`).then(() => undefined);
+    const br = hmAdsShowBreak(`hoopshow-${slot || "break"}`).then(() => undefined);
+    return window.HMMusic ? HMMusic.duck(br) : br; // pub sonore : musique coupée
   }
   return new Promise((resolve) => {
     if (!element) { resolve(); return; }
@@ -45151,7 +45155,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-15";
+const HM_LIVE_ASSET_VERSION = "20261008-16";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {

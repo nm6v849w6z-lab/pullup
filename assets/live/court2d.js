@@ -1936,6 +1936,8 @@ export function createCourt2D(host, opts = {}) {
     refs: () => refs,
     parkLine, slotPos, seatPos, ambience,
     possession: () => possession,
+    // Terrain réellement à l'écran (page du direct affichée, onglet visible).
+    shown: () => !!(host.isConnected && host.getClientRects && host.getClientRects().length) && !(typeof document !== "undefined" && document.hidden),
     raster: opts.raster !== false ? rasterizeAvatar : null,
     formation: () => formation(),
     hold(sp, x, y, speed = 1.4, snap = false) { sp.stage = { x, y, speed }; if (snap) { sp.x = sp.tx = x; sp.y = sp.ty = y; halt(sp); } },

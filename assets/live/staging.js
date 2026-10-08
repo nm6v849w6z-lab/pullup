@@ -13,7 +13,7 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-15";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-16";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -282,11 +282,28 @@ export function createStaging(api, getCfg) {
   }
   function endShow() { if (show) { show.destroy(); show = null; } }
 
+  // ---------- musique de l'entrée des joueurs (2026-10-08) ----------
+  // Fichier fourni (assets/audio/music/entree-joueurs.mp3) joué pendant la
+  // phase « intro » seulement, page du direct affichée ; bail renouvelé
+  // ici : la séquence finie (coup d'envoi), la page quittée ou la vue
+  // détruite, la musique s'efface d'elle-même (assets/audio/music.js).
+  let musicAt = 0, musicOn = false;
+  function music(ph, nowP) {
+    const M = typeof window !== "undefined" ? window.HMMusic : null;
+    if (!M || nowP - musicAt < 400) return;
+    musicAt = nowP;
+    const want = ph.kind === "intro" && (!api.shown || api.shown());
+    if (want) { M.play("entree", { lease: 1500 }); musicOn = true; }
+    else if (musicOn) { M.stop("entree"); musicOn = false; }
+  }
+  function musicOff() { const M = typeof window !== "undefined" ? window.HMMusic : null; if (M && musicOn) M.stop("entree"); musicOn = false; }
+
   // ---------- boucle ----------
   function tick(nowP) {
     if (destroyed) return;
     const now = api.now();
     const ph = phaseAt(now);
+    music(ph, nowP);
     const changed = ph.key !== phaseKey;
     if (changed) {
       phaseKey = ph.key; phaseStartedAt = now;
@@ -388,7 +405,7 @@ export function createStaging(api, getCfg) {
     update(state, freshEvents) {
       S = state;
       try { cfg = getCfg ? getCfg(state) : null; } catch (e) { cfg = null; }
-      if (!cfg) { releaseAll(false); endShow(); hideIntroCard(); coaches.forEach((c, i) => { if (c) { c.g.remove(); coaches[i] = null; } }); return; }
+      if (!cfg) { musicOff(); releaseAll(false); endShow(); hideIntroCard(); coaches.forEach((c, i) => { if (c) { c.g.remove(); coaches[i] = null; } }); return; }
       // Réactions du coach aux actions (discrètes, sans effet sur le jeu).
       for (const e of freshEvents || []) {
         if (!e) continue;
@@ -404,6 +421,6 @@ export function createStaging(api, getCfg) {
       return { phase: phaseKey, show: show ? show.name : null, choreo: show && show.choreo != null ? show.choreo : null, held: held.size,
         coaches: coaches.map(c => (c ? { x: c.x, y: c.y, anim: c.cls || "" } : null)), shownFor: [...shownFor] };
     },
-    destroy() { destroyed = true; releaseAll(false); endShow(); hideIntroCard(); coaches.forEach(c => c && c.g.remove()); },
+    destroy() { destroyed = true; musicOff(); releaseAll(false); endShow(); hideIntroCard(); coaches.forEach(c => c && c.g.remove()); },
   };
 }

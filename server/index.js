@@ -185,6 +185,23 @@ function serveAsset(res, pathname) {
   if (path.relative(ASSETS_DIR, resolved).startsWith("..")) { sendJson(res, 403, { error: "Chemin invalide" }); return; }
   fs.readFile(resolved, (err, data) => {
     if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
+    // Audio (musiques des émissions, commentaire) : requêtes partielles
+    // (Range) — Safari / iPhone refuse de lire un mp3 sans réponse 206.
+    if (/^audio\//.test(contentType)) {
+      const range = /^bytes=(\d*)-(\d*)$/.exec(String((res.req && res.req.headers && res.req.headers.range) || ""));
+      const head = { "Content-Type": contentType, "Accept-Ranges": "bytes", "Cache-Control": "public, max-age=86400" };
+      if (range && (range[1] || range[2])) {
+        let start = range[1] ? Number(range[1]) : Math.max(0, data.length - Number(range[2]));
+        let end = range[1] && range[2] ? Math.min(Number(range[2]), data.length - 1) : data.length - 1;
+        if (start >= data.length || start > end) { res.writeHead(416, { "Content-Range": `bytes */${data.length}` }); res.end(); return; }
+        res.writeHead(206, { ...head, "Content-Range": `bytes ${start}-${end}/${data.length}`, "Content-Length": end - start + 1 });
+        res.end(res.req && res.req.method === "HEAD" ? undefined : data.subarray(start, end + 1));
+        return;
+      }
+      res.writeHead(200, { ...head, "Content-Length": data.length });
+      res.end(res.req && res.req.method === "HEAD" ? undefined : data);
+      return;
+    }
     sendBody(res, 200, {
       "Content-Type": contentType,
       // Scripts et styles toujours revalidés (2026-09-26 : la nouvelle page
