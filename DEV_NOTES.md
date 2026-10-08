@@ -73,8 +73,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   lecture seule, paliers de 5, ~6 Ko par match) → `ev.fat` → `hmLive.fat` /
   adapter `st.fat` → `players[].fatigue`. Matchs déjà calculés : pas de barre.
   Version des fichiers du live : 20261008-4.
-  ARÈNE LOT 1 (2026-10-08, sur la branche, en attente de validation avant
-  prod) : court2d.js — plus de cartes joueurs en haut ni de cadre bleu ;
+  ARÈNE LOT 1 (2026-10-08, validé et déployé) : court2d.js — plus de cartes joueurs en haut ni de cadre bleu ;
   géométrie SIDE/TOP/BOT autour du terrain (OX, OY) ; `drawArena` (statique,
   une fois par club) : tribunes (sièges en motif + spectateurs déterministes,
   ~48 % aux couleurs du club qui reçoit, sections `.c2d-fans` qui oscillent,
@@ -94,7 +93,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   SEAT_Y 58.6 ; table y 52.4 ; officiels STOP_Y 50.7 ; COACH_Y 55
   (staging). Téléphone : viewBox rogné (tribunes) sous 640 px de large ;
   paysage tactile : hauteur bornée à l'écran.
-  RESTE arène : validation du lot 1, puis polissage (tape dans la main plus
+  RESTE arène : polissage (tape dans la main plus
   visible, durée des déplacements selon la vitesse de lecture).
   PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`
   (groupe `.c2d-trails` sous le ballon) — chaque vol porte un `kind` :
