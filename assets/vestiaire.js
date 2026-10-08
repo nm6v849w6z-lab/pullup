@@ -116,6 +116,7 @@
       });
       trimRelations(out.relations);
     }
+    if (data.coach && typeof data.coach === "object") out.coach = sanitizeCoach(data.coach);
     return out;
   }
   function ensure(team) {
@@ -125,7 +126,7 @@
   function serialize(team) {
     const l = team && team.locker;
     if (!l) return emptyLocker();
-    return JSON.parse(JSON.stringify({ history: l.history || [], log: l.log || [], last: l.last || null, relations: l.relations || {} }));
+    return JSON.parse(JSON.stringify({ history: l.history || [], log: l.log || [], last: l.last || null, relations: l.relations || {}, ...(l.coach ? { coach: l.coach } : {}) }));
   }
   function trimRelations(rel) {
     Object.keys(rel).forEach(k => { if (Math.abs(rel[k].v) < RELATION_KEEP) delete rel[k]; });
@@ -602,6 +603,8 @@
       else team.chemistry = clamp(num(team.chemistry, 50) + chemDelta, CHEM_MIN, 100);
     }
 
+    // 4) entretiens : promesses vérifiées, poids de la confiance.
+    const coach = weeklyCoach(team, opts);
     // Relevé de la semaine.
     const cohesion = cohesionScore(team);
     const confidence = confidenceOf(team, null);
@@ -615,7 +618,7 @@
     });
     if (l.history.length > HISTORY_MAX) l.history.splice(0, l.history.length - HISTORY_MAX);
     l.last = { w: num(team.week, 0), s: ctx.season, p: cur, ment: (team.mentorships || []).map(m => `${m.youngId}|${m.veteranId}`), streak: num(team.chemistryResultStreak, 0) };
-    return { events, chemDelta };
+    return { events, chemDelta, promises: coach.resolved };
   }
 
   // Mouvement d'effectif IMMÉDIAT (transfert, vente, agent libre, promotion
@@ -678,8 +681,17 @@
       case "interview-up": return "Le discours du coach en conférence de presse soude le groupe";
       case "interview-down": return "Le discours du coach en conférence de presse passe mal dans le vestiaire";
       case "interview": return "Le coach s'exprime en conférence de presse";
-      case "talk-ok": return `Discussion réussie avec ${n}`;
-      case "talk-ko": return `Discussion sans effet avec ${n}`;
+      case "talk-ok": return ev.m ? `Entretien (${String(ev.m).toLowerCase()}) : ${n} repart rassuré` : `Discussion réussie avec ${n}`;
+      case "talk-ko": return ev.m ? `Entretien (${String(ev.m).toLowerCase()}) : ${n} le prend mal` : `Discussion sans effet avec ${n}`;
+      case "talk": return `Entretien (${String(ev.m || "point").toLowerCase()}) avec ${n}, sans effet net`;
+      case "promise": return `Le coach promet ${ev.m || "quelque chose"} à ${n}`;
+      case "promise-public": return `Promesse publique : ${ev.m || "quelque chose"} pour ${n}`;
+      case "promise-kept": return `Promesse tenue envers ${n} (${ev.m || ""})`;
+      case "promise-broken": return `Promesse non tenue envers ${n} (${ev.m || ""})`;
+      case "contradiction": return `${n} relève une contradiction entre vos propos publics et privés`;
+      case "statement-up": return `Déclaration publique : ${n} se sent soutenu`;
+      case "statement-down": return `Déclaration publique : ${n} est touché`;
+      case "statement": return `Le coach s'exprime publiquement sur ${n}`;
       default: return n;
     }
   }
@@ -687,7 +699,524 @@
     arrival: 0, youth: 1, departure: 0, starter: 1, benched: -1, request: -1, "request-end": 1, unhappy: -1,
     "happy-again": 1, injury: -1, "injury-return": 1, extension: 1, mentor: 1, conflict: -1, bond: 1,
     "win-streak": 1, "loss-streak": -1, "big-win": 1, "big-loss": -1, "talk-ok": 1, "talk-ko": -1, "interview-up": 1, "interview-down": -1, interview: 0,
+    talk: 0, promise: 0, "promise-public": 0, "promise-kept": 1, "promise-broken": -1, contradiction: -1, "statement-up": 1, "statement-down": -1, statement: 0,
   };
+
+  // =====================================================================
+  // ENTRETIENS ET COMMUNICATION DU COACH (2026-10-08, phases 1 à 5 de la
+  // maquette « Vestiaire · Entretiens et communication ») — UN SEUL système
+  // pour les entretiens privés ET les déclarations publiques (interviews de
+  // jalon) : même confiance joueur ↔ coach, même mémoire, mêmes promesses,
+  // mêmes réactions selon la personnalité (les 8 caractéristiques mentales,
+  // pas de traits parallèles), même propagation joueur → proches → groupe →
+  // vestiaire. Tout est DÉTERMINISTE (graine = joueur, choix, date) : le
+  // navigateur et le serveur calculent la même chose.
+  //
+  // Persisté dans Team.locker.coach :
+  //   trust    { id: 0-100 }  confiance du joueur envers le coach ;
+  //   talks    [{at,w,s,p,n,topic,c,out}]   historique des discussions (30) ;
+  //   comms    [{at,w,s,k,lbl,q,p,n,imp,fx}] communication publique (20) ;
+  //   promises [{id,p,n,k,src,at,w,s,due,base,target,ok,st,end}] (20) ;
+  //   stance   { id: { pv:{v,at}, pb:{v,at} } }  dernier message privé /
+  //            public sur le joueur (+1 « on compte sur toi », −1 critique) ;
+  //   contra   [{at,w,s,p,n,txt}] contradictions relevées (10).
+  // =====================================================================
+  const DAY_MS = 24 * 3600 * 1000;
+  const TALK_COOLDOWN_MS = 12 * DAY_MS;      // ~2 semaines par joueur
+  const TALK_URGENT_COOLDOWN_MS = 4 * DAY_MS; // urgence : crise, demande de transfert, promesse en retard
+  const TALKS_PER_WEEK = 3;                  // quota glissant sur 7 jours (urgences hors quota)
+  const TALKS_MAX = 30, COMMS_MAX = 20, PROMISES_MAX = 20, CONTRA_MAX = 10;
+  const STANCE_WINDOW_MS = 60 * DAY_MS;      // une contradiction se remarque sur ~2 mois
+  const PROMISE_WEEKS = { minutes: 3, starter: 3, role: 4, extend: 6 };
+  const TOPICS = {
+    intervention: { label: "Intervention", color: "bad" },
+    prevention: { label: "Prévention", color: "warn" },
+    integration: { label: "Intégration", color: "blue" },
+    leadership: { label: "Leadership", color: "good" },
+    development: { label: "Développement", color: "blue" },
+    conflict: { label: "Conflit", color: "bad" },
+    recadrage: { label: "Recadrage", color: "warn" },
+    promise: { label: "Promesse", color: "purple" },
+    checkin: { label: "Point individuel", color: "mid" },
+  };
+  const CHOICES = ["reassure", "transparent", "objective", "firm", "promise"];
+  const CHOICE_LABEL = { reassure: "Le rassurer", transparent: "Être transparent", objective: "Lui fixer un objectif", firm: "Être ferme", promise: "Promettre" };
+  // Base de réaction (avant personnalité, confiance et contexte).
+  const TALK_BASE = {
+    intervention: { reassure: 0.35, transparent: 0.2, objective: 0.5, firm: -0.8, promise: 1.3 },
+    prevention: { reassure: 0.7, transparent: 0.4, objective: 0.5, firm: -0.5, promise: 1.0 },
+    integration: { reassure: 1.0, transparent: 0.5, objective: 0.4, firm: -0.6 },
+    leadership: { reassure: 0.5, transparent: 0.8, objective: 0.6, firm: -0.4, promise: 0.9 },
+    development: { reassure: 0.5, transparent: 0.3, objective: 1.0, firm: -0.2, promise: 0.8 },
+    conflict: { reassure: 0.2, transparent: 0.6, objective: 0.3, firm: 0.4 },
+    recadrage: { reassure: -0.3, transparent: 0.5, objective: 0.5, firm: 0.7 },
+    promise: { reassure: -0.2, transparent: 0.7, objective: 0.2, firm: -1.0 },
+    checkin: { reassure: 0.6, transparent: 0.6, objective: 0.5, firm: -0.5 },
+  };
+  // Position privée prise sur le joueur (pour les contradictions).
+  const PRIVATE_STANCE = { reassure: 1, promise: 1, transparent: -1, firm: -1 };
+  const IMPORTANCE = { "finale-po": 1.5, "demi-finale-po": 1.3, "fin-saison-reguliere": 1.2, "mi-saison": 1, "debut-saison": 1 };
+
+  function hashStr(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function seeded(key) { let a = hashStr(String(key)) || 1; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const m01 = (p, k) => (attr(p, k) - 50) / 50;   // caractéristique centrée : −1 … +1
+
+  function emptyCoach() { return { trust: {}, talks: [], comms: [], promises: [], stance: {}, contra: [] }; }
+  function sanitizeCoach(c) {
+    const out = emptyCoach();
+    if (!c || typeof c !== "object") return out;
+    if (c.trust && typeof c.trust === "object") Object.entries(c.trust).forEach(([k, v]) => { if (Number.isFinite(v)) out.trust[k] = clamp(Math.round(v), 0, 100); });
+    const str = (v, n = 160) => (typeof v === "string" ? v.slice(0, n) : "");
+    if (Array.isArray(c.talks)) out.talks = c.talks.filter(t => t && TOPICS[t.topic] && CHOICES.includes(t.c)).slice(0, TALKS_MAX)
+      .map(t => ({ at: num(t.at), w: num(t.w), s: num(t.s, 1), p: t.p, n: str(t.n, 60), topic: t.topic, c: t.c, out: ["pos", "neu", "neg"].includes(t.out) ? t.out : "neu" }));
+    if (Array.isArray(c.comms)) out.comms = c.comms.filter(x => x && typeof x.q === "string").slice(0, COMMS_MAX)
+      .map(x => ({ at: num(x.at), w: num(x.w), s: num(x.s, 1), k: str(x.k, 30), lbl: str(x.lbl, 80), q: str(x.q, 200), ...(x.p != null ? { p: x.p, n: str(x.n, 60) } : {}), imp: ["pos", "neg", "col", "neu"].includes(x.imp) ? x.imp : "neu", fx: str(x.fx, 200) }));
+    if (Array.isArray(c.promises)) out.promises = c.promises.filter(x => x && PROMISE_WEEKS[x.k] && x.p != null).slice(0, PROMISES_MAX)
+      .map(x => ({ id: str(x.id, 40), p: x.p, n: str(x.n, 60), k: x.k, src: x.src === "public" ? "public" : "private", at: num(x.at), w: num(x.w), s: num(x.s, 1), due: num(x.due), base: num(x.base), target: num(x.target), ok: num(x.ok), st: ["open", "kept", "broken"].includes(x.st) ? x.st : "open", ...(x.end ? { end: num(x.end) } : {}) }));
+    if (c.stance && typeof c.stance === "object") Object.entries(c.stance).forEach(([k, v]) => {
+      if (!v || typeof v !== "object") return;
+      const one = o => (o && Number.isFinite(o.v) && Number.isFinite(o.at) ? { v: Math.sign(o.v), at: o.at } : null);
+      const pv = one(v.pv), pb = one(v.pb);
+      if (pv || pb) out.stance[k] = { ...(pv ? { pv } : {}), ...(pb ? { pb } : {}) };
+    });
+    if (Array.isArray(c.contra)) out.contra = c.contra.filter(x => x && x.p != null).slice(0, CONTRA_MAX).map(x => ({ at: num(x.at), w: num(x.w), s: num(x.s, 1), p: x.p, n: str(x.n, 60), txt: str(x.txt, 200) }));
+    return out;
+  }
+  function coachOf(team) { const l = ensure(team); if (!l.coach || typeof l.coach !== "object" || !Array.isArray(l.coach.talks)) l.coach = sanitizeCoach(l.coach); return l.coach; }
+
+  function defaultTrust(p) { return clamp(Math.round(48 + (num(p.form, 50) - 50) * 0.3), 25, 70); }
+  function trustOf(team, p) { const c = team && team.locker && team.locker.coach; const v = c && c.trust ? c.trust[sid(p.id)] : undefined; return Number.isFinite(v) ? v : defaultTrust(p); }
+  function addTrust(team, p, d) { const c = coachOf(team); const v = clamp(Math.round(trustOf(team, p) + d), 0, 100); c.trust[sid(p.id)] = v; return v; }
+  function addForm(p, d, floor = 1) { const before = num(p.form, 50); p.form = clamp(Math.round(before + d), d < 0 ? Math.min(floor, before) : 1, 100); return p.form - before; }
+  function trustWord(v) { return v >= 75 ? "Totale" : v >= 58 ? "Solide" : v >= 42 ? "Réservée" : v >= 25 ? "Fragile" : "Rompue"; }
+
+  // Cohérence du coach : promesses tenues / non tenues et contradictions des
+  // deux dernières saisons.
+  function consistency(team) {
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const season = seasonOf(team);
+    const recent = x => num(x.s, season) >= season - 1;
+    const kept = c.promises.filter(x => x.st === "kept" && recent(x)).length;
+    const broken = c.promises.filter(x => x.st === "broken" && recent(x)).length;
+    const contra = c.contra.filter(recent).length;
+    const score = clamp(Math.round(70 + kept * 4 - broken * 10 - contra * 8), 0, 100);
+    const label = score >= 82 ? "Très fiable" : score >= 65 ? "Plutôt fiable" : score >= 45 ? "Parole fragile" : "Peu crédible";
+    return { score, label, kept, broken, contra, open: c.promises.filter(x => x.st === "open").length };
+  }
+
+  // ---------- sujets d'entretien tirés de la situation réelle ----------
+  // Matchs joués depuis une promesse : par date quand le match la porte
+  // (matchLog.at), sinon par semaine d'entraînement.
+  function minutesSince(team, p, w, s, at) {
+    const log = (Array.isArray(p.matchLog) ? p.matchLog : []).filter(m => m && (!m.team || m.team === team.name) && m.competition !== "national" && (Number.isFinite(m.at) && Number.isFinite(at) ? m.at >= at : num(m.week, -1) >= w));
+    return { games: log.length, avg: log.length ? log.reduce((a, m) => a + num(m.min), 0) / log.length : 0, starts: log.filter(m => m.starter).length };
+  }
+  function promiseProgress(team, pr, p) {
+    if (!p) return { late: false, txt: "" };
+    if (pr.k === "minutes") { const m = minutesSince(team, p, pr.w, pr.s, pr.at); return { late: num(team.week) >= pr.w + 2 && m.avg < pr.target, txt: m.games ? `${Math.round(m.avg)} min / match (objectif ${pr.target})` : `objectif ${pr.target} min / match` }; }
+    if (pr.k === "starter") { const st = roleOf(team, p) === "starter"; return { late: num(team.week) >= pr.w + 2 && !st, txt: st ? "titulaire actuellement" : "pas encore titulaire" }; }
+    if (pr.k === "role") { const st = roleOf(team, p) === "starter"; return { late: !st, txt: st ? "toujours dans le cinq" : "sorti du cinq" }; }
+    const ext = num(p.contractUntilSeason) > pr.base; return { late: num(team.week) >= pr.w + 4 && !ext, txt: ext ? "contrat prolongé" : "pas encore prolongé" };
+  }
+  function lastTalkWith(c, id) { return c.talks.find(t => sid(t.p) === id) || null; }
+  function talkQuota(team, now) {
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const used = c.talks.filter(t => now - num(t.at) < 7 * DAY_MS && !t.u).length;
+    return { used, max: TALKS_PER_WEEK, left: Math.max(0, TALKS_PER_WEEK - used) };
+  }
+  function topicFor(ctx, row, view, c) {
+    const p = row.p, id = sid(p.id);
+    const pr = c.promises.find(x => x.st === "open" && sid(x.p) === id);
+    if (pr) { const g = promiseProgress(ctx.team, pr, p); if (g.late) return { topic: "promise", urgent: true, sev: 5, why: `Vous lui avez promis ${promiseText(pr)}${pr.src === "public" ? " publiquement" : ""} : ${g.txt}. Il commence à douter de votre parole.` }; }
+    const sat = row.sat, form = num(p.form, 50);
+    if (p.transferRequestActive) return { topic: "intervention", urgent: true, sev: 5, why: "Demande son transfert dans la presse : il faut le recevoir rapidement." };
+    if (form < 38) {
+      const r = (sat.reasons || []).find(x => x.tone < 0) || { text: "moral en berne" };
+      return { topic: "intervention", urgent: form < 22, sev: form < 22 ? 4 : 3, why: `${sat.label} (${r.text.toLowerCase()})${sat.minutes != null ? ` : ${Math.round(sat.minutes)} min par match récemment` : ""}${sat.expected === "starter" && sat.role !== "starter" ? ", alors qu'il attend un rôle de titulaire" : ""}.` };
+    }
+    const tension = view.relations.find(r => r.kind === "tension" && (sid(r.a) === id || sid(r.b) === id));
+    if (tension) { const other = ctx.byId.get(sid(sid(tension.a) === id ? tension.b : tension.a)); return { topic: "conflict", urgent: false, sev: 3, why: `Tension avec ${other ? other.name : "un coéquipier"} (${tension.why.join(", ") || "rivalité"}).` }; }
+    const last = ctx.team.locker && ctx.team.locker.last && ctx.team.locker.last.p && ctx.team.locker.last.p[id];
+    if (last && last[1] - form >= 8 && form < 60) return { topic: "prevention", urgent: false, sev: 2, why: `Son moral baisse (${last[1]} → ${Math.round(form)} en une semaine)${sat.role !== "starter" && last[0] === 2 ? " depuis sa sortie du cinq" : ""}.` };
+    if (tenureOf(ctx, p) === 0 && !Object.keys(ctx.relations).some(k => k.split("|").includes(id) && ctx.relations[k].v >= 25)) return { topic: "integration", urgent: false, sev: 2, why: "Arrivé cette saison, aucune relation forte dans le vestiaire pour l'instant." };
+    if (attr(p, "discipline") < 28 && form >= 55 && row.level !== "leader") return { topic: "recadrage", urgent: false, sev: 1, why: "Discipline fragile : un rappel du cadre peut éviter un écart." };
+    if (row.level === "leader" || row.level === "cadre") return { topic: "leadership", urgent: false, sev: 1, why: `${LEVELS[row.level].label} du vestiaire${ctx.mentors.has(id) ? ", tuteur d'un jeune" : ""} : un échange positif peut renforcer votre relation et son influence.` };
+    if (num(p.age, 25) <= 22 && sat.role !== "starter") return { topic: "development", urgent: false, sev: 1, why: `${Math.round(num(p.age, 20))} ans, ${sat.role === "rotation" ? "dans la rotation" : "peu utilisé"} : parlez de sa progression.` };
+    return null;
+  }
+  // Liste des entretiens recommandés + disponibilité de chacun.
+  function recommendTalks(team, opts = {}) {
+    const now = num(opts.now, Date.now());
+    const ctx = buildContext(team, opts);
+    const view = buildView(team, opts);
+    const rows = hierarchy(ctx);
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const quota = talkQuota(team, now);
+    const out = [];
+    rows.forEach(row => {
+      const t = topicFor(ctx, row, view, c); if (!t) return;
+      out.push({ ...t, ...availability(team, row.p, t.urgent, now, quota), id: row.p.id, name: row.p.name, label: TOPICS[t.topic].label });
+    });
+    out.sort((a, b) => b.sev - a.sev || (b.urgent - a.urgent));
+    // Un seul recadrage proposé à la fois (le plus fragile en premier).
+    let rec1 = 0;
+    const list = out.filter(r => r.topic !== "recadrage" || rec1++ === 0);
+    return { list: list.slice(0, num(opts.max, 6)), quota };
+  }
+  function availability(team, p, urgent, now, quota) {
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const last = lastTalkWith(c, sid(p.id));
+    const cd = urgent ? TALK_URGENT_COOLDOWN_MS : TALK_COOLDOWN_MS;
+    const nextAt = last ? num(last.at) + cd : 0;
+    if (nextAt > now) return { available: false, nextAt, block: "cooldown" };
+    if (!urgent && quota.left <= 0) return { available: false, nextAt: 0, block: "quota" };
+    return { available: true, nextAt: 0 };
+  }
+
+  // ---------- un entretien : ouverture, choix, réaction ----------
+  function promiseText(pr) {
+    if (pr.k === "minutes") return "plus de minutes";
+    if (pr.k === "starter") return "une place de titulaire";
+    if (pr.k === "role") return "un rôle majeur dans le cinq";
+    return "une prolongation de contrat";
+  }
+  function promiseKindFor(team, p, topic) {
+    if (topic === "leadership") return roleOf(team, p) === "starter" ? "role" : null;
+    if (topic === "intervention" || topic === "prevention" || topic === "development") {
+      if (typeof p.contractUntilSeason === "number" && p.contractUntilSeason <= seasonOf(team) && num(p.form, 50) >= 30) return "extend";
+      const ctx = buildContext(team); return expectedRole(ctx, p) === "starter" && roleOf(team, p) !== "starter" ? "starter" : "minutes";
+    }
+    return null;
+  }
+  const OPEN = {
+    intervention: ["Coach, je ne comprends pas pourquoi je joue si peu. Je pense mériter plus de minutes.", "Franchement, je ne me sens plus à ma place ici.", "J'ai l'impression que vous ne comptez plus sur moi."],
+    prevention: ["Ça va… enfin, ces derniers temps c'est un peu dur.", "Je ne sais pas trop où j'en suis en ce moment.", "J'essaie de rester positif, mais ce n'est pas simple."],
+    integration: ["Je découvre encore le groupe, tout va très vite.", "Je ne connais pas encore grand monde dans le vestiaire.", "Je veux m'intégrer, mais je cherche encore mes repères."],
+    leadership: ["Coach, le groupe a besoin de repères en ce moment.", "Je sens que les jeunes me regardent, je veux être à la hauteur.", "Dites-moi ce que vous attendez de moi dans ce vestiaire."],
+    development: ["Je veux progresser, dites-moi sur quoi travailler.", "Je me sens prêt à jouer plus, qu'est-ce qu'il me manque ?", "Je bosse dur à l'entraînement, j'espère que ça se voit."],
+    conflict: ["Il y a des tensions avec un coéquipier, je préfère vous en parler.", "Ça ne passe pas avec certains, et ça commence à se voir.", "Je ne veux pas de problème, mais je ne vais pas me laisser faire."],
+    recadrage: ["Vous vouliez me voir, coach ?", "Il y a un souci ?", "Je vous écoute."],
+    promise: ["Vous m'aviez promis quelque chose, coach. Je ne vois rien venir.", "J'attends toujours ce que vous m'aviez dit.", "Je commence à douter de votre parole."],
+    checkin: ["Tout va bien, coach. Vous vouliez faire le point ?", "Je vous écoute, coach.", "On fait le point ?"],
+  };
+  const CHOICE_QUOTE = {
+    reassure: { intervention: "Tu restes un joueur important pour cette équipe.", prevention: "Je vois tes efforts, ne lâche rien : tu comptes pour nous.", integration: "Prends ton temps, tu as toute ta place ici.", leadership: "Le groupe a confiance en toi, et moi aussi.", development: "Tu progresses bien, continue comme ça.", conflict: "Je suis sûr que ça va s'arranger entre vous.", recadrage: "Ce n'est pas grave, on passe à autre chose.", promise: "Patience, ça va venir, je te le garantis.", checkin: "Je suis content de ce que tu montres." },
+    transparent: { intervention: "Pour l'instant, d'autres joueurs sont devant toi dans la rotation.", prevention: "Je vais être honnête : ta place n'est pas garantie en ce moment.", integration: "Les premières semaines sont dures, c'est normal, voilà ce que j'attends.", leadership: "Voilà franchement où en est le groupe, et ce que j'attends de toi.", development: "Tu n'es pas encore prêt pour plus de minutes, voilà pourquoi.", conflict: "Je sais ce qui se passe, et ça doit s'arrêter.", recadrage: "Ton comportement pose problème, voilà ce que j'ai vu.", promise: "Je n'ai pas pu tenir ce que j'avais dit, et je te dois une explication.", checkin: "Voilà ce qui va et ce qui doit progresser." },
+    objective: { intervention: "Montre-moi à l'entraînement que tu mérites davantage de minutes.", prevention: "Fixons-nous un objectif clair pour les prochaines semaines.", integration: "Ton objectif : trouver ta place dans le groupe d'ici un mois.", leadership: "J'ai besoin que tu tires les jeunes vers le haut.", development: "Voilà deux points précis à travailler ce mois-ci.", conflict: "Concentre-toi sur le terrain, c'est là que tout se règle.", recadrage: "Je veux voir un vrai changement d'ici la semaine prochaine.", promise: "Gagne ta place à l'entraînement, et elle sera à toi.", checkin: "On se fixe un objectif pour la suite ?" },
+    firm: { intervention: "La rotation est ma décision. Tu dois l'accepter.", prevention: "Je n'ai pas de temps pour les états d'âme.", integration: "Ici, on s'adapte vite ou on reste sur le banc.", leadership: "Un leader ne se plaint pas, il montre l'exemple.", development: "Travaille et tais-toi, les minutes viendront.", conflict: "Je ne tolérerai aucune division dans ce vestiaire.", recadrage: "C'est la dernière fois. La prochaine, il y aura des sanctions.", promise: "J'ai d'autres priorités pour l'équipe, c'est comme ça.", checkin: "Je veux plus d'implication, point." },
+  };
+  const PROMISE_QUOTE = { minutes: "Tu auras plus de minutes dans les 3 prochaines semaines.", starter: "Tu seras titulaire d'ici 3 semaines.", role: "Tu restes un pilier du cinq, je te le garantis.", extend: "On va prolonger ton contrat dans les prochaines semaines." };
+  const PROMISE_CHECK = { minutes: "Vérifiée automatiquement (minutes par match).", starter: "Vérifiée automatiquement (titularisations).", role: "Vérifiée automatiquement (place dans le cinq).", extend: "Vérifiée automatiquement (prolongation du contrat)." };
+  const REPLY = {
+    pos: ["D'accord, je vais vous le prouver.", "Merci coach, ça me fait du bien d'entendre ça.", "Compris. Vous pouvez compter sur moi.", "Ça me motive, je ne vous décevrai pas."],
+    neu: ["D'accord… on verra bien.", "Je vais y réfléchir.", "Si vous le dites.", "OK, j'ai compris."],
+    neg: ["Je m'attendais à autre chose de votre part.", "Vous ne m'écoutez pas, coach.", "Très bien. Je retiens.", "Ce n'est pas ce que j'avais besoin d'entendre."],
+  };
+  const OUT_LABEL = { pos: "accepte", neu: "reste prudent", neg: "le prend mal" };
+  function talkOptions(team, playerId, topic, opts = {}) {
+    const p = (team.players || []).find(x => sid(x.id) === sid(playerId)); if (!p || !TOPICS[topic]) return null;
+    const ctx = buildContext(team, opts); const inf = influenceOf(ctx, p); const sat = satisfactionOf(ctx, p);
+    const rnd = seeded(`${p.id}|${topic}|${num(team.week)}`);
+    const open = OPEN[topic][Math.floor(rnd() * OPEN[topic].length)];
+    const pk = promiseKindFor(team, p, topic);
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const hasOpen = c.promises.some(x => x.st === "open" && sid(x.p) === sid(p.id));
+    const choices = ["reassure", "transparent", "objective", "firm"].map((k, i) => ({ key: k, letter: "ABCD"[i], label: CHOICE_LABEL[k], quote: CHOICE_QUOTE[k][topic] }));
+    if (pk && !hasOpen && TALK_BASE[topic].promise != null) choices.push({ key: "promise", letter: "E", label: CHOICE_LABEL.promise, quote: PROMISE_QUOTE[pk], promise: pk, check: PROMISE_CHECK[pk] });
+    const last = lastTalkWith(c, sid(p.id));
+    return {
+      id: p.id, name: p.name, age: p.age, position: p.position, topic, topicLabel: TOPICS[topic].label, open, choices,
+      form: Math.round(num(p.form, 50)), trust: trustOf(team, p), trustLabel: trustWord(trustOf(team, p)),
+      minutes: Math.round(sat.minutes), role: sat.role, influence: inf.value, level: hierarchy(ctx).find(r => r.p === p).level,
+      tenure: tenureOf(ctx, p), lastTalkAt: last ? last.at : null,
+    };
+  }
+  function reactionScore(team, p, topic, choice, rnd, ctx) {
+    const base = num((TALK_BASE[topic] || {})[choice], 0);
+    const trust = (trustOf(team, p) - 50) / 50;
+    const comp = m01(p, "composure"), det = m01(p, "determination"), disc = m01(p, "discipline"), dec = m01(p, "decision"), foc = m01(p, "focus");
+    const inf = (influenceOf(ctx, p).value - 50) / 50;
+    const young = num(p.age, 25) <= 21 ? 0.15 : 0;
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const last = lastTalkWith(c, sid(p.id));
+    let s = base;
+    if (choice === "reassure") { s += -0.45 * comp + 0.5 * trust + young; if (last && last.c === "reassure" && num(last.at) > Date.now() - 60 * DAY_MS) s -= 0.6; }
+    if (choice === "transparent") s += 0.5 * disc + 0.3 * dec + 0.25 * comp;
+    if (choice === "objective") s += 0.9 * det + 0.2 * foc + young;
+    if (choice === "firm") { s += 0.6 * disc + 0.5 * comp - 0.45 * inf; if (num(p.form, 50) < 30) s -= 0.5; }
+    if (choice === "promise") { const cons = consistency(team).score; s += 0.6 * trust + (cons - 60) / 40 * 0.5; }
+    s += (rnd() - 0.5) * 0.7;
+    return s;
+  }
+  // Propagation : joueur → proches → groupe → vestiaire.
+  function closeOf(ctx, p) {
+    const id = sid(p.id);
+    return ctx.players.filter(q => q !== p && (num((ctx.relations[pairKey(id, q.id)] || {}).v) >= 25 || affinity(ctx, p, q).v >= 0.6));
+  }
+  function spread(team, ctx, p, sign, weight, opts = {}) {
+    const out = { close: [], group: null, chem: 0 };
+    if (!sign) return out;
+    const close = closeOf(ctx, p);
+    close.forEach(q => { const d = addForm(q, sign * Math.max(1, Math.round(2 * weight)), 25); if (d) out.close.push({ id: q.id, n: q.name, d }); });
+    if (sign < 0 && opts.trustHit) close.forEach(q => addTrust(team, q, -Math.round(2 * weight)));
+    const rows = hierarchy(ctx);
+    const groups = detectGroups(ctx, allPairs(ctx), rows);
+    const g = groups.find(gr => gr.ids.includes(sid(p.id)));
+    if (g && g.ids.length >= 3 && Math.abs(weight) >= 1) out.group = g.name;
+    const lvl = (rows.find(r => r.p === p) || {}).level;
+    if ((lvl === "leader" || lvl === "cadre" || (g && g.ids.length >= 3)) && weight >= 1) {
+      out.chem = sign;
+      if (typeof opts.applyChemistry === "function") opts.applyChemistry(sign);
+      else team.chemistry = clamp(num(team.chemistry, 50) + sign, CHEM_MIN, 100);
+    }
+    return out;
+  }
+  function setStance(team, p, channel, v, now, label) {
+    if (!v) return null;
+    const c = coachOf(team); const id = sid(p.id);
+    const st = c.stance[id] || {};
+    const other = st[channel === "pv" ? "pb" : "pv"];
+    let contra = null;
+    if (other && Math.sign(other.v) !== Math.sign(v) && now - num(other.at) < STANCE_WINDOW_MS) {
+      const betrayal = (channel === "pb" && v < 0) || (channel === "pv" && v < 0);
+      const txt = channel === "pb"
+        ? (v < 0 ? `En privé, vous comptiez sur ${p.name} ; en public, vous l'avez critiqué.` : `En privé, vous aviez été dur avec ${p.name} ; en public, vous le portez aux nues.`)
+        : (v < 0 ? `En public, vous aviez soutenu ${p.name} ; en privé, vous lui tenez un autre discours.` : `En public, vous aviez critiqué ${p.name} ; en privé, vous le rassurez.`);
+      addTrust(team, p, betrayal ? -12 : -5); addForm(p, betrayal ? -5 : -2, 25);
+      contra = { at: now, w: num(team.week), s: seasonOf(team), p: p.id, n: p.name, txt };
+      c.contra.unshift(contra); if (c.contra.length > CONTRA_MAX) c.contra.length = CONTRA_MAX;
+      pushLog(team, { t: "contradiction", p: p.id, n: p.name });
+    }
+    st[channel] = { v: Math.sign(v), at: now };
+    c.stance[id] = st;
+    return contra;
+  }
+  function makePromise(team, p, kind, src, now) {
+    const c = coachOf(team);
+    const ctx = buildContext(team);
+    const base = kind === "minutes" ? Math.round((ctx.minutes.get(sid(p.id)) || { avg: 0 }).avg) : kind === "extend" ? num(p.contractUntilSeason) : 0;
+    const pr = { id: `${sid(p.id)}-${now}`, p: p.id, n: p.name, k: kind, src, at: now, w: num(team.week), s: seasonOf(team), due: num(team.week) + PROMISE_WEEKS[kind], base, target: kind === "minutes" ? clamp(base + 6, 14, 34) : 0, ok: 0, st: "open" };
+    c.promises.unshift(pr);
+    // On garde toutes les promesses ouvertes, puis les plus récentes résolues.
+    const open = c.promises.filter(x => x.st === "open"), done = c.promises.filter(x => x.st !== "open");
+    c.promises = open.concat(done).slice(0, PROMISES_MAX);
+    pushLog(team, { t: src === "public" ? "promise-public" : "promise", p: p.id, n: p.name, m: promiseText(pr) });
+    return pr;
+  }
+  // Entretien : applique le choix du coach. opts : { now, applyChemistry }.
+  function talk(team, playerId, topic, choice, opts = {}) {
+    const now = num(opts.now, Date.now());
+    const p = (team.players || []).find(x => sid(x.id) === sid(playerId));
+    if (!p) return { ok: false, reason: "not-found" };
+    if (!TOPICS[topic] || TALK_BASE[topic][choice] == null) return { ok: false, reason: "bad-choice" };
+    const ctx = buildContext(team, { now });
+    const c = coachOf(team);
+    // Le sujet doit correspondre à la situation (sinon : point individuel).
+    const view = buildView(team, { now });
+    const row = hierarchy(ctx).find(r => r.p === p);
+    const rec = topicFor(ctx, row, view, c);
+    const allowed = rec ? rec.topic : "checkin";
+    if (topic !== allowed && topic !== "checkin") return { ok: false, reason: "topic" };
+    const urgent = !!(rec && rec.topic === topic && rec.urgent);
+    const av = availability(team, p, urgent, now, talkQuota(team, now));
+    if (!av.available) return { ok: false, reason: av.block, nextAt: av.nextAt };
+    const options = talkOptions(team, p.id, topic, { now });
+    const opt = options.choices.find(x => x.key === choice);
+    if (!opt) return { ok: false, reason: "bad-choice" };
+    const rnd = seeded(`${p.id}|${topic}|${choice}|${Math.floor(now / 60000)}`);
+    const score = reactionScore(team, p, topic, choice, rnd, ctx);
+    const out = score >= 0.6 ? "pos" : score <= -0.3 ? "neg" : "neu";
+    const w = urgent ? 1.2 : topic === "checkin" ? 0.6 : 1;
+    const formBefore = Math.round(num(p.form, 50)), trustBefore = trustOf(team, p);
+    if (out === "pos") { addForm(p, Math.round((topic === "intervention" || topic === "promise" ? 7 : 5) * w)); addTrust(team, p, Math.round(8 * w)); }
+    else if (out === "neu") { addForm(p, 1); addTrust(team, p, 1); }
+    else { addForm(p, -Math.round(6 * w), 15); addTrust(team, p, -Math.round((choice === "firm" ? 10 : 8) * w)); }
+    let promise = null;
+    if (choice === "promise") {
+      promise = makePromise(team, p, opt.promise, "private", now);
+      if (out !== "neg") addForm(p, out === "pos" ? 3 : 4);
+    }
+    // Promesse en retard : l'entretien la renégocie (transparence) ou l'enfonce.
+    if (topic === "promise") {
+      const pr = c.promises.find(x => x.st === "open" && sid(x.p) === sid(p.id));
+      if (pr && choice === "transparent" && out !== "neg") { pr.st = "broken"; pr.end = now; pr.soft = 1; addTrust(team, p, 4); }
+    }
+    // Demande de transfert : un entretien réussi la fait retirer.
+    let requestWithdrawn = false;
+    if (out === "pos" && p.transferRequestActive && topic === "intervention") {
+      p.transferRequestActive = false; p.transferRequestQuote = null; p.transferRequestDiscussed = false; p.weeksAtLowMotivation = 0; requestWithdrawn = true;
+    }
+    const contra = setStance(team, p, "pv", PRIVATE_STANCE[choice] || 0, now);
+    const sp = spread(team, ctx, p, out === "pos" && (topic === "intervention" || topic === "conflict" || topic === "leadership") ? 1 : out === "neg" ? -1 : 0, out === "neg" && (row.level === "leader" || row.level === "cadre") ? 1 : 0.5, { applyChemistry: opts.applyChemistry, trustHit: out === "neg" });
+    const entry = { at: now, w: num(team.week), s: seasonOf(team), p: p.id, n: p.name, topic, c: choice, out, ...(urgent ? { u: 1 } : {}) };
+    c.talks.unshift(entry); if (c.talks.length > TALKS_MAX) c.talks.length = TALKS_MAX;
+    pushLog(team, { t: out === "pos" ? "talk-ok" : out === "neg" ? "talk-ko" : "talk", p: p.id, n: p.name, m: TOPICS[topic].label });
+    const reply = REPLY[out][Math.floor(rnd() * REPLY[out].length)];
+    return {
+      ok: true, out, reply, outLabel: OUT_LABEL[out], topic, choice, urgent, requestWithdrawn,
+      form: { before: formBefore, after: Math.round(num(p.form, 50)) }, trust: { before: trustBefore, after: trustOf(team, p) },
+      spread: sp, promise, contradiction: contra,
+    };
+  }
+
+  // ---------- semaine : promesses, poids de la confiance ----------
+  function weeklyCoach(team, opts = {}) {
+    if (!team.locker || !team.locker.coach) return { resolved: [] };
+    const now = num(opts.now, Date.now());
+    const c = coachOf(team);
+    const ctx = buildContext(team, opts);
+    const resolved = [];
+    c.promises = c.promises.filter(pr => pr.st !== "open" || ctx.byId.has(sid(pr.p)));
+    c.promises.filter(pr => pr.st === "open").forEach(pr => {
+      const p = ctx.byId.get(sid(pr.p));
+      const seasonOver = seasonOf(team) !== pr.s;
+      const due = seasonOver || num(team.week) >= pr.due;
+      let kept = false, broken = false;
+      if (pr.k === "minutes") { const m = minutesSince(team, p, pr.w, pr.s, pr.at); if (m.games >= 2 && m.avg >= pr.target) kept = true; else if (due) broken = true; }
+      else if (pr.k === "starter") { if (roleOf(team, p) === "starter") pr.ok = num(pr.ok) + 1; if (pr.ok >= 2) kept = true; else if (due) broken = true; }
+      else if (pr.k === "role") { if (roleOf(team, p) !== "starter" && !isInjured(p, now)) broken = true; else if (due) kept = true; }
+      else if (pr.k === "extend") { if (num(p.contractUntilSeason) > pr.base) kept = true; else if (due) broken = true; }
+      if (!kept && !broken) return;
+      const pub = pr.src === "public" ? 1.5 : 1;
+      pr.st = kept ? "kept" : "broken"; pr.end = now;
+      if (kept) { addTrust(team, p, Math.round(10 * pub)); addForm(p, 5); }
+      else { addTrust(team, p, -Math.round(18 * pub)); addForm(p, -Math.round(10 * pub), 15); closeOf(ctx, p).forEach(q => addForm(q, -2, 25)); }
+      pushLog(team, { t: kept ? "promise-kept" : "promise-broken", p: p.id, n: p.name, m: promiseText(pr) });
+      resolved.push({ id: pr.id, p: p.id, kept });
+    });
+    // Une confiance très haute porte un peu le moral, une confiance rompue le mine.
+    ctx.players.forEach(p => {
+      const v = c.trust[sid(p.id)]; if (!Number.isFinite(v)) return;
+      if (v >= 75 && num(p.form, 50) < 60) addForm(p, 1);
+      else if (v <= 25 && num(p.form, 50) > 25) addForm(p, -1, 25);
+    });
+    Object.keys(c.trust).forEach(k => { if (!ctx.byId.has(k)) delete c.trust[k]; });
+    Object.keys(c.stance).forEach(k => { if (!ctx.byId.has(k)) delete c.stance[k]; });
+    return { resolved };
+  }
+
+  // ---------- interviews : question tirée du vestiaire (phase 5) ----------
+  const IVQ = {
+    leader: { text: "On dit que {x} est devenu le patron de ce vestiaire. Vous confirmez ?", opts: [["praise", "Le désigner comme leader", "{x} est clairement notre leader."], ["collective", "Mettre le groupe en avant", "Le groupe est plus important que les individualités."], ["pressure", "Lui mettre la pression", "Nous attendons encore davantage de {x}."]] },
+    tension: { text: "Plusieurs observateurs évoquent des tensions entre {x} et {y}. Que leur répondez-vous ?", opts: [["collective", "Défendre le groupe", "Il n'y a aucun problème, ce groupe est soudé."], ["back", "Soutenir {xs}", "{x} est un cadre, il aura son rôle."], ["pressure2", "Mettre la pression", "J'attends des deux qu'ils règlent ça entre eux."]] },
+    frustrated: { text: "{x} semble frustré par son temps de jeu. Que lui dites-vous ?", opts: [["promise", "Promettre publiquement", "{x} aura davantage de temps de jeu."], ["competition", "Parler de concurrence", "La concurrence est saine, à lui de saisir sa chance."], ["criticize", "Le critiquer", "Il doit encore progresser pour mériter plus."]] },
+    young: { text: "{x} fait beaucoup parler de lui. Quel avenir lui voyez-vous ?", opts: [["praise", "L'encenser", "{x} a un bel avenir ici."], ["patience", "Prôner la patience", "Il doit rester patient, son heure viendra."], ["pressure", "Le mettre au défi", "Il doit encore tout prouver."]] },
+    group: { text: "Comment décririez-vous l'état d'esprit de votre vestiaire ?", opts: [["collective", "Mettre le groupe en avant", "Le groupe est plus important que les individualités."], ["praise", "Saluer {x}", "{x} montre l'exemple à tout le monde."], ["pressure", "Secouer le groupe", "Certains doivent se remettre en question."]] },
+  };
+  function interviewQuestion(team, opts = {}) {
+    if (!team || !(team.players || []).length) return null;
+    const ctx = buildContext(team, opts);
+    const view = buildView(team, opts);
+    const byId = new Map(view.players.map(p => [sid(p.id), p]));
+    let kind = "group", x = null, y = null;
+    const ten = view.relations.find(r => r.kind === "tension");
+    const frus = view.players.filter(p => (p.mood === "frustrated" || p.mood === "unhappy") && p.influence >= 35).sort((a, b) => b.influence - a.influence)[0];
+    const leader = view.players.find(p => p.level === "leader");
+    const young = view.players.filter(p => num(p.age, 25) <= 22 && p.level !== "marginal").sort((a, b) => (ctx.rank.get(sid(a.id)) || 99) - (ctx.rank.get(sid(b.id)) || 99))[0];
+    if (ten) { kind = "tension"; x = byId.get(sid(ten.a)); y = byId.get(sid(ten.b)); if (x && y && x.influence < y.influence) { const t = x; x = y; y = t; } }
+    else if (frus) { kind = "frustrated"; x = frus; }
+    else if (leader && (num(team.week) + seasonOf(team)) % 2 === 0) { kind = "leader"; x = leader; }
+    else if (young && (ctx.rank.get(sid(young.id)) || 99) <= 8) { kind = "young"; x = young; }
+    else { kind = "group"; x = leader || view.players[0]; }
+    if (!x) return null;
+    const fill = s => s.replace(/\{xs\}/g, lastNameOf(x.name)).replace(/\{x\}/g, x.name).replace(/\{y\}/g, y ? y.name : "");
+    const def = IVQ[kind];
+    return { kind, pid: x.id, pid2: y ? y.id : null, n: x.name, m: y ? y.name : null, text: fill(def.text), options: def.opts.map(([key, label, quote], i) => ({ key, letter: "ABC"[i], label: fill(label), quote: fill(quote) })) };
+  }
+  function lastNameOf(name) { const s = String(name || "").split(" "); return s.length > 1 ? s.slice(1).join(" ") : s[0]; }
+  // Réaction à une déclaration publique. ans : { kind, pid, pid2, choice }.
+  // meta : { milestone, label, now, applyChemistry }.
+  function applyStatement(team, ans, meta = {}) {
+    if (!ans || !IVQ[ans.kind]) return null;
+    const def = IVQ[ans.kind];
+    const opt = def.opts.find(o => o[0] === ans.choice); if (!opt) return null;
+    const now = num(meta.now, Date.now());
+    const ctx = buildContext(team, { now });
+    const x = ctx.byId.get(sid(ans.pid)); if (!x) return null;
+    const y = ans.pid2 != null ? ctx.byId.get(sid(ans.pid2)) : null;
+    if (ans.kind === "tension" && !y) return null;
+    const wgt = IMPORTANCE[meta.milestone] || 1;
+    const rows = hierarchy(ctx);
+    const levelOf = p => (rows.find(r => r.p === p) || {}).level;
+    const infOf = p => influenceOf(ctx, p).value;
+    const rx = []; // réactions lisibles
+    const note = (p, txt) => rx.push({ id: p.id, n: p.name, txt });
+    const resilient = p => m01(p, "determination") + m01(p, "composure") > 0.4;
+    const praise = (p, k = 1) => { addForm(p, Math.round(5 * wgt * k)); addTrust(team, p, Math.round(6 * wgt * k)); note(p, "confiance ↑"); setStance(team, p, "pb", 1, now); };
+    const criticize = (p, k = 1) => {
+      if (resilient(p)) { addForm(p, 1); addTrust(team, p, -2); note(p, "piqué au vif, veut prouver"); }
+      else { addForm(p, -Math.round(5 * wgt * k), 15); addTrust(team, p, -Math.round(7 * wgt * k)); note(p, "touché, confiance ↓"); }
+      setStance(team, p, "pb", -1, now);
+    };
+    const jealousy = target => {
+      rows.filter(r => r.p !== target && (r.level === "leader" || r.level === "cadre")).forEach(r => {
+        if (m01(r.p, "leadership") > 0.2 && infOf(r.p) >= infOf(target) * 0.85) {
+          addForm(r.p, -3, 25); addTrust(team, r.p, -2); note(r.p, `${r.level === "leader" ? "autre leader" : "cadre"}, un peu frustré`);
+          const l = ensure(team); const k = pairKey(r.p.id, target.id); const rel = l.relations[k] || { v: 0, since: num(team.week), why: "déclaration du coach" }; rel.v = clamp(rel.v - 6, -100, 100); l.relations[k] = rel;
+        } else if (r.level === "leader" || r.level === "cadre") note(r.p, "respecte ce choix");
+      });
+      ctx.players.filter(q => q !== target && q.position === target.position && roleOf(team, q) !== "starter" && num(q.form, 50) < 55).slice(0, 1).forEach(q => { addForm(q, -2, 25); note(q, "concurrent, se sent sous-estimé"); });
+    };
+    const proches = (p, sign) => { const cl = closeOf(ctx, p).filter(q => q !== x && q !== y); if (!cl.length) return; cl.forEach(q => { addForm(q, sign * 2, 25); if (sign < 0) addTrust(team, q, -2); }); rx.push({ id: null, n: `${cl.length} proche${cl.length > 1 ? "s" : ""} de ${p.name}`, txt: sign > 0 ? "fiers pour lui" : "prennent sa défense" }); };
+    let imp = "neu", chem = 0, promise = null;
+    const choice = ans.choice;
+    if (choice === "praise") { praise(x); jealousy(x); proches(x, 1); imp = "pos"; }
+    else if (choice === "pressure") {
+      if (ans.kind === "group") { ctx.players.forEach(p => { if (resilient(p)) addForm(p, 1); else addForm(p, -2, 25); }); rx.push({ id: null, n: "Le groupe", txt: "les plus solides réagissent, les autres doutent" }); imp = "neg"; }
+      else { criticize(x, 0.8); proches(x, -1); imp = "neg"; }
+    }
+    else if (choice === "collective") {
+      const tensionNow = ans.kind === "tension";
+      chem = tensionNow ? 0 : 1;
+      if (tensionNow) { [x, y].forEach(p => { if (num(p.form, 50) < 45) { addForm(p, -2, 25); note(p, "se sent ignoré"); } }); }
+      rx.push({ id: null, n: "Le vestiaire", txt: tensionNow ? "le message passe à moitié" : "cohésion ↑" }); imp = "col";
+    }
+    else if (choice === "back") { praise(x); criticize(y, 1); proches(y, -1); imp = "neg"; }
+    else if (choice === "pressure2") { criticize(x, 0.6); criticize(y, 0.6); imp = "neg"; }
+    else if (choice === "promise") { addForm(x, Math.round(6 * wgt)); addTrust(team, x, Math.round(5 * wgt)); note(x, "y croit, confiance ↑"); setStance(team, x, "pb", 1, now); promise = makePromise(team, x, "minutes", "public", now); imp = "pos"; }
+    else if (choice === "competition") { addForm(x, -2, 25); note(x, "attendait un geste"); setStance(team, x, "pb", -1, now); imp = "neu"; }
+    else if (choice === "criticize") { criticize(x); proches(x, -1); imp = "neg"; }
+    else if (choice === "patience") { addForm(x, -1, 25); note(x, "patiente"); imp = "neu"; }
+    // Groupe et vestiaire : une critique d'un joueur bien entouré se propage.
+    if (imp === "neg" && choice !== "pressure2") {
+      const target = choice === "back" ? y : x;
+      const groups = detectGroups(ctx, allPairs(ctx), rows);
+      const g = groups.find(gr => gr.ids.includes(sid(target.id)));
+      if (g && g.ids.length >= 3) { g.ids.forEach(id => { const q = ctx.byId.get(id); if (q && q !== target) addForm(q, -1, 25); }); chem = -1; rx.push({ id: null, n: g.name, txt: "le groupe fait bloc, tension ↑" }); }
+    }
+    if (chem) { if (typeof meta.applyChemistry === "function") meta.applyChemistry(chem); else team.chemistry = clamp(num(team.chemistry, 50) + chem, CHEM_MIN, 100); }
+    const c = coachOf(team);
+    const contras = c.contra.filter(k => num(k.at) === now);
+    const quote = opt[2].replace(/\{x\}/g, x.name).replace(/\{y\}/g, y ? y.name : "");
+    const fx = rx.slice(0, 3).map(r => `${r.id != null ? lastNameOf(r.n) : r.n} ${r.txt}`).join(" · ") + (contras.length ? " · contradiction relevée" : "");
+    const entry = { at: now, w: num(team.week), s: seasonOf(team), k: meta.milestone || "", lbl: meta.label || "Interview", q: quote, p: x.id, n: x.name, imp, fx };
+    c.comms.unshift(entry); if (c.comms.length > COMMS_MAX) c.comms.length = COMMS_MAX;
+    pushLog(team, { t: imp === "pos" ? "statement-up" : imp === "neg" ? "statement-down" : "statement", p: x.id, n: x.name });
+    return { ok: true, quote, imp, reactions: rx, chem, promise, contradictions: contras };
+  }
+  // Interview de jalon sans question de vestiaire : seulement mémorisée.
+  function recordComm(team, meta = {}) {
+    const c = coachOf(team);
+    const q = String(meta.quote || "").slice(0, 200); if (!q) return;
+    c.comms.unshift({ at: num(meta.now, Date.now()), w: num(team.week), s: seasonOf(team), k: meta.milestone || "", lbl: meta.label || "Interview", q, imp: meta.chem > 0 ? "col" : meta.chem < 0 ? "neg" : "neu", fx: meta.chem > 0 ? "Cohésion ↑" : meta.chem < 0 ? "Cohésion ↓" : "" });
+    if (c.comms.length > COMMS_MAX) c.comms.length = COMMS_MAX;
+  }
+  // Vue de l'onglet Entretiens.
+  function coachView(team, opts = {}) {
+    const now = num(opts.now, Date.now());
+    const c = (team.locker && team.locker.coach) || emptyCoach();
+    const rec = recommendTalks(team, opts);
+    const byId = new Map((team.players || []).map(p => [sid(p.id), p]));
+    const promises = c.promises.filter(pr => pr.st === "open" || now - num(pr.end) < 21 * DAY_MS).slice(0, 6).map(pr => {
+      const p = byId.get(sid(pr.p)); const g = pr.st === "open" ? promiseProgress(team, pr, p) : { late: false, txt: "" };
+      return { ...pr, what: promiseText(pr), progress: g.txt, status: pr.st === "open" ? (g.late ? "late" : "open") : pr.st, weeksLeft: Math.max(0, pr.due - num(team.week)) };
+    });
+    return {
+      quota: rec.quota, recommended: rec.list, consistency: consistency(team), promises,
+      comms: c.comms.slice(0, 6), talks: c.talks.slice(0, 8), contra: c.contra.slice(0, 3),
+      others: (team.players || []).filter(p => !rec.list.some(r => sid(r.id) === sid(p.id))).map(p => ({ id: p.id, name: p.name, ...availability(team, p, false, now, rec.quota) })),
+    };
+  }
 
   const api = {
     HISTORY_MAX, LOG_MAX, RELATIONS_MAX, RELATION_KEEP, LEVELS, MOOD_LEVELS, STATE_LEVELS, EVENT_TONE,
@@ -695,6 +1224,8 @@
     emptyLocker, sanitize, ensure, serialize, pushLog,
     buildContext, influenceOf, satisfactionOf, hierarchy, affinity, detectGroups, allPairs,
     moodOf, stateOf, buildView, weeklyUpdate, onResult, noteRoster, eventText, pairKey,
+    TOPICS, CHOICE_LABEL, TALKS_PER_WEEK, TALK_COOLDOWN_MS, emptyCoach, sanitizeCoach, coachOf, trustOf, trustWord, consistency,
+    recommendTalks, talkOptions, talk, weeklyCoach, interviewQuestion, applyStatement, recordComm, coachView,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.HM_VESTIAIRE = api;

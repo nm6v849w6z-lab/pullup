@@ -1169,7 +1169,11 @@ function respondToInterview(team, teamIndex, league, body, now) {
   if (!toneList.length || toneList.some(t => typeof t !== "string" || !MILESTONE_INTERVIEW_TONES[t])) {
     return fail(`Ton inconnu, attendu parmi : ${Object.keys(MILESTONE_INTERVIEW_TONES).join(", ")}.`);
   }
-  const result = team.resolveInterview(id, tones, now);
+  // Question tirée du vestiaire (facultative) : { kind, pid, pid2, choice }.
+  const L = body.locker && typeof body.locker === "object" ? body.locker : null;
+  const lockerAns = L && typeof L.kind === "string" && typeof L.choice === "string" && (typeof L.pid === "number" || typeof L.pid === "string")
+    ? { kind: L.kind.slice(0, 20), choice: L.choice.slice(0, 20), pid: L.pid, pid2: typeof L.pid2 === "number" || typeof L.pid2 === "string" ? L.pid2 : null } : null;
+  const result = team.resolveInterview(id, tones, now, lockerAns);
   // "délai dépassé" générique (retour utilisateur, 2026-09 : les interviews
   // de jalon (mi-saison/fin de saison régulière/demi-finale de PO)
   // utilisent désormais un délai de 3 jours plutôt que 2h, voir
@@ -1197,6 +1201,21 @@ function skipInterview(team, teamIndex, league, body, now) {
 // "discuter", chance de succès non garantie (voir Team.
 // discussTransferRequest). Vendre le joueur concerné n'a besoin d'aucune
 // action dédiée : c'est déjà listPlayer ci-dessus (marché des transferts).
+// Entretien individuel (Vestiaire > Entretiens, 2026-10-08) : moteur partagé
+// assets/vestiaire.js (talk) ; le serveur fait autorité et renvoie le
+// vestiaire et le moral à jour (la réaction touche aussi les proches).
+const Vestiaire = require("../assets/vestiaire.js");
+function lockerTalk(team, teamIndex, league, body, now) {
+  const b = body || {};
+  if ((typeof b.playerId !== "number" && typeof b.playerId !== "string") || typeof b.topic !== "string" || typeof b.choice !== "string") return fail("playerId, topic et choice requis.");
+  const res = Vestiaire.talk(team, b.playerId, b.topic, b.choice, { now, applyChemistry: d => team.applyChemistryDelta(d) });
+  if (!res.ok) {
+    const reasons = { "not-found": "Joueur introuvable dans cet effectif.", "bad-choice": "Choix inconnu.", topic: "Ce sujet ne correspond plus à sa situation.", cooldown: "Vous lui avez parlé récemment : attendez un peu.", quota: "Vous avez déjà eu vos entretiens de la semaine." };
+    return fail(reasons[res.reason] || "Entretien impossible.");
+  }
+  return { ok: true, result: res, locker: Vestiaire.serialize(team), chemistry: team.chemistry,
+    players: team.players.map(p => ({ id: p.id, form: p.form, transferRequestActive: !!p.transferRequestActive })) };
+}
 function discussTransferRequest(team, teamIndex, league, body, now) {
   if (!body || (typeof body.playerId !== "number" && typeof body.playerId !== "string") || body.playerId === "") {
     return fail("playerId requis.");
@@ -1679,6 +1698,7 @@ module.exports = {
   // Demande de transfert (voir le grand commentaire au-dessus de
   // TRANSFER_REQUEST_MOTIVATION_THRESHOLD côté moteur) :
   discussTransferRequest,
+  lockerTalk,
   talkRetirement, offerContractExtension, respondToRaiseRequest, releasePlayer, negotiateTransfer,
   setTeamJersey, setTeamJerseyPattern, setTeamJerseyTwoTone,
   inductHallOfFame, setRetiredJersey,

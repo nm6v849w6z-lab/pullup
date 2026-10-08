@@ -18680,7 +18680,7 @@ class Team {
   // moyenné sur les tons choisis (voir engine.js pour le commentaire
   // détaillé). `entry.opponentName` peut être `null` ("debut-saison"
   // d'avant-saison, voir queueSeasonPreviewInterview).
-  resolveInterview(id, tones, now = Date.now()) {
+  resolveInterview(id, tones, now = Date.now(), lockerAns = null) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
@@ -18712,10 +18712,18 @@ class Team {
     this.applyChemistryDelta(chemistryDelta);
     // Dynamique de groupe : intervention du coach journalisée (assets/vestiaire.js).
     if (vestiaireApi()) vestiaireApi().pushLog(this, { t: chemistryDelta > 0 ? "interview-up" : chemistryDelta < 0 ? "interview-down" : "interview", x: chemistryDelta });
+    // Entretiens & communication (2026-10-08) : la déclaration est mémorisée ;
+    // la question tirée du vestiaire (lockerAns) fait réagir chaque joueur.
+    let statement = null;
+    if (vestiaireApi()) {
+      const V = vestiaireApi();
+      V.recordComm(this, { quote, milestone: entry.milestone, label: milestoneLabel, now, chem: chemistryDelta });
+      if (lockerAns) statement = V.applyStatement(this, lockerAns, { milestone: entry.milestone, label: milestoneLabel, now, applyChemistry: d => this.applyChemistryDelta(d) });
+    }
     this.pendingInterviews.splice(idx, 1);
     // Fil d'actualité (voir MIROIR EXACT engine.js).
     if (this.feed) handleGameEvent(this.feed, { type: "interview_done", interviewId: entry.id }, { clubName: this.name });
-    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes, statement };
   }
 
   // Interview d'avant-saison (voir engine.js, miroir identique, correctif
@@ -29588,9 +29596,9 @@ function syncReleaseYouthPlayerToServer(playerId) {
 // pour chacune [des questions]") : `tones` (tableau, un ton par question)
 // envoyé sous cette clé au serveur, voir server/actions.js:respondToInterview
 // qui accepte aussi `tone` (chaîne unique) en compatibilité ascendante.
-function syncInterviewToServer(id, tones) {
+function syncInterviewToServer(id, tones, locker = null) {
   try {
-    fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tones }) })
+    fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tones, locker }) })
       .then(res => { if (!res.ok) console.warn("Réponse à l'interview refusée côté serveur.", res.status); })
       .catch(e => console.warn("Interview : serveur indisponible :", e));
   } catch (e) {
@@ -30585,6 +30593,10 @@ function showInterviewModal(entry) {
   const tones = Object.keys(MILESTONE_INTERVIEW_TONES);
   const questionCount = (MILESTONE_INTERVIEW_QUESTIONS[entry.milestone] || []).length || 2;
   let selectedTones = Array(questionCount).fill("Mesuré");
+  // Question tirée du vestiaire (2026-10-08, assets/vestiaire*.js), facultative.
+  const VU = window.HM_VESTIAIRE_UI, ivq = VU && window.HM_VESTIAIRE.interviewQuestion ? window.HM_VESTIAIRE.interviewQuestion(teamA, { now: Date.now() }) : null;
+  let ivChoice = null;
+  const ivqHtml = () => (ivq ? VU.interviewBlock(ivq, ivChoice) : "");
 
   const overlay = document.createElement("div");
   overlay.className = "upgrade-confirm-overlay interview-modal-overlay";
@@ -30607,7 +30619,7 @@ function showInterviewModal(entry) {
   overlay.innerHTML = `<div class="upgrade-confirm-box interview-modal-box">` +
     `<h3>🎙️ ${escapeHtml(milestoneLabel)}</h3>` +
     `<p class="interview-modal-intro">Un journaliste vous demande une réaction sur ce moment clé de la saison. Choisissez le ton de chaque réponse séparément : votre réponse influencera aussi bien l'humeur des supporters que la forme des joueurs concernés.</p>` +
-    `<div id="interviewModalQa">${qaHtml()}</div>` +
+    `<div id="interviewModalQa">${qaHtml()}</div><div id="interviewModalIvq">${ivqHtml()}</div>` +
     `<div class="interview-modal-actions">` +
     `<button type="button" class="interview-modal-later-btn" id="interviewModalLater">Plus tard</button>` +
     `<button type="button" class="interview-modal-skip-btn" id="interviewModalSkip">Sans commentaire</button>` +
@@ -30621,6 +30633,8 @@ function showInterviewModal(entry) {
     // qaHtml() régénère tous ces boutons à chaque changement de ton (voir
     // plus bas), la délégation évite d'avoir à ré-attacher un listener à
     // chaque bouton fraîchement recréé.
+    const iv = e.target.closest("[data-ivq]");
+    if (iv) { ivChoice = ivChoice === iv.dataset.ivq ? null : iv.dataset.ivq; document.getElementById("interviewModalIvq").innerHTML = ivqHtml(); return; }
     const toneBtn = e.target.closest("[data-interview-preview-tone]");
     if (!toneBtn) return;
     const qIndex = Number(toneBtn.dataset.interviewPreviewQ);
@@ -30637,9 +30651,10 @@ function showInterviewModal(entry) {
     finishInterviewTrigger(entry.id, null);
   });
   document.getElementById("interviewModalValidate").addEventListener("click", () => {
-    const result = teamA.resolveInterview(entry.id, selectedTones);
+    const ans = ivq && ivChoice ? { kind: ivq.kind, pid: ivq.pid, pid2: ivq.pid2, choice: ivChoice } : null;
+    const result = teamA.resolveInterview(entry.id, selectedTones, Date.now(), ans);
     saveMyTeam();
-    if (result && result.ok) syncInterviewToServer(entry.id, selectedTones);
+    if (result && result.ok) syncInterviewToServer(entry.id, selectedTones, ans);
     catchupInterviewIdsShown = catchupInterviewIdsShown.filter(x => x !== entry.id);
     closeInterviewModal();
     finishInterviewTrigger(entry.id, result);
