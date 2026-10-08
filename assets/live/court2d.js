@@ -133,7 +133,9 @@ export function createCourt2D(host, opts = {}) {
   const logoG = el("g", { class: "c2d-logo", opacity: ".8" }, floor);
   const adTop = el("text", { x: "470", y: "50", class: "c2d-ad", "text-anchor": "middle" }, floor);
   const adBot = el("text", { x: "470", y: "472", class: "c2d-ad", "text-anchor": "middle" }, floor);
-  const missG = el("g", { class: "c2d-misses" }, floor);   // croix des tirs manqués du quart-temps
+  // Tirs manqués : plus aucune marque sur le terrain (retour utilisateur
+  // 2026-10-08 : la carte des tirs les montre déjà) — ni croix, ni onde
+  // rouge au cercle, ni texte ; seule l'action est jouée (tir, rebond).
 
   // Parquet : bois + bordeaux par défaut, ou parquet du club qui reçoit
   // (state.courtStyle : floor, grain, line, paint — Premium).
@@ -188,7 +190,7 @@ export function createCourt2D(host, opts = {}) {
   let logoKey = null, clipSeq = 0, colors = opts.colors || ["#F26B1D", "#3B8FE0"];
   let plan = null;                 // possession en cours (voir buildPlan)
   let possStart = now();           // début de la possession courante (chrono des 24 s)
-  let medalsKey = null, missKey = null, lastDrift = 0;
+  let medalsKey = null, lastDrift = 0;
   // Audit possession (2026-10-07) : dernier événement joué, compteurs du
   // garde-fou (voir giveBall / tick) lus par les tests via debug().
   let lastPlayed = null;
@@ -348,9 +350,12 @@ export function createCourt2D(host, opts = {}) {
     sp.stat.textContent = text; sp.stat.setAttribute("class", "c2d-stat " + cls); sp.stat.setAttribute("opacity", "1");
     later(1600, () => sp.stat.setAttribute("opacity", "0"));
   }
+  // Onde au cercle sur un PANIER seulement (un tir manqué n'a plus de
+  // signal visuel propre, voir plus haut).
   function rimFx(team, made) {
+    if (!made) return;
     const r = RIM[team];
-    const c = el("circle", { cx: r.x * PX, cy: r.y * PX, r: "10", fill: "none", stroke: made ? "#5fd6ae" : "#FF7A7F", "stroke-width": "3", class: "c2d-wave" }, fxG);
+    const c = el("circle", { cx: r.x * PX, cy: r.y * PX, r: "10", fill: "none", stroke: "#5fd6ae", "stroke-width": "3", class: "c2d-wave" }, fxG);
     later(900, () => c.remove());
   }
   function startPossession(t) { possession = t; possStart = now(); }
@@ -635,14 +640,12 @@ export function createCourt2D(host, opts = {}) {
             // Contre : le ballon part du contre et reste LIBRE ; le rebond
             // (événement suivant du moteur) dira qui le récupère.
             const bl = spriteOf(a.blocker); flash(bl, "CONTRE", "good"); jump(bl, 1.2);
-            addMiss(spot, offT);
             const dir = rim.x > 47 ? -1 : 1;
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5);
           } else if (fouledShot) {
             // Faute sur le tir : pas de rebond, le tireur va aux lancers.
             fly({ x: rim.x + (rim.x > 47 ? -2 : 2), y: rim.y + 1.5 }, 300, 1.5, () => { if (shooter && shooter.team === nextT) flyTo(shooter, 380, 2, () => giveBall(shooter)); });
           } else {
-            if (!afterBlock) addMiss(spot, offT);
             // Rebond : le ballon rebondit sur le cercle (ou part du contre)
             // puis retombe ; le vrai rebondeur y va, les autres proches
             // s'approchent (lutte), et il saute pour le capter.
@@ -756,7 +759,6 @@ export function createCourt2D(host, opts = {}) {
       }
       case "quarterStart": {
         for (const sp of sprites.values()) sp.busy = false;
-        missG.innerHTML = ""; missKey = null;
         sceneUntil = 0;
         if (e.quarter === 1) {
           // Entrée des joueurs : du banc vers le rond central, l'entre-deux suit.
@@ -791,25 +793,6 @@ export function createCourt2D(host, opts = {}) {
       default: break;
     }
     if (e.text) say(e.text);
-  }
-
-  // Croix des tirs manqués du quart-temps (comme la référence).
-  function addMiss(spot, team) {
-    const x = spot.x * PX, y = spot.y * PX;
-    const d = `M${x - 5} ${y - 5}l10 10M${x + 5} ${y - 5}l-10 10`;
-    const g = el("g", { class: "c2d-miss", opacity: ".9" }, missG);
-    el("path", { d, stroke: "rgba(0,0,0,.55)", "stroke-width": "4.5", "stroke-linecap": "round" }, g);   // liseré : lisible sur tout parquet
-    el("path", { d, stroke: colors[team], "stroke-width": "2.5", "stroke-linecap": "round" }, g);
-  }
-  function syncMisses() {
-    // À la (re)connexion : toutes les croix du quart-temps en cours.
-    const q = S.quarter;
-    const list = (S.shots || []).filter(s => !s.made && s.quarter === q);
-    const key = q + ":" + list.length;
-    if (key === missKey) return;
-    missKey = key;
-    missG.innerHTML = "";
-    list.forEach(s => addMiss(s, s.team));
   }
 
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
@@ -936,7 +919,6 @@ export function createCourt2D(host, opts = {}) {
       syncRoster();
       enforcePossession(true);
       syncMedals();
-      syncMisses();
       const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui

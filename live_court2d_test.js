@@ -124,9 +124,14 @@ const S = {
   S.events.push({ id: 4, type: "quote", kind: "quote", team: null, quarter: 1, clock: 540, text: "Quel début de match !", speaker: "Nicolas Cosset" });
   court.update(S, [3, 4]);
   await sleep(200);
-  if (host.querySelectorAll(".c2d-miss").length !== 1) fail("un tir manqué doit laisser une croix sur le terrain.");
+  // Retour utilisateur 2026-10-08 : plus aucune marque de tir manqué sur le
+  // terrain (la carte des tirs les montre) — ni croix, ni onde rouge, ni texte.
+  if (host.querySelectorAll(".c2d-miss").length !== 0) fail("un tir manqué ne doit laisser aucune croix sur le terrain.");
+  if ([...host.querySelectorAll(".c2d-wave")].some(w => w.getAttribute("stroke") !== "#5fd6ae")) fail("aucune onde rouge au cercle sur un tir manqué.");
+  if (/RAT|MANQU/i.test([...host.querySelectorAll(".c2d-stat")].map(e => e.textContent).join("|"))) fail("aucun texte « raté » sur les joueurs.");
+  if (S.shots.filter(s => !s.made).length !== 1) fail("la donnée du tir manqué reste dans shots[] pour la carte des tirs.");
   if (/Quel début/.test(host.querySelector(".c2d-caption").textContent)) fail("un commentaire du présentateur ne doit pas remplacer la légende de l'action.");
-  console.log("✅ Croix du tir manqué ; commentaire du présentateur réservé au fil.");
+  console.log("✅ Tir manqué : aucune marque sur le terrain (carte des tirs seule) ; commentaire du présentateur réservé au fil.");
   await sleep(2600);
 
   // Lancer franc marqué joué à l'avance (plan calé sur airAt) : la remise en

@@ -30,6 +30,9 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
      `POST /api/admin/beta-feature`, ou retirer le `court2d:` conditionnel
      dans hmLiveReset / spectateMountLiveView). Retrait : même appel avec
      `"enabled": false`.
+  2026-10-08 : plus aucune marque de tir manqué sur le terrain 2D (croix,
+  onde rouge, texte) — la carte des tirs reste la source ; `addMiss` /
+  `syncMisses` retirés de court2d, `rimFx` ne joue que sur panier.
   Détails livrés : `liveState` centralisé ; contexte de possession + delta
   de stats sur chaque événement moteur (`MatchEngine.statsDelta`) ; feuille
   en direct par deltas ; chrono des 24 s source unique ; court2d guidé par
