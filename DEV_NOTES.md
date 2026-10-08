@@ -20,6 +20,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-08) — Entretiens et communication du coach
+  (dynamique de groupe, phases 1 à 5, maquette « talks » validée)**. Un
+  seul système dans `assets/vestiaire.js` (section ENTRETIENS ET
+  COMMUNICATION) : `Team.locker.coach` = confiance joueur ↔ coach, historique
+  des discussions, communication publique, promesses (privées ET publiques,
+  même mécanisme, vérifiées chaque semaine par `weeklyCoach` dans
+  `weeklyUpdate` sur les vraies minutes / titularisations / prolongations),
+  positions privée / publique par joueur → contradictions, indicateur de
+  cohérence du coach. Réactions déterministes selon la personnalité (les 8
+  caractéristiques mentales), propagation joueur → proches → groupe →
+  vestiaire (`spread`). Entretiens recommandés (`recommendTalks` : crise,
+  demande de transfert, promesse en retard = urgences hors quota ; ~12 j par
+  joueur ; 3 par semaine). Interviews de jalon : question tirée du vestiaire
+  (`interviewQuestion` : tension, joueur frustré, leader, jeune, groupe ;
+  facultative) → `applyStatement` ; chaque réponse est mémorisée
+  (`recordComm`). Serveur : `POST /api/locker/talk` (actions.lockerTalk, fait
+  autorité), `/api/media/interview` accepte `locker`. UI : onglet
+  « Entretiens » du Vestiaire (assets/vestiaire-ui.js, club seulement),
+  boîte d'entretien en bottom sheet sur téléphone, bloc de la question dans
+  le popup d'interview. Tests : vestiaire_talks_test.js.
+  RESTE : traductions (en / it) des nouveaux libellés ; équilibrage après
+  quelques semaines de jeu réel (poids des réactions, seuils).
+
 - **🔵 EN COURS (2026-10-08) — Terrain 2D (rendu) puis mise en scène du
   live (coach, entrée des joueurs, shows)**. Décisions utilisateur : bêta
   `liveShows` par club (Gotham Knights + BC Dia, comme `live2d`) ;

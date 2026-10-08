@@ -189,6 +189,24 @@
       ".vs-root.vs-club .vs-eyebrow,.vs-root.vs-club .vs-table th{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-dim)}",
       ".vs-root.vs-club .vs-state{font-size:32px;letter-spacing:-.01em}.vs-root.vs-club .vs-big{font-variant-numeric:tabular-nums;letter-spacing:-.01em}",
       "@media (max-width:720px){.vs-root.vs-club .vs-head h1{font-size:32px}}",
+      // Entretiens et communication (2026-10-08).
+      ".vs-tk{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-top:1px solid var(--vs-line)}.vs-tk:first-of-type{border-top:0}",
+      ".vs-tk>.vs-dot{margin-top:7px;width:10px;height:10px}.vs-tk>div{flex:1;min-width:0}.vs-tk strong{font-size:15px}",
+      ".vs-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;vertical-align:1px}",
+      ".vs-tk .vs-text{font-size:13px;margin-top:3px}",
+      ".vs-btn.vs-go{background:var(--vs-acc);border-color:var(--vs-acc);color:#1A1205;font-weight:800}.vs-btn[disabled]{opacity:.55;cursor:default}",
+      ".vs-cons{display:flex;align-items:baseline;gap:8px}.vs-cons b{font-size:34px}",
+      ".vs-gauge{height:8px;border-radius:999px;background:var(--vs-in);overflow:hidden}.vs-gauge>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#F87171,#FBBF24 45%,#34D399)}",
+      ".vs-mini{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px solid var(--vs-line);font-size:14px}.vs-mini:first-of-type{border-top:0}.vs-mini small{color:var(--vs-faint);font-size:12px}",
+      ".vs-mini .vs-row{align-items:flex-start}",
+      ".vs-hist{display:grid;grid-template-columns:90px 1fr auto;gap:10px;padding:8px 0;border-top:1px solid var(--vs-line);font-size:13px}.vs-hist:first-of-type{border-top:0}",
+      ".vs-talk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.vs-talk-kpis>div{background:var(--vs-in);border-radius:10px;padding:8px 10px}.vs-talk-kpis small{display:block;font-size:11px;color:var(--vs-faint)}.vs-talk-kpis b{font-size:16px}",
+      ".vs-quote{margin:0;padding:10px 14px;border-left:3px solid var(--vs-acc);background:var(--vs-in);border-radius:8px;font-style:italic;font-size:14px}",
+      ".vs-choice{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:11px 12px;border-radius:12px;border:1px solid var(--vs-line);background:var(--vs-card);color:var(--ink);font:inherit;cursor:pointer}",
+      ".vs-choice:hover,.vs-choice.on{border-color:var(--vs-acc)}.vs-choice>span{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:var(--vs-in);color:var(--vs-acc);font-weight:800}",
+      ".vs-choice strong{display:block;font-size:14px}.vs-choice small{display:block;font-size:12.5px;color:var(--vs-dim);margin-top:2px}",
+      ".vs-talk-box{display:flex;flex-direction:column;gap:12px;max-width:620px;width:100%;text-align:left}",
+      "@media (max-width:720px){.vs-talk-kpis{grid-template-columns:repeat(2,1fr)}.vs-hist{grid-template-columns:70px 1fr auto}}",
       "@media (max-width:720px){.vs-root{gap:14px}.vs-card{padding:16px;border-radius:14px}.vs-head h1{font-size:34px}.vs-tabs{width:100%}.vs-tabs button{flex:1 1 auto;padding:0 10px;font-size:13px}.vs-ring{width:120px;height:120px}.vs-ring b{font-size:42px}.vs-state{font-size:30px}.vs-tier-name{flex-basis:100%}.vs-grid2{grid-template-columns:1fr}.vs-tl li{grid-template-columns:50px 18px 1fr;gap:8px}}",
     ].join("\n");
     document.head.appendChild(s);
@@ -485,7 +503,135 @@
     return chart + '<div class="vs-split">' + journal + aside + "</div>";
   }
 
-  var TABS = [["overview", "Vue générale"], ["hierarchy", "Hiérarchie"], ["groups", "Groupes"], ["relations", "Relations"], ["evolution", "Évolution"]];
+
+  // =====================================================================
+  // Entretiens et communication (2026-10-08) : vue calculée par
+  // HM_VESTIAIRE.coachView ; l'entretien passe par le serveur
+  // (POST /api/locker/talk, qui fait autorité), en solo par le moteur local.
+  // =====================================================================
+  var TOPIC_COLOR = { bad: C.bad, warn: C.warn, blue: C.blue, good: C.good, purple: C.purple, mid: "var(--vs-faint)" };
+  function topicColor(k) { var V = window.HM_VESTIAIRE; var tp = V && V.TOPICS[k]; return TOPIC_COLOR[tp ? tp.color : "mid"] || C.mid; }
+  function tag(text, col) { return '<span class="vs-tag" style="background:' + tint(col, 0.16) + ";color:" + col + '">' + esc(text) + "</span>"; }
+  function dateFr(at) { try { return new Date(at).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }); } catch (e) { return ""; } }
+  function daysUntil(at) { return Math.max(1, Math.ceil((at - Date.now()) / 86400000)); }
+  var IMP = { pos: ["Positif", C.good], neg: ["Négatif", C.bad], col: ["Collectif", C.blue], neu: ["Neutre", "var(--vs-faint)"] };
+  var OUTW = { pos: ["Positif", C.good], neu: ["Neutre", "var(--vs-faint)"], neg: ["Négatif", C.bad] };
+  function talksHtml() {
+    var V = window.HM_VESTIAIRE, t = myTeam();
+    var cv = V.coachView(t, { now: Date.now(), recent: recent() });
+    var rec = cv.recommended.map(function (r) {
+      var col = topicColor(r.topic);
+      var btn = r.available ? '<button type="button" class="vs-btn vs-go" data-vs-talk="' + esc(r.id) + '" data-vs-topic="' + esc(r.topic) + '">Lui parler</button>'
+        : '<button type="button" class="vs-btn" disabled>' + (r.block === "quota" ? "Quota atteint" : "Dans " + daysUntil(r.nextAt) + " j") + "</button>";
+      return '<div class="vs-tk"><span class="vs-dot" style="background:' + col + '"></span><div><strong>' + link({ id: r.id, name: r.name }) + "</strong>" + tag(r.label, col) + (r.urgent ? tag("Urgent", C.bad) : "") + '<p class="vs-text">' + esc(r.why) + "</p></div>" + btn + "</div>";
+    }).join("") || '<p class="vs-empty">Aucun entretien à prévoir : le vestiaire va bien.</p>';
+    var others = cv.others.filter(function (o) { return o.available; });
+    var pick = others.length ? '<div class="vs-row" style="gap:8px;flex-wrap:wrap;justify-content:flex-start"><select class="vs-btn" id="vsTalkOther" aria-label="Autre joueur">' + others.map(function (o) { return '<option value="' + esc(o.id) + '">' + esc(o.name) + "</option>"; }).join("") + '</select><button type="button" class="vs-btn" data-vs-talk-other>Faire le point</button></div>' : "";
+    var left = '<section class="vs-card vs-main" style="display:flex;flex-direction:column;gap:6px"><div class="vs-row"><h2 class="vs-h2">Entretiens recommandés</h2><span class="vs-text">' + cv.quota.left + " entretien" + (cv.quota.left > 1 ? "s" : "") + " possible" + (cv.quota.left > 1 ? "s" : "") + " cette semaine</span></div>" + rec +
+      '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px"><p class="vs-eyebrow">Parler à un autre joueur</p>' + (pick || '<p class="vs-empty">Personne d\'autre de disponible pour l\'instant.</p>') + "</div>" +
+      '<p class="vs-text" style="font-size:12.5px;margin-top:8px">Environ un entretien toutes les deux semaines par joueur, ' + V.TALKS_PER_WEEK + " par semaine ; les urgences (crise, demande de transfert, promesse en retard) passent avant.</p></section>";
+    var c = cv.consistency;
+    var cons = '<section class="vs-card" style="display:flex;flex-direction:column;gap:10px"><h2 class="vs-h2">Cohérence du coach</h2><div class="vs-cons"><b class="vs-big">' + c.score + '</b><span class="vs-text">/ 100 · ' + esc(c.label) + '</span></div><div class="vs-gauge"><i style="width:' + c.score + '%"></i></div><p class="vs-text">' +
+      c.kept + " promesse" + (c.kept > 1 ? "s" : "") + " tenue" + (c.kept > 1 ? "s" : "") + " · " + c.broken + " non tenue" + (c.broken > 1 ? "s" : "") + " · " + c.contra + " contradiction" + (c.contra > 1 ? "s" : "") + " relevée" + (c.contra > 1 ? "s" : "") + "</p></section>";
+    var ST = { late: ["En retard", C.warn], open: ["En cours", C.blue], kept: ["Tenue", C.good], broken: ["Non tenue", C.bad] };
+    var prom = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Promesses en cours</h2>' + (cv.promises.map(function (pr) {
+      var st = ST[pr.status] || ST.open;
+      return '<div class="vs-mini"><div class="vs-row"><span><strong>' + esc(pr.n) + "</strong> · " + esc(pr.what) + tag(pr.src === "public" ? "Publique" : "Privée", pr.src === "public" ? C.blue : C.purple) + "</span>" + tag(st[0], st[1]) + "</div><small>Faite le " + esc(dateFr(pr.at)) + (pr.status === "open" || pr.status === "late" ? " · échéance dans " + pr.weeksLeft + " semaine" + (pr.weeksLeft > 1 ? "s" : "") : "") + (pr.progress ? " · " + esc(pr.progress) : "") + "</small></div>";
+    }).join("") || '<p class="vs-empty">Aucune promesse en cours.</p>') + "</section>";
+    var comms = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Communication récente</h2>' + (cv.comms.map(function (x) {
+      var im = IMP[x.imp] || IMP.neu;
+      return '<div class="vs-mini"><div class="vs-row"><small>' + esc(dateFr(x.at)) + " · " + esc(x.lbl) + "</small>" + tag(im[0], im[1]) + "</div><span>« " + esc(x.q) + " »</span>" + (x.fx ? "<small>" + esc(x.fx) + "</small>" : "") + "</div>";
+    }).join("") || '<p class="vs-empty">Vos déclarations publiques (interviews) apparaîtront ici.</p>') + "</section>";
+    var V2 = window.HM_VESTIAIRE;
+    var hist = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Historique des discussions</h2>' + (cv.talks.map(function (x) {
+      var o = OUTW[x.out] || OUTW.neu;
+      return '<div class="vs-hist"><span class="vs-text">' + esc(dateFr(x.at)) + "</span><span>" + esc(x.n) + " · " + esc((V2.TOPICS[x.topic] || {}).label || "") + '</span><b style="color:' + o[1] + '">' + o[0] + "</b></div>";
+    }).join("") || '<p class="vs-empty">Aucune discussion pour l\'instant.</p>') + "</section>";
+    return '<div class="vs-split">' + left + '<aside class="vs-side">' + cons + prom + comms + hist + "</aside></div>";
+  }
+  // Boîte d'entretien : .upgrade-confirm-overlay + .upgrade-confirm-box
+  // (bottom sheet sur téléphone, règle UI mobile du projet).
+  function closeTalk() { var o = document.getElementById("vsTalkOverlay"); if (o) o.remove(); }
+  function openTalk(pid, topic, rerender) {
+    var V = window.HM_VESTIAIRE, t = myTeam();
+    var o = V.talkOptions(t, pid, topic, { now: Date.now() });
+    if (!o) return;
+    closeTalk();
+    var tp = teamPlayer({ id: pid }) || {};
+    var lvl = V.LEVELS[o.level] ? V.LEVELS[o.level].label : "";
+    var head = '<div class="vs-row" style="justify-content:flex-start;gap:12px">' + avatar({ id: pid, name: o.name }, topicColor(topic), 52) + '<div><strong style="font-size:17px">' + esc(o.name) + '</strong> <span class="vs-text">' + esc([o.position, o.age ? o.age + " ans" : "", o.tenure ? (o.tenure + 1) + "e saison au club" : "nouveau au club"].filter(Boolean).join(" · ")) + '</span><br><span class="vs-text" style="font-size:12.5px">' +
+      (o.lastTalkAt ? "Dernier entretien : " + esc(dateFr(o.lastTalkAt)) : "Premier entretien") + " · " + esc(o.topicLabel) + "</span></div></div>";
+    var roleWord = { starter: "Titulaire", rotation: "Rotation", reserve: "Réserve" };
+    var kpis = '<div class="vs-talk-kpis"><div><small>Moral</small><b style="color:' + toneColor(o.form) + '">' + o.form + '</b></div><div><small>Confiance en vous</small><b style="color:' + toneColor(o.trust) + '">' + o.trust + '</b></div><div><small>Temps de jeu</small><b>' + o.minutes + ' min</b></div><div><small>Influence</small><b>' + esc(lvl || roleWord[o.role] || "") + "</b></div></div>";
+    var choices = o.choices.map(function (c) {
+      return '<button type="button" class="vs-choice" data-vs-choice="' + c.key + '"><span>' + c.letter + "</span><div><strong>" + esc(c.label) + (c.promise ? tag("Promesse", C.purple) : "") + "</strong><small>« " + esc(c.quote) + " »" + (c.check ? " " + esc(c.check) : "") + "</small></div></button>";
+    }).join("");
+    var ov = document.createElement("div");
+    ov.className = "upgrade-confirm-overlay"; ov.id = "vsTalkOverlay";
+    ov.innerHTML = '<div class="upgrade-confirm-box vs-root vs-club vs-talk-box" role="dialog" aria-label="Entretien">' + head + kpis + '<p class="vs-quote">« ' + esc(o.open) + " »</p>" +
+      '<div id="vsTalkBody" style="display:flex;flex-direction:column;gap:8px">' + choices + '<p class="vs-text" style="font-size:12.5px">Aucun chiffre n\'est affiché à l\'avance : la réaction dépend de sa personnalité (sang-froid, détermination, discipline, leadership), de son moral, de sa confiance en vous et de la situation.</p></div>' +
+      '<div class="vs-row" style="justify-content:flex-end"><button type="button" class="vs-btn" data-vs-close>Fermer</button></div></div>';
+    document.body.appendChild(ov);
+    var busy = false;
+    ov.addEventListener("click", function (e) {
+      if (e.target === ov || e.target.closest("[data-vs-close]")) { closeTalk(); if (rerender) rerender(); return; }
+      var ch = e.target.closest("[data-vs-choice]");
+      if (!ch || busy) return;
+      busy = true;
+      ov.querySelectorAll("[data-vs-choice]").forEach(function (b) { b.disabled = true; b.classList.toggle("on", b === ch); });
+      doTalk(pid, topic, ch.getAttribute("data-vs-choice")).then(function (r) {
+        var body = document.getElementById("vsTalkBody"); if (!body) return;
+        if (!r || !r.ok) { body.insertAdjacentHTML("beforeend", '<p class="vs-text" style="color:' + C.bad + '">' + esc((r && r.error) || "Entretien impossible pour l'instant.") + "</p>"); return; }
+        body.innerHTML = reactionHtml(o, r);
+      });
+    });
+  }
+  function arrow(d) { return d > 0 ? "↑" : d < 0 ? "↓" : "="; }
+  function reactionHtml(o, r) {
+    var col = r.out === "pos" ? C.good : r.out === "neg" ? C.bad : "var(--vs-faint)";
+    var bits = ['<b style="color:' + col + '">Moral ' + arrow(r.form.after - r.form.before) + "</b>", '<b style="color:' + col + '">Confiance en vous ' + arrow(r.trust.after - r.trust.before) + "</b>"];
+    var sp = r.spread || {};
+    if (sp.close && sp.close.length) bits.push(sp.close.length + " proche" + (sp.close.length > 1 ? "s" : "") + " (" + esc(sp.close.slice(0, 3).map(function (x) { return lastName(x.n); }).join(", ")) + ") " + (sp.close[0].d > 0 ? "rassurés" : "solidaires de lui"));
+    if (sp.group) bits.push("« " + esc(sp.group) + " » " + (r.out === "neg" ? "fait bloc" : "apaisé"));
+    if (sp.chem) bits.push("Vestiaire : " + (sp.chem > 0 ? "cohésion ↑" : "tension ↑"));
+    var chain = ['<span class="vs-pill">' + esc(lastName(o.name)) + "</span>"];
+    if (sp.close && sp.close.length) chain.push('<span class="vs-pill">→ ' + sp.close.length + " proche" + (sp.close.length > 1 ? "s" : "") + "</span>");
+    if (sp.group) chain.push('<span class="vs-pill">→ ' + esc(sp.group) + "</span>");
+    if (sp.chem) chain.push('<span class="vs-pill">→ Vestiaire : ' + (sp.chem > 0 ? "cohésion ↑" : "tension ↑") + "</span>");
+    return '<p class="vs-eyebrow">Réaction</p><p class="vs-quote">« ' + esc(r.reply) + " » — " + esc(lastName(o.name)) + " " + esc(r.outLabel) + ".</p>" +
+      '<p class="vs-text">' + bits.join(" · ") + "</p>" + '<div class="vs-chips">' + chain.join("") + "</div>" +
+      (r.promise ? '<p class="vs-text">Promesse enregistrée (' + esc(r.promise.k === "minutes" ? "plus de minutes" : r.promise.k === "starter" ? "place de titulaire" : r.promise.k === "role" ? "rôle majeur" : "prolongation") + ") : elle sera vérifiée automatiquement.</p>" : "") +
+      (r.requestWithdrawn ? '<p class="vs-text" style="color:' + C.good + '">Il retire sa demande de transfert.</p>' : "") +
+      (r.contradiction ? '<p class="vs-text" style="color:' + C.warn + '">Contradiction relevée : ' + esc(r.contradiction.txt) + "</p>" : "");
+  }
+  function doTalk(pid, topic, choice) {
+    var V = window.HM_VESTIAIRE, t = myTeam();
+    var token = null; try { token = typeof managerToken !== "undefined" ? managerToken : null; } catch (e) { token = null; }
+    if (token && typeof fetchApi === "function") {
+      return fetchApi("/api/locker/talk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playerId: pid, topic: topic, choice: choice }) })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; }); })
+        .then(function (x) {
+          if (!x.res.ok || !x.data.ok) return { ok: false, error: x.data.error };
+          t.locker = V.sanitize(x.data.locker);
+          (x.data.players || []).forEach(function (q) { var p = t.players.find(function (y) { return String(y.id) === String(q.id); }); if (p) { p.form = q.form; if (!q.transferRequestActive && p.transferRequestActive) { p.transferRequestActive = false; p.transferRequestQuote = null; } } });
+          if (typeof x.data.chemistry === "number") t.chemistry = x.data.chemistry;
+          return x.data.result;
+        }).catch(function () { return { ok: false, error: "Serveur indisponible, réessayez." }; });
+    }
+    var r = V.talk(t, pid, topic, choice, { now: Date.now(), applyChemistry: function (d) { if (typeof t.applyChemistryDelta === "function") t.applyChemistryDelta(d); } });
+    if (r.ok && typeof saveMyTeam === "function") saveMyTeam();
+    return Promise.resolve(r.ok ? r : { ok: false, error: "Entretien impossible pour l'instant." });
+  }
+  // Question de l'interview de jalon tirée du vestiaire (popup d'interview).
+  function interviewBlock(q, choice) {
+    if (!q) return "";
+    ensureCss();
+    return '<div class="vs-root vs-club" style="gap:8px;margin-top:10px"><p class="vs-eyebrow">Question tirée du vestiaire · facultative</p><p class="vs-quote" style="font-style:normal">« ' + esc(q.text) + " »</p>" +
+      q.options.map(function (o) { return '<button type="button" class="vs-choice' + (choice === o.key ? " on" : "") + '" data-ivq="' + o.key + '"><span>' + o.letter + "</span><div><strong>" + esc(o.label) + "</strong><small>« " + esc(o.quote) + " »</small></div></button>"; }).join("") +
+      '<p class="vs-text" style="font-size:12.5px">Ce qui est dit en public est mémorisé : une phrase qui contredit un entretien privé, ou une promesse publique non tenue, fait baisser la confiance et la cohérence.</p></div>';
+  }
+
+  var TABS = [["overview", "Vue générale"], ["hierarchy", "Hiérarchie"], ["groups", "Groupes"], ["relations", "Relations"], ["talks", "Entretiens"], ["evolution", "Évolution"]];
   function render(opts) {
     ctx = opts || null;
     var holder = (ctx && ctx.holder) || document.getElementById("vestiaireContent");
@@ -495,7 +641,10 @@
     if (!V || !t) { holder.innerHTML = '<p class="vs-empty">Chargement du vestiaire…</p>'; return null; }
     var view;
     try { view = V.buildView(t, { now: Date.now(), recent: recent(), nationName: g("nationName") }); } catch (e) { holder.innerHTML = '<p class="vs-empty">Vestiaire indisponible pour le moment.</p>'; return null; }
-    var tabs = '<nav class="vs-tabs" role="tablist" aria-label="Sections du vestiaire">' + TABS.map(function (x) {
+    // Entretiens : club du manager seulement (pas en mode Sélection).
+    var tabList = TABS.filter(function (x) { return x[0] !== "talks" || (!ctx && V.coachView); });
+    if (state.tab === "talks" && tabList.length !== TABS.length) state.tab = "overview";
+    var tabs = '<nav class="vs-tabs" role="tablist" aria-label="Sections du vestiaire">' + tabList.map(function (x) {
       var on = state.tab === x[0];
       return '<button type="button" role="tab" class="' + (on ? "active" : "") + '" data-vs-tab="' + x[0] + '" aria-selected="' + on + '">' + esc(x[1]) + "</button>";
     }).join("") + "</nav>";
@@ -503,7 +652,7 @@
     // Sélection a déjà son titre de page (pas de second « Vestiaire »).
     var eyebrow = (!ctx && t.week != null ? "Semaine " + esc(t.week) + " · " : "") + view.players.length + " joueur" + (view.players.length > 1 ? "s" : "");
     var head = '<header class="vs-head"><div><p class="vs-eyebrow">' + eyebrow + "</p>" + (ctx ? "" : "<h1>Vestiaire</h1>") + "</div>" + tabs + "</header>";
-    var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
+    var body = state.tab === "talks" ? talksHtml() : state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
     // Police du Mode Club dans les deux modes (demande du 2026-10-08 : le
     // Vestiaire du mode Sélection doit avoir la même police que celui du club).
     holder.innerHTML = '<div class="vs-root vs-club">' + head + body + "</div>";
@@ -516,9 +665,13 @@
         var tb = e.target.closest("[data-vs-tab]");
         if (tb) { state.tab = tb.getAttribute("data-vs-tab"); state.allRows = false; render(holder.__vsCtx || null); return; }
         if (e.target.closest("[data-vs-all]")) { state.allRows = true; render(holder.__vsCtx || null); }
+        var again = function () { render(holder.__vsCtx || null); };
+        var tk = e.target.closest("[data-vs-talk]");
+        if (tk) { openTalk(tk.getAttribute("data-vs-talk"), tk.getAttribute("data-vs-topic"), again); return; }
+        if (e.target.closest("[data-vs-talk-other]")) { var sel = document.getElementById("vsTalkOther"); if (sel && sel.value) openTalk(sel.value, "checkin", again); }
       });
     }
     return view;
   }
-  window.HM_VESTIAIRE_UI = { render: render, setTab: function (k) { state.tab = k; } };
+  window.HM_VESTIAIRE_UI = { render: render, setTab: function (k) { state.tab = k; }, interviewBlock: interviewBlock, openTalk: openTalk };
 })();

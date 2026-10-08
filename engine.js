@@ -7851,7 +7851,7 @@ class Team {
   // ci-dessous, sans adversaire ni résultat concerné) : le libellé du
   // journal s'adapte alors pour ne mentionner ni victoire/défaite ni
   // adversaire.
-  resolveInterview(id, tones, now = Date.now()) {
+  resolveInterview(id, tones, now = Date.now(), lockerAns = null) {
     this.pruneExpiredInterviews(now);
     this.pendingInterviews = this.pendingInterviews || [];
     const idx = this.pendingInterviews.findIndex(i => i.id === id);
@@ -7884,12 +7884,20 @@ class Team {
     this.applyChemistryDelta(chemistryDelta);
     // Dynamique de groupe : intervention du coach journalisée (assets/vestiaire.js).
     if (vestiaireApi()) vestiaireApi().pushLog(this, { t: chemistryDelta > 0 ? "interview-up" : chemistryDelta < 0 ? "interview-down" : "interview", x: chemistryDelta });
+    // Entretiens & communication (2026-10-08) : la déclaration est mémorisée ;
+    // la question tirée du vestiaire (lockerAns) fait réagir chaque joueur.
+    let statement = null;
+    if (vestiaireApi()) {
+      const V = vestiaireApi();
+      V.recordComm(this, { quote, milestone: entry.milestone, label: milestoneLabel, now, chem: chemistryDelta });
+      if (lockerAns) statement = V.applyStatement(this, lockerAns, { milestone: entry.milestone, label: milestoneLabel, now, applyChemistry: d => this.applyChemistryDelta(d) });
+    }
     this.pendingInterviews.splice(idx, 1);
     // Fil d'actualité (voir applyMoraleForResult ci-dessus, qui a créé
     // l'entrée `interview_<id>` correspondante) : retirée, l'interview est
     // répondue.
     if (this.feed) handleGameEvent(this.feed, { type: "interview_done", interviewId: entry.id }, { clubName: this.name });
-    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes };
+    return { ok: true, delta: fanDelta, formDelta, chemistryDelta, quotes, statement };
   }
 
   // Interview d'AVANT-saison (correctif 2026-09, retour utilisateur : "la
