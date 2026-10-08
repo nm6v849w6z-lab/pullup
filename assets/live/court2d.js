@@ -554,12 +554,14 @@ export function createCourt2D(host, opts = {}) {
       endTrail();
       const shot = f.kind.startsWith("shot");
       const cls = shot ? `c2d-trail shot t${f.kind.slice(4)}` : "c2d-trail pass";
-      trail = { flight: f, pts: [], path: el("path", { class: cls, fill: "none" }, trailG) };
+      trail = { flight: f, pts: [], pass: !shot, path: el("path", { class: cls, fill: "none" }, trailG) };
     }
     const x = (ball.x + ballOff.x) * PX, y = (ball.y + ballOff.y) * PX - ball.z * 4;
     const last = trail.pts[trail.pts.length - 1];
     if (last && Math.hypot(last[0] - x, last[1] - y) < 3) return;
-    trail.pts.push([x, y]); if (trail.pts.length > 40) trail.pts.shift();
+    // Passe : courte traînée de mouvement juste derrière le ballon (retour
+    // utilisateur 2026-10-08 : la ligne pointillée complète était laide).
+    trail.pts.push([x, y]); if (trail.pts.length > (trail.pass ? 6 : 40)) trail.pts.shift();
     trail.path.setAttribute("d", "M" + trail.pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L"));
   }
   function endTrail() {

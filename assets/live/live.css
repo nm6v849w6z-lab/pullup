@@ -644,7 +644,7 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 
 /* Priorité 3 (2026-10-08) : traînée des passes, arc des tirs, points flottants. */
 .c2d-trail{stroke-linecap:round;stroke-linejoin:round;pointer-events:none;transition:opacity .7s ease-out .25s}
-.c2d-trail.pass{stroke:#fff;stroke-width:3px;stroke-opacity:.75;stroke-dasharray:5 6}
+.c2d-trail.pass{stroke:#fff;stroke-width:7px;stroke-opacity:.22;transition-delay:0s;transition-duration:.25s}
 .c2d-trail.shot{stroke-width:3.6px;stroke-opacity:.85;stroke-dasharray:2 7}
 .c2d-trail.shot.t0{stroke:var(--c0,#ff7a7f)}.c2d-trail.shot.t1{stroke:var(--c1,#6aa8ff)}
 .c2d-trail.fade{opacity:0}
