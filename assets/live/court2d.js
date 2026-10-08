@@ -1229,7 +1229,7 @@ export function createCourt2D(host, opts = {}) {
     ballOff.x += ((hb ? hb.ox : 0) - ballOff.x) * kb; ballOff.y += ((hb ? hb.oy : 0) - ballOff.y) * kb;
     ballG.setAttribute("transform", `translate(${((ball.x + ballOff.x) * PX).toFixed(1)} ${((ball.y + ballOff.y) * PX).toFixed(1)})`);
     // Avant-match (entrée des joueurs) : pas de ballon par terre sans porteur.
-    const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime") && !ball.holder && !ball.flight);
+    const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime"));
     if (hideBall !== ballHidden) { ballHidden = hideBall; ballG.setAttribute("opacity", hideBall ? "0" : "1"); }
     ballBody.setAttribute("transform", `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`);
     // Chrono des 24 s : descend depuis le début de la possession.
