@@ -93,6 +93,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   SEAT_Y 58.6 ; table y 52.4 ; officiels STOP_Y 50.7 ; COACH_Y 55
   (staging). Téléphone : viewBox rogné (tribunes) sous 640 px de large ;
   paysage tactile : hauteur bornée à l'écran.
+  RETOURS 2026-10-08 (faits) : tir = courte traînée de mouvement comme la
+  passe (plus de pointillés) ; « +1/+2/+3 » = élément `.c2d-ptsf` attaché au
+  jeton, 2 s (apparition, stable, fondu) puis supprimé, dédoublonné (plan +
+  événement) ; public = spectateurs individuels (`.c2d-crowd .fan`, corps,
+  tête, bras) en 12 cohortes mélangées, supporters h / a / n, mouvements de
+  repos variés (balancement, déplacement, penché, bras), réactions
+  `crowdReact` : panier (supporters de l'équipe qui marque debout bras en
+  l'air, les autres s'affaissent), tir raté (déception), contre / 3 pts /
+  dunk / buzzer (agitation plus forte, plus longue) ; arbitre de ligne de
+  fond DERRIÈRE la ligne (REF_BEHIND 2,5 pieds, `bl`, borné après
+  l'anti-chevauchement), en coordonnées terrain donc indépendant du zoom.
   RESTE arène : polissage (tape dans la main plus
   visible, durée des déplacements selon la vitesse de lecture).
   PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`

@@ -83,6 +83,7 @@ function parkLine(team, i) {
 // Table de marque : où vont les arbitres pendant les arrêts.
 const TABLE = { x: 47, y: 52.4 };
 const STOP_Y = 50.7;                                      // officiels debout devant la table
+const REF_BEHIND = 2.5;                                   // arbitre de fond : centre à 2,5 pieds derrière la ligne (jeton ≈ 1,6 de demi-largeur)
 
 // Avatars rastérisés (2026-10-01, « ça semble laguer ») : dix SVG d'avatar
 // complets déplacés 60 fois par seconde coûtent cher à repeindre ; on les
@@ -278,20 +279,28 @@ export function createCourt2D(host, opts = {}) {
     const rnd01 = (() => { let k = 0; for (const ch of key) k = (k * 31 + ch.charCodeAt(0)) >>> 0; return () => { k = (k * 1664525 + 1013904223) >>> 0; return k / 4294967296; }; })();
     const skins = ["#f1c7a3", "#d9a47c", "#b97d55", "#8d5a3b", "#5e3b26", "#e8b48f"];
     const shirts = ["#2b3445", "#3b4252", "#5a6170", "#e9e4da", "#273a5a", "#4a3b35", awayColor || "#3B8FE0"];
-    const sections = [];
-    const section = k => { if (!sections[k]) { const g = el("g", { class: `c2d-fans s${k % 4}` }, arenaG); sections[k] = g; fansG.push(g); } return sections[k]; };
-    const fan = (x, y, k) => {
+    // Spectateurs (retour utilisateur 2026-10-08 : « pas de simples points
+    // décoratifs ») : chacun est un petit personnage (corps, tête, bras) dans
+    // une cohorte tirée au hasard (12) — les voisins ne bougent jamais en
+    // même temps. Supporter du club qui reçoit (h), visiteur (a) ou neutre
+    // (n) : les réactions (crowdReact) dépendent de l'équipe qui marque.
+    const crowd = el("g", { class: "c2d-crowd" }, arenaG);
+    fansG.push(crowd);
+    const fan = (x, y) => {
       if (rnd01() > fill) return;
-      const g = section(k);
       const r = rnd01();
-      const shirt = r < 0.48 ? home : r < 0.56 ? "#ffffff" : r < 0.62 ? (awayColor || "#3B8FE0") : shirts[Math.floor(rnd01() * (shirts.length - 1))];
+      const side = r < 0.48 ? "h" : r < 0.56 ? "n" : r < 0.62 ? "a" : (rnd01() < 0.7 ? "h" : "n");
+      const shirt = side === "h" && r < 0.48 ? home : side === "a" ? (awayColor || "#3B8FE0") : r < 0.56 ? "#ffffff" : shirts[Math.floor(rnd01() * (shirts.length - 1))];
+      const skin = skins[Math.floor(rnd01() * skins.length)];
+      const g = el("g", { class: `fan c${Math.floor(rnd01() * 12)} ${side}` }, crowd);
+      el("path", { d: `M${(x - 5).toFixed(1)} ${(y + 1).toFixed(1)}l-2.6 -7M${(x + 5).toFixed(1)} ${(y + 1).toFixed(1)}l2.6 -7`, stroke: skin, "stroke-width": "2.3", "stroke-linecap": "round", class: "arms" }, g);
       el("ellipse", { cx: x.toFixed(1), cy: (y + 3).toFixed(1), rx: "6.6", ry: "4.2", fill: shirt }, g);
-      el("circle", { cx: x.toFixed(1), cy: (y - 0.8).toFixed(1), r: "3.7", fill: skins[Math.floor(rnd01() * skins.length)] }, g);
+      el("circle", { cx: x.toFixed(1), cy: (y - 0.8).toFixed(1), r: "3.7", fill: skin }, g);
     };
     // Haut : 3 rangs ; bas : 2 rangs ; côtés : 2 colonnes.
-    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, -55 - row * 16, Math.floor((x + OX) / 170));
-    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, 640 + row * 16, 10 + Math.floor((x + OX) / 170));
-    for (let col = 0; col < 3; col++) for (let y = -40; y < 640; y += 16) { fan(-60 - col * 17, y + (col % 2) * 8, 20 + Math.floor((y + 60) / 180)); fan(1000 + col * 17, y + (col % 2) * 8, 26 + Math.floor((y + 60) / 180)); }
+    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, -55 - row * 16);
+    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, 640 + row * 16);
+    for (let col = 0; col < 3; col++) for (let y = -40; y < 640; y += 16) { fan(-60 - col * 17, y + (col % 2) * 8); fan(1000 + col * 17, y + (col % 2) * 8); }
     // Les tribunes se fondent dans le noir vers l'extérieur.
     const fade = el("radialGradient", { id: uid + "-af", cx: "50%", cy: "47%", r: "62%" }, defs);
     el("stop", { offset: ".62", "stop-color": "#000", "stop-opacity": "0" }, fade);
@@ -372,10 +381,19 @@ export function createCourt2D(host, opts = {}) {
     if (reducedMotion) return;
     flashR.classList.remove("on"); void flashR.getBoundingClientRect(); flashR.classList.add("on");
   }
-  function crowdJump(strong) {
-    if (reducedMotion) return;
-    fansG.forEach(g => { g.classList.remove("jump", "jump2"); void g.getBoundingClientRect(); g.classList.add(strong ? "jump2" : "jump"); });
-    later(strong ? 1500 : 1000, () => fansG.forEach(g => g.classList.remove("jump", "jump2")));
+  // Réactions du public : « score » (panier : les supporters de l'équipe qui
+  // marque se lèvent, bras en l'air ; les autres s'affaissent), « miss » (tir
+  // raté : déception chez ses supporters, rien chez les autres), « big »
+  // ajouté sur une grosse action (3 points, dunk, contre, buzzer) : plus
+  // d'agitation, plus longtemps. Équipe 0 = club qui reçoit (h).
+  let reactTimer = 0;
+  function crowdReact(kind, team, big = false) {
+    if (reducedMotion || !fansG.length) return;
+    const fan = team === 0 ? "h" : "a";
+    const cls = kind === "score" ? `react-cheer-${fan}` : `react-groan-${fan}`;
+    fansG.forEach(g => { g.setAttribute("class", "c2d-crowd"); void g.getBoundingClientRect(); g.setAttribute("class", `c2d-crowd ${cls}${big ? " react-big" : ""}`); });
+    clearTimeout(reactTimer);
+    reactTimer = setTimeout(() => fansG.forEach(g => g.setAttribute("class", "c2d-crowd")), big ? 2600 : 1700);
   }
 
   // --- tableau d'affichage suspendu (2026-10-08, refonte arène) : sigles,
@@ -550,14 +568,16 @@ export function createCourt2D(host, opts = {}) {
   // à la table de marque. Entre-deux : un arbitre au centre.
   function refTargets() {
     const live = S && S.status === "live";
-    if (!live || performance.now() < stopUntil) return [{ x: 47, y: STOP_Y }, { x: 41, y: STOP_Y }, { x: 53, y: STOP_Y }];
+    if (!live || performance.now() < stopUntil) return [{ x: 47, y: STOP_Y }, { x: 41, y: STOP_Y }, { x: 53, y: STOP_Y }];   // bl absent → 0
     if (lastPlayed && lastPlayed.kind === "tipoff" && performance.now() < sceneUntil) return [{ x: 47, y: 29 }, { x: 30, y: 2.5 }, { x: 64, y: 47.5 }];
     const rim = RIM[possession], dir = rim.x > 47 ? 1 : -1;
     const ballSide = ball.y < 25 ? -1 : 1;                   // -1 : haut de l'écran
     const sideY = side => (side < 0 ? 2.5 : 47.5);
     const bx = Math.max(6, Math.min(88, ball.x));
     return [
-      { x: rim.x + dir * 4.5, y: 25 + ballSide * 11 },                                   // chef
+      // Chef : DERRIÈRE la ligne de fond (x 94 / 0), jamais dessus ni devant
+      // (retour utilisateur 2026-10-08) ; `bl` le garde derrière (declutter).
+      { x: dir > 0 ? 94 + REF_BEHIND : -REF_BEHIND, y: 25 + ballSide * 11, bl: dir },
       { x: Math.max(4, Math.min(90, bx - dir * 14)), y: sideY(ballSide) },               // queue, derrière le jeu
       { x: Math.max(4, Math.min(90, rim.x - dir * 17)), y: sideY(-ballSide) },           // centre, côté faible
     ];
@@ -570,7 +590,7 @@ export function createCourt2D(host, opts = {}) {
     const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
     let best = null, bestD = Infinity;
     for (const pm of perms) { const d = pm.reduce((s, ti, ri) => s + Math.hypot(T[ti].x - refs[ri].x, T[ti].y - refs[ri].y), 0); if (d < bestD) { bestD = d; best = pm; } }
-    best.forEach((ti, ri) => { const r = refs[ri]; r.tx = T[ti].x + rnd(-0.6, 0.6); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
+    best.forEach((ti, ri) => { const r = refs[ri]; r.bl = T[ti].bl || 0; r.tx = T[ti].x + (r.bl ? 0 : rnd(-0.6, 0.6)); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
   }
 
   // Changements (2026-10-08, arène) : l'entrant se lève, passe par la
@@ -688,18 +708,30 @@ export function createCourt2D(host, opts = {}) {
   function jump(sp, h = 1) { if (!sp) return; sp.jump = { t: 0, h }; }
   // Réaction du banc (sobre) : la bande des médaillons de l'équipe sursaute.
   // Le public (aux couleurs du club qui reçoit) se lève sur un panier à domicile.
-  function cheer(team, strong = false) { if (team === 0) crowdJump(strong); }
+  function cheer(team, strong = false) { crowdReact("score", team, strong); }
   // Cibles bornées au terrain (le remiseur peut sortir derrière la ligne de fond, en x seulement).
   function moveTo(sp, x, y, speed = 1.6) { if (!sp) return; sp.tx = Math.max(-3, Math.min(97, x)); sp.ty = Math.max(1.5, Math.min(57, y)); sp.speed = speed; }
   function say(text) { caption.innerHTML = text; caption.classList.add("show"); }
+  // « +1 / +2 / +3 » (retour utilisateur 2026-10-08) : élément à part, attaché
+  // au jeton, qui apparaît vite, reste ~2 s puis s'efface et est SUPPRIMÉ ;
+  // même timing pour les trois ; un même panier rejoué (plan + événement,
+  // resynchronisation) ne le relance pas.
+  const ptsSeen = new Map();
+  function floatPts(sp, text) {
+    const key = sp.id + "|" + text, t = performance.now();
+    if (t - (ptsSeen.get(key) || -1e9) < 2600) return;
+    ptsSeen.set(key, t);
+    const g = el("g", { class: `c2d-ptsf t${sp.team}`, transform: "translate(0 -38)" }, sp.g);
+    el("text", { "text-anchor": "middle", "data-no-i18n": "1" }, g).textContent = text;
+    setTimeout(() => g.remove(), 2050);
+  }
   function flash(sp, text, cls = "") {
     if (!sp) return;
     sp.stat.textContent = text;
     // Points marqués (« +2 », « +3 », « +1 ») : plus gros, couleur de
     // l'équipe, montent en flottant puis s'effacent (priorité 3).
-    const pts = cls === "good" && /^\+\d$/.test(text);
+    if (cls === "good" && /^\+\d$/.test(text)) { sp.stat.textContent = ""; floatPts(sp, text); return; }
     sp.stat.setAttribute("class", "c2d-stat " + cls);
-    if (pts) { void sp.stat.getBoundingClientRect(); sp.stat.setAttribute("class", `c2d-stat ${cls} pts t${sp.team}`); }
     sp.stat.setAttribute("opacity", "1");
     later(1600, () => sp.stat.setAttribute("opacity", "0"));
   }
@@ -725,14 +757,15 @@ export function createCourt2D(host, opts = {}) {
       endTrail();
       const shot = f.kind.startsWith("shot");
       const cls = shot ? `c2d-trail shot t${f.kind.slice(4)}` : "c2d-trail pass";
-      trail = { flight: f, pts: [], pass: !shot, path: el("path", { class: cls, fill: "none" }, trailG) };
+      trail = { flight: f, pts: [], max: shot ? 9 : 6, path: el("path", { class: cls, fill: "none" }, trailG) };
     }
     const x = (ball.x + ballOff.x) * PX, y = (ball.y + ballOff.y) * PX - ball.z * 4;
     const last = trail.pts[trail.pts.length - 1];
     if (last && Math.hypot(last[0] - x, last[1] - y) < 3) return;
-    // Passe : courte traînée de mouvement juste derrière le ballon (retour
-    // utilisateur 2026-10-08 : la ligne pointillée complète était laide).
-    trail.pts.push([x, y]); if (trail.pts.length > (trail.pass ? 6 : 40)) trail.pts.shift();
+    // Passe ET tir : courte traînée de mouvement juste derrière le ballon
+    // (retours utilisateur 2026-10-08 : plus de pointillés ; l'arc du tir se
+    // lit au mouvement du ballon, dont la hauteur est dessinée).
+    trail.pts.push([x, y]); if (trail.pts.length > trail.max) trail.pts.shift();
     trail.path.setAttribute("d", "M" + trail.pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L"));
   }
   function endTrail() {
@@ -1044,6 +1077,7 @@ export function createCourt2D(host, opts = {}) {
             // (événement suivant du moteur) dira qui le récupère.
             const bl = spriteOf(a.blocker); jump(bl, 1.3);
             banner(blockLabel(), "block");
+            crowdReact("score", 1 - offT, true);   // contre : les supporters de la défense exultent
             const dir = rim.x > 47 ? -1 : 1;
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5);
           } else if (fouledShot) {
@@ -1054,6 +1088,7 @@ export function createCourt2D(host, opts = {}) {
             // puis retombe ; le vrai rebondeur y va, les autres proches
             // s'approchent (lutte), et il saute pour le capter.
             const dir = rim.x > 47 ? -1 : 1;
+            if (!isReb || !afterBlock) crowdReact("miss", offT);   // tir raté : déception
             const drop = { x: rim.x + dir * rnd(3, 9), y: rim.y + rnd(-7, 7) };
             const hop = afterBlock ? { x: ball.x, y: ball.y } : { x: rim.x + dir * rnd(0.5, 2), y: rim.y + rnd(-1.5, 1.5) };
             scene(1700);
@@ -1094,6 +1129,7 @@ export function createCourt2D(host, opts = {}) {
         const nextT = after !== null ? after : 1 - t;
         const finish = () => {
           rimFx(t, made); if (made) flash(shooter, "+" + e.made, "good");
+          crowdReact(made ? "score" : "miss", t);
           scene(1500);
           later(500, () => {
             for (const sp of sprites.values()) sp.busy = false;
@@ -1345,6 +1381,11 @@ export function createCourt2D(host, opts = {}) {
       let fx = a.fx, fy = a.fy; const m = Math.hypot(fx, fy);
       if (m > OFF_MAX) { fx *= OFF_MAX / m; fy *= OFF_MAX / m; }
       a.ox += (fx - a.ox) * k; a.oy += (fy - a.oy) * k;
+      // Arbitre de ligne de fond arrivé à son poste : jamais repoussé sur le terrain.
+      if (a.ref && a.bl && Math.abs(a.tx - a.x) < 1.5) {
+        if (a.bl > 0 && a.x + a.ox < 94 + REF_BEHIND - 0.3) a.ox = 94 + REF_BEHIND - 0.3 - a.x;
+        if (a.bl < 0 && a.x + a.ox > 0.3 - REF_BEHIND) a.ox = 0.3 - REF_BEHIND - a.x;
+      }
     }
     // Étiquettes, sur les positions affichées.
     for (let i = 0; i < list.length; i++) {
@@ -1422,7 +1463,7 @@ export function createCourt2D(host, opts = {}) {
     }
     steerRefs(nowP);
     for (const r of refs) {
-      if (r.stage) { r.tx = r.stage.x; r.ty = r.stage.y; r.speed = r.stage.speed; }
+      if (r.stage) { r.bl = 0; r.tx = r.stage.x; r.ty = r.stage.y; r.speed = r.stage.speed; }
       const d = Math.hypot(r.tx - r.x, r.ty - r.y);
       if (d > 0.05) { const k = Math.min(1, 14 * r.speed * dt / d); r.x += (r.tx - r.x) * k; r.y += (r.ty - r.y) * k; r.moving = true; } else r.moving = false;
     }

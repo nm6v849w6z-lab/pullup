@@ -74,6 +74,10 @@ const S = {
   const trailsSeen = new Set();
   const trailObs = new window.MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains("c2d-trail")) trailsSeen.add(n.getAttribute("class")); })));
   trailObs.observe(host, { childList: true, subtree: true });
+  // Public : on relève les réactions déclenchées (classe du groupe des spectateurs).
+  const reactions = new Set();
+  const crowdObs = new window.MutationObserver(ms => ms.forEach(m => { const c = m.target.getAttribute && m.target.getAttribute("class"); if (c && /react-/.test(c)) c.split(" ").forEach(x => /react-/.test(x) && reactions.add(x)); }));
+  crowdObs.observe(host, { attributes: true, attributeFilter: ["class"], subtree: true });
   S.teams[0].score = 2; S.possession = 1; S.teams[0].players[1].pts = 2;
   court.update(S, [1]);
   await sleep(150);
@@ -90,19 +94,27 @@ const S = {
   if (!p0 || !p1) fail("le sprite du tireur doit être positionné par un transform translate(x y).");
   if (!(d(p1) < d(p0) - 20)) fail(`le tireur doit se déplacer vers l'endroit du tir (≈780,180) : ${p0} → ${p1}.`);
   await sleep(1200);
-  const stat = moro.querySelector(".c2d-stat");
-  if (stat.textContent !== "+2") fail(`« +2 » attendu au-dessus du tireur après le panier, obtenu « ${stat.textContent} ».`);
+  const ptsf = moro.querySelectorAll(".c2d-ptsf");
+  if (ptsf.length !== 1 || ptsf[0].textContent !== "+2") fail(`un seul « +2 » attendu au-dessus du tireur après le panier, obtenu ${ptsf.length} (« ${ptsf[0] && ptsf[0].textContent} »).`);
   console.log("✅ Panier : le tireur va à l'endroit du tir et le +2 s'affiche.");
-  if (!/\bpts\b/.test(stat.getAttribute("class")) || !/\bt0\b/.test(stat.getAttribute("class"))) fail(`le « +2 » doit flotter aux couleurs de l'équipe (classes pts t0), obtenu « ${stat.getAttribute("class")} ».`);
+  if (!/\bt0\b/.test(ptsf[0].getAttribute("class"))) fail(`le « +2 » doit être aux couleurs de l'équipe (t0), obtenu « ${ptsf[0].getAttribute("class")} ».`);
+  if (moro.querySelector(".c2d-stat").textContent) fail("le « +2 » ne passe plus par l'étiquette d'action du jeton (plus de clignotement prolongé).");
+  if (!reactions.has("react-cheer-h")) fail(`panier du club qui reçoit : ses supporters doivent réagir (react-cheer-h), obtenu ${[...reactions]}.`);
+  const fans = host.querySelectorAll(".c2d-crowd .fan");
+  const cohorts = new Set([...fans].map(f => (/\bc(\d+)\b/.exec(f.getAttribute("class")) || [])[1]));
+  if (fans.length < 150 || cohorts.size < 10 || !host.querySelector(".c2d-crowd .fan .arms") || !host.querySelector(".c2d-crowd .fan.a") || !host.querySelector(".c2d-crowd .fan.h")) fail(`public : des spectateurs individuels (bras, supporters des deux clubs) répartis en cohortes, obtenu ${fans.length} / ${cohorts.size} cohortes.`);
+  console.log(`✅ Public : ${fans.length} spectateurs individuels en ${cohorts.size} cohortes ; les supporters du club qui marque célèbrent.`);
   if (![...trailsSeen].some(c => /pass/.test(c))) fail("la passe décisive doit laisser une traînée (.c2d-trail.pass).");
-  if (![...trailsSeen].some(c => /shot t0/.test(c))) fail("le tir doit dessiner son arc aux couleurs de l'équipe (.c2d-trail.shot.t0).");
-  console.log("✅ Priorité 3 : traînée de la passe, arc du tir et « +2 » flottant aux couleurs de l'équipe.");
+  if (![...trailsSeen].some(c => /shot t0/.test(c))) fail("le tir doit laisser sa traînée de mouvement aux couleurs de l'équipe (.c2d-trail.shot.t0).");
+  console.log("✅ Traînée de mouvement derrière la passe et le tir (plus de pointillés), « +2 » aux couleurs de l'équipe.");
 
   await sleep(2200);
   const holder2 = host.querySelector(".c2d-p.has-ball");
   if (!holder2 || !holder2.dataset.id.startsWith("Rennes:")) fail(`après un panier encaissé, Rennes doit remettre en jeu et avoir le ballon, obtenu ${holder2 && holder2.dataset.id}.`);
   console.log("✅ Remise en jeu : le ballon passe à l'équipe qui a encaissé.");
   trailObs.disconnect();
+  if (moro.querySelector(".c2d-ptsf")) fail("le « +2 » doit avoir disparu (supprimé) après ~2 s.");
+  console.log("✅ « +2 » : visible ~2 s puis supprimé, aucun résidu.");
   if (host.querySelector(".c2d-trail.shot")) fail("l'arc du tir doit s'effacer après l'arrivée du ballon.");
 
   // Arène (2026-10-08) : plus de cartes en haut ; tableau suspendu (score,
@@ -141,7 +153,7 @@ const S = {
   await sleep(250);
   court.update(S, [2]);
   await sleep(120);
-  const wright = host.querySelector('.c2d-p[data-id="Rennes:Jo Wright"] .c2d-stat');
+  const wright = host.querySelector('.c2d-p[data-id="Rennes:Jo Wright"] .c2d-ptsf');
   if (!wright || wright.textContent !== "+3") fail(`tir joué à l'avance : « +3 » attendu dès l'arrivée de l'événement, obtenu « ${wright && wright.textContent} ».`);
   console.log("✅ Possession jouée à l'avance : tir parti avant l'événement, résultat révélé à son arrivée.");
 
@@ -232,6 +244,20 @@ const S = {
   if (!bn || bn.textContent !== "CONTRE") fail(`bannière « CONTRE » attendue sur un contre, obtenu ${bn && bn.textContent}.`);
   console.log("✅ Bannière CONTRE sur un contre du moteur.");
   await sleep(1700);
+
+  // Arbitre de ligne de fond : toujours DERRIÈRE la ligne (x > 94 ou x < 0),
+  // jamais dessus ni sur le terrain (retour utilisateur 2026-10-08).
+  {
+    const posR = g => { const m = /translate\(([\d.-]+) ([\d.-]+)\)/.exec(g.getAttribute("transform") || ""); return m ? [+m[1] / 10, +m[2] / 10] : null; };
+    const samples = [];
+    for (let i = 0; i < 6; i++) { await sleep(300); samples.push(...[...host.querySelectorAll(".c2d-ref")].map(posR)); }
+    const bad = samples.filter(p => p && ((p[0] > 91 && p[0] < 95.5) || (p[0] < 3 && p[0] > -1.5)));
+    if (bad.length) fail(`arbitre sur ou devant la ligne de fond : ${JSON.stringify(bad.slice(0, 3))}.`);
+    if (!samples.some(p => p && (p[0] >= 95.5 || p[0] <= -1.5))) fail(`un arbitre doit se tenir derrière la ligne de fond : ${JSON.stringify(samples.slice(-3))}.`);
+    console.log("✅ Arbitre de ligne de fond : derrière la ligne, jamais dessus ni sur le terrain.");
+  }
+  crowdObs.disconnect();
+  if (!reactions.has("react-groan-h") && !reactions.has("react-groan-a")) fail(`tir raté : les supporters de l'équipe qui rate doivent montrer leur déception, obtenu ${[...reactions]}.`);
 
   // Temps mort : chaque équipe rejoint SON banc (Gotham à gauche du centre, Rennes à droite).
   S.events.push({ id: 8, type: "timeout", kind: "timeout", team: 0, quarter: 1, clock: 480, text: "Temps mort Gotham", durationMs: 6000, actors: {} });
