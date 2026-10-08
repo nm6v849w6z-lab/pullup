@@ -9041,8 +9041,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-3">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-3">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-4">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-4">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -44691,7 +44691,7 @@ function hmLiveLoadAdapterModule() {
 function spectateTeamData(obj, colorIdx, colors, leagueIdx) {
   const players = ((obj && obj.players) || []).map(p => {
     let avatar = ""; try { avatar = playerAvatarHtml(p, obj, 40); } catch (e) { avatar = ""; }
-    return { id: p.id, name: p.name, pos: POS_SHORT[p.matchPosition || p.position] || "", avatar, link: leagueIdx != null && leagueIdx >= 0 ? { team: leagueIdx, id: p.id } : null };
+    return { id: p.id, name: p.name, pos: POS_SHORT[p.matchPosition || p.position] || "", avatar, number: Number.isInteger(p.number) ? p.number : null, link: leagueIdx != null && leagueIdx >= 0 ? { team: leagueIdx, id: p.id } : null };
   });
   let logo = ""; try { logo = obj ? teamLogoHtml(obj, 76) : ""; } catch (e) { logo = ""; }
   let sponsor = null; try { sponsor = obj ? sponsorNameForSlot(obj, "maillot") : null; } catch (e) { sponsor = null; }
@@ -44937,7 +44937,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-3";
+const HM_LIVE_ASSET_VERSION = "20261008-4";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45043,7 +45043,7 @@ function hmLiveReset(liveMatch) {
     if (prev && prev.view && !keepView) { try { prev.view.destroy(); } catch (e) { /* rien */ } }
     hmLive = {
       match: liveMatch, view: keepView ? prev.view : null, final: false, scheduled: false, tickKey: "",
-      events: [], shots: [], fouls: [], raw: [], seq: 0, possession: null, quarter: 1,
+      events: [], shots: [], fouls: [], raw: [], seq: 0, possession: null, quarter: 1, fat: {},
       dress: keepView ? prev.dress : undefined,
       // Avant-match : redessine chaque seconde pour le compte à rebours.
       pregameTimer: liveMatch.pregame ? setInterval(() => hmLiveSchedule(), 1000) : null,
@@ -45097,6 +45097,8 @@ function hmLiveOnEvent(ev) {
     const possAfter = livePossessionAfterOf(ev);
     if (possAfter) hmLive.possession = hmLiveIdx(possAfter);
     hmLive.raw.push({ quarter, score: sc });
+    // Fatigue du moteur (ev.fat, paliers de 5) : barre d'énergie du terrain 2D.
+    if (ev.fat && typeof ev.fat === "object") Object.assign(hmLive.fat || (hmLive.fat = {}), ev.fat);
 
     const out = { id: ++hmLive.seq, team: t, quarter, clock, text: ev.text || "", score: null, highlight: false };
     // Terrain 2D animé (assets/live/court2d.js, 2026-09-29) : type brut du
@@ -45500,6 +45502,9 @@ function hmLiveBuildState() {
         seconds,
         pts: row.pts, reb: row.reb, oreb: row.oreb || 0, ast: row.ast, stl: row.stl, blk: row.blk, tov: row.tov, pf: row.pf,
         fg2m: row.fgm2, fg2a: row.fga2, fg3m: row.fgm3, fg3a: row.fga3, ftm: row.ftm, fta: row.fta,
+        // Terrain 2D : numéro de maillot (pastille) et fatigue 0-100 du moteur (null si inconnue).
+        number: pObj && Number.isInteger(pObj.number) ? pObj.number : null,
+        fatigue: pObj && hmLive.fat && typeof hmLive.fat[pObj.id] === "number" ? hmLive.fat[pObj.id] : null,
       };
     });
     return {

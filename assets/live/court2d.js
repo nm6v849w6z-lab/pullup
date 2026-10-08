@@ -163,6 +163,11 @@ export function createCourt2D(host, opts = {}) {
   el("stop", { offset: "0", "stop-color": "#000", "stop-opacity": ".42" }, hoopSh);
   el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": "0" }, hoopSh);
   const hoopsG = el("g", { class: "c2d-hoops" }, floor);
+  // Ombre douce sous chaque jeton (dégradé, pas de filtre).
+  const tokSh = el("radialGradient", { id: uid + "-ts", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#000", "stop-opacity": ".5" }, tokSh);
+  el("stop", { offset: ".65", "stop-color": "#000", "stop-opacity": ".22" }, tokSh);
+  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": "0" }, tokSh);
   [false, true].forEach(flip => {
     const X = x => (flip ? 940 - x : x), RX = (x, w) => (flip ? 940 - x - w : x);
     const g = el("g", { class: "c2d-hoop" }, hoopsG);
@@ -187,22 +192,31 @@ export function createCourt2D(host, opts = {}) {
 
   // Parquet : bois + bordeaux par défaut, ou parquet du club qui reçoit
   // (state.courtStyle : floor, grain, line, paint — Premium).
+  // Sans parquet Premium (2026-10-08) : raquettes et zones à 3 points aux
+  // couleurs de l'équipe qui reçoit (homeColor), lattes au ton légèrement
+  // alterné (grain), le tout dessiné une fois par changement de style.
   let floorKey = null;
-  function drawFloor(cs) {
-    const key = cs ? [cs.floor, cs.grain, cs.line, cs.paint].join("|") : "default";
+  function drawFloor(cs, homeColor) {
+    const key = cs ? [cs.floor, cs.grain, cs.line, cs.paint].join("|") : "default|" + (homeColor || "");
     if (key === floorKey) return;
     floorKey = key;
     floorBase.innerHTML = "";
     const wood = cs ? cs.floor : "#cf9a55", grain = cs ? cs.grain : "#c6904b";
-    const paint = cs && cs.paint ? cs.paint : (cs ? null : "rgba(118,30,56,.55)");
+    const paint = cs && cs.paint ? cs.paint : (cs ? null : (homeColor || "rgba(118,30,56,.55)"));
     el("rect", { width: "940", height: "500", rx: "8", fill: wood }, floorBase);
+    // Lattes : une sur trois un peu plus sombre, une sur cinq un peu plus claire.
+    for (let y = 0, i = 0; y < 500; y += 14, i++) {
+      if (i % 3 === 1) el("rect", { y, width: "940", height: "14", fill: "#000", opacity: ".035" }, floorBase);
+      else if (i % 5 === 3) el("rect", { y, width: "940", height: "14", fill: "#fff", opacity: ".035" }, floorBase);
+    }
     for (let y = 14; y < 500; y += 14) el("rect", { y, width: "940", height: "1", fill: grain, opacity: ".9" }, floorBase);
     for (let y = 0; y < 500; y += 14) for (let x = (y / 14) % 2 ? 45 : 0; x < 940; x += 90) el("rect", { x, y, width: "1", height: "14", fill: grain, opacity: ".7" }, floorBase);
     if (paint) {
+      const home = !cs && !!homeColor;
       [false, true].forEach(flip => {
         const X = x => (flip ? 940 - x : x), sw = flip ? 0 : 1;
-        el("path", { d: `M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470 Z`, fill: paint, opacity: cs ? ".55" : "1" }, floorBase);
-        el("rect", { x: flip ? 750 : 0, y: "170", width: "190", height: "160", fill: paint, opacity: cs ? ".85" : ".9" }, floorBase);
+        el("path", { d: `M${X(0)} 30 L${X(141.5)} 30 A237.5 237.5 0 0 ${sw} ${X(141.5)} 470 L${X(0)} 470 Z`, fill: paint, opacity: cs ? ".55" : home ? ".26" : "1" }, floorBase);
+        el("rect", { x: flip ? 750 : 0, y: "170", width: "190", height: "160", fill: paint, opacity: cs ? ".85" : home ? ".55" : ".9" }, floorBase);
       });
       if (cs) el("circle", { cx: "470", cy: "250", r: "60", fill: paint, opacity: ".65" }, floorBase);
     }
@@ -213,11 +227,31 @@ export function createCourt2D(host, opts = {}) {
   // --- bande du haut : médaillons des cinq en jeu + chrono des 24 s ---
   const head = el("g", { transform: `translate(${PAD} 12)`, class: "c2d-head" }, svg);
   const medals = [el("g", { class: "c2d-medals t0" }, head), el("g", { class: "c2d-medals t1", transform: "translate(940 0)" }, head)];
-  const clockG = el("g", { transform: "translate(470 0)", class: "c2d-clock" }, head);
-  el("rect", { x: "-44", y: "2", width: "88", height: "40", rx: "10", fill: "rgba(10,16,28,.85)", stroke: "rgba(255,255,255,.12)" }, clockG);
-  el("text", { x: "0", y: "16", "text-anchor": "middle", class: "c2d-clock-lbl" }, clockG).textContent = "24 S";
-  const clockTxt = el("text", { x: "0", y: "36", "text-anchor": "middle", class: "c2d-clock-val" }, clockG);
+  // Tableau central (2026-10-08) : score des deux équipes autour des 24 s,
+  // quart-temps et chrono du match dessous. Les cartes des cinq sont un peu
+  // plus étroites (76 px) pour lui laisser la place.
+  const board = el("g", { transform: "translate(470 0)", class: "c2d-board" }, head);
+  el("rect", { x: "-66", y: "0", width: "132", height: "50", rx: "10", fill: "rgba(10,16,28,.88)", stroke: "rgba(255,255,255,.12)" }, board);
+  const scoreTxt = [0, 1].map(t => el("text", { x: t ? "46" : "-46", y: "35", "text-anchor": "middle", class: "c2d-score" }, board));
+  const shortTxt = [0, 1].map(t => el("text", { x: t ? "46" : "-46", y: "12", "text-anchor": "middle", class: "c2d-short", "data-no-i18n": "1" }, board));
+  const periodTxt = el("text", { x: "0", y: "45", "text-anchor": "middle", class: "c2d-period", "data-no-i18n": "1" }, board);
+  const clockG = el("g", { class: "c2d-clock" }, board);
+  el("rect", { x: "-24", y: "4", width: "48", height: "31", rx: "7", fill: "rgba(255,255,255,.06)" }, clockG);
+  el("text", { x: "0", y: "14", "text-anchor": "middle", class: "c2d-clock-lbl" }, clockG).textContent = "24 S";
+  const clockTxt = el("text", { x: "0", y: "31", "text-anchor": "middle", class: "c2d-clock-val" }, clockG);
   clockTxt.textContent = "24";
+  let boardKey = "";
+  function syncBoard() {
+    const T = S.teams || [];
+    const q = S.quarter || 1, qLab = q > 4 ? "P" + (q - 4) : "Q" + q;
+    const c = Math.max(0, Math.round(S.clock || 0)), clk = Math.floor(c / 60) + ":" + String(c % 60).padStart(2, "0");
+    const per = S.status === "final" ? "FIN" : S.status === "halftime" ? "MI-TEMPS" : S.status === "pregame" ? "AVANT-MATCH" : qLab + " · " + clk;
+    const key = [T[0] && T[0].score, T[1] && T[1].score, T[0] && T[0].short, T[1] && T[1].short, per].join("|");
+    if (key === boardKey) return;
+    boardKey = key;
+    [0, 1].forEach(t => { scoreTxt[t].textContent = T[t] ? String(T[t].score ?? 0) : "0"; shortTxt[t].textContent = T[t] ? String(T[t].short || "").toUpperCase() : ""; shortTxt[t].setAttribute("fill", colors[t]); });
+    periodTxt.textContent = per;
+  }
 
   // --- calques animés ---
   const layer = el("g", { transform: `translate(${PAD} ${PAD + HEAD})`, class: "c2d-players" }, svg);
@@ -266,7 +300,7 @@ export function createCourt2D(host, opts = {}) {
 
   function makeSprite(p, t) {
     const g = el("g", { class: "c2d-p t" + t, "data-id": p.id }, layer);
-    el("ellipse", { cx: "0", cy: "12", rx: "13", ry: "5", fill: "rgba(0,0,0,.38)", class: "c2d-sh" }, g);
+    el("ellipse", { cx: "0", cy: "12", rx: "19", ry: "7", fill: `url(#${uid}-ts)`, class: "c2d-sh" }, g);
     const ring = el("ellipse", { cx: "0", cy: "12", rx: "17", ry: "7", fill: "none", stroke: "#F5A13A", "stroke-width": "2", class: "c2d-ring", opacity: "0" }, g);
     // Porteur de balle (2026-10-08) : halo pulsant aux couleurs de son équipe
     // sous le jeton (animation CSS, coupée si prefers-reduced-motion).
@@ -300,6 +334,12 @@ export function createCourt2D(host, opts = {}) {
     } else {
       el("circle", { r: "12", cy: "-8", fill: colors[t], stroke: "#0b1220", "stroke-width": "2" }, g);
       el("text", { y: "-4", "text-anchor": "middle", class: "c2d-ini" }, g).textContent = initials(p.name);
+    }
+    // Numéro de maillot en pastille, coin haut du jeton (côté opposé au ballon).
+    if (Number.isInteger(p.number)) {
+      const nb = el("g", { class: "c2d-num", transform: `translate(${t === 0 ? -17 : 17} -28)` }, g);
+      el("circle", { r: "7.2", fill: colors[t], stroke: "#0b1220", "stroke-width": "1.6" }, nb);
+      el("text", { y: "3", "text-anchor": "middle", "data-no-i18n": "1" }, nb).textContent = String(p.number);
     }
     const lab = el("g", { class: "c2d-lab" }, g);
     const txt = el("text", { y: "26", "text-anchor": "middle" }, lab);
@@ -957,16 +997,17 @@ export function createCourt2D(host, opts = {}) {
 
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
   function syncMedals() {
-    const key = [0, 1].map(t => S.teams[t].players.filter(p => p.onCourt).map(p => p.id).join("|")).join("#");
+    const key = [0, 1].map(t => S.teams[t].players.filter(p => p.onCourt).map(p => p.id).join("|")).join("#") + "#" + colors.join("|");
     if (key === medalsKey) return;
     medalsKey = key;
+    medalRefs.clear();
     [0, 1].forEach(t => {
       const g = medals[t]; g.innerHTML = "";
       const on = S.teams[t].players.filter(p => p.onCourt).slice(0, 5);
       on.forEach((p, i) => {
-        const x = t === 0 ? i * 86 : -(i + 1) * 86 + 4;
+        const x = t === 0 ? i * 80 : -(i + 1) * 80 + 4;
         const m = el("g", { transform: `translate(${x} 0)`, class: "c2d-medal" }, g);
-        el("rect", { width: "82", height: "44", rx: "8", fill: "rgba(10,16,28,.82)", stroke: colors[t], "stroke-width": "1.2", "stroke-opacity": ".7" }, m);
+        el("rect", { width: "76", height: "44", rx: "8", fill: "rgba(10,16,28,.82)", stroke: colors[t], "stroke-width": "1.2", "stroke-opacity": ".7" }, m);
         if (p.avatar) {
           const tpl = document.createElement("template"); tpl.innerHTML = p.avatar;
           const av = tpl.content.querySelector("svg");
@@ -983,15 +1024,38 @@ export function createCourt2D(host, opts = {}) {
         // de statistiques sur les cartes, aucun nom qui déborde) : largeur
         // disponible 40 px ; au-delà, les glyphes sont resserrés (textLength).
         const name = lastName(p.name).toUpperCase();
-        const nm = el("text", { x: "60", y: "25", "text-anchor": "middle", class: "c2d-medal-name" }, m);
+        const nm = el("text", { x: "56.5", y: "17", "text-anchor": "middle", class: "c2d-medal-name" }, m);
         nm.textContent = name;
         // Mesure réelle quand le navigateur la donne (≈ 8 px par lettre en
         // 800 10 px), estimation sinon (tests JSDOM).
         let w = name.length * 8;
         try { if (typeof nm.getComputedTextLength === "function") { const m = nm.getComputedTextLength(); if (m > 0) w = m; } } catch (e) { /* JSDOM */ }
-        if (w > 40) { nm.setAttribute("textLength", "40"); nm.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+        if (w > 34) { nm.setAttribute("textLength", "34"); nm.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+        // Fautes (5 pastilles) et énergie (barre, 100 - fatigue du moteur) —
+        // pas de statistiques de jeu sur les cartes (décision 2026-10-08).
+        const pips = [];
+        for (let k = 0; k < 5; k++) pips.push(el("circle", { cx: (44.5 + k * 6).toFixed(1), cy: "26", r: "2.1", class: "c2d-pip" }, m));
+        const eg = el("g", { class: "c2d-energy" }, m);
+        el("rect", { x: "41", y: "33", width: "31", height: "4", rx: "2", fill: "rgba(255,255,255,.14)" }, eg);
+        const bar = el("rect", { x: "41", y: "33", width: "31", height: "4", rx: "2", fill: "#3ecf67" }, eg);
+        medalRefs.set(p.id, { pips, bar, eg, pf: -1, en: -2 });
       });
     });
+  }
+  // Mise à jour légère des cartes (fautes, énergie) sans les reconstruire.
+  const medalRefs = new Map();
+  function syncMedalStats() {
+    [0, 1].forEach(t => S.teams[t].players.forEach(p => {
+      const r = medalRefs.get(p.id); if (!r) return;
+      const pf = Math.max(0, Math.min(5, p.pf || 0));
+      if (pf !== r.pf) { r.pf = pf; r.pips.forEach((c, k) => c.setAttribute("class", "c2d-pip" + (k < pf ? (pf >= 4 ? " on hot" : " on") : ""))); }
+      const en = typeof p.fatigue === "number" ? Math.max(0, Math.min(100, 100 - p.fatigue)) : -1;
+      if (en !== r.en) {
+        r.en = en;
+        r.eg.setAttribute("opacity", en < 0 ? "0" : "1");
+        if (en >= 0) { r.bar.setAttribute("width", (31 * en / 100).toFixed(1)); r.bar.setAttribute("fill", en > 60 ? "#3ecf67" : en > 35 ? "#F5A13A" : "#FF5B5B"); }
+      }
+    }));
   }
 
   // ---------- anti-chevauchement (rendu seulement) ----------
@@ -1184,7 +1248,7 @@ export function createCourt2D(host, opts = {}) {
     update(state, newEvents = []) {
       S = state;
       if (state.teams && state.teams[0] && state.teams[0].color) colors = [state.teams[0].color, state.teams[1].color];
-      drawFloor(state.courtStyle || null);
+      drawFloor(state.courtStyle || null, colors[0]);
       const lk = (state.courtLogo || "") + "|" + (state.arenaSponsor || "");
       if (lk !== logoKey) { logoKey = lk; logoG.innerHTML = state.courtLogo || ""; adTop.textContent = adBot.textContent = (state.arenaSponsor || "HOOP MANAGER").toUpperCase(); }
       const before = sprites.size;
@@ -1192,6 +1256,8 @@ export function createCourt2D(host, opts = {}) {
       syncRoster();
       enforcePossession(true);
       syncMedals();
+      syncMedalStats();
+      syncBoard();
       const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui

@@ -19550,7 +19550,25 @@ class MatchEngine {
     // le terrain met en scène des faits du moteur plutôt que des inventions.
     const ctx = this._possCtx || null;
     const delta = this.statsDelta();
-    events.push({ quarter, clock: this.fmtClock(clock), text, score: { A, B }, ...(ctx || null), ...(delta ? { delta } : null), ...(meta || null) });
+    const fat = this.fatigueDelta();
+    events.push({ quarter, clock: this.fmtClock(clock), text, score: { A, B }, ...(ctx || null), ...(delta ? { delta } : null), ...(fat ? { fat } : null), ...(meta || null) });
+  }
+
+  // Fatigue pour la barre d'énergie du live 2D (2026-10-08) : { "<playerId>":
+  // 0-100 } arrondi par paliers de 5, seulement quand le palier change depuis
+  // le dernier événement (quelques octets par événement). Lecture seule :
+  // n'influence pas la simulation.
+  fatigueDelta() {
+    if (!this._fatSent) this._fatSent = new Map();
+    let out = null;
+    for (const p of [...(this.teamA.players || []), ...(this.teamB.players || [])]) {
+      if (!p || p.id == null) continue;
+      const f = Math.max(0, Math.min(100, Math.round((Number(p.fatigue) || 0) / 5) * 5));
+      if (this._fatSent.get(p.id) === f) continue;
+      this._fatSent.set(p.id, f);
+      (out || (out = {}))[p.id] = f;
+    }
+    return out;
   }
 
   // Delta des statistiques individuelles depuis le dernier événement

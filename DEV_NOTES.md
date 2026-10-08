@@ -38,10 +38,17 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   posé sur le bord du jeton, paniers vus de dessus (`.c2d-hoop` : ombre,
   support, planche, cercle, filet). Crochets de test `placeAt` / `layout`.
   `QUARTER_BREAK_MS` 2 min. Version des fichiers du live : 20261008-3.
-  RESTE : priorité 2 (parquet, ombres, jetons n° de maillot, HUD score /
-  quart / chrono, fautes, fatigue — PAS de stats PTS/REB/AST), priorité 3
-  (traînée de passe, arc de tir, « +2/+3 » existe déjà — PAS de marqueurs
-  de tirs), puis mise en scène.
+  Priorité 2 FAITE : lattes au ton alterné, ombre douce des jetons
+  (dégradé), raquettes / zones à 3 pts aux couleurs du club qui reçoit
+  (sans parquet Premium), pastille du numéro de maillot (`p.number`),
+  tableau central (sigles, score, 24 s, « Q2 · 7:32 ») avec cartes des cinq
+  à 76 px, fautes (5 pastilles, rouges à 4+) et barre d'énergie (100 -
+  fatigue) sur les cartes. Fatigue : `MatchEngine.fatigueDelta()` (engine.js,
+  lecture seule, paliers de 5, ~6 Ko par match) → `ev.fat` → `hmLive.fat` /
+  adapter `st.fat` → `players[].fatigue`. Matchs déjà calculés : pas de barre.
+  Version des fichiers du live : 20261008-4.
+  RESTE : priorité 3 (traînée de passe, arc de tir ; « +2/+3 » existe déjà ;
+  PAS de marqueurs de tirs), puis mise en scène.
 
 - **🟡 EN BÊTA EN PROD (2026-10-08) — live 2D v2, activé pour Gotham
   Knights et BC Dia seulement** (poussé 79b1fce, drapeaux posés en prod le

@@ -29,7 +29,7 @@ window.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/court2d.js")
 const avatar = (id) => `<span class="player-avatar"><svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" data-avatar="${id}"><circle cx="60" cy="60" r="40"/></svg></span>`;
 const mkTeam = (key, names, poss) => ({
   name: key, short: key.slice(0, 3).toUpperCase(), score: 0, color: key === "Gotham" ? "#F26B1D" : "#3B8FE0",
-  players: names.map((n, i) => ({ id: key + ":" + n, name: n, pos: poss[i % 5], onCourt: i < 5, avatar: avatar(key + i), pts: 0, reb: 0, ast: 0 })),
+  players: names.map((n, i) => ({ id: key + ":" + n, name: n, pos: poss[i % 5], onCourt: i < 5, avatar: avatar(key + i), pts: 0, reb: 0, ast: 0, number: 4 + i, fatigue: i * 20, pf: i === 1 ? 4 : 0 })),
 });
 const POS = ["M", "AS", "A", "AF", "P"];
 const S = {
@@ -104,7 +104,19 @@ const S = {
   if (!/MORO/.test(medalTxt)) fail("la carte du tireur doit porter son nom.");
   if (/pts|rb|pd/.test(medalTxt)) fail("plus aucune statistique sur les cartes.");
   const longName = [...host.querySelectorAll(".c2d-medal-name")].find(t => t.textContent === "NAKAMURA");
-  if (!longName || longName.getAttribute("textLength") !== "40") fail("un nom long doit être resserré pour tenir dans sa carte (textLength).");
+  if (!longName || longName.getAttribute("textLength") !== "34") fail("un nom long doit être resserré pour tenir dans sa carte (textLength).");
+  // Priorité 2 (2026-10-08) : numéro de maillot sur le jeton, tableau
+  // central (score, quart-temps, chrono), fautes et énergie sur les cartes.
+  if (host.querySelectorAll(".c2d-p .c2d-num").length !== 10) fail("numéro de maillot attendu sur chaque jeton.");
+  if (host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"] .c2d-num text').textContent !== "4") fail("pastille du numéro : 4 attendu pour Ali Kane.");
+  const scores = [...host.querySelectorAll(".c2d-score")].map(t => t.textContent);
+  if (scores.length !== 2 || scores.some(x => !/^\d+$/.test(x))) fail(`score des deux équipes attendu dans le tableau central, obtenu ${scores}.`);
+  if (!/^Q\d · \d+:\d\d$/.test(host.querySelector(".c2d-period").textContent)) fail(`quart-temps et chrono attendus, obtenu « ${host.querySelector(".c2d-period").textContent} ».`);
+  const moroCard = [...host.querySelectorAll(".c2d-medal")].find(m => /MORO/.test(m.textContent));
+  if (moroCard.querySelectorAll(".c2d-pip.on").length !== 4 || !moroCard.querySelector(".c2d-pip.hot")) fail("4 fautes attendues (en rouge) sur la carte de Ben Moro.");
+  const bars = [...host.querySelectorAll(".c2d-medals.t0 .c2d-energy rect:last-child")].map(r => +r.getAttribute("width"));
+  if (!(bars[0] > bars[2] && Math.abs(bars[0] - 31) < 0.1)) fail(`barre d'énergie attendue (100 - fatigue), obtenu ${bars}.`);
+  if (/pts|rb|pd|PTS|REB|AST/.test(host.querySelector(".c2d-medals.t1").textContent)) fail("toujours aucune statistique de jeu sur les cartes.");
   const clock = host.querySelector(".c2d-clock-val").textContent;
   if (!/^\d+(\.\d)?$/.test(clock) || +clock > 24) fail(`chrono des 24 s attendu, obtenu « ${clock} ».`);
   console.log("✅ Médaillons des cinq en jeu (points à jour) et chrono des 24 s.");

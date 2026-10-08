@@ -459,7 +459,7 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d-ms-v{fill:#fff;font-weight:800}
 .c2d-ms-l{fill:rgba(255,255,255,.55)}
 .c2d-clock-lbl{fill:rgba(255,255,255,.55);font:700 8.5px/1 system-ui,sans-serif;letter-spacing:1.5px}
-.c2d-clock-val{fill:#fff;font:900 20px/1 system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+.c2d-clock-val{fill:#fff;font:900 18px/1 system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
 .c2d-clock.low .c2d-clock-val{fill:#FF7A7F;animation:c2dBlink .5s steps(2,start) infinite}
 @keyframes c2dBlink{to{opacity:.35}}
 .c2d-carrier{transition:opacity .2s}
@@ -472,6 +472,15 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d-lab.lab-off{opacity:0}
 .c2d-hoops{pointer-events:none}
 @media (prefers-reduced-motion:reduce){.c2d-p.has-ball .c2d-carrier-ring,.c2d-p.has-ball .c2d-carrier-glow{animation:none}}
+/* Priorité 2 terrain (2026-10-08) : numéro de maillot, tableau central
+   (score, quart-temps, chrono, 24 s), fautes et énergie sur les cartes. */
+.c2d-num text{fill:#fff;font:800 8.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:1.5px}
+.c2d-score{fill:#fff;font:900 20px/1 system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+.c2d-short{font:800 9px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:1px}
+.c2d-period{fill:rgba(255,255,255,.75);font:700 9px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.8px;font-variant-numeric:tabular-nums}
+.c2d-pip{fill:rgba(255,255,255,.16)}
+.c2d-pip.on{fill:#F5A13A}.c2d-pip.on.hot{fill:#FF5B5B}
+.c2d-energy rect{transition:width .6s ease,fill .6s ease}
 .c2d-light{pointer-events:none}
 /* Commentaires du présentateur dans le fil (2026-09-30). */
 .hm-live .feed li.quote{grid-template-columns:auto 1fr;align-items:center;gap:10px;background:rgba(245,161,58,.06);border-left:3px solid var(--accent,#F5A13A)}

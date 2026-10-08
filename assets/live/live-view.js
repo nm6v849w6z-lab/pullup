@@ -16,7 +16,7 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261008-3";
+import { createCourt2D } from "./court2d.js?v=20261008-4";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 

@@ -100,6 +100,7 @@ export function createLiveAdapter(opts) {
   function reset() {
     st.events = []; st.shots = []; st.fouls = []; st.raw = []; st.seq = 0; st.quarter = 1; st.final = false;
     st.scoreAB = { A: 0, B: 0 }; st.clock = QL; st.shotClock = null; st.possession = null; st.lastAirAt = 0;
+    st.fat = {};
     st.rows = { A: new Map(), B: new Map() }; st.starters = { A: new Set(), B: new Set() }; st.onCourt = { A: new Set(), B: new Set() };
     st.elapsed = 0; st.run = { team: null, pts: 0, said: false }; st.prevScore = [0, 0]; st.moneyQ = null; st.finalSaid = false;
     for (const key of ["A", "B"]) {
@@ -150,6 +151,7 @@ export function createLiveAdapter(opts) {
   const TYPE = { shot: ev => (ev.made ? "made" : "miss"), rebound: () => "miss", freeThrow: () => "ft", foul: () => "foul", technicalFoul: () => "foul", unsportsmanlikeFoul: () => "foul", foulOut: () => "foul", technicalEjection: () => "foul", turnover: () => "turnover", substitution: () => "sub", shortHanded: () => "sub", injury: () => "injury", quarterStart: () => "period", quarterEnd: () => "period" };
 
   function applyStats(ev) {
+    if (ev.fat && typeof ev.fat === "object") Object.assign(st.fat, ev.fat);
     if (ev.delta && typeof ev.delta === "object") {
       for (const key of ["A", "B"]) { const per = ev.delta[key]; if (!per) continue; for (const id in per) { const row = rowOf(key, Number(id)); for (const f of DELTA_FIELDS) if (typeof per[id][f] === "number") row[f] += per[id][f]; } }
       return;
@@ -304,7 +306,8 @@ export function createLiveAdapter(opts) {
         const p = byId.get(id) || {};
         return { id: key + ":#" + id, name: r.name || p.name, pos: r.pos || p.pos || "", avatar: p.avatar || "", link: p.link || null, starter: st.starters[key].has(id),
           onCourt: !st.final && !live.pregame && st.onCourt[key].has(id), seconds: r.seconds + (r.openSince != null ? Math.max(0, nowElapsed - r.openSince) : 0),
-          pts: r.pts, reb: r.reb, ast: r.ast, stl: r.stl, blk: r.blk, tov: r.tov, pf: r.pf, fg2m: r.fgm2, fg2a: r.fga2, fg3m: r.fgm3, fg3a: r.fga3, ftm: r.ftm, fta: r.fta };
+          pts: r.pts, reb: r.reb, ast: r.ast, stl: r.stl, blk: r.blk, tov: r.tov, pf: r.pf, fg2m: r.fgm2, fg2a: r.fga2, fg3m: r.fgm3, fg3a: r.fga3, ftm: r.ftm, fta: r.fta,
+          number: Number.isInteger(p.number) ? p.number : null, fatigue: typeof st.fat[id] === "number" ? st.fat[id] : null };
       });
       return { name: team.name || (t ? "Extérieur" : "Domicile"), short: team.short || (team.name || "?").slice(0, 3).toUpperCase(), sponsor: team.sponsor || null, score: total[t], quarterScores: quarterScores[t],
         teamFouls: st.fouls.filter(f => f.team === t && f.quarter === st.quarter).length, ...timeouts(t), color: team.color || null, logo: team.logo || "", mine: opts.mine === key, tactics: team.tactics || null, players };
