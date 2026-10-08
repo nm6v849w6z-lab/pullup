@@ -20,17 +20,16 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
-- **🟡 POUSSÉ main + prod (2026-10-07, 79b1fce) — live 2D v2 en BÊTA,
-  à activer pour Gotham Knights seulement** : tout est en prod mais
-  INVISIBLE tant que le drapeau n'est pas posé (sans bêta : carte des tirs,
-  comportement inchangé). RESTE :
-  1. Activer en prod (jeton côté utilisateur) :
-     `curl -X POST https://hoop-manager.com/api/admin/beta-feature -H "X-Admin-Token: …" -H "Content-Type: application/json" -d '{"teamName":"Gotham Knights","feature":"live2d","enabled":true}'`
-     (`"enabled":false` pour retirer ; réponse `betaFeatures:["live2d"]`).
-  2. Revue en conditions réelles (match de club ; un match de sélection ou
+- **🟡 EN BÊTA EN PROD (2026-10-08) — live 2D v2, activé pour Gotham
+  Knights seulement** (poussé 79b1fce, drapeau posé en prod le 2026-10-08,
+  `betaFeatures:["live2d"]`, ligue fr-1). Sans bêta : carte des tirs,
+  comportement inchangé. RESTE :
+  1. Revue en conditions réelles (match de club ; un match de sélection ou
      d'un autre club via le mode spectateur affiche la même vue).
-  3. Après validation : ouvrir à tous (poser le drapeau club par club, ou
-     retirer le `court2d:` conditionnel dans hmLiveReset/spectateMountLiveView).
+  2. Après validation : ouvrir à tous (poser le drapeau club par club via
+     `POST /api/admin/beta-feature`, ou retirer le `court2d:` conditionnel
+     dans hmLiveReset / spectateMountLiveView). Retrait : même appel avec
+     `"enabled": false`.
   Détails livrés : `liveState` centralisé ; contexte de possession + delta
   de stats sur chaque événement moteur (`MatchEngine.statsDelta`) ; feuille
   en direct par deltas ; chrono des 24 s source unique ; court2d guidé par
