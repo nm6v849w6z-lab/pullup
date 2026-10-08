@@ -83,6 +83,9 @@ function parkLine(team, i) {
 // Table de marque : où vont les arbitres pendant les arrêts.
 const TABLE = { x: 47, y: 52.4 };
 const STOP_Y = 50.7;                                      // officiels debout devant la table
+const STALE_EVENT_MS = 6000;                              // événement plus vieux : recalage, pas d'animation
+const GAP_RESYNC_MS = 1500;                               // trou d'images au-delà duquel on recale
+const THROTTLE_MS = 700;                                  // images bridées : mise en scène suspendue
 const REF_BEHIND = 2.5;                                   // arbitre de fond : centre à 2,5 pieds derrière la ligne (jeton ≈ 1,6 de demi-largeur)
 
 // Avatars rastérisés (2026-10-01, « ça semble laguer ») : dix SVG d'avatar
@@ -457,7 +460,7 @@ export function createCourt2D(host, opts = {}) {
   // ---------- état ----------
   const sprites = new Map();
   const ball = { x: 47, y: 25, z: 0, holder: null, flight: null };
-  let S = null, possession = 0, raf = 0, last = performance.now(), timers = [];
+  let S = null, possession = 0, raf = 0, last = performance.now(), timers = new Set();
   let logoKey = null, clipSeq = 0, colors = opts.colors || ["#F26B1D", "#3B8FE0"];
   let plan = null;                 // possession en cours (voir buildPlan)
   let stopUntil = 0;               // arrêt de jeu (temps mort, fin de quart) : arbitres à la table
@@ -599,7 +602,7 @@ export function createCourt2D(host, opts = {}) {
   // affichage, onglet masqué ou hors direct : chacun apparaît à sa place.
   function syncRoster() {
     const seen = new Set();
-    const walk = sprites.size > 0 && S.status === "live" && !(typeof document !== "undefined" && document.hidden) && !reducedMotion;
+    const walk = sprites.size > 0 && S.status === "live" && !suspended && !resyncing && !(typeof document !== "undefined" && document.hidden) && !reducedMotion;
     [0, 1].forEach(t => {
       const on = S.teams[t].players.filter(p => p.onCourt);
       const used = new Set();
@@ -702,7 +705,7 @@ export function createCourt2D(host, opts = {}) {
     const dist = Math.hypot(to.x - ball.x, to.y - ball.y);
     flyTo(to, Math.max(140, Math.min(lob ? 520 : 320 + dist * 6, maxMs)), lob ? 7 : 2.5, () => giveBall(to), "pass");
   }
-  const later = (ms, fn) => { const id = setTimeout(fn, Math.max(0, ms)); timers.push(id); return id; };
+  const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, Math.max(0, ms)); timers.add(id); return id; };
   function busy(sp, ms) { if (!sp) return; sp.busy = true; later(ms, () => { sp.busy = false; }); }
   // Saut (tir, contre, rebond) : l'avatar se soulève et grossit un instant.
   function jump(sp, h = 1) { if (!sp) return; sp.jump = { t: 0, h }; }
@@ -1244,6 +1247,83 @@ export function createCourt2D(host, opts = {}) {
   }
 
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
+  // ---------- onglet masqué / reprise (2026-10-08) ----------
+  // Cause du bug « le direct part en vrille après un changement d'onglet » :
+  // onglet masqué, requestAnimationFrame s'arrête (plus de rendu ni de
+  // déplacement) mais la page continue d'appeler update() et TOUTE la
+  // chorégraphie à base de minuteries (passes, tirs, rebonds, remises en
+  // jeu, temps morts, plan de possession) continue, bridée et par paquets :
+  // vols de ballon jamais terminés, passes enchaînées sur un état figé,
+  // cibles contradictoires ; au retour tout se déclenche d'un coup.
+  // Correctif : à la mise en arrière-plan on SUSPEND (minuteries de mise en
+  // scène annulées, file vidée, événements seulement absorbés) ; au retour
+  // on RECALE sur l'état courant du moteur (possession, arrêt de jeu,
+  // statut, cinq en jeu) sans rejouer ni inventer quoi que ce soit, horloge
+  // de rendu remise à l'instant présent. Une seule boucle de rendu (rAF)
+  // et un seul écouteur, retirés à destroy().
+  let suspended = false, resyncCount = 0, throttled = false;
+  function clearChoreo() {
+    timers.forEach(clearTimeout); timers.clear();
+    drainTimer = 0; queue.length = 0; plan = null;
+  }
+  function suspend() {
+    if (suspended) return;
+    suspended = true;
+    clearChoreo();
+  }
+  function resync() {
+    suspended = false;
+    resyncCount++;
+    clearChoreo();
+    busyUntil = 0; sceneUntil = 0; firedAt = 0;
+    ball.flight = null; ball.z = 0; endTrail();
+    for (const [id, sp] of sprites) {
+      if (sp.leaving) { sp.g.remove(); sprites.delete(id); continue; }
+      sp.busy = false; sp.entering = 0; sp.jump = null; sp.cut = false; sp.ox = 0; sp.oy = 0;
+    }
+    benchKey = null;
+    last = performance.now();
+    if (!S) return;
+    resyncing = true;
+    try { syncRoster(); } finally { resyncing = false; }
+    syncBench();
+    const live = S.status === "live";
+    const st = S.stoppage;
+    const tNow = now();
+    if (S.possession === 0 || S.possession === 1) possession = S.possession;
+    // Arrêt de jeu en cours selon le moteur (temps mort, pause) : tout le
+    // monde au banc ; sinon jeu en cours ; hors direct : au banc.
+    stopUntil = live && st && st.endsAt > tNow ? performance.now() + (st.endsAt - tNow) : live ? 0 : performance.now() + 3600e3;
+    const inPlay = live && performance.now() >= stopUntil;
+    ball.holder = null;
+    if (inPlay) {
+      formation();
+      for (const sp of sprites.values()) { sp.x = sp.tx; sp.y = sp.ty; sp.moving = false; }
+      const h = handlerOf(possession);
+      if (h) { giveBall(h); ball.x = h.x; ball.y = h.y; }
+      crossed = !!h && inFront(h.team, h.x);
+    } else {
+      for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); sp.x = sp.tx = p.x; sp.y = sp.ty = p.y; sp.moving = false; }
+      ball.x = 47; ball.y = 25;
+    }
+    possStart = tNow;
+    const evs = (S.events || []).filter(e => e.kind !== "quote");
+    lastPlayed = evs.length ? evs[evs.length - 1] : lastPlayed;
+    lastRefs = 0; steerRefs(performance.now());
+    for (const r of refs) { r.x = r.tx; r.y = r.ty; r.ox = 0; r.oy = 0; r.moving = false; }
+    ballOff.x = 0; ballOff.y = 0;
+  }
+  let resyncing = false;
+  function onVisibility() {
+    if (typeof document === "undefined") return;
+    if (document.visibilityState === "hidden") { throttled = false; suspend(); }
+    else if (suspended) { throttled = false; resync(); }
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisibility);
+    if (document.visibilityState === "hidden") suspended = true;
+  }
+
   // ---------- énergie / fautes sous les jetons, banc des remplaçants ----------
   // (2026-10-08, refonte arène : remplacent les cartes du haut.) Barre
   // d'énergie fine (100 − fatigue du moteur) sous chaque jeton, pastille de
@@ -1418,7 +1498,16 @@ export function createCourt2D(host, opts = {}) {
   // ---------- boucle d'animation ----------
   function tick(nowP) {
     raf = requestAnimationFrame(tick);
-    const dt = Math.min(0.05, (nowP - last) / 1000); last = nowP;
+    // Trou d'images (onglet gelé sans visibilitychange, machine en veille) :
+    // même recalage que le retour d'onglet, jamais de rattrapage.
+    // Images très ralenties (navigateur qui bride rAF sans masquer la page,
+    // économie d'énergie) : la chorégraphie à minuteries n'est plus
+    // suivie par le rendu → suspendue jusqu'au retour d'images normales.
+    const gap = nowP - last;
+    if (S && !suspended && gap > GAP_RESYNC_MS) resync();
+    else if (S && !suspended && gap > THROTTLE_MS) { suspend(); throttled = true; }
+    else if (suspended && throttled && gap < 100 && !(typeof document !== "undefined" && document.hidden)) { throttled = false; resync(); }
+    const dt = Math.min(0.05, Math.max(0, (nowP - last) / 1000)); last = nowP;
     if (stage) { try { stage.tick(nowP, dt); } catch (e) { /* la mise en scène ne bloque jamais le terrain */ } }
     // Jeu sans ballon (retour utilisateur 2026-10-01 : « les joueurs sont
     // trop statiques ») : toutes les 1,2 s, chaque attaquant sans ballon
@@ -1592,7 +1681,7 @@ export function createCourt2D(host, opts = {}) {
       syncTokenStats();
       if (tipId && !pdata.has(tipId)) hideTip();
       syncBoard();
-      const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
+      const quiet = !suspended && performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
       // désigne qui le récupère — pas de meneur choisi ici.
@@ -1612,7 +1701,22 @@ export function createCourt2D(host, opts = {}) {
         fresh = state.events.filter(e => e.airAt && e.airAt >= t - 6000).slice(-3).map(e => e.id);
       }
       firstUpdate = false;
-      for (const e of state.events) if (fresh.includes(e.id)) queue.push(e);
+      // Onglet masqué : le moteur reste la source de vérité, mais rien n'est
+      // mis en scène (requestAnimationFrame est suspendu, les minuteries
+      // bridées) — les événements sont seulement absorbés ; la reprise
+      // (resync) recale le terrain sur l'état courant. Onglet visible : un
+      // événement arrivé très en retard (minuteries bridées, reconnexion)
+      // n'est pas rejoué non plus — recalage à la place.
+      const tNow = now();
+      const evs = state.events.filter(e => fresh.includes(e.id));
+      const stale = evs.filter(e => e.airAt && tNow - e.airAt > STALE_EVENT_MS);
+      if (suspended || stale.length) {
+        evs.forEach(e => { if (e.kind !== "quote") lastPlayed = e; });
+        if (!suspended) resync();
+        if (stage) { try { stage.update(state, []); } catch (e) { /* jamais bloquant */ } }
+        return;
+      }
+      for (const e of evs) queue.push(e);
       drain();
       if (stage) { try { stage.update(state, state.events.filter(e => fresh.includes(e.id))); } catch (e) { /* jamais bloquant */ } }
       // Action à venir : une possession complète calée sur son heure.
@@ -1634,6 +1738,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
+        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length,
         staging: stage ? stage.debug() : null };
     },
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de
@@ -1647,6 +1752,6 @@ export function createCourt2D(host, opts = {}) {
       placeAt(id, x, y) { const sp = sprites.get(id) || refs.find(r => r.id === id); if (!sp) return; sp.x = sp.tx = x; sp.y = sp.ty = y; if (!sp.ref) busy(sp, 10000); },
       layout() { const out = {}; for (const sp of [...sprites.values(), ...refs]) out[sp.id] = { x: sp.x + sp.ox, y: sp.y + sp.oy, sx: sp.x, sy: sp.y, lab: sp.labState }; return { holder: ball.holder, sprites: out }; },
     },
-    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
+    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility); host.innerHTML = ""; host.classList.remove("c2d"); },
   };
 }

@@ -112,6 +112,21 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   moteurbasket3.html. ~34 changements / match (35,8 avant). Test :
   engine_dead_ball_subs_test.js. Pas de changement manuel en direct dans le
   jeu (les ordres sont fixés avant le match).
+  ONGLET MASQUÉ / REPRISE (2026-10-08) : court2d.js `suspend` / `resync`.
+  Cause : rAF s'arrête onglet masqué mais update() et la chorégraphie à
+  minuteries (`later`) continuent (bridées, par paquets) → vols jamais
+  finis, passes sur état figé, tout se déclenche au retour. Correctif :
+  `visibilitychange` hidden → suspend (minuteries de mise en scène
+  annulées, file vidée, événements seulement absorbés) ; visible → resync
+  (recalage sur l'état du moteur : possession, `stoppage`, statut, cinq en
+  jeu ; positions de formation / bancs posées, ballon au meneur de
+  l'équipe du moteur, horloge de rendu remise à maintenant, aucun événement
+  rejoué). Filets : trou d'images > 1,5 s → resync ; images bridées
+  > 0,7 s (page visible mais rAF ralenti) → suspend jusqu'au retour
+  d'images normales ; événement arrivé > 6 s après son airAt → absorbé +
+  resync. `later` suit ses minuteries dans un Set (plus de liste qui
+  grossit). Un seul rAF, un seul écouteur (retiré à destroy). Test :
+  live_court2d_visibility_test.js.
   RESTE arène : polissage (tape dans la main plus
   visible, durée des déplacements selon la vitesse de lecture).
   PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`
