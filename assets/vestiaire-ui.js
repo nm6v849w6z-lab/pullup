@@ -504,7 +504,9 @@
     var eyebrow = (!ctx && t.week != null ? "Semaine " + esc(t.week) + " · " : "") + view.players.length + " joueur" + (view.players.length > 1 ? "s" : "");
     var head = '<header class="vs-head"><div><p class="vs-eyebrow">' + eyebrow + "</p>" + (ctx ? "" : "<h1>Vestiaire</h1>") + "</div>" + tabs + "</header>";
     var body = state.tab === "hierarchy" ? hierarchyHtml(view) : state.tab === "groups" ? groupsHtml(view) : state.tab === "relations" ? relationsHtml(view) : state.tab === "evolution" ? evolutionHtml(view) : overviewHtml(view);
-    holder.innerHTML = '<div class="vs-root' + (ctx ? "" : " vs-club") + '">' + head + body + "</div>";
+    // Police du Mode Club dans les deux modes (demande du 2026-10-08 : le
+    // Vestiaire du mode Sélection doit avoir la même police que celui du club).
+    holder.innerHTML = '<div class="vs-root vs-club">' + head + body + "</div>";
     // Page du club : le titre est dans l'en-tête (pas de doublon avec celui de la section).
     if (!ctx) { var sec = document.getElementById("vestiaireSection"), pt = sec && sec.querySelector(".page-title"); if (pt) pt.style.display = "none"; }
     holder.__vsCtx = ctx;

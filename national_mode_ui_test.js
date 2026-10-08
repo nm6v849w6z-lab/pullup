@@ -145,6 +145,7 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   const vsTeam = win.eval("HM_NATIONAL_COACH.state.view.tacticsPlayers.length");
   if (vsTeam) {
     assert(doc.querySelector("#ncVestiaire .vs-tabs") && win.__lastVestiaire && win.__lastVestiaire.players.length === vsTeam, `vestiaire de la sélection : mêmes vues que le club, ${vsTeam} joueurs`);
+    assert(doc.querySelector("#ncVestiaire .vs-root.vs-club"), "vestiaire de la sélection : même police que le Mode Club (classe vs-club)");
     doc.querySelector('#ncVestiaire [data-vs-tab="groups"]').click();
     assert(doc.querySelector('#ncVestiaire [data-vs-tab="groups"].active'), "vestiaire : changement d'onglet (Groupes)");
     assert(!doc.querySelector("#ncVestiaire [data-player-team]"), "vestiaire : liens vers les fiches de la sélection, pas du club");
