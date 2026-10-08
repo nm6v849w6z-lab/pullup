@@ -57,7 +57,8 @@ const ok = msg => console.log("✅ " + msg);
   const fragile = t2.players[t2.players.length - 1], solid = t2.players[t2.players.length - 2];
   [fragile, solid].forEach(x => { x.form = 33; x.matchLog = [{ week: 4, min: 3 }, { week: 4, min: 2 }]; });
   Object.assign(fragile.attrs, { composure: 10, discipline: 15 });
-  Object.assign(solid.attrs, { composure: 95, discipline: 95 });
+  Object.assign(solid.attrs, { composure: 95, discipline: 95, leadership: 15 });
+  solid.age = 21; solid.clubSinceSeason = 1;   // peu influent : la fermeté ne heurte pas son ego
   const rf = V.talk(t2, fragile.id, "intervention", "firm", { now: T0 });
   const rs = V.talk(t2, solid.id, "intervention", "firm", { now: T0 });
   assert.strictEqual(rf.out, "neg", "fragile + fermeté = mal pris");
@@ -96,7 +97,9 @@ const ok = msg => console.log("✅ " + msg);
   assert.ok(t.locker.log.some(e => e.t === "promise-broken"), "journal du vestiaire");
   // Promesse tenue : minutes en hausse.
   const t2 = team("Promesse tenue");
-  const q = t2.players[t2.players.length - 1];
+  // Joueur le moins bien noté, sous contrat long : la promesse porte sur les minutes.
+  const q = t2.players.slice().sort((x, y) => x.overall() - y.overall())[0];
+  q.contractUntilSeason = 99;
   q.form = 32; q.matchLog = [{ week: 4, min: 4 }, { week: 4, min: 2 }];
   const r2 = V.talk(t2, q.id, "intervention", "promise", { now: T0 });
   t2.week = 6; q.matchLog.push({ week: 5, min: 22 }, { week: 6, min: 25 });
