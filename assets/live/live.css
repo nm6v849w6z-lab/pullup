@@ -501,6 +501,14 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
    ===================================================================== */
 .hm-live .fs-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel2);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;margin-left:auto}
 .hm-live .fs-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hm-live .comm-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel2);color:var(--muted,var(--text));font-weight:700;font-size:13px;cursor:pointer;margin-left:auto}
+.hm-live .comm-btn[hidden]{display:none}
+.hm-live .comm-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hm-live .comm-btn[aria-pressed=true]{color:var(--accent);border-color:var(--accent)}
+.hm-live .comm-btn .on,.hm-live .comm-btn[aria-pressed=true] .off{display:none}
+.hm-live .comm-btn[aria-pressed=true] .on{display:inline}
+.hm-live .comm-btn:not([hidden])+.fs-btn{margin-left:0}
+@media (max-width:640px){.hm-live .comm-btn span{display:none}.hm-live .comm-btn{padding:0 10px}}
 .hm-live .fsbar{display:none}
 /* Timer du temps mort : pastille ambre, distincte du chrono de match. */
 .hm-live .tmo{display:inline-flex;align-items:center;gap:6px;margin:6px auto 0;padding:3px 11px;border-radius:999px;background:rgba(245,161,58,.16);border:1px solid rgba(245,161,58,.55);color:var(--accent);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-variant-numeric:tabular-nums;white-space:nowrap}

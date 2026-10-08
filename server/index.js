@@ -169,6 +169,9 @@ const ASSET_CONTENT_TYPES = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
   ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8",
+  // Commentaire audio du direct (assets/audio/commentary/<langue>/) :
+  // phrases enregistrées + manifest.json qui les déclare (2026-10-08).
+  ".mp3": "audio/mpeg", ".json": "application/json; charset=utf-8",
 };
 
 function serveAsset(res, pathname) {
@@ -187,7 +190,7 @@ function serveAsset(res, pathname) {
       // Scripts et styles toujours revalidés (2026-09-26 : la nouvelle page
       // live restait invisible, l'ancien live.css/live-view.js étant gardé
       // 24 h par le navigateur) ; images et polices gardées 24 h.
-      "Cache-Control": /\.(js|css)$/i.test(relative) ? "no-cache" : "public, max-age=86400",
+      "Cache-Control": /\.(js|css|json)$/i.test(relative) ? "no-cache" : "public, max-age=86400",
     }, data, true);
   });
 }

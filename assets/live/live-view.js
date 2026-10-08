@@ -16,7 +16,7 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261008-12";
+import { createCourt2D } from "./court2d.js?v=20261008-13";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -121,6 +121,9 @@ const TEMPLATE = `
   <section class="panel court-panel" data-ref="courtPanel">
     <div class="phead">
       <h2 data-ref="courtTitle">Terrain</h2>
+      <button type="button" class="comm-btn" data-ref="commBtn" aria-pressed="false" title="Commentaire audio du match" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 6 6M22 9l-6 6"/></svg><span>Commentaire</span>
+      </button>
       <button type="button" class="fs-btn" data-ref="fsBtn" aria-pressed="false" title="Suivre le match en plein écran">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Plein écran</span>
       </button>
@@ -238,6 +241,20 @@ export function createLiveView(root, opts = {}) {
   const court2dAllowed = opts.court2d !== false;
   const ui = { team: "all", q: "all", res: "all", feed: "all", box: null, view: court2dAllowed ? "2d" : "chart" };
   let court2d = null;
+  // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
+  // animé ; le terrain annonce ses moments (onMoment), le module parle.
+  let comm = null, commLoad = null;
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261008-13").then(m => {
+    if (comm === false) return null;          // vue détruite entre-temps
+    comm = m.createCommentary();
+    syncCommBtn();
+    return comm;
+  }).catch(() => null));
+  function syncCommBtn() {
+    const b = $("commBtn"); if (!b) return;
+    b.toggleAttribute("hidden", !court2dAllowed || !comm);
+    b.setAttribute("aria-pressed", String(!!(comm && comm.on)));
+  }
   let S = null;                 // dernier état reçu
   let seenEvents = null;        // Set des id d'événements déjà affichés
   let seenShots = null;
@@ -286,8 +303,9 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261008-12").catch(() => null);
-      try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule }); if (S) court2d.update(S, []); }
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261008-13").catch(() => null);
+      loadComm();
+      try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
     } else if (is2d && court2d && S) {
       // Retour depuis la carte des tirs : remet le terrain à jour (joueurs
@@ -343,6 +361,7 @@ export function createLiveView(root, opts = {}) {
     if (S) { renderBoard(); }
   }
   $("fsBtn").addEventListener("click", () => setFull(!full));
+  $("commBtn").addEventListener("click", () => { if (!comm) return; comm.setOn(!comm.on); syncCommBtn(); });
   $("fsExit").addEventListener("click", () => setFull(false));
   if (typeof document !== "undefined") {
     // Échap / geste système : le navigateur quitte le vrai plein écran.
@@ -447,6 +466,7 @@ export function createLiveView(root, opts = {}) {
     }
     if (miniRaf) cancelAnimationFrame(miniRaf);
     if (court2d) { try { court2d.destroy(); } catch (e) { /* rien */ } court2d = null; }
+    if (comm) { try { comm.destroy(); } catch (e) { /* rien */ } } comm = false;
     root.innerHTML = ""; root.classList.remove("hm-live");
   }
 

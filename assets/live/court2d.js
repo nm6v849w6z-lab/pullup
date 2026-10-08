@@ -705,6 +705,9 @@ export function createCourt2D(host, opts = {}) {
     const dist = Math.hypot(to.x - ball.x, to.y - ball.y);
     flyTo(to, Math.max(140, Math.min(lob ? 520 : 320 + dist * 6, maxMs)), lob ? 7 : 2.5, () => giveBall(to), "pass");
   }
+  // Commentaire audio (commentary.js) : le moment est annoncé à l'instant
+  // où il est animé ; rien quand l'onglet est masqué (pas de rattrapage).
+  const moment = (k, info) => { if (suspended || !opts.onMoment) return; try { opts.onMoment(k, info || {}); } catch (err) { /* jamais bloquant */ } };
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, Math.max(0, ms)); timers.add(id); return id; };
   function busy(sp, ms) { if (!sp) return; sp.busy = true; later(ms, () => { sp.busy = false; }); }
   // Saut (tir, contre, rebond) : l'avatar se soulève et grossit un instant.
@@ -1034,6 +1037,7 @@ export function createCourt2D(host, opts = {}) {
           });
         });
         ball.holder = null; ball.flight = null; ball.x = c.x; ball.y = c.y;
+        moment("entre_deux");
         later(1100, () => {
           fly({ x: c.x, y: c.y }, 800, 10, () => {
             const to = handlerOf(t) || onCourt(t)[0];
@@ -1066,6 +1070,7 @@ export function createCourt2D(host, opts = {}) {
             // Gros panier (3 points, dunk, buzzer) : flash de lumière et public debout.
             const big = e.zone === "three" || /dunk|smash/i.test(String(e.shotType || "")) || (typeof e.clock === "number" && e.clock <= 1);
             if (big) bigFlash();
+            moment(typeof e.clock === "number" && e.clock <= 1 ? "buzzer" : /dunk|smash/i.test(String(e.shotType || "")) ? "dunk" : e.zone === "three" ? "trois_points" : "panier", { team: offT });
             later(350, () => { jump(shooter, 0.6); cheer(offT, big); });
             ball.x = rim.x + (rim.x > 47 ? -1.5 : 1.5); ball.y = rim.y + 1; ball.holder = null; ball.flight = null;
             // Panier + faute (« and one ») : pas de remise en jeu, les lancers suivent.
@@ -1080,6 +1085,7 @@ export function createCourt2D(host, opts = {}) {
             // (événement suivant du moteur) dira qui le récupère.
             const bl = spriteOf(a.blocker); jump(bl, 1.3);
             banner(blockLabel(), "block");
+            moment("contre", { team: 1 - offT });
             crowdReact("score", 1 - offT, true);   // contre : les supporters de la défense exultent
             const dir = rim.x > 47 ? -1 : 1;
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5);
@@ -1092,6 +1098,7 @@ export function createCourt2D(host, opts = {}) {
             // s'approchent (lutte), et il saute pour le capter.
             const dir = rim.x > 47 ? -1 : 1;
             if (!isReb || !afterBlock) crowdReact("miss", offT);   // tir raté : déception
+            if (isReb && e.offensive) moment("rebond_offensif", { team: nextT }); else if (!isReb) moment("rate", { team: offT });
             const drop = { x: rim.x + dir * rnd(3, 9), y: rim.y + rnd(-7, 7) };
             const hop = afterBlock ? { x: ball.x, y: ball.y } : { x: rim.x + dir * rnd(0.5, 2), y: rim.y + rnd(-1.5, 1.5) };
             scene(1700);
@@ -1133,6 +1140,7 @@ export function createCourt2D(host, opts = {}) {
         const finish = () => {
           rimFx(t, made); if (made) flash(shooter, "+" + e.made, "good");
           crowdReact(made ? "score" : "miss", t);
+          moment(made ? "lancer_reussi" : "lancer_rate", { team: t });
           scene(1500);
           later(500, () => {
             for (const sp of sprites.values()) sp.busy = false;
@@ -1172,10 +1180,12 @@ export function createCourt2D(host, opts = {}) {
           busy(st, 900);
           if (pl) moveTo(st, pl.x + (st.team === 0 ? -1 : 1), pl.y + 1, 2.4);
           flash(st, "INT", "good");
+          moment("interception", { team: nt });
           flyTo(st, 420, 1.5, () => giveBall(st));
           later(900, () => formation());
         } else {
           if (pl) flash(pl, "PERTE", "bad");
+          moment("perte", { team: 1 - nt });
           const src = pl || { x: ball.x, y: ball.y };
           fly({ x: src.x + rnd(-3, 3), y: src.y < 25 ? -2 : 52 }, 500, 2, () => {
             const h = handlerOf(nt);
@@ -1191,12 +1201,14 @@ export function createCourt2D(host, opts = {}) {
         const v = e.kind === "foul" ? spriteOf(a.player) : null;
         if (d && v && d !== v) { busy(d, 900); busy(v, 900); moveTo(d, v.x + (d.x >= v.x ? 1.6 : -1.6), v.y + 0.4, 2.6); later(350, () => jump(v, 0.5)); }
         flash(d, e.kind === "technicalFoul" ? "TECHNIQUE" : e.kind === "unsportsmanlikeFoul" ? "ANTISPORTIVE" : "FAUTE", "bad");
+        moment(e.kind === "technicalFoul" ? "faute_technique" : e.kind === "unsportsmanlikeFoul" ? "antisportive" : "faute", { team: t });
         if (d) { d.ring.setAttribute("opacity", "1"); later(1500, () => d.ring.setAttribute("opacity", "0")); }
         break;
       }
-      case "foulOut": case "technicalEjection": case "injury": { flash(spriteOf(a.player), e.kind === "injury" ? "BLESSÉ" : "EXCLU", "bad"); break; }
+      case "foulOut": case "technicalEjection": case "injury": { flash(spriteOf(a.player), e.kind === "injury" ? "BLESSÉ" : "EXCLU", "bad"); moment(e.kind === "injury" ? "blessure" : "exclusion", { team: t }); break; }
       case "substitution": case "shortHanded": {
         const p = spriteOf(a.player); if (p) flash(p, "SORT");
+        if (e.kind === "substitution") moment("changement", { team: t });
         later(1600, () => { const r = spriteOf(a.replacement); if (r) flash(r, "ENTRE", "good"); });
         break;
       }
@@ -1210,13 +1222,16 @@ export function createCourt2D(host, opts = {}) {
           for (const sp of sprites.values()) { const dir = sp.team === 0 ? -1 : 1; moveTo(sp, 47 + dir * (8 + sp.slot * 2), 25 + (sp.slot - 2) * 5, 1.3); busy(sp, 2400); }
           break;
         }
+        moment("debut_quart", { quarter: e.quarter });
         // Reprise : remise en jeu de l'équipe en possession depuis sa ligne de fond.
         const pt = teamOf(e.possessionTeam) !== null ? e.possessionTeam : teamOf(ownerTeam()) !== null ? ownerTeam() : possession;
         inbound(pt, RIM[1 - pt]);
         break;
       }
       case "quarterEnd": {
-        // Tout le monde au banc jusqu'au début du quart suivant.
+        // Tout le monde au banc jusqu'au début du quart suivant (la fin du
+        // match est annoncée par le passage au statut « final »).
+        if (S && S.status !== "final" && !(e.quarter >= 4)) moment(e.quarter === 2 ? "mi_temps" : "fin_quart", { quarter: e.quarter });
         scene(60 * 60 * 1000);
         stopUntil = performance.now() + 60 * 60 * 1000;
         plan = null;
@@ -1229,6 +1244,7 @@ export function createCourt2D(host, opts = {}) {
         // fil la donne, 60 s côté serveur) ; la reprise vient de la
         // possession suivante (buildPlan attend la fin de scène).
         const hold = e.durationMs || 4200;
+        moment("temps_mort", { team: t });
         scene(hold);
         stopUntil = performance.now() + hold;
         // La possession planifiée avant l'arrêt est oubliée : elle sera
@@ -1262,6 +1278,7 @@ export function createCourt2D(host, opts = {}) {
   // de rendu remise à l'instant présent. Une seule boucle de rendu (rAF)
   // et un seul écouteur, retirés à destroy().
   let suspended = false, resyncCount = 0, throttled = false;
+  let lastStatus = null;   // dernier statut vu par update() (fin du match → commentaire)
   function clearChoreo() {
     timers.forEach(clearTimeout); timers.clear();
     drainTimer = 0; queue.length = 0; plan = null;
@@ -1666,6 +1683,9 @@ export function createCourt2D(host, opts = {}) {
   // ---------- API ----------
   return {
     update(state, newEvents = []) {
+      // Statut précédent gardé à part (la vue peut muter le même objet état).
+      if (lastStatus && lastStatus !== "final" && state.status === "final") moment("fin_match");
+      lastStatus = state.status;
       S = state;
       if (state.teams && state.teams[0] && state.teams[0].color) colors = [state.teams[0].color, state.teams[1].color];
       drawFloor(state.courtStyle || null, colors[0]);

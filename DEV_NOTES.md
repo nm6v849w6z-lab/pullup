@@ -20,6 +20,26 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 EN COURS (2026-10-08) — Commentaire audio du direct 2D (voix d'un
+  ami clonée par IA, avec son accord écrit)**. Lecteur livré :
+  `assets/live/commentary.js` (MOMENTS = 23 moments × 3–4 phrases ; ces
+  phrases SONT la liste à générer avec la voix). Le terrain (`court2d.js`,
+  `opts.onMoment`) annonce chaque moment à l'instant où il l'anime, jamais
+  onglet masqué (pas de rattrapage). Bouton « Commentaire » (haut-parleur)
+  dans l'en-tête du terrain, désactivé par défaut, préférence dans le
+  navigateur (`localStorage hm-commentary`). Règles : une voix à la fois,
+  moment fort coupe un petit, délai mini entre phrases ordinaires
+  (GAP_MS), pas deux fois la même variante. Fichiers :
+  `assets/audio/commentary/fr/<moment>_<n>.mp3` + `manifest.json`
+  (`files: { moment: nbVariantes }`, `version` = cache des mp3, à monter à
+  chaque nouvelle génération) ; sans fichier → voix de synthèse du
+  navigateur (provisoire). Lecture Web Audio (débloquée par le geste du
+  bouton, iPhone OK, pas de Range côté serveur) ; serveur : .mp3/.json
+  ajoutés à la liste blanche des assets. Test : `live_commentary_test.js`.
+  **Reste** : déposer les mp3 générés + remplir le manifest ; puis
+  éventuellement noms des joueurs (phrases génériques pour l'instant),
+  anglais / italien.
+
 - **🟢 LIVRÉ (2026-10-08) — Entretiens et communication du coach
   (dynamique de groupe, phases 1 à 5, maquette « talks » validée)**. Un
   seul système dans `assets/vestiaire.js` (section ENTRETIENS ET
