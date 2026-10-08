@@ -101,7 +101,7 @@ const wait = async (fn, label, ms = 20000) => { const t = Date.now(); while (Dat
   };
   const sel = `[data-nc-profile$="|${target.p}"]`;
   await nav("joueurs");
-  assert(/Liste des joueurs/.test(content().querySelector(".nc-mode-title").textContent), "titre de page : « Liste des joueurs »");
+  assert(/Liste des joueurs/.test(content().querySelector("h2.page-title").textContent), "titre de page : « Liste des joueurs »");
   await pdpOpens(content().querySelector(sel), "Liste des joueurs");
 
   await nav("suivis");

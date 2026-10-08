@@ -47,48 +47,43 @@
     ".nc-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}",
     ".nc-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center}",
     ".nc-scroll{overflow-x:auto}",
-    ".nc-table{width:100%;border-collapse:collapse;font-size:13px}",
-    ".nc-table th{color:var(--ink-faint);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;text-align:center;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}",
+    ".nc-table{width:100%;border-collapse:collapse;font-size:14px}",
+    ".nc-table th{color:var(--ink-dim);font-weight:600;font-size:12px;text-align:center;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}",
     ".nc-table td{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center;font-variant-numeric:tabular-nums}",
     ".nc-table .l{text-align:left}",
-    ".nc-nm{background:none;border:0;padding:0;color:var(--ink);font:inherit;font-weight:700;cursor:pointer;text-align:left}",
-    ".nc-club{color:var(--ink-dim);font-size:12px}",
-    ".nc-gen{display:inline-block;min-width:30px;padding:2px 6px;border-radius:6px;background:rgba(79,209,139,.14);color:#4FD18B;font-weight:800}",
+    ".nc-nm{background:none;border:0;padding:0;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-align:left}",
+    ".nc-club{color:var(--ink-dim);font-size:13px}",
     ".nc-bar{width:54px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);display:inline-block;vertical-align:middle;overflow:hidden}.nc-bar i{display:block;height:100%}",
     ".nc-ic{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);display:inline-grid;place-items:center;color:var(--ink-dim);cursor:pointer;padding:0;margin:0 1px}",
     ".nc-ic.on-watch{color:var(--amber);border-color:rgba(240,162,60,.5)}.nc-ic.on-pre{color:#4FD18B;border-color:rgba(79,209,139,.5)}.nc-ic.on-conv{color:#6FB6FF;border-color:rgba(111,182,255,.55)}",
     ".nc-ic:disabled{opacity:.4;cursor:default}",
-    ".nc-sec{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:2px 0 10px}",
+    ".nc-sec{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 12px}.nc-sec>.lp-card-title{margin:0}",
     ".nc-next{padding:10px 12px;border-radius:10px;background:rgba(111,182,255,.08);border:1px solid rgba(111,182,255,.3);margin-bottom:12px;font-size:13px}",
-    ".nc-slot{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;background:var(--panel-2);margin-bottom:6px;font-size:13px}",
+    ".nc-slot{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;background:var(--panel-2);margin-bottom:6px;font-size:14px}",
     ".nc-slot .nc-grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".nc-tag{font-size:11px;padding:2px 7px;border-radius:6px;white-space:nowrap}.nc-tag.ok{background:rgba(79,209,139,.12);color:#4FD18B}.nc-tag.bad{background:rgba(226,105,79,.15);color:#E2694F}.nc-tag.mid{background:rgba(240,162,60,.14);color:var(--amber)}.nc-tag.info{background:rgba(111,182,255,.14);color:#6FB6FF}",
-    ".nc-btn{background:var(--amber);color:#1A0F02;border-radius:9px;padding:9px 14px;font:inherit;font-weight:800;border:0;cursor:pointer}",
-    ".nc-btn2{background:transparent;border:1px solid rgba(240,162,60,.5);color:var(--amber);border-radius:8px;padding:5px 9px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}",
-    ".nc-btn:disabled,.nc-btn2:disabled{opacity:.5;cursor:default}",
-    ".nc-small{font-size:12px;color:var(--ink-faint);margin:8px 0 0}",
+    ".nc-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}.nc-tag.ok{background:rgba(79,209,139,.12);color:#4FD18B}.nc-tag.bad{background:rgba(226,105,79,.15);color:#E2694F}.nc-tag.mid{background:rgba(240,162,60,.14);color:var(--amber)}.nc-tag.info{background:rgba(111,182,255,.14);color:#6FB6FF}",
+    ":is(#selectionsSection,.nc-msg-acts) .tq-btn{white-space:nowrap}:is(#selectionsSection,.nc-msg-acts) .tq-btn:disabled{opacity:.5;cursor:default}",
+    ".nc-small{font-size:13px;color:var(--ink-faint);margin:8px 0 0}",
     ".nc-err{color:#E2694F;font-size:13px;margin:8px 0}",
     ".nc-gath{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}",
     ".nc-g{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--ink);font:inherit;cursor:pointer}",
     ".nc-g.on{border-color:var(--amber)}.nc-g.past{opacity:.6}.nc-g b{display:block;font-size:13.5px}.nc-g span{font-size:12px;color:var(--ink-dim)}.nc-g b .nat-flag{width:18px;height:12px;vertical-align:-1px}.nc-g .nc-g-comp{color:var(--amber);font-weight:700}",
     ".nc-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}@media(max-width:900px){.nc-two{grid-template-columns:minmax(0,1fr)}}",
     ".nc-set{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}",
-    ".nc-set label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-dim);font-weight:700}",
+    ".nc-set label{display:flex;flex-direction:column;min-width:0}.nc-set .lp-input{width:100%}",
     ".nc-set select,.nc-sheet select,.nc-sheet input,.nc-in{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 8px;font:inherit;font-size:13px}",
     ".nc-sheet{width:100%;border-collapse:collapse;font-size:13px}.nc-sheet td,.nc-sheet th{padding:6px;border-bottom:1px solid rgba(255,255,255,.05);text-align:left}",
-    ".nc-sheet th{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em}.nc-sheet input[type=number]{width:62px}",
+    ".nc-sheet th{font-size:12px;font-weight:600;color:var(--ink-dim)}.nc-sheet input[type=number]{width:62px}",
     ".nc-stack>*+*{margin-top:14px}",
     ".nc-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}",
     ".nc-fr{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}.nc-fr:first-child{border-top:0}.nc-fr .nc-grow{flex:1;min-width:180px}",
     ".nc-fr .nat-flag,.nc-opp-head .nat-flag{width:26px;height:18px;border-radius:3px;object-fit:cover}",
     ".nc-opp-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.nc-opp-head .nat-flag{width:42px;height:28px}.nc-opp-head h3{margin:0;font-size:19px}",
-    ".nc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:700px){.nc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}",
-    ".nc-kpis>div{background:var(--panel-2);border-radius:10px;padding:10px 12px}.nc-kpis b{display:block;font-size:18px}.nc-kpis span{font-size:12px;color:var(--ink-dim)}",
     "#selectionsSection .nc-players th.eff-th{cursor:pointer}",
     // Tableau des joueurs sans défilement horizontal (2026-10-07) : toutes
     // les colonnes tiennent dès ~1200 px d'écran (cellules resserrées, nom
     // et club tronqués, libellés courts).
-    "#selectionsSection table.nc-players{width:100%;table-layout:fixed;font-size:13px}",
+    "#selectionsSection table.nc-players{width:100%;table-layout:fixed;font-size:14px}",
     "#selectionsSection table.nc-players th,#selectionsSection table.nc-players td{padding:0 2px!important;text-align:center}",
     "#selectionsSection table.nc-players th.eff-th-attr{min-width:0!important;font-size:10.5px!important;padding:0 1px!important}",
     "#selectionsSection table.nc-players .nc-c-name{width:168px;text-align:left!important;padding-left:10px!important}",
@@ -96,7 +91,7 @@
     "#selectionsSection table.nc-players .nc-c-attr{width:auto}#selectionsSection table.nc-players .nc-c-cond{width:52px}#selectionsSection table.nc-players .nc-c-act{width:64px}",
     "#selectionsSection table.nc-players td.eff-td-name .eff-player,#selectionsSection table.nc-players td.eff-td-name .nc-club{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}",
     "#selectionsSection table.nc-players td.eff-td-name .eff-player{display:flex;align-items:center;gap:6px}#selectionsSection table.nc-players .nc-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}",
-    "#selectionsSection table.nc-players .attr-cell{min-width:0}#selectionsSection table.nc-players .nc-gen{min-width:0;padding:2px 4px}",
+    "#selectionsSection table.nc-players .attr-cell{min-width:0}",
     "#selectionsSection table.nc-players .nc-bar{width:100%;max-width:44px}#selectionsSection table.nc-players .nc-ic{width:26px;height:26px}",
     "#selectionsSection table.nc-players td.eff-td-name{text-align:left!important;padding-left:10px!important}",
     "#selectionsSection table.nc-players td.nc-club{white-space:normal;text-align:left;padding:10px!important}",
@@ -104,8 +99,9 @@
     // Téléphone : 23 colonnes ne tiennent pas, défilement horizontal comme avant.
     "@media(max-width:768px){#selectionsSection table.nc-players{width:auto;table-layout:auto}#selectionsSection table.nc-players .nc-c-attr{width:36px}}",
     // Petit écran d'ordinateur : nom plus étroit, chiffres un peu plus petits.
-    "@media(max-width:1250px){#selectionsSection table.nc-players .nc-c-name{width:132px}#selectionsSection table.nc-players .nc-c-pos{width:34px}#selectionsSection table.nc-players .nc-c-gen{width:36px}#selectionsSection table.nc-players .nc-c-cond{width:40px}#selectionsSection table.nc-players .nc-c-act{width:58px}#selectionsSection table.nc-players{font-size:12px}#selectionsSection table.nc-players th.eff-th-attr{font-size:9.5px!important}#selectionsSection table.nc-players .nc-ic{width:24px;height:24px}#selectionsSection table.nc-players .eff-pos{padding:2px 4px;font-size:11px}}",
+    "@media(max-width:1250px){#selectionsSection table.nc-players .nc-c-name{width:132px}#selectionsSection table.nc-players .nc-c-pos{width:34px}#selectionsSection table.nc-players .nc-c-gen{width:36px}#selectionsSection table.nc-players .nc-c-cond{width:40px}#selectionsSection table.nc-players .nc-c-act{width:58px}#selectionsSection table.nc-players{font-size:13px}#selectionsSection table.nc-players th.eff-th-attr{font-size:9.5px!important}#selectionsSection table.nc-players .nc-ic{width:24px;height:24px}#selectionsSection table.nc-players .eff-pos{padding:2px 4px;font-size:11px}}",
     // Rapport d'analyse : drapeau dans l'écusson rond du bandeau (sp2-crest).
+    "@media(max-width:768px){#selectionsSection table.nc-players{font-size:14px}}",
     ".nc-ana-crest{display:block;width:100%;height:100%}.nc-ana-crest .nat-flag{width:100%;height:100%;object-fit:cover}",
   ].join("\n");
 
@@ -138,6 +134,8 @@
   function tier(v) { var f = g("attrColorTier"); return f ? f(v) : ""; }
   function attrVal(x, k) { return k === "physicalAvg" ? x.physAvg : k === "mentalAvg" ? x.mentAvg : (x.attrs ? x.attrs[k] : null); }
   function genOf(x) { return x.gen != null ? x.gen : x.ovr; }
+  // GEN comme l'Effectif du Club : attr-cell par palier (td.eff-td-rating).
+  function genHtml(x) { var v = genOf(x); return v == null ? "–" : '<span class="attr-cell eff-attr ' + tier(v) + '"><span class="attr-val">' + esc(Math.round(v)) + "</span></span>"; }
   function can(perm) { return !!(ui.view && (ui.view.perms || []).indexOf(perm) >= 0); }
   function ensureCss() {
     if (document.getElementById("ncCss")) return;
@@ -259,7 +257,7 @@
     var h = '<tr class="eff-row"><td class="eff-td-name l"><span class="eff-player">' + flag(x.nationality) + '<button type="button" class="nc-nm player-link" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '">' + esc(x.name) + "</button></span>" +
       '<div class="nc-club">' + esc(x.club.name) + (x.club.division ? " · " + esc(x.club.division) : "") + "</div></td>" +
       "<td>" + esc(x.age) + "</td><td>" + posBadge(x.position) + "</td><td title=\"cm\">" + (x.height ? esc(x.height) : "–") + "</td>" +
-      '<td><span class="nc-gen">' + esc(genOf(x)) + "</span></td>";
+      '<td class="eff-td-rating">' + genHtml(x) + "</td>";
     attrGroups().forEach(function (gr) {
       gr.keys.forEach(function (k, ki) {
         var val = attrVal(x, k);
@@ -284,12 +282,12 @@
     var cg = "<colgroup>" + cols.map(function (c) { return '<col class="' + (colCls[c.key] || "nc-c-attr") + '">'; }).join("") + (withActs ? '<col class="nc-c-act">' : "") + "</colgroup>";
     var h = '<div class="eff-table-wrap eff-table-wrap-caracs roster-table-frozen-col"><table class="roster-table eff-table eff-caracs nc-players">' + cg + "<thead>" + fam + "<tr>" + cols.map(headCell).join("") + (withActs ? "<th></th>" : "") + "</tr></thead><tbody>" +
       (list.length ? list.map(function (x) { return playerRow(x, v); }).join("") : '<tr><td colspan="40" class="l nc-club">' + esc(opts.empty || "Aucun joueur.") + "</td></tr>") + "</tbody></table></div>";
-    if (opts.limit && total > list.length) h += '<div style="text-align:center;margin-top:10px"><button type="button" class="nc-btn2" data-nc-more="1">Afficher plus (' + (total - list.length) + " joueurs)</button></div>";
+    if (opts.limit && total > list.length) h += '<div style="text-align:center;margin-top:10px"><button type="button" class="tq-btn" data-nc-more="1">Afficher plus (' + (total - list.length) + " joueurs)</button></div>";
     return h;
   }
   function filtersHtml(v) {
     var f = function (attr, val, on, label) { return '<button type="button" class="cal-filter' + (on ? " active" : "") + '" ' + attr + '="' + esc(val) + '">' + esc(label) + "</button>"; };
-    return '<div class="cal-toolbar">' + f("data-nc-pos", "", !ui.pos, "Tous les postes") +
+    return '<div class="cal-toolbar vs-tabs">' + f("data-nc-pos", "", !ui.pos, "Tous les postes") +
       POS.map(function (p) { return f("data-nc-pos", p, ui.pos === p, posShort(p)); }).join("") +
       f("data-nc-filter", "dispo", ui.filter === "dispo", "Disponibles") + f("data-nc-filter", "u23", ui.filter === "u23", "23 ans et moins") +
       ((v.followed || []).length ? f("data-nc-filter", "suivis", ui.filter === "suivis", "Suivis") : "") + "</div>";
@@ -315,7 +313,7 @@
   }
   // Présélection : la liste de travail centrale.
   function preselectionHtml(v) {
-    return '<div class="nc-stack"><div class="nc-card"><div class="nc-sec"><span>Présélection</span><span>' + v.preselection.length + " / " + v.limits.preselection + "</span></div>" +
+    return '<div class="nc-stack"><div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Présélection</span><span class="nc-club">' + v.preselection.length + " / " + v.limits.preselection + "</span></div>" +
       playersTableHtml(refsToPlayers(v.preselection), v, { empty: can("preselect") ? "Présélection vide : ajoutez des joueurs (coche) depuis Liste des joueurs ou Joueurs suivis." : "Présélection vide pour l'instant." }) + missingNote(v.preselection) + "</div></div>";
   }
   // Joueurs suivis (onglet à part, 2026-10-07) : serveur = followedOf.
@@ -331,13 +329,13 @@
         return '<span class="nc-chip" style="padding:3px 9px">' + esc(b.mine ? "Vous" : (b.name || "Membre du staff")) + (b.role ? ' <span class="nc-club">· ' + esc(ROLE_LABEL[b.role] || b.role) + "</span>" : "") + "</span>";
       }).join("") + "</span>";
     };
-    var h = '<div class="nc-card"><div class="nc-sec"><span>' + (own ? "Joueurs que vous suivez" : "Joueurs suivis par le staff") + "</span><span>" + list.length + "</span></div>";
+    var h = '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">' + (own ? "Joueurs que vous suivez" : "Joueurs suivis par le staff") + '</span><span class="nc-club">' + list.length + "</span></div>";
     if (!rows.length) h += '<p class="nc-club">' + (own ? "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici." : "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).") + "</p>";
     else {
       h += '<div class="nc-scroll"><table class="nc-table nc-followed"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th>' + (own ? "" : '<th class="l">Suivi par</th>') + (can("preselect") ? "<th></th>" : "") + "</tr></thead><tbody>" + rows.map(function (r) {
         var x = r.x, e = r.e;
         return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + (x ? profileBtn(x, x.name, true) : "<b>" + esc(e.ref.n) + "</b>") + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : '<div class="nc-club">Plus sélectionnable</div>') + "</td>" +
-          "<td>" + (x ? esc(x.age) : "–") + "</td><td>" + (x ? '<span class="nc-gen">' + esc(genOf(x)) + "</span>" : "–") + "</td><td>" + (x ? (x.injuryUntil ? statusTag("injured", x) : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') : "–") + "</td>" +
+          "<td>" + (x ? esc(x.age) : "–") + '</td><td class="eff-td-rating">' + (x ? genHtml(x) : "–") + "</td><td>" + (x ? (x.injuryUntil ? statusTag("injured", x) : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') : "–") + "</td>" +
           (own ? "" : '<td class="l">' + who(e) + "</td>") + (can("preselect") ? '<td style="white-space:nowrap">' + (x ? actionsHtml(x, v) : "") + "</td>" : "") + "</tr>";
       }).join("") + "</tbody></table></div>";
     }
@@ -353,7 +351,7 @@
     return '<div class="nc-next" style="margin-top:10px"><b>Remplacer ' + esc(ui.replaceOut.split("|").slice(1).join("|")) + "</b>" + (out ? " (" + esc(posShort(out.position)) + ")" : "") +
       '<div class="nc-row" style="margin-top:8px"><select id="ncReplaceIn" class="nc-in" style="flex:1">' +
       cands.slice(0, 80).map(function (x) { return '<option value="' + esc(key(x)) + '">' + esc(x.name + " · " + posShort(x.position) + " · GEN " + genOf(x) + (inList(v.preselection, x) ? " · présélection" : "")) + "</option>"; }).join("") +
-      '</select><button type="button" class="nc-btn2" data-nc-replace-go="1">Valider</button><button type="button" class="nc-ic" data-nc-replace-cancel="1" title="Annuler">' + icon("cross") + "</button></div></div>";
+      '</select><button type="button" class="tq-btn" data-nc-replace-go="1">Valider</button><button type="button" class="nc-ic" data-nc-replace-cancel="1" title="Annuler">' + icon("cross") + "</button></div></div>";
   }
   function convocationsHtml(v) {
     if (!v.gatherings.length) return '<div class="nc-card"><p class="nc-club">Aucun rassemblement cette saison.</p></div>';
@@ -373,15 +371,15 @@
     // Convoqués : infos joueur et disponibilité.
     var rows = cur.players.map(function (c) { return { c: c, x: pm[key(c.ref)] || null }; })
       .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? genOf(b.x) : 0) - (a.x ? genOf(a.x) : 0); });
-    h += '<div class="nc-two"><div class="nc-card"><div class="nc-sec"><span>Convoqués</span><span>' + cur.players.length + " / " + v.limits.convocation + "</span></div>";
+    h += '<div class="nc-two"><div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Convoqués</span><span class="nc-club">' + cur.players.length + " / " + v.limits.convocation + "</span></div>";
     if (!rows.length) h += '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>';
     else {
       h += '<div class="nc-scroll"><table class="nc-table"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th><th>Disponibilité</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
         var x = r.x, c = r.c;
-        return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + profileBtn(x, c.ref.n, true) + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + (x ? esc(x.age) : "–") + "</td><td>" + (x ? '<span class="nc-gen">' + esc(genOf(x)) + "</span>" : "–") + "</td>" +
+        return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + profileBtn(x, c.ref.n, true) + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + (x ? esc(x.age) : "–") + '</td><td class="eff-td-rating">' + (x ? genHtml(x) : "–") + "</td>" +
           "<td>" + (x && !x.injuryUntil ? '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>' : "–") + "</td><td>" + statusTag(c.status, x) + "</td><td style=\"white-space:nowrap\">" +
           (edit ? '<button type="button" class="nc-ic" data-nc-conv="0" data-nc-p="' + esc(c.ref.p) + '" data-nc-n="' + esc(c.ref.n) + '" title="Retirer">' + icon("cross") + "</button>" :
-            can("convoke") && cur.frozen && !cur.past && c.status !== "ok" ? '<button type="button" class="nc-btn2" data-nc-replace="' + esc(key(c.ref)) + '">Remplacer</button>' : "") + "</td></tr>";
+            can("convoke") && cur.frozen && !cur.past && c.status !== "ok" ? '<button type="button" class="tq-btn" data-nc-replace="' + esc(key(c.ref)) + '">Remplacer</button>' : "") + "</td></tr>";
       }).join("") + "</tbody></table></div>";
     }
     if (ui.replaceOut) h += replaceHtml(v, cur);
@@ -391,7 +389,7 @@
     h += '<div class="nc-card">';
     if (can("preselectView")) {
       var pre = refsToPlayers(v.preselection).filter(function (x) { return !inList(conv, x); }).sort(function (a, b) { return POS.indexOf(a.position) - POS.indexOf(b.position) || genOf(b) - genOf(a); });
-      h += '<div class="nc-sec"><span>Présélection non convoquée</span><span>' + pre.length + "</span></div>";
+      h += '<div class="nc-sec"><span class="cal-card-kicker">Présélection non convoquée</span><span class="nc-club">' + pre.length + "</span></div>";
       if (!pre.length) h += '<p class="nc-club">' + (v.preselection.length ? "Toute la présélection est convoquée." : "Présélection vide.") + "</p>";
       pre.forEach(function (x) {
         h += '<div class="nc-slot">' + posBadge(x.position) + '<span class="nc-grow">' + profileBtn(x, x.name) + ' <span class="nc-club">· GEN ' + esc(genOf(x)) + " · " + esc(x.club.name) + "</span></span>" + (x.injuryUntil ? statusTag("injured", x) : "") +
@@ -399,7 +397,7 @@
       });
     }
     if (cur.changes && cur.changes.length) {
-      h += '<div class="nc-sec" style="margin-top:14px"><span>Remplacements</span></div>' + cur.changes.map(function (c) {
+      h += '<div class="nc-sec" style="margin-top:14px"><span class="cal-card-kicker">Remplacements</span></div>' + cur.changes.map(function (c) {
         return '<div class="nc-slot">' + icon("swap") + '<span class="nc-grow">' + esc(c.in.n) + " remplace " + esc(c.out.n) + ' <span class="nc-club">(' + (c.reason === "injured" ? "blessé" : "plus éligible") + ")</span></span></div>";
       }).join("");
     }
@@ -690,30 +688,30 @@
     // Envoyer une demande.
     var opps = fr.opponents, dates = fr.dates.filter(function (d) { return !ui.frOpp || d.busy.indexOf(ui.frOpp) < 0; });
     var full = fr.limits.used >= fr.limits.perSeason;
-    h += '<div class="nc-card"><div class="nc-sec"><span>Proposer un match amical</span><span>' + fr.limits.used + " / " + fr.limits.perSeason + " cette saison</span></div>";
+    h += '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Proposer un match amical</span><span class="nc-club">' + fr.limits.used + " / " + fr.limits.perSeason + " cette saison</span></div>";
     if (full) h += '<p class="nc-club">Nombre maximum de matchs amicaux atteint pour cette saison.</p>';
     else {
-      h += '<div class="nc-set"><label>Adversaire<select class="nc-in" data-nc-fr="opp"><option value="">Choisir une sélection</option>' + opps.map(function (o) {
+      h += '<div class="nc-set"><label><span class="field-label">Adversaire</span><select class="lp-input" data-nc-fr="opp"><option value="">Choisir une sélection</option>' + opps.map(function (o) {
         return '<option value="' + esc(o.id) + '"' + (ui.frOpp === o.id ? " selected" : "") + ">" + esc(teamLab(o.id) + (o.interim ? " · intérim (accepte d'office)" : " · " + o.coach) + (o.used >= fr.limits.perSeason ? " · complet" : "")) + "</option>";
       }).join("") + "</select></label>" +
-        '<label>Fenêtre internationale<select class="nc-in" data-nc-fr="at"><option value="">' + (dates.length ? "Choisir une fenêtre" : "Aucune fenêtre libre") + "</option>" + dates.map(function (d) {
+        '<label><span class="field-label">Fenêtre internationale</span><select class="lp-input" data-nc-fr="at"><option value="">' + (dates.length ? "Choisir une fenêtre" : "Aucune fenêtre libre") + "</option>" + dates.map(function (d) {
           return '<option value="' + d.at + '"' + (String(ui.frAt) === String(d.at) ? " selected" : "") + ">" + esc("Fenêtre internationale " + d.window + " · " + when(d.at, true)) + "</option>";
         }).join("") + "</select></label>" +
-        '<label>Lieu<select class="nc-in" data-nc-fr="venue"><option value="home"' + (ui.frVenue === "home" ? " selected" : "") + '>À domicile</option><option value="away"' + (ui.frVenue === "away" ? " selected" : "") + ">À l'extérieur</option></select></label></div>" +
-        '<div class="nc-row" style="margin-top:12px"><button type="button" class="nc-btn" data-nc-fr-send="1"' + (!ui.frOpp || !ui.frAt || ui.busy ? " disabled" : "") + ">Envoyer la demande</button></div>";
+        '<label><span class="field-label">Lieu</span><select class="lp-input" data-nc-fr="venue"><option value="home"' + (ui.frVenue === "home" ? " selected" : "") + '>À domicile</option><option value="away"' + (ui.frVenue === "away" ? " selected" : "") + ">À l'extérieur</option></select></label></div>" +
+        '<div class="lp-actions" style="margin-top:14px"><button type="button" class="cal-next-btn lp-btn" data-nc-fr-send="1"' + (!ui.frOpp || !ui.frAt || ui.busy ? " disabled" : "") + ">Envoyer la demande</button></div>";
     }
     h += '<p class="nc-small">' + (fr.dates.length ? "" : "Votre sélection joue ses qualifications à chaque fenêtre restante. ") + "Les amicaux se jouent uniquement pendant les fenêtres internationales (dimanche à 20h), entre deux sélections sans match de qualification ce jour-là. Réponse attendue avant le gel des convocations (3 jours avant le match).</p></div>";
     var sec = function (title, list, actsFn, empty) {
-      return '<div class="nc-card"><div class="nc-sec"><span>' + esc(title) + "</span><span>" + list.length + "</span></div>" + (list.length ? list.map(function (f) { return frLine(f, actsFn ? actsFn(f) : ""); }).join("") : '<p class="nc-club">' + esc(empty) + "</p>") + "</div>";
+      return '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">' + esc(title) + '</span><span class="nc-club">' + list.length + "</span></div>" + (list.length ? list.map(function (f) { return frLine(f, actsFn ? actsFn(f) : ""); }).join("") : '<p class="nc-club">' + esc(empty) + "</p>") + "</div>";
     };
     h += sec("Demandes reçues", fr.received, function (f) {
-      return '<button type="button" class="nc-btn2" data-nc-fr-accept="' + esc(f.id) + '">Accepter</button><button type="button" class="nc-btn2" data-nc-fr-refuse="' + esc(f.id) + '">Refuser</button>';
+      return '<button type="button" class="tq-btn" data-nc-fr-accept="' + esc(f.id) + '">Accepter</button><button type="button" class="tq-btn" data-nc-fr-refuse="' + esc(f.id) + '">Refuser</button>';
     }, "Aucune demande reçue.");
-    h += sec("Demandes envoyées", fr.sent, function (f) { return '<button type="button" class="nc-btn2" data-nc-fr-cancel="' + esc(f.id) + '">Annuler</button>'; }, "Aucune demande en attente.");
+    h += sec("Demandes envoyées", fr.sent, function (f) { return '<button type="button" class="tq-btn" data-nc-fr-cancel="' + esc(f.id) + '">Annuler</button>'; }, "Aucune demande en attente.");
     h += sec("Matchs programmés", fr.scheduled, function (f) {
-      return '<button type="button" class="nc-btn2" data-nc-gid-go="' + esc(f.gid) + '">Convocations</button>' + (now < f.freezeAt ? '<button type="button" class="nc-btn2" data-nc-fr-cancel="' + esc(f.id) + '">Annuler</button>' : "");
+      return '<button type="button" class="tq-btn" data-nc-gid-go="' + esc(f.gid) + '">Convocations</button>' + (now < f.freezeAt ? '<button type="button" class="tq-btn" data-nc-fr-cancel="' + esc(f.id) + '">Annuler</button>' : "");
     }, "Aucun match amical programmé.");
-    h += sec("Matchs joués", fr.played, function (f) { return '<button type="button" class="nc-btn2" data-nc-match="' + esc(f.id) + '">Feuille de match</button>'; }, "Aucun match amical joué.");
+    h += sec("Matchs joués", fr.played, function (f) { return '<button type="button" class="tq-btn" data-nc-match="' + esc(f.id) + '">Feuille de match</button>'; }, "Aucun match amical joué.");
     if (fr.closed.length) h += sec("Refusées et annulées", fr.closed, null, "");
     return h + "</div>";
   }
@@ -744,7 +742,7 @@
       h += '<div class="nc-row" style="margin-top:8px;flex-wrap:wrap;gap:8px"><input type="search" class="nc-in" data-nc-assign-q="' + esc(s.mid) + '" placeholder="Rechercher un joueur, un club, un poste" style="max-width:260px">' +
         '<select class="nc-in" id="ncAssignSel-' + esc(s.mid) + '" style="max-width:320px">' +
         opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '" data-q="' + esc((x.name + " " + ((x.club && x.club.name) || "") + " " + (x.position || "")).toLowerCase()) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + genOf(x)) + "</option>"; }).join("") +
-        '</select><button type="button" class="nc-btn2" data-nc-assign-add="' + esc(s.mid) + '">Attribuer</button></div>';
+        '</select><button type="button" class="tq-btn" data-nc-assign-add="' + esc(s.mid) + '">Attribuer</button></div>';
     }
     return h + "</div>";
   }
@@ -755,15 +753,15 @@
       // Un recruteur ne voit que la DTN ; le staff NT voit les deux.
       var roles = gr[1].filter(function (r) { return gr[0] === "DTN" || appoint.indexOf(r[0]) >= 0; });
       if (!roles.length) return;
-      h += '<h3 class="nc-sec" style="margin:18px 0 8px"><span>' + esc(gr[0]) + "</span></h3><div class=\"nc-two\">";
+      h += '<h3 class="nc-sec" style="margin:18px 0 8px"><span class="cal-card-kicker">' + esc(gr[0]) + "</span></h3><div class=\"nc-two\">";
       roles.forEach(function (r) {
         var role = r[0], list = staff.filter(function (s) { return s.role === role; });
-        h += '<div class="nc-card"><div class="nc-sec"><span>' + esc(r[1]) + "</span><span>" + list.length + " / " + (max[role] || 0) + "</span></div>" +
+        h += '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">' + esc(r[1]) + '</span><span class="nc-club">' + list.length + " / " + (max[role] || 0) + "</span></div>" +
           '<p class="nc-small" style="margin:0 0 10px">' + esc(r[2]) + "</p>" +
           (list.length ? list.map(function (s) {
             return '<div class="nc-slot-wrap"><div class="nc-slot"><span class="nc-grow"><b>' + esc(s.pseudo || s.clubName) + '</b> <span class="nc-club">· ' + esc(s.clubName || "") + (s.byName ? " · nommé par " + esc(s.byName) : "") + "</span></span>" +
               (s.status === "active" ? '<span class="nc-tag ok">En poste</span>' : '<span class="nc-tag mid">Invitation envoyée</span>') +
-              (appoint.indexOf(role) >= 0 ? '<button type="button" class="nc-btn2" data-nc-staff-remove="' + esc(s.mid) + '" data-nc-role="' + role + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>" +
+              (appoint.indexOf(role) >= 0 ? '<button type="button" class="tq-btn" data-nc-staff-remove="' + esc(s.mid) + '" data-nc-role="' + role + '">' + (s.status === "active" ? "Retirer" : "Annuler") + "</button>" : "") + "</div>" +
               (role === "scout" && (can("assign") || s.status === "active") ? assignHtml(v, s) : "") + "</div>";
           }).join("") : '<p class="nc-club">Personne pour l\'instant.</p>') + "</div>";
       });
@@ -783,14 +781,14 @@
       if ((role === "assistant" || role === "helper") && rs.some(function (r) { return NT_ROLES.indexOf(r) >= 0; })) return "déjà dans le staff NT";
       return "";
     };
-    h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>Nommer un manager</span><span>' + (v.managers || []).length + " managers</span></div>" +
+    h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span class="lp-card-title">Nommer un manager</span><span class="nc-club">' + (v.managers || []).length + " managers</span></div>" +
       '<input type="search" class="nc-in" data-nc-staff-q="1" placeholder="Rechercher un manager ou un club" value="' + esc(ui.staffQ) + '" style="width:100%;max-width:420px;margin-bottom:10px">' +
       (mgrs.length ? mgrs.slice(0, 25).map(function (m) {
         var rs = (m.roles || []).map(function (r) { return ROLE_LABEL[r] || r; });
         return '<div class="nc-fr">' + flag(m.country) + '<div class="nc-grow"><b>' + esc(m.pseudo || m.clubName) + '</b><br><span class="nc-club">' + esc(m.clubName || "") + (m.division ? " · " + esc(m.division) : "") + (m.busy ? " · déjà sélectionneur ou dans le staff d'une autre sélection" : rs.length ? " · ici : " + esc(rs.join(", ")) : "") + "</span></div>" +
           appoint.map(function (role) {
             var why = m.busy ? "Pris par une autre sélection" : blocked(m, role);
-            return '<button type="button" class="nc-btn2" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="' + role + '"' + (why || count(role) >= (max[role] || 0) ? ' disabled title="' + esc(why || "Places complètes") + '"' : "") + ">" + esc(INVITE_LABEL[role]) + "</button>";
+            return '<button type="button" class="tq-btn" data-nc-staff-invite="' + esc(m.mid) + '" data-nc-role="' + role + '"' + (why || count(role) >= (max[role] || 0) ? ' disabled title="' + esc(why || "Places complètes") + '"' : "") + ">" + esc(INVITE_LABEL[role]) + "</button>";
           }).join("") + "</div>";
       }).join("") : '<p class="nc-club">Aucun manager trouvé.</p>') +
       '<p class="nc-small">Le manager nommé reçoit la proposition dans sa messagerie (bouton « Accepter le poste ») et sur la page Sélections. Une même personne peut cumuler un rôle du staff NT avec recruteur et scout ; vous pouvez aussi vous nommer vous-même recruteur ou scout. Le staff prend fin avec le mandat du sélectionneur.</p></div>';
@@ -891,7 +889,7 @@
     var a = v.analysis;
     if (!a) return '<div class="nc-card"><p class="nc-club">Analyse indisponible.</p></div>';
     var o = a.opponent;
-    var h = '<div class="nc-card"><div class="nc-row"><label class="nc-club" style="display:flex;flex-direction:column;gap:4px;font-weight:700">Sélection analysée<select class="nc-in" data-nc-opp="1">' +
+    var h = '<div class="nc-card"><div class="nc-row"><label style="display:flex;flex-direction:column;min-width:0"><span class="field-label">Sélection analysée</span><select class="lp-input" data-nc-opp="1">' +
       (a.next ? '<option value="">Prochain adversaire</option>' : '<option value="">Choisir une sélection</option>') +
       '<option value="__self"' + (ui.anaSelf ? " selected" : "") + ">Ma sélection · " + esc(teamLab(v.team.id)) + "</option>" +
       a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (!ui.anaSelf && ui.opp === c.id ? " selected" : "") + ">" + esc(teamLab(c.id)) + "</option>"; }).join("") + "</select></label>" +
@@ -903,7 +901,7 @@
     h += anaBlockHtml(v, target);
     // Effectif de référence (fiches publiques).
     var squad = (o.squad || []).slice().sort(function (x, y) { return POS.indexOf(x.position) - POS.indexOf(y.position) || y.pts - x.pts; });
-    h += '<div class="nc-two" style="margin-top:14px"><div class="nc-card"><div class="nc-sec"><span>Joueurs de référence</span><span>' + squad.length + "</span></div>" +
+    h += '<div class="nc-two" style="margin-top:14px"><div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Joueurs de référence</span><span class="nc-club">' + squad.length + "</span></div>" +
       (squad.length ? '<div class="nc-scroll"><table class="nc-table"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>MJ</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pd</th><th>Éval.</th></tr></thead><tbody>' + squad.map(function (x) {
         var conv = o.convoked && o.convoked.indexOf(x.name) >= 0;
         return "<tr><td>" + posBadge(x.position) + '</td><td class="l"><b>' + esc(x.name) + "</b>" + (x.injured ? ' <span class="nc-tag bad">Blessé</span>' : "") + (conv ? ' <span class="nc-tag info">Convoqué</span>' : "") + (x.club ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + esc(x.age) + "</td><td>" + esc(x.gp) + "</td><td>" + esc(x.min) + "</td><td>" + esc(x.pts) + "</td><td>" + esc(x.reb) + "</td><td>" + esc(x.ast) + "</td><td>" + esc(x.eff) + "</td></tr>";
@@ -912,12 +910,12 @@
     var res = function (list) {
       return list.map(function (m) {
         return '<div class="nc-slot"><span class="nc-grow">' + esc(teamLab(m.home)) + " " + esc(m.scoreHome) + " – " + esc(m.scoreAway) + " " + esc(teamLab(m.away)) + ' <span class="nc-club">· ' + esc(m.label || when(m.at)) + "</span></span>" +
-          '<button type="button" class="nc-btn2" data-nc-match="' + esc(m.id) + '">Feuille</button></div>';
+          '<button type="button" class="tq-btn" data-nc-match="' + esc(m.id) + '">Feuille</button></div>';
       }).join("");
     };
-    h += '<div class="nc-card"><div class="nc-sec"><span>Derniers résultats</span></div>' + (o.results.length ? res(o.results) : '<p class="nc-club">Aucun match international joué.</p>') +
-      '<div class="nc-sec" style="margin-top:14px"><span>Confrontations directes</span></div>' + (o.headToHead.length ? res(o.headToHead) : '<p class="nc-club">Aucune confrontation.</p>') +
-      (o.honours.length ? '<div class="nc-sec" style="margin-top:14px"><span>Palmarès</span></div>' + o.honours.map(function (x) { return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(x.season) + " · " + esc(x.label) + "</span><span class=\"nc-tag ok\">Classement final : " + esc(x.rank) + "e sur " + esc(x.of) + ".</span></div>"; }).join("") : "") + "</div></div>";
+    h += '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Derniers résultats</span></div>' + (o.results.length ? res(o.results) : '<p class="nc-club">Aucun match international joué.</p>') +
+      '<div class="nc-sec" style="margin-top:14px"><span class="cal-card-kicker">Confrontations directes</span></div>' + (o.headToHead.length ? res(o.headToHead) : '<p class="nc-club">Aucune confrontation.</p>') +
+      (o.honours.length ? '<div class="nc-sec" style="margin-top:14px"><span class="cal-card-kicker">Palmarès</span></div>' + o.honours.map(function (x) { return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(x.season) + " · " + esc(x.label) + "</span><span class=\"nc-tag ok\">Classement final : " + esc(x.rank) + "e sur " + esc(x.of) + ".</span></div>"; }).join("") : "") + "</div></div>";
     return h;
   }
 
@@ -941,24 +939,23 @@
     "body.nc-mode .topbar-right > :not(#topbarOnline):not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
     "body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
-    "body.nc-mode #selectionsSection .page-title{display:none}",
-    "#ncTopTitle{display:flex;align-items:center;gap:10px}#ncTopTitle .nat-flag{width:28px;height:19px;border-radius:3px;object-fit:cover}#ncTopTitle b{font-size:15px}#ncTopTitle span{display:block;font-size:12px;color:var(--ink-dim)}",
+    "body.nc-mode #selectionsSection .section > .page-title{display:none}",
+    "#ncTopTitle{display:flex;align-items:center;gap:10px}#ncTopTitle .nat-flag{width:28px;height:19px;border-radius:3px;object-fit:cover}#ncTopTitle b{font-size:15px;font-weight:700}#ncTopTitle span{display:block;font-size:12px;color:var(--ink-dim)}",
     ".hm-head__nc{display:inline-flex}.hm-head__nc:empty{display:none}",
     ".hm-head__nc-btn{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}.hm-head__nc-btn .nat-flag{width:22px;height:15px;border-radius:2px;object-fit:cover}",
     ".nc-badge{min-width:18px;height:18px;border-radius:9px;background:#E2694F;color:#fff;font-size:11px;display:inline-grid;place-items:center;padding:0 5px}",
     "@media(max-width:680px){.hm-head__nc-btn span.nc-lbl{display:none}}",
     "#ncSidebar{display:flex;flex-direction:column;gap:2px;padding:6px 10px 16px}",
-    "#ncSidebar .nc-side-head{display:flex;align-items:center;gap:10px;padding:10px 8px 12px;border-bottom:1px solid var(--line);margin-bottom:8px}#ncSidebar .nc-side-head .nat-flag{width:30px;height:20px;border-radius:3px;object-fit:cover}#ncSidebar .nc-side-head b{font-size:15px}",
-    "#ncSidebar .nc-side-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:12px 8px 4px}",
-    ".nc-side-link{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;background:none;border:0;color:var(--ink-dim);font:inherit;font-size:14px;font-weight:700;padding:8px 10px;border-radius:9px;cursor:pointer}",
-    ".nc-side-link:hover{color:var(--ink);background:var(--panel-2)}.nc-side-link.on{color:var(--amber);background:rgba(240,162,60,.1);box-shadow:inset 0 0 0 1px rgba(240,162,60,.5)}.nc-side-link.hot{color:var(--ink)}",
-    ".nc-side-back{margin:14px 8px 0;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}",
+    "#ncSidebar .nc-side-head{display:flex;align-items:center;gap:10px;padding:10px 8px 12px;border-bottom:1px solid var(--line);margin-bottom:8px}#ncSidebar .nc-side-head .nat-flag{width:30px;height:20px;border-radius:3px;object-fit:cover}#ncSidebar .nc-side-head b{font-size:15px;font-weight:700}#ncSidebar .nc-side-head .nc-club{font-size:12px}",
+    "#ncSidebar .sidebar-section-label{margin:12px 0 4px}",
+    ".nc-side-link{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;background:none;border:1px solid transparent;color:var(--ink-dim);font:inherit;font-size:13px;font-weight:600;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}",
+    ".nc-side-link:hover{color:var(--ink);background:var(--panel-2)}.nc-side-link.on{color:var(--amber);background:rgba(240,162,60,.14);border-color:rgba(240,162,60,.35);font-weight:700}.nc-side-link.hot{color:var(--ink)}",
+    ".nc-side-back{margin:14px 8px 0;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}",
     ".nc-dash{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:900px){.nc-dash{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.nc-dash{grid-template-columns:1fr}}",
-    ".nc-kpi .nc-k{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}.nc-kpi .nc-v{font-size:22px;font-weight:900;margin:8px 0 2px}.nc-kpi .nc-s{font-size:12.5px;color:var(--ink-dim)}",
-    ".nc-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0 16px}.nc-hero .nat-flag{width:60px;height:40px;border-radius:5px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.15)}.nc-hero h1{margin:0;font-size:26px}",
-    ".nc-feed-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.nc-feed-item:first-child{border-top:0}.nc-feed-item b{display:block;font-size:13.5px}.nc-feed-item span{font-size:12.5px;color:var(--ink-dim)}.nc-feed-item.unread b{color:var(--amber)}",
+    ".nc-kpi .nc-v{margin:10px 0 6px}",
+    ".nc-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0 16px}.nc-hero .nat-flag{width:60px;height:40px;border-radius:5px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.15)}.nc-hero h1{margin:2px 0 0;font-size:26px;font-weight:700;line-height:1}",
+    ".nc-feed-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.nc-feed-item:first-child{border-top:0}.nc-feed-item b{display:block;font-size:13.5px}.nc-feed-item span{font-size:13px;color:var(--ink-dim)}.nc-feed-item.unread b{color:var(--amber)}",
     ".nc-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--line)}.nc-feed-item.unread .nc-feed-dot{background:var(--amber)}",
-    ".nc-mode-title{font-size:24px;font-weight:900;margin:4px 0 14px}",
     "@media(max-width:900px){body.nc-mode .topbar-m-logo{display:none!important}}",
     ".nc-notes{margin-top:18px}.nc-notes-form{display:flex;flex-direction:column;gap:8px;align-items:flex-end;margin-top:4px}.nc-notes-form textarea{width:100%;resize:vertical;min-height:70px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px}.nc-notes-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}.nc-note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.025)}.nc-note-head{display:flex;align-items:center;gap:8px}.nc-note-head .nc-club{flex:1}.nc-note-text{margin:6px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.45}",
     ".nc-chips{display:flex;flex-wrap:wrap;gap:6px}.nc-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:99px;border:1px solid var(--line);font-size:12.5px;font-weight:700}.nc-chip-x{border:0;background:none;color:var(--ink-dim);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}.nc-slot-wrap{border-top:1px solid var(--line);padding:6px 0}.nc-slot-wrap:first-of-type{border-top:0}.nc-assign{padding:2px 0 6px 2px}",
@@ -1053,7 +1050,7 @@
       return false;
     }) : [];
     if (side) side.innerHTML = '<div class="nc-side-head">' + flag(m.country) + "<div><b>" + esc(m.teamId ? teamLab(m.teamId) : "") + '</b><div class="nc-club">' + esc(v ? rolesLabel(v) : (m.roles || [role]).map(function (r) { return ROLE_LABEL[r] || r; }).join(" · ")) + "</div></div></div>" + navs.map(function (n) {
-      if (n[0] === "#") return '<div class="nc-side-label">' + esc(n[1]) + "</div>";
+      if (n[0] === "#") return '<div class="sidebar-section-label">' + esc(n[1]) + "</div>";
       var badge = n[0] === "notifications" && v && v.unread ? '<span class="nc-badge">' + v.unread + "</span>" :
         n[0] === "convocations" && curGathering() ? '<span class="nc-club">' + curGathering().players.length + "</span>" :
         n[0] === "amicaux" && v && v.friendlies && v.friendlies.received.length ? '<span class="nc-badge">' + v.friendlies.received.length + "</span>" : "";
@@ -1121,7 +1118,7 @@
   function titleHtml(nav) {
     var cur = NAV.filter(function (n) { return n[0] === nav; })[0];
     var lab = cur ? navLabel(cur) : "";
-    return '<h2 class="nc-mode-title">' + esc(lab) + "</h2>";
+    return '<h2 class="page-title">' + esc(lab) + "</h2>";
   }
   function modeHtml() {
     var v = ui.view;
@@ -1165,7 +1162,7 @@
     var oppOf = function (m) { return m.home === v.team.id ? m.away : m.home; };
     var rank = tv && tv.qualif && tv.qualif.group ? (tv.qualif.group.standings.filter(function (s) { return s.teamId === v.team.id; })[0] || {}).rank : null;
     var seasonNo = v.mandate ? Math.min(2, Math.max(1, v.season - v.mandate.fromSeason + 1)) : 1;
-    var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="nc-k">' + k + '</div><div class="nc-v">' + val + '</div><div class="nc-s">' + sub + "</div></button>"; };
+    var kpi = function (k, val, sub, nav) { return '<button type="button" class="nc-card nc-kpi" style="text-align:left;cursor:pointer;color:inherit;font:inherit" data-nc-nav="' + nav + '"><div class="cal-card-kicker">' + k + '</div><div class="nc-v eff-kpi-num">' + val + '</div><div class="eff-kpi-label">' + sub + "</div></button>"; };
     var h = '<div class="nc-hero">' + flag(v.team.country) + '<div><div class="nc-club">' + esc(rolesLabel(v)) + (v.role === "coach" ? " · " + esc(coachName(v)) : " · sélectionneur : " + esc(coachName(v))) + "</div><h1>" + esc(teamLab(v.team.id)) + "</h1></div></div>";
     h += '<div class="nc-dash">';
     h += kpi("Prochain match", nx ? flag(oppOf(nx).split("-")[0]) + " " + esc(teamLab(oppOf(nx))) : "–", nx ? esc(nx.label || (nx.w ? "Qualifications" + (tv && tv.qualif && tv.qualif.group ? " · " + tv.qualif.group.label : "") : "")) + " · " + esc(when(nx.at, true)) : "Aucun match programmé", can("analysis") ? "analyse" : "calendrier");
@@ -1178,12 +1175,12 @@
     h += "</div>";
     // Prochain match en direct ou imminent : bouton du direct (écran des clubs).
     var nxLive = nx ? liveBtn(nx) : "";
-    if (nxLive) h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span>' + (nx.status === "live" ? "Match en cours" : "Coup d'envoi imminent") + "</span></div>" +
+    if (nxLive) h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span class="lp-card-title">' + (nx.status === "live" ? "Match en cours" : "Coup d'envoi imminent") + "</span></div>" +
       '<div class="nc-slot"><span class="nc-grow">' + flag(nx.home.split("-")[0]) + " " + esc(teamLab(nx.home)) + " – " + flag(nx.away.split("-")[0]) + " " + esc(teamLab(nx.away)) + ' <span class="nc-club">· ' + esc(when(nx.at, true)) + "</span></span>" + nxLive + "</div></div>";
     h += showcaseHtml();
     h += '<div class="nc-two" style="margin-top:16px">';
-    if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span>Notifications</span><button type="button" class="nc-btn2" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
-    if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span>Convoqués · ' + esc(cur ? gTitleText(cur) : "") + "</span><span>" + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
+    if (can("feed")) h += '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Notifications</span><button type="button" class="tq-btn" data-nc-nav="notifications">Tout voir</button></div>' + feedHtml(v, 5) + "</div>";
+    if (can("convocView")) h += '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Convoqués · ' + esc(cur ? gTitleText(cur) : "") + '</span><span class="nc-club">' + (cur ? cur.players.length : 0) + " / " + v.limits.convocation + "</span></div>" +
       (cur && cur.players.length ? cur.players.slice(0, 15).map(function (c) { return '<div class="nc-slot"><span class="nc-grow">' + profileBtn(poolByKey()[key(c.ref)] || null, c.ref.n) + "</span>" + statusTag(c.status) + "</div>"; }).join("") : '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>') + "</div>";
     return h + "</div>";
   }
@@ -1195,9 +1192,9 @@
     if (!S || !tv || !tv.extras) return "";
     var x = tv.extras;
     if (!x.canEditMessage && !x.canEditVisuals && !x.message) return "";
-    return '<div class="nc-card" id="ncShowcase" style="margin-top:16px"><div class="nc-sec"><span>Vitrine publique</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
-      (x.canEditVisuals ? '<button type="button" class="nc-btn2" data-nt-visuals>Personnaliser</button> ' : "") +
-      '<button type="button" class="nc-btn2" data-nc-public>Voir la page publique</button></span></div>' +
+    return '<div class="nc-card" id="ncShowcase" style="margin-top:16px"><div class="nc-sec"><span class="lp-card-title">Vitrine publique</span><span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+      (x.canEditVisuals ? '<button type="button" class="tq-btn" data-nt-visuals>Personnaliser</button> ' : "") +
+      '<button type="button" class="tq-btn" data-nc-public>Voir la page publique</button></span></div>' +
       S.previewHtml(tv) + S.messageHtml(tv, onShowcaseUpdate) +
       (x.canEditVisuals ? "" : '<p class="nc-small">Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.</p>') + "</div>";
   }
@@ -1241,17 +1238,17 @@
       '</tbody></table></div><p class="nc-small">Moyennes par match en sélection, sous votre mandat.</p>';
   }
   function reportHtml(r, live) {
-    var k = function (tt, v, s) { return '<div class="nc-card nc-kpi"><div class="nc-k">' + tt + '</div><div class="nc-v">' + v + '</div><div class="nc-s">' + (s || "") + "</div></div>"; };
+    var k = function (tt, v, s) { return '<div class="nc-card nc-kpi"><div class="cal-card-kicker">' + tt + '</div><div class="nc-v eff-kpi-num">' + v + '</div><div class="eff-kpi-label">' + (s || "") + "</div></div>"; };
     var h = '<div class="nc-card" style="margin-bottom:12px"><b>' + (live ? "Bilan en cours" : "Bilan du mandat") + " · " + esc(r.label) + " · " + esc(r.coach) + '</b><div class="nc-club">Saisons ' + esc(r.fromSeason) + " à " + esc(r.toSeason) + " (" + r.seasons + " saison" + (r.seasons > 1 ? "s" : "") + ")</div></div>";
     h += '<div class="nc-report">' + k("Matchs", r.played, r.played ? r.wins + (r.wins > 1 ? " victoires, " : " victoire, ") + r.losses + (r.losses > 1 ? " défaites" : " défaite") : "") + k("Victoires", r.winPct != null ? r.winPct + " %" : "–", r.played ? "Points : " + r.pf + " pour, " + r.pa + " contre" : "") +
       k("Joueurs utilisés", r.playersUsed, "") + k("Nouveaux internationaux", r.newInternationals, (r.newNames || []).slice(0, 6).map(esc).join(", ")) + "</div>";
-    h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span>Compétitions</span></div>' + (r.seasonsDetail || []).map(function (s) {
+    h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span class="lp-card-title">Compétitions</span></div>' + (r.seasonsDetail || []).map(function (s) {
       var comp = s.comp === "continental" ? "Compétition continentale" : s.comp === "world" ? "Coupe du monde" : "Compétition";
       return '<div class="nc-slot"><span class="nc-grow">Saison ' + esc(s.season) + " · " + comp + "</span>" +
         (s.comp === "continental" && s.qualified != null ? '<span class="nc-tag ' + (s.qualified ? "ok" : "bad") + '">Qualification : ' + (s.qualified ? "oui" : "non") + "</span>" : "") +
         (s.tournament && s.tournament.rank ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " : " + esc(s.tournament.stage) + "</span>" : s.tournament ? '<span class="nc-tag ok">' + esc(s.tournament.label) + " en cours</span>" : '<span class="nc-club">à venir</span>') + "</div>";
     }).join("") + (r.bestFinish ? '<p class="nc-small">Meilleur résultat : ' + esc(r.bestFinish) + "</p>" : "") + "</div>";
-    if (r.results && r.results.length) h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span>Principaux résultats</span></div>' + r.results.map(function (m) {
+    if (r.results && r.results.length) h += '<div class="nc-card" style="margin-top:12px"><div class="nc-sec"><span class="lp-card-title">Principaux résultats</span></div>' + r.results.map(function (m) {
       return '<div class="nc-slot"><span class="nc-grow">' + esc(teamLab(m.home)) + " " + esc(m.scoreHome) + " – " + esc(m.scoreAway) + " " + esc(teamLab(m.away)) + ' <span class="nc-club">· ' + esc(m.label || "") + "</span></span>" + '<button type="button" class="nt-link" data-nc-match="' + esc(m.id) + '">Feuille</button></div>';
     }).join("") + "</div>";
     return h;
@@ -1646,9 +1643,9 @@
     natMsgRefresh();
     var same = function (x) { return x.teamId === meta.teamId && x.role === meta.role; };
     var attrs = ' data-nc-msg-team="' + esc(meta.teamId) + '" data-nc-msg-role="' + esc(meta.role) + '"';
-    if (natMsg.invites.some(same)) return head + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="nc-btn" data-nc-msg-accept' + attrs + (natMsg.busy ? " disabled" : "") + ">Accepter le poste</button>" +
-      '<button type="button" class="nc-btn2" data-nc-msg-decline' + attrs + (natMsg.busy ? " disabled" : "") + ">Refuser</button></div></div>";
-    if (natMsg.roles.some(same)) return head + '<span class="nc-tag ok">Poste accepté</span> <button type="button" class="nc-btn2" data-nc-enter="' + esc(meta.teamId) + '">Mode Sélection</button></div>';
+    if (natMsg.invites.some(same)) return head + '<div class="lp-actions nc-msg-acts"><button type="button" class="cal-next-btn lp-btn" data-nc-msg-accept' + attrs + (natMsg.busy ? " disabled" : "") + ">Accepter le poste</button>" +
+      '<button type="button" class="tq-btn" data-nc-msg-decline' + attrs + (natMsg.busy ? " disabled" : "") + ">Refuser</button></div></div>";
+    if (natMsg.roles.some(same)) return head + '<span class="nc-tag ok">Poste accepté</span> <button type="button" class="tq-btn" data-nc-enter="' + esc(meta.teamId) + '">Mode Sélection</button></div>';
     return head + '<span class="nc-club">Proposition expirée ou retirée.</span></div>';
   }
   function onMsgAction(b) {

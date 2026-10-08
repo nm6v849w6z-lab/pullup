@@ -862,6 +862,17 @@ points réellement ouverts.
   envoie qu'au staff, jamais pour les joueurs du club du lecteur, scout =
   ses joueurs ; bloc en bas de la fiche (`pdpNotesHtml`). Le mode s'affiche
   « Mode Sélection » (anciennement « Mode Sélectionneur »).
+  Typographie (2026-10-08) : le Mode Sélection réutilise celle du Club, ne
+  pas recréer de variante `.nc-*` / `.nt-*` : titre `h2.page-title`
+  (`titleHtml`), titre de carte `.lp-card-title` + méta `.nc-club` dans
+  `.nc-sec` (mise en page seule), sur-titres `.cal-card-kicker`, KPI
+  `.eff-kpi-num` / `.eff-kpi-label`, boutons `.cal-next-btn` (+ `.lp-btn`
+  dans `.lp-actions`, ou `.nt-btn` pour la version en ligne) et `.tq-btn`,
+  champs `.field-label` + `.lp-input`, filtres `.cal-toolbar.vs-tabs`, GEN
+  `attr-cell` dans `td.eff-td-rating`, barre latérale aux valeurs de
+  `.tab-btn.sidebar-link` (classe propre `.nc-side-link` gardée : la classe
+  Club est remise à zéro par `switchTab`) + `.sidebar-section-label`.
+  Aucune graisse 900 propre au mode.
 
 - **Analyse d'équipe (Scouting Pro, sa propre équipe en Premium) — mise en
   page dense (2026-10-05)** : seuils en requêtes de CONTENEUR sur

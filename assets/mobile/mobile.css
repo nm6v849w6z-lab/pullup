@@ -34,7 +34,7 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   }
   .sidebar-brand { padding-top: calc(14px + env(safe-area-inset-top)); }
   body.m-drawer-open .sidebar { transform: none; }
-  .tab-btn.sidebar-link { font-size: 15px; padding: 12px 12px; }
+  .tab-btn.sidebar-link, #ncSidebar .nc-side-link { font-size: 15px; padding: 12px 12px; }
   .m-drawer-backdrop {
     display: block; position: fixed; inset: 0; z-index: 55; background: rgba(4,8,15,.6);
     opacity: 0; pointer-events: none; transition: opacity .2s ease;

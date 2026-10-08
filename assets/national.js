@@ -23,24 +23,23 @@
 
   var CSS = [
     ".nt-sub{color:var(--ink-dim);margin:-4px 0 14px;font-size:13.5px}",
-    ".nt-h{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);margin:22px 0 10px;font-weight:800}",
+    ".nt-h{margin:22px 0 10px}",
     ".nt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}",
     ".nt-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}",
     ".nt-card.is-mine{border-color:var(--amber)}",
     ".nt-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.nt-sp{flex:1}",
     ".nt-card .nat-flag,.nt-table .nat-flag,.nt-head .nat-flag{width:24px;height:16px;border-radius:3px;object-fit:cover;vertical-align:-3px;box-shadow:0 0 0 1px rgba(255,255,255,.15)}",
     ".nt-head .nat-flag{width:36px;height:24px}",
-    ".nt-tag{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;white-space:nowrap}",
+    ".nt-tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;white-space:nowrap}",
     ".nt-t-cand{background:rgba(111,182,255,.15);color:#6FB6FF}.nt-t-vote{background:rgba(240,162,60,.16);color:var(--amber)}.nt-t-res{background:rgba(79,209,139,.14);color:#4FD18B}.nt-t-none{background:rgba(154,168,189,.14);color:var(--ink-dim)}",
-    ".nt-small{font-size:12.5px;color:var(--ink-dim);margin:8px 0}",
-    ".nt-btn{background:var(--amber);color:#1A0F02;font-weight:800;border-radius:8px;padding:7px 12px;font-size:13px;border:0;cursor:pointer}",
-    ".nt-btn2{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}",
-    ".nt-btn:disabled,.nt-btn2:disabled{opacity:.55;cursor:default}",
+    ".nt-small{font-size:13px;color:var(--ink-dim);margin:8px 0}",
+    ".cal-next-btn.nt-btn{display:inline-block;width:auto;margin-top:0}",
+    ".cal-next-btn.nt-btn:disabled,:is(#selectionsSection,.ntv-box) .tq-btn:disabled{opacity:.55;cursor:default}:is(#selectionsSection,.ntv-box) .tq-btn{white-space:nowrap}",
     ".nt-link{background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(154,168,189,.4);text-underline-offset:2px}",
     ".nt-tablewrap{overflow-x:auto;padding:0}",
     ".nt-table{width:100%;border-collapse:collapse;min-width:560px}",
-    ".nt-table td,.nt-table th{padding:9px 10px;border-top:1px solid var(--line);text-align:left;font-size:13px;vertical-align:middle}",
-    ".nt-table th{color:var(--ink-dim);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-top:0}",
+    ".nt-table td,.nt-table th{padding:9px 10px;border-top:1px solid var(--line);text-align:left;font-size:14px;vertical-align:middle}",
+    ".nt-table th{color:var(--ink-faint);font-weight:700;font-size:11px;border-top:0}",
     ".nt-table tr.is-mine td{background:rgba(240,162,60,.06)}",
     ".nt-coach{font-weight:700}.nt-cpu{color:var(--ink-faint);font-style:italic}",
     ".nt-cand{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--panel-2)}",
@@ -50,11 +49,11 @@
     ".nt-project{white-space:pre-wrap;margin:8px 0 0;font-size:13.5px;line-height:1.45}",
     ".nt-steps{display:flex;gap:6px;margin:12px 0 4px;flex-wrap:wrap}",
     ".nt-step{flex:1;min-width:110px;text-align:center;padding:7px;border-radius:8px;background:var(--panel-2);font-size:12px;color:var(--ink-dim)}",
-    ".nt-step.on{background:var(--amber);color:#1A0F02;font-weight:800}.nt-step.done{color:#4FD18B}",
+    ".nt-step.on{background:var(--amber);color:var(--amber-ink);font-weight:700}.nt-step.done{color:#4FD18B}",
     ".nt-form{display:flex;flex-direction:column;gap:8px;margin-top:12px}",
     ".nt-form input,.nt-form textarea{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:13.5px}",
     ".nt-form textarea{min-height:140px;resize:vertical}",
-    ".nt-mine-badge{font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.05em}",
+    ".nt-mine-badge{font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.1em}",
     ".nt-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}.nt-bar i{display:block;height:100%;background:var(--amber)}",
     ".nt-err{color:var(--danger,#e2694f);font-size:13px;margin:8px 0}",
     ".nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px}",
@@ -62,7 +61,7 @@
     ".nt-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 6px}.nt-switch .nt-grow{flex:1}",
     ".nt-country{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ink-dim)}.nt-country .nat-flag{width:24px;height:16px;border-radius:3px;object-fit:cover}",
     ".nt-country select{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font:inherit;font-size:13.5px;font-weight:700;max-width:220px}",
-    ".nt-seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--panel-2)}.nt-seg button{border:0;background:transparent;color:var(--ink-dim);font:inherit;font-size:13px;font-weight:800;padding:6px 14px;border-radius:999px;cursor:pointer}.nt-seg button.on{background:var(--amber);color:#1A0F02}",
+    ".nt-seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--panel-2)}.nt-seg button{border:0;background:transparent;color:var(--ink-dim);font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;cursor:pointer}.nt-seg button.on{background:var(--amber);color:#1A0F02}",
     ".nt-invite-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px}",
     "@media(max-width:600px){.nt-switch{gap:8px}.nt-country select{max-width:170px}}",
     ".nt-tab{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer}",
@@ -85,7 +84,7 @@
     ".nt-msg-count{font-size:12px;color:var(--ink-dim);text-align:right}.nt-msg-count.over{color:var(--danger,#e2694f)}",
     ".nt-msg-preview{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}",
     ".ntv-box{max-width:760px;width:100%}",
-    ".ntv-kind{margin:14px 0 6px;font-size:11.5px;letter-spacing:.08em;color:var(--ink-dim);font-weight:800;text-transform:uppercase}",
+    ".ntv-kind{margin:14px 0 6px;font-size:11px;letter-spacing:.1em;color:var(--ink-dim);font-weight:700;text-transform:uppercase}",
     ".ntv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}",
     ".ntv-opt{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);padding:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font:inherit;font-size:12px;text-align:center;min-height:96px}",
     ".ntv-opt.on{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}",
@@ -96,19 +95,19 @@
     ".ntv-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}",
     "@media (max-width:820px){.nt-logo{width:64px;height:64px}.nt-hero-jersey{display:none}.nt-hero{flex-wrap:wrap}}",
     ".nt-hero .nat-flag{width:120px;height:80px;border-radius:10px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.2),0 12px 30px -10px #000}",
-    ".nt-kicker{font-size:11.5px;letter-spacing:.08em;color:#b8c6ee;font-weight:800;text-transform:uppercase}",
+    ".nt-kicker{font-size:11px;letter-spacing:.1em;color:#b8c6ee;font-weight:700;text-transform:uppercase}",
     ".nt-hero h1{font-size:36px;margin:4px 0 10px;color:#fff;line-height:1.1}",
     ".nt-pill{display:inline-block;background:rgba(255,255,255,.09);border-radius:999px;padding:4px 11px;font-size:12.5px;color:#dbe3f3;margin:0 6px 6px 0}",
     ".nt-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}",
     ".nt-two{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin-top:12px}",
     "@media (max-width:820px){.nt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nt-two{grid-template-columns:1fr}.nt-hero{padding:18px}.nt-hero .nat-flag{width:84px;height:56px}.nt-hero h1{font-size:28px}}",
-    ".nt-k{font-size:11.5px;letter-spacing:.08em;color:var(--ink-dim);font-weight:800;text-transform:uppercase;display:flex;gap:8px}.nt-k .nt-link{margin-left:auto;color:var(--amber);text-transform:none;letter-spacing:0;font-weight:700;text-decoration:none}",
-    ".nt-big{font-size:24px;font-weight:900;margin:10px 0 4px}",
-    ".nt-next{display:flex;align-items:center;gap:12px;margin-top:14px;font-size:17px;font-weight:800;flex-wrap:wrap}",
+    ".nt-k{display:flex;gap:8px}.nt-k .nt-link{margin-left:auto;color:var(--amber);text-transform:none;letter-spacing:0;font-weight:700;text-decoration:none}",
+    ".nt-big{margin:10px 0 4px}",
+    ".nt-next{display:flex;align-items:center;gap:12px;margin-top:14px;font-size:17px;font-weight:700;flex-wrap:wrap}",
     ".nt-av{display:inline-flex;vertical-align:middle;margin-right:8px}",
-    ".nt-tag2{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:rgba(111,182,255,.15);color:#6FB6FF;white-space:nowrap}",
+    ".nt-tag2{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:rgba(111,182,255,.15);color:#6FB6FF;white-space:nowrap}",
     ".nt-tag2.is-final{background:rgba(240,162,60,.16);color:var(--amber)}",
-    ".nt-ko{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.nt-ko:first-child{border-top:0}.nt-ko-team{min-width:150px}.nt-ko-team.is-win{font-weight:800}",
+    ".nt-ko{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.nt-ko:first-child{border-top:0}.nt-ko-team{min-width:150px}.nt-ko-team.is-win{font-weight:700}",
     ".nt-win{color:#4FD18B}.nt-loss{color:#E2694F}.nt-res{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}.nt-res:first-child{border-top:0}",
     ".nt-eff td{white-space:nowrap}",
     ".nt-eff .eff-player .nt-link{text-decoration:none;font-weight:700}",
@@ -185,17 +184,17 @@
     if (el.status === "candidacy") {
       info = "Candidatures jusqu'au " + esc(when(el.voteAt)) + " · " + candCount(n);
       if (me.candidateId) btns += '<span class="nt-mine-badge">Vous êtes candidat</span>';
-      else if (me.canRun) btns += '<button type="button" class="nt-btn" data-nt-open="' + esc(el.id) + '" data-nt-run="1">Se présenter</button>';
-      btns += '<button type="button" class="nt-btn2" data-nt-open="' + esc(el.id) + '">Voir l\'élection</button>';
+      else if (me.canRun) btns += '<button type="button" class="cal-next-btn nt-btn" data-nt-open="' + esc(el.id) + '" data-nt-run="1">Se présenter</button>';
+      btns += '<button type="button" class="tq-btn" data-nt-open="' + esc(el.id) + '">Voir l\'élection</button>';
     } else if (el.status === "vote") {
       info = "Vote jusqu'au " + esc(when(el.closesAt)) + " · " + candCount(n);
       if (me.votedFor) info += " · vous avez voté";
       else if (me.canVote) info += " · vous pouvez voter";
-      btns += '<button type="button" class="' + (me.canVote && !me.votedFor ? "nt-btn" : "nt-btn2") + '" data-nt-open="' + esc(el.id) + '">' + (me.canVote && !me.votedFor ? "Voter" : "Lire les projets") + "</button>";
+      btns += '<button type="button" class="' + (me.canVote && !me.votedFor ? "cal-next-btn nt-btn" : "tq-btn") + '" data-nt-open="' + esc(el.id) + '">' + (me.canVote && !me.votedFor ? "Voter" : "Lire les projets") + "</button>";
     } else {
       var w = winnerOf(el);
       info = w ? "Nouveau sélectionneur : <b>" + esc(w.pseudo) + "</b> · " + esc(el.result.counts && el.result.counts[0] ? el.result.counts[0].votes : 0) + " voix sur " + esc(votersTxt(el.result.voters || 0)) : "Aucun candidat élu";
-      btns += '<button type="button" class="nt-btn2" data-nt-open="' + esc(el.id) + '">Voir le résultat</button>';
+      btns += '<button type="button" class="tq-btn" data-nt-open="' + esc(el.id) + '">Voir le résultat</button>';
     }
     var mine = el.country === myCountry();
     return '<div class="nt-card' + (mine ? " is-mine" : "") + '"><div class="nt-row">' + flag(el.country) + "<b>" + teamNameHtml(t) + '</b><span class="nt-sp"></span>' + statusTag(el) + "</div>" +
@@ -218,12 +217,12 @@
     // Mes mandats.
     var active = ov.me && (ov.me.myMandates || []).filter(function (m) { return !m.endedAt; });
     if (active && active.length) {
-      h += '<div class="nt-h">Mon mandat</div><div class="nt-grid">';
+      h += '<div class="nt-h cal-card-kicker">Mon mandat</div><div class="nt-grid">';
       active.forEach(function (m) {
         var t = teamById(m.teamId) || { countryName: "", cat: "" };
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(t.country) + "<b>Sélectionneur · " + teamNameHtml(t) + "</b></div>" +
           '<p class="nt-small">Mandat de la saison ' + esc(m.fromSeason) + " à la saison " + esc(m.toSeason) + " · élu avec " + esc(m.votes || 0) + " voix</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn2" data-nt-resign="' + esc(m.teamId) + '">Démissionner</button></div></div>';
+          '<div class="nt-row"><button type="button" class="tq-btn" data-nt-resign="' + esc(m.teamId) + '">Démissionner</button></div></div>';
       });
       h += "</div>";
     }
@@ -237,16 +236,16 @@
       scout: "Scout (DTN) : suit et analyse les joueurs qui lui sont attribués.",
     };
     if ((meInfo.staffInvites || []).length || (meInfo.staffRoles || []).length) {
-      h += '<div class="nt-h">Staff des sélections</div><div class="nt-grid">';
+      h += '<div class="nt-h cal-card-kicker">Staff des sélections</div><div class="nt-grid">';
       (meInfo.staffInvites || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>Invitation · " + esc(roleLab[s.role] || s.role) + " de " + esc(s.label) + "</b></div>" +
           '<p class="nt-small">Proposée par ' + esc(s.by || s.coach) + ". " + esc(roleDesc[s.role] || "") + "</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Accepter le poste</button><button type="button" class="nt-btn2" data-nt-staff-decline="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Refuser</button></div></div>';
+          '<div class="nt-row"><button type="button" class="cal-next-btn nt-btn" data-nt-staff-accept="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Accepter le poste</button><button type="button" class="tq-btn" data-nt-staff-decline="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Refuser</button></div></div>';
       });
       (meInfo.staffRoles || []).forEach(function (s) {
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(s.country) + "<b>" + esc(roleLab[s.role] || s.role) + " · " + esc(s.label) + "</b></div>" +
           '<p class="nt-small">Sélectionneur : ' + esc(s.coach) + "</p>" +
-          '<div class="nt-row"><button type="button" class="nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélection</button><button type="button" class="nt-btn2" data-nt-staff-leave="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Quitter ce rôle</button></div></div>';
+          '<div class="nt-row"><button type="button" class="cal-next-btn nt-btn" data-nc-enter="' + esc(s.teamId) + '">Mode Sélection</button><button type="button" class="tq-btn" data-nt-staff-leave="' + esc(s.teamId) + '" data-nt-staff-role="' + esc(s.role) + '">Quitter ce rôle</button></div></div>';
       });
       h += "</div>";
     }
@@ -257,7 +256,7 @@
     var all = els.concat(recent).sort(function (a, b) {
       return (b.country === mc) - (a.country === mc) || (a.status === "closed") - (b.status === "closed") || String(a.teamId).localeCompare(String(b.teamId));
     });
-    h += '<div class="nt-h">Élections</div>';
+    h += '<div class="nt-h cal-card-kicker">Élections</div>';
     // Cartes : son pays, les élections où l'on est candidat / a voté, les
     // résultats récents ; les autres pays en liste compacte.
     var big = all.filter(function (el) { var m = el.me || {}; return el.country === mc || m.candidateId || m.votedFor || el.status === "closed"; });
@@ -279,7 +278,7 @@
     var byCountry = {};
     (ov.teams || []).forEach(function (t) { (byCountry[t.country] = byCountry[t.country] || { name: t.countryName, code: t.country })[t.cat] = t; });
     var rows = Object.keys(byCountry).map(function (k) { return byCountry[k]; }).sort(function (a, b) { return (b.code === mc) - (a.code === mc) || String(a.name).localeCompare(String(b.name), "fr"); });
-    h += '<div class="nt-h">Sélections</div><div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Pays</th><th>Sélection A</th><th>Fin du mandat</th><th>Sélection U21</th><th>Fin du mandat</th></tr></thead><tbody>';
+    h += '<div class="nt-h cal-card-kicker">Sélections</div><div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Pays</th><th>Sélection A</th><th>Fin du mandat</th><th>Sélection U21</th><th>Fin du mandat</th></tr></thead><tbody>';
     rows.forEach(function (r) {
       var a = r.A ? coachCell(r.A, ov.season) : { who: "–", end: "–" };
       var u = r.U21 ? coachCell(r.U21, ov.season) : { who: "–", end: "–" };
@@ -289,7 +288,7 @@
     // Anciens sélectionneurs.
     var hist = (ov.history || []).slice(-12).reverse();
     if (hist.length) {
-      h += '<div class="nt-h">Anciens sélectionneurs</div><div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Sélection</th><th>Sélectionneur</th><th>Saisons</th><th>Fin</th></tr></thead><tbody>';
+      h += '<div class="nt-h cal-card-kicker">Anciens sélectionneurs</div><div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>Sélection</th><th>Sélectionneur</th><th>Saisons</th><th>Fin</th></tr></thead><tbody>';
       hist.forEach(function (m) {
         var t = teamById(m.teamId) || { countryName: m.teamId, cat: "" };
         h += "<tr><td>" + flag(t.country) + " " + teamNameHtml(t) + "</td><td>" + clubBtn(m.ref, m.pseudo, m.clubName) + "</td><td>" + esc(m.fromSeason) + " – " + esc(m.toSeason) + "</td><td>" + esc(endReasonLabel(m.endReason)) + "</td></tr>";
@@ -340,9 +339,9 @@
       var right = "";
       if (c.withdrawn) right = '<span class="nt-small">Candidature retirée</span>';
       else if (st === "vote" && me.votedFor === c.id) right = '<span class="nt-mine-badge">Votre vote</span>';
-      else if (st === "vote" && me.canVote && !me.votedFor) right = '<button type="button" class="nt-btn" data-nt-vote="' + esc(c.id) + '" data-nt-name="' + esc(c.pseudo || c.clubName || "") + '">Voter</button>';
+      else if (st === "vote" && me.canVote && !me.votedFor) right = '<button type="button" class="cal-next-btn nt-btn" data-nt-vote="' + esc(c.id) + '" data-nt-name="' + esc(c.pseudo || c.clubName || "") + '">Voter</button>';
       else if (st === "closed") right = "<b>" + esc(counts[c.id] || 0) + "</b> voix";
-      if (me.candidateId === c.id && !closed) right += ' <button type="button" class="nt-btn2" data-nt-withdraw="1">Retirer ma candidature</button>';
+      if (me.candidateId === c.id && !closed) right += ' <button type="button" class="tq-btn" data-nt-withdraw="1">Retirer ma candidature</button>';
       h += '<div class="nt-cand' + (isWin ? " is-win" : "") + (c.withdrawn ? " is-out" : "") + '"><div class="nt-row"><span>' + flag(c.country) + " " + clubBtn(c.ref, c.pseudo, c.clubName) + (c.division ? ' <span class="nt-small">(' + esc(c.division) + ")</span>" : "") + '</span><span class="nt-sp"></span>' + right + "</div>" +
         '<div class="nt-quote">« ' + esc(c.title) + " »</div>" +
         // Expérience (bilans des mandats précédents, phase E).
@@ -356,8 +355,8 @@
         h += '<form class="nt-form" data-nt-form><b>Ma candidature · ' + teamNameHtml(t) + "</b>" +
           '<input name="title" maxlength="90" placeholder="Titre de votre projet (une phrase)" required>' +
           '<textarea name="project" maxlength="2000" placeholder="Votre projet : style de jeu, joueurs, objectifs (20 caractères au moins)" required></textarea>' +
-          '<div class="nt-row"><button type="submit" class="nt-btn"' + (ui.busy ? " disabled" : "") + '>Déposer ma candidature</button><button type="button" class="nt-btn2" data-nt-cancel-form>Annuler</button></div></form>';
-      } else h += '<div class="nt-row" style="margin-top:12px"><button type="button" class="nt-btn" data-nt-show-form>Se présenter</button></div>';
+          '<div class="nt-row"><button type="submit" class="cal-next-btn nt-btn"' + (ui.busy ? " disabled" : "") + '>Déposer ma candidature</button><button type="button" class="tq-btn" data-nt-cancel-form>Annuler</button></div></form>';
+      } else h += '<div class="nt-row" style="margin-top:12px"><button type="button" class="cal-next-btn nt-btn" data-nt-show-form>Se présenter</button></div>';
     }
     if (!closed) {
       var voters = me.canVote ? "Vous faites partie des électeurs." : "Vous ne votez pas dans ce pays (seuls les managers d'un club du pays votent).";
@@ -396,8 +395,8 @@
   var LIVE_SOON_MS = 3600e3;
   function liveBtnHtml(m) {
     var now = Date.now();
-    if (m.status === "live") return ' <button type="button" class="nt-btn2 nt-live-btn" data-nt-live="' + esc(m.id) + '">Voir le direct</button>';
-    if ((m.status === "scheduled" || m.status === "accepted") && m.at - now <= LIVE_SOON_MS && m.at + 3 * 3600e3 > now) return ' <button type="button" class="nt-btn2 nt-live-btn" data-nt-live="' + esc(m.id) + '">Suivre le match</button>';
+    if (m.status === "live") return ' <button type="button" class="tq-btn nt-live-btn" data-nt-live="' + esc(m.id) + '">Voir le direct</button>';
+    if ((m.status === "scheduled" || m.status === "accepted") && m.at - now <= LIVE_SOON_MS && m.at + 3 * 3600e3 > now) return ' <button type="button" class="tq-btn nt-live-btn" data-nt-live="' + esc(m.id) + '">Suivre le match</button>';
     return "";
   }
   // Match de la sélection en direct ou imminent (qualifications, phase
@@ -456,13 +455,13 @@
     var inj = players.filter(function (p) { return p.pub && typeof p.pub.injuryUntil === "number" && p.pub.injuryUntil > now; }).length;
     var nx = nextItem(tv, now);
     var h = '<div class="nt-stats">';
-    h += '<div class="nt-card"><div class="nt-k">Groupe</div><div class="nt-big">' + (players.length ? esc(players.length) + " joueurs" : "–") + '</div><div class="nt-small">' + (avgAge != null ? "moyenne " + esc(avgAge.toFixed(1).replace(".", ",")) + " ans" : "Groupe en préparation") + (inj ? " · " + esc(inj) + (inj > 1 ? " blessés" : " blessé") : "") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k cal-card-kicker">Groupe</div><div class="nt-big eff-kpi-num">' + (players.length ? esc(players.length) + " joueurs" : "–") + '</div><div class="nt-small">' + (avgAge != null ? "moyenne " + esc(avgAge.toFixed(1).replace(".", ",")) + " ans" : "Groupe en préparation") + (inj ? " · " + esc(inj) + (inj > 1 ? " blessés" : " blessé") : "") + "</div></div>";
     var rec = recordOf(tv);
-    h += '<div class="nt-card"><div class="nt-k">Bilan</div><div class="nt-big">' + (rec.w + rec.l ? esc(rec.w) + " V – " + esc(rec.l) + " D" : "–") + '</div><div class="nt-small">' + (rec.w + rec.l ? "Saison " + esc(tv.season) : "Aucun match joué") + "</div></div>";
-    h += '<div class="nt-card"><div class="nt-k">Prochaine échéance</div><div class="nt-big">' + (nx ? esc(dayDate(itemStart(nx))) : "–") + '</div><div class="nt-small">' + (nx ? esc(calItemLabel(tv, nx)) + " · dans " + esc(dur(itemStart(nx) - now)) : "Saison terminée") + "</div></div>";
-    h += '<div class="nt-card"><div class="nt-k">Joueurs éligibles</div><div class="nt-big">' + (sq ? esc(sq.eligible) : "–") + '</div><div class="nt-small">' + (sq ? "dans " + esc(sq.leagues) + (sq.leagues > 1 ? " championnats" : " championnat") : "") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k cal-card-kicker">Bilan</div><div class="nt-big eff-kpi-num">' + (rec.w + rec.l ? esc(rec.w) + " V – " + esc(rec.l) + " D" : "–") + '</div><div class="nt-small">' + (rec.w + rec.l ? "Saison " + esc(tv.season) : "Aucun match joué") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k cal-card-kicker">Prochaine échéance</div><div class="nt-big eff-kpi-num">' + (nx ? esc(dayDate(itemStart(nx))) : "–") + '</div><div class="nt-small">' + (nx ? esc(calItemLabel(tv, nx)) + " · dans " + esc(dur(itemStart(nx) - now)) : "Saison terminée") + "</div></div>";
+    h += '<div class="nt-card"><div class="nt-k cal-card-kicker">Joueurs éligibles</div><div class="nt-big eff-kpi-num">' + (sq ? esc(sq.eligible) : "–") + '</div><div class="nt-small">' + (sq ? "dans " + esc(sq.leagues) + (sq.leagues > 1 ? " championnats" : " championnat") : "") + "</div></div>";
     h += "</div>";
-    h += '<div class="nt-two"><div class="nt-card"><div class="nt-k">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
+    h += '<div class="nt-two"><div class="nt-card"><div class="nt-k cal-card-kicker">Prochain match' + (nx ? " · " + esc(calItemLabel(tv, nx)) : "") + '<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>';
     if (nx) {
       var nxm = nx.kind === "window" ? windowMatch(tv, nx.n) : nx.kind === "friendly" ? nx.match : null;
       h += '<div class="nt-next"><span>' + flag(tv.team.country) + " " + teamNameHtml(tv.team) + '</span> <span class="nt-small" style="margin:0 auto;text-align:center">' + (nx.kind === "final" ? "Phase finale<br>" + esc(dayDate(nx.from)) + " → " + esc(dayDate(nx.to)) : (nxm ? "face à" : "Adversaire à déterminer") + "<br>" + esc(when(nx.at))) + "</span>" + (nxm ? "<span>" + flag(oppSide(tv, nxm).id.split("-")[0]) + " " + esc(teamLabelOf(oppSide(tv, nxm).id)) + "</span>" : "") + "</div>";
@@ -471,7 +470,7 @@
       if (lm) h += '<div style="margin-top:10px;text-align:center">' + liveBtnHtml(lm) + "</div>";
     } else h += '<p class="nt-small">Aucune échéance cette saison.</p>';
     var res = (tv.results || []).slice(0, 5);
-    h += '</div><div class="nt-card"><div class="nt-k">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>' +
+    h += '</div><div class="nt-card"><div class="nt-k cal-card-kicker">Derniers résultats<button type="button" class="nt-link" data-nt-tab="calendrier">Calendrier →</button></div>' +
       (res.length ? '<div style="margin-top:10px">' + res.map(function (r) { return '<div class="nt-res"><span class="nt-small">' + esc(shortDate(r.at)) + "</span> " + matchLine(tv, r) + "</div>"; }).join("") + "</div>" : '<p class="nt-small" style="margin-top:14px">Aucun match joué pour l\'instant.</p>') + "</div></div>";
     return h;
   }
@@ -600,7 +599,7 @@
   function teamCalendrierHtml(tv) {
     var cal = tv.calendar || [];
     if (!cal.length) return '<p class="training-empty">Calendrier indisponible.</p>';
-    var h = '<div class="nt-h" style="margin-top:6px">Saison ' + esc(tv.season) + '</div><div class="nt-card nt-tablewrap"><table class="nt-table"><tbody>';
+    var h = '<div class="nt-h cal-card-kicker" style="margin-top:6px">Saison ' + esc(tv.season) + '</div><div class="nt-card nt-tablewrap"><table class="nt-table"><tbody>';
     cal.forEach(function (c) {
       if (c.kind === "final") {
         h += '<tr><td class="nt-small">' + esc(dayDate(c.from)) + " → " + esc(dayDate(c.to)) + '</td><td><span class="nt-tag2 is-final">' + esc(compName(tv, c.comp)) + "</span></td><td>" + (c.comp === "world" ? "Phase finale (consolante pour les non-qualifiés)" : "Phase finale") + " : poules du lundi au jeudi, quarts vendredi, demi-finales samedi, finale dimanche (20:00)</td></tr>";
@@ -624,7 +623,7 @@
     var q = tv.qualif;
     if (!q || !q.group) return '<p class="training-empty">Pas de qualifications cette saison pour cette sélection.</p>';
     var g = q.group;
-    var h = '<div class="nt-h" style="margin-top:6px">' + esc(g.label) + " · " + esc(g.continent) + " · " + esc(q.comp === "continental" ? "qualifications " + continentalComp(tv.team.country) : "têtes de série de la Coupe du monde") + "</div>";
+    var h = '<div class="nt-h cal-card-kicker" style="margin-top:6px">' + esc(g.label) + " · " + esc(g.continent) + " · " + esc(q.comp === "continental" ? "qualifications " + continentalComp(tv.team.country) : "têtes de série de la Coupe du monde") + "</div>";
     h += '<div class="nt-card nt-tablewrap"><table class="nt-table"><thead><tr><th>#</th><th>Sélection</th><th>MJ</th><th>V</th><th>D</th><th>Pts</th><th>Diff.</th><th></th></tr></thead><tbody>';
     g.standings.forEach(function (r) {
       var tag = r.status === "qualified" ? '<span class="nt-tag nt-t-res">Qualifié</span>' : r.status === "consolation" ? '<span class="nt-tag nt-t-none">Consolation</span>' : "";
@@ -675,7 +674,7 @@
     }
     var h = "";
     f.tournaments.forEach(function (t) {
-      h += '<div class="nt-h" style="margin-top:6px">' + esc(t.label) + (t.champion ? " · vainqueur : " + esc(teamLabelOf(t.champion)) : "") + "</div>";
+      h += '<div class="nt-h cal-card-kicker" style="margin-top:6px">' + esc(t.label) + (t.champion ? " · vainqueur : " + esc(teamLabelOf(t.champion)) : "") + "</div>";
       t.groups.forEach(function (g) { h += '<div class="nt-small" style="margin:10px 0 6px;font-weight:700">' + esc(g.label) + "</div>" + stdTable(g.standings, tv); });
       ["qf", "sf", "third", "final"].forEach(function (st) {
         var ms = t.matches.filter(function (m) { return m.stage === st; });
@@ -763,20 +762,20 @@
     var x = extrasOf(tv), msg = x.message, max = x.messageMax || 500;
     if (ui.msgEdit && x.canEditMessage) {
       var draft = ui.msgDraft != null ? ui.msgDraft : (msg ? msg.text : "");
-      return '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff · modification</div>' +
+      return '<section class="nt-msg" id="ntMsg"><div class="nt-k cal-card-kicker">Le mot du staff · modification</div>' +
         '<textarea id="ntMsgInput" maxlength="' + esc(max) + '" placeholder="Bienvenue sur la page de la sélection ! Notre objectif cette saison…">' + esc(draft) + "</textarea>" +
         '<div class="nt-msg-count' + (draft.length > max ? " over" : "") + '" id="ntMsgCount">' + esc(draft.length) + " / " + esc(max) + "</div>" +
-        '<div class="nt-k" style="margin-top:8px">Aperçu</div><div class="nt-msg-preview"><div class="nt-msg-text" id="ntMsgPreview">' + (draft.trim() ? esc(draft.trim()) : '<span class="nt-small">Le message apparaîtra ici.</span>') + "</div></div>" +
-        '<div class="nt-msg-actions"><button type="button" class="nt-btn" data-nt-msg-save>Publier</button><button type="button" class="nt-btn2" data-nt-msg-cancel>Annuler</button>' +
-        (msg ? '<button type="button" class="nt-btn2" data-nt-msg-delete>Supprimer le message</button>' : "") + "</div></section>";
+        '<div class="nt-k cal-card-kicker" style="margin-top:8px">Aperçu</div><div class="nt-msg-preview"><div class="nt-msg-text" id="ntMsgPreview">' + (draft.trim() ? esc(draft.trim()) : '<span class="nt-small">Le message apparaîtra ici.</span>') + "</div></div>" +
+        '<div class="nt-msg-actions"><button type="button" class="cal-next-btn nt-btn" data-nt-msg-save>Publier</button><button type="button" class="tq-btn" data-nt-msg-cancel>Annuler</button>' +
+        (msg ? '<button type="button" class="tq-btn" data-nt-msg-delete>Supprimer le message</button>' : "") + "</div></section>";
     }
     if (!msg) {
       // Visiteurs : pas de section vide ; staff autorisé : invitation à écrire.
-      return x.canEditMessage ? '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff</div><p class="nt-small" style="margin:8px 0 0">Aucun message pour l\'instant. Présentez la sélection et vos objectifs aux visiteurs.</p><div class="nt-msg-actions"><button type="button" class="nt-btn2" data-nt-msg-edit>Écrire un message</button></div></section>' : "";
+      return x.canEditMessage ? '<section class="nt-msg" id="ntMsg"><div class="nt-k cal-card-kicker">Le mot du staff</div><p class="nt-small" style="margin:8px 0 0">Aucun message pour l\'instant. Présentez la sélection et vos objectifs aux visiteurs.</p><div class="nt-msg-actions"><button type="button" class="tq-btn" data-nt-msg-edit>Écrire un message</button></div></section>' : "";
     }
-    return '<section class="nt-msg" id="ntMsg"><div class="nt-k">Le mot du staff</div><div class="nt-msg-text" data-no-i18n>' + esc(msg.text) + "</div>" +
+    return '<section class="nt-msg" id="ntMsg"><div class="nt-k cal-card-kicker">Le mot du staff</div><div class="nt-msg-text" data-no-i18n>' + esc(msg.text) + "</div>" +
       '<div class="nt-msg-meta">' + (msg.by ? '<span data-no-i18n>' + esc(msg.by) + "</span>, <span>" + esc(roleName(msg.role)) + "</span> · " : "") + "<span>modifié le " + esc(dayDate(msg.at)) + "</span></div>" +
-      (x.canEditMessage ? '<div class="nt-msg-actions"><button type="button" class="nt-btn2" data-nt-msg-edit>Modifier le message</button></div>' : "") + "</section>";
+      (x.canEditMessage ? '<div class="nt-msg-actions"><button type="button" class="tq-btn" data-nt-msg-edit>Modifier le message</button></div>' : "") + "</section>";
   }
   // Fenêtre de personnalisation (sélectionneur) : bottom sheet sur mobile
   // (.upgrade-confirm-overlay, règle UI mobile du projet).
@@ -797,7 +796,7 @@
       h += "</div>";
     });
     h += '<p class="nt-err" id="ntvErr"' + (ui.visErr ? "" : " hidden") + ">" + esc(ui.visErr || "") + "</p>";
-    return h + '<div class="ntv-actions"><button type="button" class="nt-btn2" data-ntv-cancel>Annuler</button><button type="button" class="nt-btn" data-ntv-save>Enregistrer</button></div></div>';
+    return h + '<div class="ntv-actions"><button type="button" class="tq-btn" data-ntv-cancel>Annuler</button><button type="button" class="cal-next-btn nt-btn" data-ntv-save>Enregistrer</button></div></div>';
   }
   function openVisuals() {
     var tv = ui.team;
@@ -870,14 +869,14 @@
     return '<div class="nt-switch"><label class="nt-country">' + flag(c) + '<select data-nt-country aria-label="Pays de la sélection">' + opts + "</select></label>" +
       '<div class="nt-seg vs-tabs" role="tablist" aria-label="Catégorie">' + [["A", "Équipe A"], ["U21", "U21"]].map(function (x) {
         return '<button type="button" role="tab" aria-selected="' + (cat === x[0]) + '" class="' + (cat === x[0] ? "on" : "") + '" data-nt-cat="' + x[0] + '">' + x[1] + "</button>";
-      }).join("") + '</div><span class="nt-grow"></span><button type="button" class="nt-btn2" data-nt-back>Toutes les sélections</button></div>';
+      }).join("") + '</div><span class="nt-grow"></span><button type="button" class="tq-btn" data-nt-back>Toutes les sélections</button></div>';
   }
   // Proposition de poste en attente : rappel sur la page de la sélection.
   function inviteNoteHtml() {
     var inv = ui.overview && ui.overview.me && ui.overview.me.staffInvites || [];
     if (!inv.length) return "";
     return '<div class="nt-card is-mine nt-invite-note"><b>' + (inv.length > 1 ? inv.length + " propositions de poste en attente" : "Proposition de poste : " + esc(({ assistant: "Adjoint", helper: "Personne aidante", recruiter: "Recruteur", scout: "Scout" })[inv[0].role] || inv[0].role) + " · " + esc(inv[0].label)) + "</b>" +
-      '<span class="nt-grow"></span><button type="button" class="nt-btn2" data-nt-back>Répondre</button></div>';
+      '<span class="nt-grow"></span><button type="button" class="tq-btn" data-nt-back>Répondre</button></div>';
   }
   function teamHtml() {
     var back = switchHtml(ui.teamId) + inviteNoteHtml();
@@ -887,11 +886,11 @@
     var h = back + '<div class="nt-tabs vs-tabs" role="tablist">' + tabs.map(function (x) { return '<button type="button" class="nt-tab' + (ui.teamTab === x[0] ? " on" : "") + '" data-nt-tab="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
     h += "<div" + heroAttrs(tv) + ">" + heroLogoHtml(tv) + '<div class="nt-hero-text"><div class="nt-kicker">Sélection nationale · ' + esc(continentOf(tv.team.country)) + "</div><h1>" + teamNameHtml(tv.team) + "</h1>" +
       coachPill(tv) + (tv.phase ? '<span class="nt-pill">Objectif : ' + esc(objectiveLabel(tv)) + "</span>" : "") + '<span class="nt-pill">Palmarès : ' + esc(honoursSummary(tv)) + "</span>" +
-      (tv.election ? ' <button type="button" class="nt-btn2" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +
+      (tv.election ? ' <button type="button" class="tq-btn" data-nt-open="' + esc(tv.election.id) + '">Élection en cours</button>' : "") +
       // Phase B : espace du sélectionneur (assets/national-coach.js).
       // Mode Sélection : sélectionneur et membres de son staff.
-      (tv.isCoach || tv.myRole ? ' <button type="button" class="nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") +
-      (extrasOf(tv).canEditVisuals && V() ? ' <button type="button" class="nt-btn2" data-nt-visuals>Personnaliser</button>' : "") + "</div>" +
+      (tv.isCoach || tv.myRole ? ' <button type="button" class="cal-next-btn nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") +
+      (extrasOf(tv).canEditVisuals && V() ? ' <button type="button" class="tq-btn" data-nt-visuals>Personnaliser</button>' : "") + "</div>" +
       '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 84) + "</div></div>";
     // Le mot du staff : en tête de l'Aperçu, identifiable par les visiteurs.
     if (ui.teamTab === "apercu" || !ui.teamTab) h += messageHtml(tv);
