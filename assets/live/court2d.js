@@ -59,9 +59,20 @@ function slotPos(team, slot, attacking) {
   const dir = rim.x > 47 ? -1 : 1;
   return { x: rim.x + dir * s.d, y: s.y };
 }
-// Banc (pause, mi-temps, temps mort) : le long de la ligne de touche du bas,
-// chaque équipe de son côté (la bande des médaillons occupe le haut).
-function parkLine(team, i) { return { x: team === 0 ? 16 + i * 5.5 : 78 - i * 5.5, y: 46 }; }
+// Bancs (pause, mi-temps, temps mort) : de part et d'autre de la table de
+// marque, au centre de la ligne de touche du bas (comme dans une vraie
+// salle) — l'équipe [0] à gauche, l'équipe [1] à droite, donc jamais une
+// traversée complète du terrain, et chaque équipe rejoint TOUJOURS le sien
+// (retour utilisateur 2026-10-08). Les joueurs se regroupent en demi-cercle
+// autour du coach (point BENCH), pas en file.
+const BENCH = [{ x: 33, y: 46 }, { x: 61, y: 46 }];
+function parkLine(team, i) {
+  const b = BENCH[team] || BENCH[0];
+  const k = Math.max(0, Math.min(6, i)) - 2;                 // -2 … 4 autour du centre
+  return { x: b.x + k * 3.2, y: b.y - (k === 0 || k === 2 ? 3 : (Math.abs(k) === 1 || k === 3 ? 1 : 0)) };
+}
+// Table de marque : où vont les arbitres pendant les arrêts.
+const TABLE = { x: 47, y: 48 };
 
 // Avatars rastérisés (2026-10-01, « ça semble laguer ») : dix SVG d'avatar
 // complets déplacés 60 fois par seconde coûtent cher à repeindre ; on les
@@ -108,15 +119,32 @@ export function createCourt2D(host, opts = {}) {
   const vign = el("radialGradient", { id: uid + "-vg", cx: "50%", cy: "55%", r: "70%" }, defs);
   el("stop", { offset: ".6", "stop-color": "#000", "stop-opacity": "0" }, vign);
   el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".6" }, vign);
-  const light = el("radialGradient", { id: uid + "-lt", cx: "50%", cy: "50%", r: "62%" }, defs);
-  el("stop", { offset: "0", "stop-color": "#fff3dc", "stop-opacity": ".18" }, light);
-  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".25" }, light);
+  // Éclairage de salle (2026-10-08) : un éclairage général chaud, trois
+  // nappes de projecteurs (au-dessus de chaque raquette et du rond central)
+  // et un assombrissement des bords — des dégradés statiques, sans filtre,
+  // donc sans coût par image.
+  const light = el("radialGradient", { id: uid + "-lt", cx: "50%", cy: "46%", r: "64%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#fff3dc", "stop-opacity": ".16" }, light);
+  el("stop", { offset: ".55", "stop-color": "#fff3dc", "stop-opacity": ".04" }, light);
+  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".32" }, light);
+  const spot = el("radialGradient", { id: uid + "-sp", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#fff8e8", "stop-opacity": ".22" }, spot);
+  el("stop", { offset: ".5", "stop-color": "#fff8e8", "stop-opacity": ".07" }, spot);
+  el("stop", { offset: "1", "stop-color": "#fff8e8", "stop-opacity": "0" }, spot);
+  const glow = el("radialGradient", { id: uid + "-gl", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#ffe9b8", "stop-opacity": ".10" }, glow);
+  el("stop", { offset: "1", "stop-color": "#ffe9b8", "stop-opacity": "0" }, glow);
   el("rect", { width: VW, height: VH, fill: "#0b1220", rx: "14" }, svg);
   el("rect", { width: VW, height: VH, fill: `url(#${uid}-cw)`, rx: "14" }, svg);
   el("rect", { width: VW, height: VH, fill: `url(#${uid}-vg)`, rx: "14" }, svg);
   const floor = el("g", { transform: `translate(${PAD} ${PAD + HEAD})` }, svg);
   const floorBase = el("g", {}, floor);          // parquet + zones (redessiné selon le club)
-  el("rect", { width: "940", height: "500", rx: "8", fill: `url(#${uid}-lt)`, class: "c2d-light" }, floor);
+  // Lumière des projecteurs posée SUR le parquet, SOUS les lignes et les joueurs.
+  const lightG = el("g", { class: "c2d-light" }, floor);
+  [[190, 250, 330], [750, 250, 330], [470, 250, 260]].forEach(([cx, cy, r]) => el("ellipse", { cx, cy, rx: r, ry: r * 0.78, fill: `url(#${uid}-sp)` }, lightG));
+  el("rect", { width: "940", height: "500", rx: "8", fill: `url(#${uid}-lt)` }, lightG);
+  // Halo des projecteurs qui déborde sur les gradins, au-dessus de chaque panier.
+  [[52, 250], [888, 250]].forEach(([cx, cy]) => el("ellipse", { cx, cy, rx: 150, ry: 110, fill: `url(#${uid}-gl)` }, lightG));
   const lines = el("g", { class: "c2d-lines", fill: "none", stroke: "rgba(255,255,255,.88)", "stroke-width": "2.5" }, floor);
   el("rect", { x: "2", y: "2", width: "936", height: "496", rx: "4" }, lines);
   el("line", { x1: "470", y1: "2", x2: "470", y2: "498" }, lines);
@@ -133,7 +161,9 @@ export function createCourt2D(host, opts = {}) {
   const logoG = el("g", { class: "c2d-logo", opacity: ".8" }, floor);
   const adTop = el("text", { x: "470", y: "50", class: "c2d-ad", "text-anchor": "middle" }, floor);
   const adBot = el("text", { x: "470", y: "472", class: "c2d-ad", "text-anchor": "middle" }, floor);
-  const missG = el("g", { class: "c2d-misses" }, floor);   // croix des tirs manqués du quart-temps
+  // Tirs manqués : plus aucune marque sur le terrain (retour utilisateur
+  // 2026-10-08 : la carte des tirs les montre déjà) — ni croix, ni onde
+  // rouge au cercle, ni texte ; seule l'action est jouée (tir, rebond).
 
   // Parquet : bois + bordeaux par défaut, ou parquet du club qui reçoit
   // (state.courtStyle : floor, grain, line, paint — Premium).
@@ -174,7 +204,11 @@ export function createCourt2D(host, opts = {}) {
   const ballG = el("g", { class: "c2d-ball" }, layer);
   el("ellipse", { cx: "0", cy: "6", rx: "7", ry: "3", fill: "rgba(0,0,0,.35)", class: "c2d-ball-sh" }, ballG);
   const ballBody = el("g", {}, ballG);
-  el("circle", { r: "7", fill: "#e8892e", stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
+  const ballGrad = el("radialGradient", { id: uid + "-bl", cx: "35%", cy: "30%", r: "70%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#ffb76b" }, ballGrad);
+  el("stop", { offset: ".6", "stop-color": "#e8892e" }, ballGrad);
+  el("stop", { offset: "1", "stop-color": "#b85f17" }, ballGrad);
+  el("circle", { r: "7", fill: `url(#${uid}-bl)`, stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
   el("path", { d: "M-7 0h14M0 -7v14M-4.5 -5.3c2.6 2.4 2.6 8.2 0 10.6M4.5 -5.3c-2.6 2.4-2.6 8.2 0 10.6", fill: "none", stroke: "#4a2308", "stroke-width": "1" }, ballBody);
   const fxG = el("g", { class: "c2d-fx" }, layer);
   const caption = document.createElement("div");
@@ -187,8 +221,19 @@ export function createCourt2D(host, opts = {}) {
   let S = null, possession = 0, raf = 0, last = performance.now(), timers = [];
   let logoKey = null, clipSeq = 0, colors = opts.colors || ["#F26B1D", "#3B8FE0"];
   let plan = null;                 // possession en cours (voir buildPlan)
+  let stopUntil = 0;               // arrêt de jeu (temps mort, fin de quart) : arbitres à la table
   let possStart = now();           // début de la possession courante (chrono des 24 s)
-  let medalsKey = null, missKey = null, lastDrift = 0;
+  let medalsKey = null, lastDrift = 0;
+  // Arbitres (2026-10-08) : trois sprites gris (state.referees), placés en
+  // mécanique à trois (chef sur la ligne de fond, queue derrière le jeu,
+  // centre côté faible), réaffectés au plus court chemin toutes les 700 ms.
+  const refs = [];
+  let lastRefs = 0;
+  // Zone avant : dès que le ballon a franchi la ligne médiane dans le sens
+  // de l'attaque, le porteur n'y retourne plus (règle du retour en zone,
+  // représentation seulement — le moteur ne siffle pas de violation) ; et
+  // il traverse dans les 8 s de possession (règle des 8 s).
+  let crossed = false;
   // Audit possession (2026-10-07) : dernier événement joué, compteurs du
   // garde-fou (voir giveBall / tick) lus par les tests via debug().
   let lastPlayed = null;
@@ -240,6 +285,61 @@ export function createCourt2D(host, opts = {}) {
     return sp;
   }
 
+  function makeRef(r, i) {
+    const g = el("g", { class: "c2d-ref", "data-id": "ref" + i }, layer);
+    el("ellipse", { cx: "0", cy: "12", rx: "11", ry: "4.5", fill: "rgba(0,0,0,.32)", class: "c2d-sh" }, g);
+    let av = null;
+    if (r && r.avatar) { const tpl = document.createElement("template"); tpl.innerHTML = r.avatar; av = tpl.content.querySelector("svg"); }
+    if (av) {
+      const cid = uid + "-r" + (++clipSeq);
+      const cp = el("clipPath", { id: cid }, defs);
+      el("rect", { x: "-16", y: "-26", width: "32", height: "35", rx: "5.8" }, cp);
+      av.setAttribute("width", "32"); av.setAttribute("height", "35"); av.setAttribute("x", "-16"); av.setAttribute("y", "-26");
+      const wrap = el("g", { "clip-path": `url(#${cid})` }, g); wrap.appendChild(av);
+      if (opts.raster !== false) rasterizeAvatar(r.avatar, 32, 35).then(url => { if (!url || !wrap.isConnected) return; wrap.innerHTML = ""; el("image", { href: url, x: "-16", y: "-26", width: "32", height: "35", preserveAspectRatio: "xMidYMid slice" }, wrap); });
+    } else {
+      el("circle", { r: "10", cy: "-8", fill: "#8a8f99", stroke: "#2b2f36", "stroke-width": "2" }, g);
+      el("text", { y: "-4", "text-anchor": "middle", class: "c2d-ini" }, g).textContent = "A";
+    }
+    const lab = el("g", { class: "c2d-lab" }, g);
+    el("rect", { x: "-14", y: "15", width: "28", height: "11", rx: "3.5", fill: "#6b7280", class: "c2d-plate" }, lab);
+    el("text", { y: "23.5", "text-anchor": "middle", "data-no-i18n": "1" }, lab).textContent = "ARB";
+    const home = [{ x: 47, y: 48 }, { x: 42, y: 48 }, { x: 52, y: 48 }][i];
+    return { id: "ref" + i, g, x: home.x, y: home.y, tx: home.x, ty: home.y, speed: 1, moving: false };
+  }
+  function syncRefs(list) {
+    if (refs.length || !Array.isArray(list)) return;
+    for (let i = 0; i < 3; i++) refs.push(makeRef(list[i] || null, i));
+  }
+  // Cibles des trois arbitres : chef (ligne de fond du panier attaqué, côté
+  // ballon), queue (ligne de touche côté ballon, derrière le jeu), centre
+  // (ligne de touche côté faible, hauteur lancer franc). Arrêts de jeu :
+  // à la table de marque. Entre-deux : un arbitre au centre.
+  function refTargets() {
+    const live = S && S.status === "live";
+    if (!live || performance.now() < stopUntil) return [{ x: 47, y: 48.5 }, { x: 41, y: 48.5 }, { x: 53, y: 48.5 }];
+    if (lastPlayed && lastPlayed.kind === "tipoff" && performance.now() < sceneUntil) return [{ x: 47, y: 29 }, { x: 30, y: 2.5 }, { x: 64, y: 47.5 }];
+    const rim = RIM[possession], dir = rim.x > 47 ? 1 : -1;
+    const ballSide = ball.y < 25 ? -1 : 1;                   // -1 : haut de l'écran
+    const sideY = side => (side < 0 ? 2.5 : 47.5);
+    const bx = Math.max(6, Math.min(88, ball.x));
+    return [
+      { x: rim.x + dir * 4.5, y: 25 + ballSide * 11 },                                   // chef
+      { x: Math.max(4, Math.min(90, bx - dir * 14)), y: sideY(ballSide) },               // queue, derrière le jeu
+      { x: Math.max(4, Math.min(90, rim.x - dir * 17)), y: sideY(-ballSide) },           // centre, côté faible
+    ];
+  }
+  function steerRefs(nowP) {
+    if (!refs.length || nowP - lastRefs < 700) return;
+    lastRefs = nowP;
+    const T = refTargets();
+    // Affectation au plus court chemin (3! = 6 permutations) : pas de traversée inutile.
+    const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+    let best = null, bestD = Infinity;
+    for (const pm of perms) { const d = pm.reduce((s, ti, ri) => s + Math.hypot(T[ti].x - refs[ri].x, T[ti].y - refs[ri].y), 0); if (d < bestD) { bestD = d; best = pm; } }
+    best.forEach((ti, ri) => { const r = refs[ri]; r.tx = T[ti].x + rnd(-0.6, 0.6); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
+  }
+
   function syncRoster() {
     const seen = new Set();
     [0, 1].forEach(t => {
@@ -268,6 +368,7 @@ export function createCourt2D(host, opts = {}) {
   // Cibles de formation. Les défenseurs se placent entre leur vis-à-vis
   // (même créneau) et le cercle, pas sur un créneau figé.
   function formation() {
+    if (performance.now() < stopUntil) return;   // arrêt de jeu : tout le monde reste au banc
     for (const sp of sprites.values()) {
       if (sp.leaving || sp.busy) continue;
       if (sp.team === possession) {
@@ -299,6 +400,9 @@ export function createCourt2D(host, opts = {}) {
   function giveBall(sp) {
     const own = ownerTeam();
     if (sp && ((own !== null && sp.team !== own) || sp.leaving || !sprites.has(sp.id))) { audit.refusals++; if (opts.onAudit) opts.onAudit({ kind: "refusal", id: sp.id, team: sp.team, owner: own, leaving: !!sp.leaving, stack: new Error().stack }); ball.holder = null; ball.flight = null; return false; }
+    // Arrêt de jeu en cours (temps mort, fin de quart) : le ballon reste à la
+    // table ; la reprise (fin de l'arrêt) le redonne elle-même.
+    if (sp && performance.now() < stopUntil) { ball.holder = null; ball.flight = null; return false; }
     ball.holder = sp ? sp.id : null; ball.flight = null;
     return true;
   }
@@ -348,16 +452,35 @@ export function createCourt2D(host, opts = {}) {
     sp.stat.textContent = text; sp.stat.setAttribute("class", "c2d-stat " + cls); sp.stat.setAttribute("opacity", "1");
     later(1600, () => sp.stat.setAttribute("opacity", "0"));
   }
+  // Onde au cercle sur un PANIER seulement (un tir manqué n'a plus de
+  // signal visuel propre, voir plus haut).
+  // Grande bannière d'action (contre) : texte traduit par la couche i18n du
+  // jeu (« Contre » → « Block »), entrée en zoom, secousse, fondu — CSS
+  // (.c2d-banner). Déclenchée UNIQUEMENT par un contre du moteur, à son airAt.
+  function banner(text, cls = "") {
+    const g = el("g", { class: "c2d-banner " + cls, transform: "translate(470 250)" }, fxG);
+    g.setAttribute("data-no-i18n", "1");
+    el("text", { class: "c2d-banner-shadow", "text-anchor": "middle", y: "6", "data-no-i18n": "1" }, g).textContent = text;
+    el("text", { class: "c2d-banner-text", "text-anchor": "middle", y: "0", "data-no-i18n": "1" }, g).textContent = text;
+    later(1500, () => g.remove());
+  }
+  const blockLabel = () => { try { const t = typeof window !== "undefined" && window.hmI18n && window.hmI18n.t ? window.hmI18n.t("Contre") : "Contre"; return String(t || "Contre").toUpperCase(); } catch (e) { return "CONTRE"; } };
   function rimFx(team, made) {
+    if (!made) return;
     const r = RIM[team];
-    const c = el("circle", { cx: r.x * PX, cy: r.y * PX, r: "10", fill: "none", stroke: made ? "#5fd6ae" : "#FF7A7F", "stroke-width": "3", class: "c2d-wave" }, fxG);
+    const c = el("circle", { cx: r.x * PX, cy: r.y * PX, r: "10", fill: "none", stroke: "#5fd6ae", "stroke-width": "3", class: "c2d-wave" }, fxG);
     later(900, () => c.remove());
   }
-  function startPossession(t) { possession = t; possStart = now(); }
+  function startPossession(t) { possession = t; possStart = now(); crossed = false; }
+  // Ligne médiane franchie dans le sens de l'attaque ?
+  const inFront = (team, x) => (team === 0 ? x >= 47 : x <= 47);
+  // Borne une abscisse à la zone avant quand le ballon y est déjà passé.
+  function frontX(team, x) { if (!crossed) return x; return team === 0 ? Math.max(48.5, x) : Math.min(45.5, x); }
 
   // Remise en jeu après panier : le pivot derrière la ligne de fond, le
   // meneur vient chercher le ballon, puis tout le monde remonte.
   function inbound(nt, rim) {
+    if (performance.now() < stopUntil) return;   // temps mort / fin de quart déjà sifflé : pas de remise en jeu
     startPossession(nt); scene(2400);
     const dir = rim.x > 47 ? 1 : -1;
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
@@ -373,9 +496,12 @@ export function createCourt2D(host, opts = {}) {
     busy(pg, 2400); moveTo(pg, baseline - dir * 9, 30 + rnd(-4, 4), 2);
     for (const sp of onCourt(nt)) if (sp !== pg && sp !== inb) { busy(sp, 1200); moveTo(sp, lerp(sp.x, 47, 0.5), sp.y + rnd(-4, 4), 1.4); }
     formation();
-    later(800, () => { const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 300, 1, () => giveBall(src)); });
-    later(1650, () => { if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
-    later(2200, () => { pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
+    // Un arrêt de jeu survenu entre-temps (temps mort, fin de quart) annule
+    // la suite de la remise en jeu : personne ne revient du banc.
+    const stopped = () => performance.now() < stopUntil;
+    later(800, () => { if (stopped()) return; const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 300, 1, () => giveBall(src)); });
+    later(1650, () => { if (stopped()) return; if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
+    later(2200, () => { if (stopped()) return; pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
   }
 
   // ---------- possession à venir (state.nextAction) ----------
@@ -412,7 +538,10 @@ export function createCourt2D(host, opts = {}) {
     if (offT !== 0 && offT !== 1) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     if (possession !== offT) startPossession(offT);
     plan = { airAt: na.airAt, kind, offT, fired: false, steps: [] };
-    const at = (frac, fn) => later(total * frac, () => { if (plan && plan.airAt === na.airAt) fn(); });
+    // Les étapes ne valent que pour CE plan : un arrêt de jeu (temps mort,
+    // fin de quart) le remplace, et ses minuteries déjà posées se taisent.
+    const self = plan;
+    const at = (frac, fn) => later(total * frac, () => { if (plan === self) fn(); });
     const shooter = spriteOf(a.shooter), assister = spriteOf(a.assister);
     // Porteur : celui que le moteur a désigné (na.passes[0] / na.actors.handler),
     // sinon celui qui a déjà le ballon, sinon le meneur.
@@ -439,7 +568,7 @@ export function createCourt2D(host, opts = {}) {
         busy(sh, total); moveTo(sh, line.x, line.y, 1.8);
         const others = [...onCourt(offT).filter(s => s !== sh), ...onCourt(1 - offT)];
         others.forEach((sp, i) => { busy(sp, total); moveTo(sp, rim.x + dir * (3 + (i >> 1) * 5.5), i % 2 ? 16.5 : 33.5, 1.8); });
-        later(700, () => { if (plan && plan.airAt === na.airAt && sh && ball.holder !== sh.id) flyTo(sh, 300, 1.5, () => giveBall(sh)); });
+        later(700, () => { if (plan === self && sh && ball.holder !== sh.id) flyTo(sh, 300, 1.5, () => giveBall(sh)); });
       });
       at(0.97, () => { fly({ x: RIM[offT].x, y: RIM[offT].y }, Math.max(350, total * 0.03), 6); plan.fired = true; firedAt = na.airAt; });
       return;
@@ -478,7 +607,7 @@ export function createCourt2D(host, opts = {}) {
     // tireur reçoit toujours le ballon avant de tirer).
     while (chain.length > 2 && (chain.length - 1) * 360 > total - flightMs - 200) chain.splice(chain.length - 2, 1);
     const tShot = total - flightMs;
-    const atMs = (ms, fn) => later(ms, () => { if (plan && plan.airAt === na.airAt) fn(); });
+    const atMs = (ms, fn) => later(ms, () => { if (plan === self) fn(); });
     // Les passes se répartissent entre 35 % et 80 % du temps ; aucune passe
     // inventée : une chaîne d'un seul joueur = isolation / drive.
     const nPass = Math.max(0, chain.length - 1);
@@ -516,7 +645,7 @@ export function createCourt2D(host, opts = {}) {
       atMs(Math.max(tMove, tShot + lateMs), () => { busy(defender, 1400); moveTo(defender, lerp(spot.x, rim.x, 0.08) + (rim.x > 47 ? gap : -gap), spot.y + 0.6, q === "ouvert" ? 1.8 : 2.6); });
     }
     later(Math.max(0, tShot), () => {
-      if (!plan || plan.airAt !== na.airAt) return;
+      if (plan !== self) return;
       // Le tir part : le ballon touche le cercle à airAt. Saut du tireur.
       // Le ballon part d'où il est (dans les mains du tireur, ou encore en
       // fin de passe) : plus de téléportation sur le tireur.
@@ -634,15 +763,14 @@ export function createCourt2D(host, opts = {}) {
           } else if (blockedShot) {
             // Contre : le ballon part du contre et reste LIBRE ; le rebond
             // (événement suivant du moteur) dira qui le récupère.
-            const bl = spriteOf(a.blocker); flash(bl, "CONTRE", "good"); jump(bl, 1.2);
-            addMiss(spot, offT);
+            const bl = spriteOf(a.blocker); jump(bl, 1.3);
+            banner(blockLabel(), "block");
             const dir = rim.x > 47 ? -1 : 1;
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5);
           } else if (fouledShot) {
             // Faute sur le tir : pas de rebond, le tireur va aux lancers.
             fly({ x: rim.x + (rim.x > 47 ? -2 : 2), y: rim.y + 1.5 }, 300, 1.5, () => { if (shooter && shooter.team === nextT) flyTo(shooter, 380, 2, () => giveBall(shooter)); });
           } else {
-            if (!afterBlock) addMiss(spot, offT);
             // Rebond : le ballon rebondit sur le cercle (ou part du contre)
             // puis retombe ; le vrai rebondeur y va, les autres proches
             // s'approchent (lutte), et il saute pour le capter.
@@ -756,8 +884,7 @@ export function createCourt2D(host, opts = {}) {
       }
       case "quarterStart": {
         for (const sp of sprites.values()) sp.busy = false;
-        missG.innerHTML = ""; missKey = null;
-        sceneUntil = 0;
+        sceneUntil = 0; stopUntil = 0;
         if (e.quarter === 1) {
           // Entrée des joueurs : du banc vers le rond central, l'entre-deux suit.
           scene(2500);
@@ -773,7 +900,9 @@ export function createCourt2D(host, opts = {}) {
       case "quarterEnd": {
         // Tout le monde au banc jusqu'au début du quart suivant.
         scene(60 * 60 * 1000);
-        for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1); busy(sp, 4000); }
+        stopUntil = performance.now() + 60 * 60 * 1000;
+        plan = null;
+        for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1.3); busy(sp, 4000); }
         ball.holder = null; ball.flight = null;
         break;
       }
@@ -783,9 +912,15 @@ export function createCourt2D(host, opts = {}) {
         // possession suivante (buildPlan attend la fin de scène).
         const hold = e.durationMs || 4200;
         scene(hold);
-        for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1); busy(sp, hold - 600); }
+        stopUntil = performance.now() + hold;
+        // La possession planifiée avant l'arrêt est oubliée : elle sera
+        // reconstruite à la reprise (buildPlan attend la fin de scène), et
+        // ses étapes déjà posées ne déplacent plus personne.
+        plan = null;
+        // Chacun rejoint SON banc (BENCH[team], de part et d'autre de la table) d'un pas rapide.
+        for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1.5); busy(sp, hold - 600); }
         ball.holder = null; ball.flight = null;
-        later(hold - 500, () => { for (const sp of sprites.values()) sp.busy = false; const own = ownerTeam(); if (own !== null) possession = own; giveBall(handlerOf(possession)); formation(); });
+        later(hold - 500, () => { stopUntil = 0; for (const sp of sprites.values()) sp.busy = false; const own = ownerTeam(); if (own !== null) possession = own; giveBall(handlerOf(possession)); formation(); });
         break;
       }
       default: break;
@@ -793,28 +928,9 @@ export function createCourt2D(host, opts = {}) {
     if (e.text) say(e.text);
   }
 
-  // Croix des tirs manqués du quart-temps (comme la référence).
-  function addMiss(spot, team) {
-    const x = spot.x * PX, y = spot.y * PX;
-    const d = `M${x - 5} ${y - 5}l10 10M${x + 5} ${y - 5}l-10 10`;
-    const g = el("g", { class: "c2d-miss", opacity: ".9" }, missG);
-    el("path", { d, stroke: "rgba(0,0,0,.55)", "stroke-width": "4.5", "stroke-linecap": "round" }, g);   // liseré : lisible sur tout parquet
-    el("path", { d, stroke: colors[team], "stroke-width": "2.5", "stroke-linecap": "round" }, g);
-  }
-  function syncMisses() {
-    // À la (re)connexion : toutes les croix du quart-temps en cours.
-    const q = S.quarter;
-    const list = (S.shots || []).filter(s => !s.made && s.quarter === q);
-    const key = q + ":" + list.length;
-    if (key === missKey) return;
-    missKey = key;
-    missG.innerHTML = "";
-    list.forEach(s => addMiss(s, s.team));
-  }
-
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
   function syncMedals() {
-    const key = [0, 1].map(t => S.teams[t].players.filter(p => p.onCourt).map(p => p.id + ":" + p.pts + ":" + p.reb + ":" + p.ast).join("|")).join("#");
+    const key = [0, 1].map(t => S.teams[t].players.filter(p => p.onCourt).map(p => p.id).join("|")).join("#");
     if (key === medalsKey) return;
     medalsKey = key;
     [0, 1].forEach(t => {
@@ -836,9 +952,17 @@ export function createCourt2D(host, opts = {}) {
             const wrap = el("g", { "clip-path": `url(#${cid})` }, m); wrap.appendChild(av);
           }
         }
-        el("text", { x: "40", y: "17", class: "c2d-medal-name" }, m).textContent = lastName(p.name).toUpperCase().slice(0, 9);
-        const line = el("text", { x: "40", y: "36", class: "c2d-medal-stats" }, m);
-        line.innerHTML = `<tspan class="c2d-ms-v">${p.pts | 0}</tspan><tspan class="c2d-ms-l"> pts </tspan><tspan class="c2d-ms-v">${p.reb | 0}</tspan><tspan class="c2d-ms-l"> rb </tspan><tspan class="c2d-ms-v">${p.ast | 0}</tspan><tspan class="c2d-ms-l"> pd</tspan>`;
+        // Nom seul, toujours contenu dans la carte (retour 2026-10-08 : plus
+        // de statistiques sur les cartes, aucun nom qui déborde) : largeur
+        // disponible 40 px ; au-delà, les glyphes sont resserrés (textLength).
+        const name = lastName(p.name).toUpperCase();
+        const nm = el("text", { x: "60", y: "25", "text-anchor": "middle", class: "c2d-medal-name" }, m);
+        nm.textContent = name;
+        // Mesure réelle quand le navigateur la donne (≈ 8 px par lettre en
+        // 800 10 px), estimation sinon (tests JSDOM).
+        let w = name.length * 8;
+        try { if (typeof nm.getComputedTextLength === "function") { const m = nm.getComputedTextLength(); if (m > 0) w = m; } } catch (e) { /* JSDOM */ }
+        if (w > 40) { nm.setAttribute("textLength", "40"); nm.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
       });
     });
   }
@@ -859,7 +983,7 @@ export function createCourt2D(host, opts = {}) {
         if (sp.leaving || sp.busy) continue;
         if (sp.team === possession) {
           const p = slotPos(sp.team, sp.slot, true);
-          if (ball.holder === sp.id) { sp.tx = sp.x + rnd(-3, 3); sp.ty = Math.max(2, Math.min(48, sp.y + rnd(-2.5, 2.5))); sp.speed = 0.7; continue; }
+          if (ball.holder === sp.id) continue;   // le porteur erre en continu (voir plus bas)
           if (sp.cut) { sp.cut = false; sp.tx = p.x + rnd(-3, 3); sp.ty = p.y + rnd(-3, 3); sp.speed = 1.1; }
           else if (Math.random() < 0.33) { sp.cut = true; sp.tx = lerp(p.x, rim.x, rnd(0.45, 0.75)); sp.ty = lerp(p.y, rim.y, rnd(0.3, 0.6)) + rnd(-3, 3); sp.speed = 1.5; }
           else { sp.tx = p.x + rnd(-5, 5); sp.ty = p.y + rnd(-5, 5); sp.speed = 0.9; }
@@ -869,6 +993,31 @@ export function createCourt2D(host, opts = {}) {
           if (mark) { moveTo(sp, lerp(mark.tx, rim.x, 0.25) + rnd(-1.5, 1.5), lerp(mark.ty, rim.y, 0.25) + rnd(-1.5, 1.5), 1.2); }
         }
       }
+    }
+    // Porteur de balle : dribble continu (retour 2026-10-08 : « dribbler →
+    // s'arrêter → reprendre » disparaît). Hors chorégraphie, il se déplace
+    // sans jamais s'immobiliser (nouvelle petite cible dès qu'il arrive), en
+    // zone avant uniquement une fois la ligne médiane franchie, et il la
+    // franchit avant 8 s de possession.
+    if (S && S.status === "live" && ball.holder && !ball.flight) {
+      const h = sprites.get(ball.holder);
+      if (h && h.team === possession) {
+        if (!crossed && inFront(h.team, ball.x)) crossed = true;
+        const age = (now() - possStart) / 1000;
+        if (!h.busy && nowP > sceneUntil) {
+          const d = Math.hypot(h.tx - h.x, h.ty - h.y);
+          if (!crossed && age > 5.5 && !inFront(h.team, h.tx)) { moveTo(h, h.team === 0 ? 52 : 42, Math.max(8, Math.min(42, h.y)), 1.8); }
+          else if (d < 0.6) { const p = slotPos(h.team, h.slot, true); moveTo(h, frontX(h.team, Math.max(2, Math.min(92, lerp(h.x, p.x, 0.3) + rnd(-4, 4)))), Math.max(3, Math.min(47, lerp(h.y, p.y, 0.3) + rnd(-3, 3))), rnd(0.55, 0.8)); }
+          else if (crossed && !inFront(h.team, h.tx)) { h.tx = frontX(h.team, h.tx); }
+        }
+      }
+    }
+    steerRefs(nowP);
+    for (const r of refs) {
+      const d = Math.hypot(r.tx - r.x, r.ty - r.y);
+      if (d > 0.05) { const k = Math.min(1, 14 * r.speed * dt / d); r.x += (r.tx - r.x) * k; r.y += (r.ty - r.y) * k; r.moving = true; } else r.moving = false;
+      const bob = r.moving ? Math.sin(nowP / 95) * 1 : 0;
+      r.g.setAttribute("transform", `translate(${(r.x * PX).toFixed(1)} ${(r.y * PX + bob).toFixed(1)})`);
     }
     for (const [id, sp] of sprites) {
       if (sp.leaving && nowP > sp.leaveAt) { sp.g.remove(); sprites.delete(id); continue; }
@@ -896,7 +1045,8 @@ export function createCourt2D(host, opts = {}) {
       if (f.t >= 1) { ball.flight = null; ball.z = 0; if (f.done) f.done(); }
     } else if (ball.holder) {
       const h = sprites.get(ball.holder);
-      if (h) { ball.x = h.x + (h.team === 0 ? 1.6 : -1.6); ball.y = h.y + 0.6; ball.z = h.moving ? Math.abs(Math.sin(nowP / 110)) * 1.2 : 0; }
+      // Dribble continu tant qu'il a le ballon (un peu plus bas et plus vite à l'arrêt).
+      if (h) { ball.x = h.x + (h.team === 0 ? 1.6 : -1.6); ball.y = h.y + 0.6; ball.z = Math.abs(Math.sin(nowP / (h.moving ? 110 : 95))) * (h.moving ? 1.2 : 0.9); }
     }
     // Garde-fou : jamais de porteur dans l'équipe qui n'a pas le ballon selon
     // le moteur (ex. scène encore en retard sur le fil) — le ballon est
@@ -917,7 +1067,7 @@ export function createCourt2D(host, opts = {}) {
     // seulement si l'ordre a changé.
     if (nowP - lastSort > 250) {
       lastSort = nowP;
-      const ordered = [...sprites.values()].sort((a, b) => a.y - b.y);
+      const ordered = [...sprites.values(), ...refs].sort((a, b) => a.y - b.y);
       const key = ordered.map(sp => sp.id).join("|");
       if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.appendChild(sp.g)); layer.appendChild(ballG); layer.appendChild(fxG); }
     }
@@ -933,10 +1083,10 @@ export function createCourt2D(host, opts = {}) {
       const lk = (state.courtLogo || "") + "|" + (state.arenaSponsor || "");
       if (lk !== logoKey) { logoKey = lk; logoG.innerHTML = state.courtLogo || ""; adTop.textContent = adBot.textContent = (state.arenaSponsor || "HOOP MANAGER").toUpperCase(); }
       const before = sprites.size;
+      syncRefs(state.referees);
       syncRoster();
       enforcePossession(true);
       syncMedals();
-      syncMisses();
       const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
@@ -976,8 +1126,15 @@ export function createCourt2D(host, opts = {}) {
     // État du ballon pour les tests (audit possession 2026-10-07).
     debug() {
       const h = ball.holder ? sprites.get(ball.holder) : null;
-      return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null,
+      return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases };
+    },
+    // Crochets de test (live_court2d_test.js) : position du porteur, âge de
+    // la possession, cible courante — aucun usage dans le jeu.
+    test: {
+      setHolderPosition(x, y) { const h = sprites.get(ball.holder); if (h) { h.x = h.tx = x; h.y = h.ty = y; h.busy = false; crossed = false; } },
+      resetPossessionClock(offsetMs) { possStart = now() + offsetMs; sceneUntil = 0; },
+      holderTarget() { const h = sprites.get(ball.holder); return h ? { x: h.tx, y: h.ty } : null; },
     },
     destroy() { cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
   };

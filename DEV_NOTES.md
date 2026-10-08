@@ -21,15 +21,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 ## À faire
 
 - **🟡 EN BÊTA EN PROD (2026-10-08) — live 2D v2, activé pour Gotham
-  Knights seulement** (poussé 79b1fce, drapeau posé en prod le 2026-10-08,
-  `betaFeatures:["live2d"]`, ligue fr-1). Sans bêta : carte des tirs,
-  comportement inchangé. RESTE :
+  Knights et BC Dia seulement** (poussé 79b1fce, drapeaux posés en prod le
+  2026-10-08, `betaFeatures:["live2d"]`, ligue fr-1). Sans bêta : carte des
+  tirs, comportement inchangé. RESTE :
   1. Revue en conditions réelles (match de club ; un match de sélection ou
      d'un autre club via le mode spectateur affiche la même vue).
   2. Après validation : ouvrir à tous (poser le drapeau club par club via
      `POST /api/admin/beta-feature`, ou retirer le `court2d:` conditionnel
      dans hmLiveReset / spectateMountLiveView). Retrait : même appel avec
      `"enabled": false`.
+  2026-10-08 : plus aucune marque de tir manqué sur le terrain 2D (croix,
+  onde rouge, texte) — la carte des tirs reste la source ; `addMiss` /
+  `syncMisses` retirés de court2d, `rimFx` ne joue que sur panier.
+  2026-10-08 (lot arbitres) : 3 arbitres (avatars gris `AvatarGen` polo
+  staff, `hmLiveReferees` → `dress.referees`, chef / queue / centre côté
+  ballon, table de marque aux arrêts), éclairage (dégradés SVG sous les
+  lignes, 1 couche, 58 fps), dribble continu, représentation 8 s / retour
+  en zone (le moteur n'a PAS de règle des 8 s ni de retour en zone : rien
+  d'inventé, le porteur traverse avant 5,5 s et ne revient pas), bannière
+  CONTRE / BLOCK (`hmI18n.t("Contre")`, uniquement sur `blocked` moteur à
+  l'arrivée de l'événement), cartes des cinq = nom seul contenu
+  (`textLength`), temps mort : bancs de part et d'autre de la table
+  (`BENCH[team]`), plan / remise en jeu / `giveBall` neutralisés pendant un
+  arrêt (`stopUntil`). Vérifié navigateur (Playwright `lot7.js` sandbox) :
+  temps morts A et B, 2 contres à airAt, passage Q1 → Q2, reprise.
   Détails livrés : `liveState` centralisé ; contexte de possession + delta
   de stats sur chaque événement moteur (`MatchEngine.statsDelta`) ; feuille
   en direct par deltas ; chrono des 24 s source unique ; court2d guidé par

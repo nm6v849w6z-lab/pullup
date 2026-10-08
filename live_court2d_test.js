@@ -42,6 +42,7 @@ const S = {
 (async () => {
   const host = window.document.getElementById("host");
   const court = window.createCourt2D(host, { colors: ["#F26B1D", "#3B8FE0"], raster: false });   // pas de canvas sous JSDOM
+  S.referees = [0, 1, 2].map(i => ({ id: "ref" + i, avatar: avatar("ref" + i) }));
   court.update(S, []);
   await sleep(120);
 
@@ -49,6 +50,10 @@ const S = {
   if (sprites().length !== 10) fail(`10 joueurs attendus sur le terrain (les onCourt), obtenu ${sprites().length}.`);
   if (sprites().filter(g => g.classList.contains("t0")).length !== 5) fail("5 sprites par équipe attendus.");
   console.log("✅ Dix sprites, cinq par équipe (players[].onCourt).");
+  const refEls = [...host.querySelectorAll(".c2d-ref")];
+  if (refEls.length !== 3) fail(`3 arbitres attendus, obtenu ${refEls.length}.`);
+  if (!refEls.every(g => g.querySelector('svg[data-avatar^="ref"]'))) fail("chaque arbitre doit porter son avatar.");
+  console.log("✅ Trois arbitres avec avatar sur le terrain.");
 
   const g0 = host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"]');
   if (!g0 || !g0.querySelector('svg[data-avatar="Gotham0"]')) fail("le sprite doit embarquer le vrai avatar SVG du joueur (players[].avatar).");
@@ -94,7 +99,12 @@ const S = {
   // jeu avec pts/rb/pd) et chrono des 24 s.
   const medals = host.querySelectorAll(".c2d-medal");
   if (medals.length !== 10) fail(`10 médaillons attendus (5 par équipe), obtenu ${medals.length}.`);
-  if (!/MORO/.test(host.querySelector(".c2d-medals.t0").textContent) || !/2 pts/.test(host.querySelector(".c2d-medals.t0").textContent)) fail("le médaillon du tireur doit afficher ses points.");
+  // 2026-10-08 : cartes sans statistiques, nom seul et toujours contenu.
+  const medalTxt = host.querySelector(".c2d-medals.t0").textContent;
+  if (!/MORO/.test(medalTxt)) fail("la carte du tireur doit porter son nom.");
+  if (/pts|rb|pd/.test(medalTxt)) fail("plus aucune statistique sur les cartes.");
+  const longName = [...host.querySelectorAll(".c2d-medal-name")].find(t => t.textContent === "NAKAMURA");
+  if (!longName || longName.getAttribute("textLength") !== "40") fail("un nom long doit être resserré pour tenir dans sa carte (textLength).");
   const clock = host.querySelector(".c2d-clock-val").textContent;
   if (!/^\d+(\.\d)?$/.test(clock) || +clock > 24) fail(`chrono des 24 s attendu, obtenu « ${clock} ».`);
   console.log("✅ Médaillons des cinq en jeu (points à jour) et chrono des 24 s.");
@@ -124,9 +134,14 @@ const S = {
   S.events.push({ id: 4, type: "quote", kind: "quote", team: null, quarter: 1, clock: 540, text: "Quel début de match !", speaker: "Nicolas Cosset" });
   court.update(S, [3, 4]);
   await sleep(200);
-  if (host.querySelectorAll(".c2d-miss").length !== 1) fail("un tir manqué doit laisser une croix sur le terrain.");
+  // Retour utilisateur 2026-10-08 : plus aucune marque de tir manqué sur le
+  // terrain (la carte des tirs les montre) — ni croix, ni onde rouge, ni texte.
+  if (host.querySelectorAll(".c2d-miss").length !== 0) fail("un tir manqué ne doit laisser aucune croix sur le terrain.");
+  if ([...host.querySelectorAll(".c2d-wave")].some(w => w.getAttribute("stroke") !== "#5fd6ae")) fail("aucune onde rouge au cercle sur un tir manqué.");
+  if (/RAT|MANQU/i.test([...host.querySelectorAll(".c2d-stat")].map(e => e.textContent).join("|"))) fail("aucun texte « raté » sur les joueurs.");
+  if (S.shots.filter(s => !s.made).length !== 1) fail("la donnée du tir manqué reste dans shots[] pour la carte des tirs.");
   if (/Quel début/.test(host.querySelector(".c2d-caption").textContent)) fail("un commentaire du présentateur ne doit pas remplacer la légende de l'action.");
-  console.log("✅ Croix du tir manqué ; commentaire du présentateur réservé au fil.");
+  console.log("✅ Tir manqué : aucune marque sur le terrain (carte des tirs seule) ; commentaire du présentateur réservé au fil.");
   await sleep(2600);
 
   // Lancer franc marqué joué à l'avance (plan calé sur airAt) : la remise en
@@ -147,7 +162,10 @@ const S = {
   const h3 = host.querySelector(".c2d-p.has-ball");
   if (!h3 || !h3.dataset.id.startsWith("Rennes:")) fail(`après un lancer franc marqué, Rennes doit remettre en jeu, obtenu ${h3 && h3.dataset.id}.`);
   console.log("✅ Lancer franc marqué (joué à l'avance) : remise en jeu derrière la ligne de fond par l'équipe qui encaisse.");
-  S.nextAction = null;
+  // La possession suivante est annoncée loin dans le futur : le plan du tir
+  // précédent est remplacé (ses minuteries ne partent plus).
+  S.nextAction = { kind: "shot", team: 1, zone: "mid", airAt: Date.now() + 60000, shot: { x: 20, y: 20 }, actors: { shooter: "Rennes:Leo Ramos" } };
+  court.update(S, []);
   await sleep(2500);
 
   // Remplacement : Kane sort, Roux entre.
@@ -160,6 +178,54 @@ const S = {
   if (!host.querySelector('.c2d-p[data-id="Gotham:Fab Roux"]')) fail("le remplaçant doit être entré.");
   if (sprites().length !== 10) fail(`toujours 10 sprites après un remplacement, obtenu ${sprites().length}.`);
   console.log("✅ Remplacement : le sortant disparaît, l'entrant apparaît, toujours dix joueurs.");
+
+  // Dribble continu (2026-10-08) : le ballon rebondit dans les mains d'un
+  // porteur même immobile ; il ne s'arrête qu'en vol (passe / tir).
+  await sleep(300);
+  const ballBody = host.querySelector(".c2d-ball > g");
+  const zs = new Set();
+  for (let i = 0; i < 8; i++) { await sleep(45); const m = /translate\(0 ([\d.-]+)\)/.exec(ballBody.getAttribute("transform") || ""); if (m) zs.add(m[1]); }
+  if (!host.querySelector(".c2d-p.has-ball")) fail("un porteur est attendu pour le test du dribble.");
+  if (zs.size < 3) fail(`le dribble doit être continu (hauteur du ballon qui varie), valeurs vues : ${[...zs]}.`);
+  console.log("✅ Dribble continu dans les mains du porteur.");
+
+  // Règle des 8 s / retour en zone (représentation) : un porteur placé en
+  // zone arrière plus de 5,5 s après le début de la possession repart vers
+  // la zone avant ; une fois la ligne franchie, sa cible reste en zone avant.
+  const holderEl = host.querySelector(".c2d-p.has-ball");
+  const dbg0 = court.debug();
+  const holderTeam = dbg0.holderTeam;
+  court.test.setHolderPosition(holderTeam === 0 ? 20 : 74, 25);
+  court.test.resetPossessionClock(-6000);
+  await sleep(400);
+  const tgt = court.test.holderTarget();
+  if (!tgt || (holderTeam === 0 ? tgt.x < 47 : tgt.x > 47)) fail(`après 6 s en zone arrière, le porteur doit viser la zone avant (cible ${JSON.stringify(tgt)}).`);
+  await sleep(2500);
+  const tgt2 = court.test.holderTarget();
+  if (!tgt2 || (holderTeam === 0 ? tgt2.x < 47 : tgt2.x > 47)) fail(`ligne franchie : la cible du porteur ne revient pas en zone arrière (${JSON.stringify(tgt2)}).`);
+  console.log("✅ 8 secondes : le porteur traverse ; retour en zone : il ne revient pas derrière la ligne.");
+
+  // Bannière CONTRE sur un vrai contre du moteur, à l'arrivée de l'événement.
+  S.events.push({ id: 7, team: 1, type: "miss", kind: "shot", quarter: 1, clock: 500, made: false, blocked: true, zone: "paint", airAt: Date.now(), text: "Contre !", shot: { x: 10, y: 25 }, actors: { shooter: "Rennes:Leo Ramos", blocker: "Gotham:Cal Ito" } });
+  court.update(S, [7]);
+  // Version courte sans plan : passes (~0,9 s) puis vol du ballon (~0,5 s), la bannière suit.
+  await sleep(2100);
+  const bn = host.querySelector(".c2d-banner .c2d-banner-text");
+  if (!bn || bn.textContent !== "CONTRE") fail(`bannière « CONTRE » attendue sur un contre, obtenu ${bn && bn.textContent}.`);
+  console.log("✅ Bannière CONTRE sur un contre du moteur.");
+  await sleep(1700);
+
+  // Temps mort : chaque équipe rejoint SON banc (Gotham à gauche du centre, Rennes à droite).
+  S.events.push({ id: 8, type: "timeout", kind: "timeout", team: 0, quarter: 1, clock: 480, text: "Temps mort Gotham", durationMs: 6000, actors: {} });
+  court.update(S, [8]);
+  await sleep(4200);
+  const posOf = g => { const m = /translate\(([\d.-]+) ([\d.-]+)\)/.exec(g.getAttribute("transform") || ""); return m ? [+m[1] / 10, +m[2] / 10] : null; };
+  const tg0 = [...host.querySelectorAll(".c2d-p.t0")].map(posOf), tg1 = [...host.querySelectorAll(".c2d-p.t1")].map(posOf);
+  if (!tg0.every(p => p && p[0] < 47 && p[1] > 40)) fail(`Gotham doit être à son banc (gauche du centre, ligne de touche basse) : ${JSON.stringify(tg0)}.`);
+  if (!tg1.every(p => p && p[0] > 47 && p[1] > 40)) fail(`Rennes doit être à son banc (droite du centre) : ${JSON.stringify(tg1)}.`);
+  const refPos = [...host.querySelectorAll(".c2d-ref")].map(posOf);
+  if (!refPos.every(p => p && p[1] > 44)) fail("les arbitres rejoignent la table de marque pendant le temps mort.");
+  console.log("✅ Temps mort : chaque équipe à son banc, arbitres à la table.");
 
   court.destroy();
   if (host.innerHTML !== "") fail("destroy() doit vider le conteneur.");

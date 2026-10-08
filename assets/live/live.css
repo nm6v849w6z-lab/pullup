@@ -442,9 +442,9 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d{position:relative}
 .c2d-svg{width:100%;height:auto;display:block;border-radius:14px}
 .c2d-ad{fill:rgba(60,30,5,.32);font:900 24px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:3px}
-.c2d-p{will-change:transform}
-.c2d-p .c2d-lab text{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:2px;font:700 9.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px}
-.c2d-p .c2d-ini{fill:#fff;font:800 10px/1 system-ui,sans-serif}
+.c2d-p,.c2d-ref{will-change:transform}
+.c2d-p .c2d-lab text,.c2d-ref .c2d-lab text{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:2px;font:700 9.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px}
+.c2d-p .c2d-ini,.c2d-ref .c2d-ini{fill:#fff;font:800 10px/1 system-ui,sans-serif}
 .c2d-p.has-ball .c2d-sh{fill:rgba(245,161,58,.55)}
 .c2d-stat{font:900 12px/1 system-ui,-apple-system,'Segoe UI',sans-serif;fill:#fff;paint-order:stroke;stroke:#0b1220;stroke-width:3px;transition:opacity .3s}
 .c2d-stat.good{fill:#5fd6ae}.c2d-stat.bad{fill:#FF7A7F}
@@ -463,7 +463,7 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d-clock.low .c2d-clock-val{fill:#FF7A7F;animation:c2dBlink .5s steps(2,start) infinite}
 @keyframes c2dBlink{to{opacity:.35}}
 .c2d-carrier{transition:opacity .2s}
-.c2d-miss,.c2d-light{pointer-events:none}
+.c2d-light{pointer-events:none}
 /* Commentaires du présentateur dans le fil (2026-09-30). */
 .hm-live .feed li.quote{grid-template-columns:auto 1fr;align-items:center;gap:10px;background:rgba(245,161,58,.06);border-left:3px solid var(--accent,#F5A13A)}
 .hm-live .feed li.quote .qav{width:30px;height:32px;border-radius:8px;overflow:hidden;background:#1F2A40;flex:none}
@@ -572,3 +572,11 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
   .hm-live.is-full .feed-panel .phead{margin-bottom:6px}
   .hm-live.is-full .feed-panel h2{font-size:14px}
 }
+/* Arbitres (2026-10-08) : plaque grise « ARB ». */
+.c2d-ref .c2d-lab text{font-size:8px!important;letter-spacing:.6px}
+/* Bannière CONTRE / BLOCK : entrée en zoom, secousse, fondu (1,5 s). */
+.c2d-banner{animation:c2dBanner 1.5s cubic-bezier(.2,.9,.3,1) forwards;transform-box:fill-box;transform-origin:center}
+.c2d-banner-text{fill:#fff;font:italic 900 96px/1 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:4px;paint-order:stroke;stroke:#0b1220;stroke-width:8px}
+.c2d-banner.block .c2d-banner-text{fill:#5fd6ae}
+.c2d-banner-shadow{fill:rgba(0,0,0,.45);font:italic 900 96px/1 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:4px;filter:blur(2px)}
+@keyframes c2dBanner{0%{opacity:0;transform:translate(470px,250px) scale(2.4) rotate(-6deg)}14%{opacity:1;transform:translate(470px,250px) scale(.92) rotate(2deg)}22%{transform:translate(466px,252px) scale(1.06) rotate(-1deg)}30%{transform:translate(473px,249px) scale(1) rotate(0)}75%{opacity:1;transform:translate(470px,250px) scale(1.02)}100%{opacity:0;transform:translate(470px,236px) scale(1.15)}}

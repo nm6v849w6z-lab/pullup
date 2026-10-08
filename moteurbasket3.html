@@ -9041,8 +9041,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-1">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-1">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-2">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-2">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -44709,7 +44709,7 @@ async function spectateMountLiveView(state) {
     B: spectateTeamData(state.opponentObj, live.isHome ? 1 : 0, colors, state.opponentIdx),
   };
   if (live.tacticsUsed) { teams[live.isHome ? "A" : "B"].tactics = live.tacticsUsed.home || null; teams[live.isHome ? "B" : "A"].tactics = live.tacticsUsed.away || null; }
-  const dress = { meta: null, courtLogo: "", arenaSponsor: null, courtStyle: null };
+  const dress = { meta: null, courtLogo: "", arenaSponsor: null, courtStyle: null, referees: hmLiveReferees(live.seed != null ? live.seed : live.kickoffAt) };
   try { dress.courtLogo = homeObj ? liveCourtHomeLogoSvg(homeObj, 470, 250, 52).replace(/liveCourtLogoClip/g, "spectateCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
   try { dress.arenaSponsor = homeObj ? sponsorNameForSlot(homeObj, "salle") : null; } catch (e) { /* rien */ }
   // Parquet Premium du club qui reçoit ; une sélection nationale n'en a pas (repli neutre).
@@ -44935,7 +44935,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-1";
+const HM_LIVE_ASSET_VERSION = "20261008-2";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45397,6 +45397,20 @@ function hmLiveMetaBase() {
   } catch (e) { /* salle inconnue : on s'en passe */ }
   return { competition, round, venue };
 }
+// Trois arbitres (live 2D, 2026-10-08) : avatars du jeu en polo gris, graines
+// fixes par match (même trio à chaque reconnexion). Partagé avec le mode
+// spectateur. Vide si le générateur d'avatars n'est pas disponible.
+function hmLiveReferees(seedBase) {
+  const out = [];
+  const grey = ["#8a8f99", "#e5e7eb"];
+  for (let i = 0; i < 3; i++) {
+    try {
+      const seed = ((Math.abs(Number(seedBase) || 7413) * 31 + i * 1009) % 2147483647) + 1;
+      out.push({ id: "ref" + i, avatar: AvatarGen.generateAvatar(seed, { outfit: "polo", staff: true, age: 38 + i * 4, suitColors: grey, teamColors: grey }) });
+    } catch (e) { out.push({ id: "ref" + i, avatar: "" }); }
+  }
+  return out;
+}
 function hmLiveDress() {
   if (hmLive.dress) return hmLive.dress;
   const m = hmLive.match;
@@ -45419,6 +45433,7 @@ function hmLiveDress() {
   } catch (e) { d.sponsors = [null, null]; d.arenaSponsor = null; d.arenaSponsorStyle = null; }
   // Parquet aux couleurs du club qui reçoit (Premium, courtStyleFor).
   try { d.courtStyle = courtStyleFor(homeTeam); } catch (e) { d.courtStyle = null; }
+  d.referees = hmLiveReferees(m.seed != null ? m.seed : m.kickoffAt);
   hmLive.dress = d;
   return d;
 }
@@ -45520,6 +45535,7 @@ function hmLiveBuildState() {
     arenaSponsor: dress.arenaSponsor || null,
     arenaSponsorStyle: dress.arenaSponsorStyle || null,
     courtStyle: dress.courtStyle || null,
+    referees: dress.referees || null,
     teams,
     shots: hmLive.shots,
     events: hmLive.events,
