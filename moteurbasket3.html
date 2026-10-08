@@ -9011,8 +9011,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261007-3">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261007-3">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-1">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-1">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -44905,7 +44905,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261007-3";
+const HM_LIVE_ASSET_VERSION = "20261008-1";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {

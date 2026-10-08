@@ -77,6 +77,11 @@ const assert = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅
   root.ownerDocument.defaultView.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape" }));
   $("fsExit").click();
   assert(!root.classList.contains("is-full"), "plein écran : quitté par le bouton");
+  // Hôte du jeu (#hmLiveRoot{display:block}, sélecteur par id) : la grille
+  // du plein écran doit l'emporter, sinon la carte des tirs s'étire hors
+  // de l'écran (retour utilisateur 2026-10-08).
+  const css = fs.readFileSync("assets/live/live.css", "utf8");
+  assert(/\.hm-live\.is-full\{[^}]*display:grid!important[^}]*grid-template-rows:auto minmax\(0,1fr\)!important/.test(css), "plein écran : grille prioritaire sur le conteneur du jeu (carte des tirs visible)");
   console.log("\n🏁 live_fullscreen_timeout_test.js : plein écran et timer du temps mort.");
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
