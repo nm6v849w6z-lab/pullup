@@ -100,10 +100,16 @@ const S = {
   if (!/\bt0\b/.test(ptsf[0].getAttribute("class"))) fail(`le « +2 » doit être aux couleurs de l'équipe (t0), obtenu « ${ptsf[0].getAttribute("class")} ».`);
   if (moro.querySelector(".c2d-stat").textContent) fail("le « +2 » ne passe plus par l'étiquette d'action du jeton (plus de clignotement prolongé).");
   if (!reactions.has("react-cheer-h")) fail(`panier du club qui reçoit : ses supporters doivent réagir (react-cheer-h), obtenu ${[...reactions]}.`);
-  const fans = host.querySelectorAll(".c2d-crowd .fan");
-  const cohorts = new Set([...fans].map(f => (/\bc(\d+)\b/.exec(f.getAttribute("class")) || [])[1]));
-  if (fans.length < 150 || cohorts.size < 10 || !host.querySelector(".c2d-crowd .fan .arms") || !host.querySelector(".c2d-crowd .fan.a") || !host.querySelector(".c2d-crowd .fan.h")) fail(`public : des spectateurs individuels (bras, supporters des deux clubs) répartis en cohortes, obtenu ${fans.length} / ${cohorts.size} cohortes.`);
-  console.log(`✅ Public : ${fans.length} spectateurs individuels en ${cohorts.size} cohortes ; les supporters du club qui marque célèbrent.`);
+  // Fluidité (2026-10-08) : le public est rangé en feuilles (une par
+  // cohorte de mouvement × camp, calques composés), spectateurs regroupés
+  // en tracés par couleur ; le nombre de spectateurs est porté par data-fans.
+  const crowdEl = host.querySelector(".c2d-crowd");
+  const nFans = +(crowdEl && crowdEl.getAttribute("data-fans") || 0);
+  const sheets = [...host.querySelectorAll(".c2d-crowd > svg.c2d-fans")];
+  const motions = new Set(sheets.map(sv => (/\bm-(\w+)/.exec(sv.getAttribute("class")) || [])[1]));
+  if (nFans < 150 || sheets.length < 6 || motions.size < 3 || !host.querySelector(".c2d-fans .arms path") || !host.querySelector(".c2d-fans.s-a") || !host.querySelector(".c2d-fans.s-h")) fail(`public : des spectateurs (bras, supporters des deux clubs) répartis en cohortes de mouvement, obtenu ${nFans} spectateurs, ${sheets.length} feuilles, ${motions.size} mouvements.`);
+  if (host.querySelectorAll(".c2d-crowd .fan").length) fail("public : plus d'élément par spectateur (tracés regroupés par couleur).");
+  console.log(`✅ Public : ${nFans} spectateurs en ${sheets.length} feuilles (${motions.size} mouvements) ; les supporters du club qui marque célèbrent.`);
   if (![...trailsSeen].some(c => /pass/.test(c))) fail("la passe décisive doit laisser une traînée (.c2d-trail.pass).");
   if (![...trailsSeen].some(c => /shot t0/.test(c))) fail("le tir doit laisser sa traînée de mouvement aux couleurs de l'équipe (.c2d-trail.shot.t0).");
   console.log("✅ Traînée de mouvement derrière la passe et le tir (plus de pointillés), « +2 » aux couleurs de l'équipe.");

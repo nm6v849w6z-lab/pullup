@@ -16,7 +16,7 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261008-13";
+import { createCourt2D } from "./court2d.js?v=20261008-14";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -233,6 +233,18 @@ export function createLiveView(root, opts = {}) {
   root.classList.add("hm-live");
   root.innerHTML = TEMPLATE;
   const $ = r => root.querySelector(`[data-ref="${r}"]`);
+  // Fluidité (2026-10-08) : les blocs reconstruits chaque seconde (feuille
+  // de match et ses 24 avatars, meneurs, comparatif, fautes…) ne touchent
+  // plus au DOM quand leur contenu n'a pas changé — chaque réécriture
+  // coûtait style, mise en page et peinture, et volait des images au
+  // terrain animé.
+  const IH = typeof Element !== "undefined" ? Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML") : null;
+  function guardHTML(el) {
+    if (!el || !IH || !IH.set) return;
+    let last = null;
+    Object.defineProperty(el, "innerHTML", { configurable: true, get() { return IH.get.call(el); }, set(v) { v = String(v); if (v === last) return; last = v; IH.set.call(el, v); } });
+  }
+  ["box", "leaders", "cmp", "cmpLegend", "tactics", "dnp", "lead", "qt", "sides", "halfTxt", "fouls0", "fouls1", "tos0", "tos1", "feed"].forEach(r => guardHTML($(r)));
 
   // `view` : "2d" = terrain animé (court2d.js, 2026-09-29 : « les joueurs qui
   // bougent »), "chart" = l'ancienne carte des tirs avec ses filtres.
@@ -244,7 +256,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261008-13").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261008-14").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -303,7 +315,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261008-13").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261008-14").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }

@@ -20,6 +20,38 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-08) — Live 2D : fluidité (audit + correctifs
+  mesurés)**. Causes trouvées : (1) le navigateur repeignait TOUTE la salle
+  à chaque image (un seul SVG : parquet, tribunes, ~660 spectateurs dont
+  ~275 animés un par un en CSS avec transform-box, panneaux, bancs) →
+  peinture + « layerize » ≈ 22 ms/image sur téléphone (14 i/s) ;
+  (2) mouvement à vitesse constante : départ / arrêt secs, demi-tour
+  instantané, les dix joueurs changeant de cible à la même image toutes les
+  1,2 s, oscillation de marche qui s'allume / s'éteint ; (3) ballon : saut
+  quand le porteur change sans passe, hauteur qui saute au lâcher ;
+  (4) vue live : feuille de match (24 avatars), meneurs, comparatif
+  réécrits chaque seconde même inchangés. Correctifs (court2d.js,
+  live.css, live-view.js) : calques `c2d-under` (décor `c2d-bgsvg` jamais
+  repeint, public en feuilles `c2d-fans` regroupées en tracés par couleur,
+  bancs + coachs `c2d-benchsvg`) sous le terrain animé `c2d-svg` (même
+  viewBox, boîte recopiée par `placeUnder` au redimensionnement) ; public :
+  plus d'animation continue, petites « vies » ponctuelles et réactions en
+  Web Animations sur les feuilles ; `steer()` (vitesse, accélération,
+  virage en arc, freinage, croisière inchangée 14 × speed pieds/s),
+  rythme propre à chaque joueur (`nextDrift`), foulée liée à la distance ;
+  ballon : hauteur continue au lâcher (`z0`), phase de dribble repartie à
+  la réception, filtre de continuité (`ballFix`, ≤ 110 pieds/s) ;
+  écritures DOM par image seulement si la valeur change ; `guardHTML`
+  dans live-view ; découpes d'avatars rangées dans leur jeton (fuite de
+  `clipPath` corrigée). Diagnostic : `?c2dperf=1` ou localStorage
+  `hm-c2d-perf=1` (panneau i/s, image p95/max, boucle, pics, animés),
+  `debug().perf`, `perfReset()`. Banc de mesure Chromium (match réel,
+  cadence du jeu) : téléphone simulé (CPU ×4) 14 → ~50 i/s, à-coups
+  joueurs ~15 → < 1 ‰, arrêts/départs secs ~11 → 0 ‰. Test :
+  `live_court2d_fluidity_test.js`. **Reste** (si besoin) : jetons des
+  joueurs en éléments HTML composés (aucune repeinte du tout) ; fil du
+  match incrémental (pic ~50 ms ×4 à chaque nouvelle action).
+
 - **🟡 EN COURS (2026-10-08) — Commentaire audio du direct 2D (voix d'un
   ami clonée par IA, avec son accord écrit)**. Lecteur livré :
   `assets/live/commentary.js` (MOMENTS = 23 moments × 3–4 phrases ; ces

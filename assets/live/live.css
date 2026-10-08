@@ -440,7 +440,24 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 /* ---- Terrain 2D animé (court2d.js, 2026-09-29 : « les joueurs qui
    bougent », « rendu parquet », « le vrai visage des joueurs ») ---- */
 .c2d{position:relative}
-.c2d-svg{width:100%;height:auto;display:block;border-radius:10px;background:#04060b}
+.c2d-svg{width:100%;height:auto;display:block;border-radius:10px;background:transparent;position:relative}
+/* Calques (fluidité 2026-10-08) : décor statique et public sous le terrain
+   animé, même boîte (placée par court2d.js), chacun sur son calque. */
+.c2d-under{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:10px;overflow:hidden;background:#04060b;pointer-events:none}
+.c2d-under svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;overflow:hidden}
+.c2d-bgsvg{will-change:transform}
+.c2d-benchsvg{will-change:transform}
+/* Survol / toucher : le terrain animé laisse passer les événements, sauf
+   sur les jetons ; les remplaçants (calque du dessous) restent cliquables. */
+.c2d-svg{pointer-events:none}
+.c2d-svg .c2d-p{pointer-events:auto}
+.c2d-benchsvg .c2d-sub{pointer-events:auto}
+.c2d-crowd{position:absolute;inset:0}
+/* Public : balancement léger piloté par court2d.js (5 mises à jour par
+   seconde, pas d'animation continue) ; feuilles mobiles sur leur calque. */
+.c2d-fans.m-ba,.c2d-fans.m-bb,.c2d-fans.m-sh{will-change:transform}
+.c2d-fans .arms{opacity:0}
+.c2d-fans.arms-up .arms{opacity:1}
 .c2d-ad{fill:rgba(60,30,5,.32);font:900 24px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:3px}
 .c2d-p,.c2d-ref{will-change:transform}
 .c2d-p .c2d-lab text,.c2d-ref .c2d-lab text{fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:2px;font:700 9.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px}
@@ -672,6 +689,8 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 .c2d-foul text,.c2d-sub .c2d-out text{fill:#fff;font:900 8px/1 system-ui,sans-serif}
 .c2d-sub{cursor:pointer}.c2d-p{cursor:pointer}
 .c2d-sub.out image,.c2d-sub.out svg{filter:grayscale(1) brightness(.6)}
+/* Diagnostic de fluidité (?c2dperf=1, développement) */
+.c2d-perf{position:absolute;left:6px;top:6px;z-index:6;padding:3px 7px;border-radius:6px;background:rgba(0,0,0,.72);color:#9ff0b0;font:600 10.5px/1.3 ui-monospace,Menlo,monospace;pointer-events:none;max-width:calc(100% - 12px)}
 .c2d-tip{position:absolute;z-index:5;width:170px;padding:7px 9px;border-radius:9px;background:rgba(8,12,20,.94);border:1px solid rgba(255,255,255,.14);color:#e9eef7;font:600 11.5px/1.35 system-ui,-apple-system,'Segoe UI',sans-serif;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .c2d-tip b{font-weight:800}.c2d-tip span{color:#9aa6bb}
 .c2d-tip div{color:#b9c3d4;font-weight:500}
@@ -688,32 +707,5 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 @keyframes c2dPts2{0%{opacity:0;transform:translateY(6px) scale(.6)}8%{opacity:1;transform:translateY(0) scale(1.15)}15%{transform:translateY(0) scale(1)}82%{opacity:1;transform:translateY(-6px) scale(1)}100%{opacity:0;transform:translateY(-12px) scale(1)}}
 @media (prefers-reduced-motion: reduce){.c2d-ptsf>text{animation:none}}
 /* Public (2026-10-08) : chaque spectateur bouge à sa façon (cohortes mélangées). */
-.c2d-crowd .fan{transform-box:fill-box;transform-origin:50% 100%}
-.c2d-crowd .fan .arms{opacity:0;transition:opacity .15s}
-.c2d-crowd .fan.c0,.c2d-crowd .fan.c4{animation:c2dBob 2.8s ease-in-out infinite alternate}
-.c2d-crowd .fan.c2{animation:c2dShift 4.6s ease-in-out infinite alternate}
-.c2d-crowd .fan.c7{animation:c2dLean 5.3s ease-in-out infinite alternate}
-.c2d-crowd .fan.c9{animation:c2dFidget 7s ease-in-out infinite}
-.c2d-crowd .fan.c9 .arms{animation:c2dArmIdle 7s ease-in-out infinite}
-@keyframes c2dBob{from{transform:translateY(0)}to{transform:translateY(-1.2px)}}
-@keyframes c2dShift{from{transform:translateX(-1.2px)}to{transform:translateX(1.2px)}}
-@keyframes c2dLean{from{transform:rotate(-5deg)}to{transform:rotate(4deg)}}
-@keyframes c2dFidget{0%,70%,100%{transform:translateY(0)}78%{transform:translateY(-2.5px)}86%{transform:translateY(0)}}
-@keyframes c2dArmIdle{0%,72%,92%,100%{opacity:0}76%,88%{opacity:1}}
 /* Panier : les supporters de l'équipe qui marque se lèvent, bras en l'air ;
    les autres s'affaissent. Raté : déception chez ses supporters. */
-.c2d-crowd.react-cheer-h .fan.h,.c2d-crowd.react-cheer-h .fan.n:nth-child(2n),.c2d-crowd.react-cheer-a .fan.a{animation:c2dCheer .46s ease-out 3}
-.c2d-crowd.react-cheer-h .fan.h .arms,.c2d-crowd.react-cheer-a .fan.a .arms{animation:c2dArms 1.4s ease-out 1 forwards}
-.c2d-crowd.react-cheer-h .fan.a,.c2d-crowd.react-cheer-a .fan.h{animation:c2dSlump 1.4s ease-out 1}
-.c2d-crowd.react-groan-h .fan.h,.c2d-crowd.react-groan-a .fan.a{animation:c2dGroan 1.2s ease-out 1}
-.c2d-crowd.react-groan-h .fan.h:nth-child(3n) .arms,.c2d-crowd.react-groan-a .fan.a:nth-child(3n) .arms{animation:c2dArmsShort .9s ease-out 1}
-.c2d-crowd.react-big.react-cheer-h .fan.h,.c2d-crowd.react-big.react-cheer-h .fan.n,.c2d-crowd.react-big.react-cheer-a .fan.a{animation:c2dCheerBig .42s ease-out 5}
-.c2d-crowd.react-big.react-cheer-h .fan.h .arms,.c2d-crowd.react-big.react-cheer-a .fan.a .arms,.c2d-crowd.react-big.react-cheer-h .fan.n .arms{animation:c2dArms 2.2s ease-out 1 forwards}
-@keyframes c2dCheer{0%,100%{transform:translateY(0)}45%{transform:translateY(-3.5px)}}
-@keyframes c2dCheerBig{0%,100%{transform:translateY(0) rotate(0)}35%{transform:translateY(-5px) rotate(-4deg)}70%{transform:translateY(-2px) rotate(4deg)}}
-@keyframes c2dArms{0%{opacity:0}10%,80%{opacity:1}100%{opacity:0}}
-@keyframes c2dArmsShort{0%{opacity:0}15%,60%{opacity:1}100%{opacity:0}}
-@keyframes c2dSlump{0%,100%{transform:translateY(0) scale(1)}30%,70%{transform:translateY(1px) scale(.95)}}
-@keyframes c2dGroan{0%,100%{transform:translateY(0)}20%{transform:translateY(-1.5px)}55%{transform:translateY(1px) scale(.96)}}
-.c2d-crowd .fan.c0{animation-delay:0.00s}.c2d-crowd .fan.c1{animation-delay:0.14s}.c2d-crowd .fan.c2{animation-delay:0.27s}.c2d-crowd .fan.c3{animation-delay:0.41s}.c2d-crowd .fan.c4{animation-delay:0.55s}.c2d-crowd .fan.c5{animation-delay:0.69s}.c2d-crowd .fan.c6{animation-delay:0.82s}.c2d-crowd .fan.c7{animation-delay:0.96s}.c2d-crowd .fan.c8{animation-delay:1.10s}.c2d-crowd .fan.c9{animation-delay:0.03s}.c2d-crowd .fan.c10{animation-delay:0.17s}.c2d-crowd .fan.c11{animation-delay:0.31s}
-@media (prefers-reduced-motion: reduce){.c2d-crowd .fan,.c2d-crowd .fan .arms{animation:none!important}}
