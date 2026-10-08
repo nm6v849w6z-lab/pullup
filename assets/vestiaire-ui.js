@@ -531,21 +531,24 @@
       '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px"><p class="vs-eyebrow">Parler à un autre joueur</p>' + (pick || '<p class="vs-empty">Personne d\'autre de disponible pour l\'instant.</p>') + "</div>" +
       '<p class="vs-text" style="font-size:12.5px;margin-top:8px">Environ un entretien toutes les deux semaines par joueur, ' + V.TALKS_PER_WEEK + " par semaine ; les urgences (crise, demande de transfert, promesse en retard) passent avant.</p></section>";
     var c = cv.consistency;
-    var cons = '<section class="vs-card" style="display:flex;flex-direction:column;gap:10px"><h2 class="vs-h2">Cohérence du coach</h2><div class="vs-cons"><b class="vs-big">' + c.score + '</b><span class="vs-text">/ 100 · ' + esc(c.label) + '</span></div><div class="vs-gauge"><i style="width:' + c.score + '%"></i></div><p class="vs-text">' +
-      c.kept + " promesse" + (c.kept > 1 ? "s" : "") + " tenue" + (c.kept > 1 ? "s" : "") + " · " + c.broken + " non tenue" + (c.broken > 1 ? "s" : "") + " · " + c.contra + " contradiction" + (c.contra > 1 ? "s" : "") + " relevée" + (c.contra > 1 ? "s" : "") + "</p></section>";
+    var cons = '<section class="vs-card" style="display:flex;flex-direction:column;gap:10px"><h2 class="vs-h2">Cohérence du coach</h2><div class="vs-cons"><b class="vs-big">' + c.score + '</b><span class="vs-text">/ 100 · <span>' + esc(c.label) + '</span></span></div><div class="vs-gauge"><i style="width:' + c.score + '%"></i></div><p class="vs-text"><span>' +
+      c.kept + " promesse" + (c.kept > 1 ? "s" : "") + " tenue" + (c.kept > 1 ? "s" : "") + "</span> · <span>" + c.broken + " non tenue" + (c.broken > 1 ? "s" : "") + "</span> · <span>" + c.contra + " contradiction" + (c.contra > 1 ? "s" : "") + " relevée" + (c.contra > 1 ? "s" : "") + "</span></p></section>";
     var ST = { late: ["En retard", C.warn], open: ["En cours", C.blue], kept: ["Tenue", C.good], broken: ["Non tenue", C.bad] };
     var prom = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Promesses en cours</h2>' + (cv.promises.map(function (pr) {
       var st = ST[pr.status] || ST.open;
-      return '<div class="vs-mini"><div class="vs-row"><span><strong>' + esc(pr.n) + "</strong> · " + esc(pr.what) + tag(pr.src === "public" ? "Publique" : "Privée", pr.src === "public" ? C.blue : C.purple) + "</span>" + tag(st[0], st[1]) + "</div><small>Faite le " + esc(dateFr(pr.at)) + (pr.status === "open" || pr.status === "late" ? " · échéance dans " + pr.weeksLeft + " semaine" + (pr.weeksLeft > 1 ? "s" : "") : "") + (pr.progress ? " · " + esc(pr.progress) : "") + "</small></div>";
+      var bits = ["<span>Faite le " + esc(dateFr(pr.at)) + "</span>"];
+      if (pr.status === "open" || pr.status === "late") bits.push("<span>échéance dans " + pr.weeksLeft + " semaine" + (pr.weeksLeft > 1 ? "s" : "") + "</span>");
+      if (pr.progress) bits.push("<span>" + esc(pr.progress) + "</span>");
+      return '<div class="vs-mini"><div class="vs-row"><span><strong>' + esc(pr.n) + "</strong> · <span>" + esc(pr.what) + "</span>" + tag(pr.src === "public" ? "Publique" : "Privée", pr.src === "public" ? C.blue : C.purple) + "</span>" + tag(st[0], st[1]) + "</div><small>" + bits.join(" · ") + "</small></div>";
     }).join("") || '<p class="vs-empty">Aucune promesse en cours.</p>') + "</section>";
     var comms = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Communication récente</h2>' + (cv.comms.map(function (x) {
       var im = IMP[x.imp] || IMP.neu;
-      return '<div class="vs-mini"><div class="vs-row"><small>' + esc(dateFr(x.at)) + " · " + esc(x.lbl) + "</small>" + tag(im[0], im[1]) + "</div><span>« " + esc(x.q) + " »</span>" + (x.fx ? "<small>" + esc(x.fx) + "</small>" : "") + "</div>";
+      return '<div class="vs-mini"><div class="vs-row"><small><span>' + esc(dateFr(x.at)) + "</span> · <span>" + esc(x.lbl) + "</span></small>" + tag(im[0], im[1]) + "</div><span>« " + esc(x.q) + " »</span>" + (x.fx ? "<small>" + String(x.fx).split(" · ").map(function (f) { return "<span>" + esc(f) + "</span>"; }).join(" · ") + "</small>" : "") + "</div>";
     }).join("") || '<p class="vs-empty">Vos déclarations publiques (interviews) apparaîtront ici.</p>') + "</section>";
     var V2 = window.HM_VESTIAIRE;
     var hist = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Historique des discussions</h2>' + (cv.talks.map(function (x) {
       var o = OUTW[x.out] || OUTW.neu;
-      return '<div class="vs-hist"><span class="vs-text">' + esc(dateFr(x.at)) + "</span><span>" + esc(x.n) + " · " + esc((V2.TOPICS[x.topic] || {}).label || "") + '</span><b style="color:' + o[1] + '">' + o[0] + "</b></div>";
+      return '<div class="vs-hist"><span class="vs-text">' + esc(dateFr(x.at)) + "</span><span><span>" + esc(x.n) + "</span> · <span>" + esc((V2.TOPICS[x.topic] || {}).label || "") + '</span></span><b style="color:' + o[1] + '">' + o[0] + "</b></div>";
     }).join("") || '<p class="vs-empty">Aucune discussion pour l\'instant.</p>') + "</section>";
     return '<div class="vs-split">' + left + '<aside class="vs-side">' + cons + prom + comms + hist + "</aside></div>";
   }
@@ -559,12 +562,12 @@
     closeTalk();
     var tp = teamPlayer({ id: pid }) || {};
     var lvl = V.LEVELS[o.level] ? V.LEVELS[o.level].label : "";
-    var head = '<div class="vs-row" style="justify-content:flex-start;gap:12px">' + avatar({ id: pid, name: o.name }, topicColor(topic), 52) + '<div><strong style="font-size:17px">' + esc(o.name) + '</strong> <span class="vs-text">' + esc([o.position, o.age ? o.age + " ans" : "", o.tenure ? (o.tenure + 1) + "e saison au club" : "nouveau au club"].filter(Boolean).join(" · ")) + '</span><br><span class="vs-text" style="font-size:12.5px">' +
-      (o.lastTalkAt ? "Dernier entretien : " + esc(dateFr(o.lastTalkAt)) : "Premier entretien") + " · " + esc(o.topicLabel) + "</span></div></div>";
+    var head = '<div class="vs-row" style="justify-content:flex-start;gap:12px">' + avatar({ id: pid, name: o.name }, topicColor(topic), 52) + '<div><strong style="font-size:17px">' + esc(o.name) + '</strong> <span class="vs-text">' + [o.position, o.age ? o.age + " ans" : "", o.tenure ? (o.tenure + 1) + "e saison au club" : "nouveau au club"].filter(Boolean).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join(" · ") + '</span><br><span class="vs-text" style="font-size:12.5px"><span>' +
+      (o.lastTalkAt ? "Dernier entretien : " + esc(dateFr(o.lastTalkAt)) : "Premier entretien") + "</span> · <span>" + esc(o.topicLabel) + "</span></span></div></div>";
     var roleWord = { starter: "Titulaire", rotation: "Rotation", reserve: "Réserve" };
     var kpis = '<div class="vs-talk-kpis"><div><small>Moral</small><b style="color:' + toneColor(o.form) + '">' + o.form + '</b></div><div><small>Confiance en vous</small><b style="color:' + toneColor(o.trust) + '">' + o.trust + '</b></div><div><small>Temps de jeu</small><b>' + o.minutes + ' min</b></div><div><small>Influence</small><b>' + esc(lvl || roleWord[o.role] || "") + "</b></div></div>";
     var choices = o.choices.map(function (c) {
-      return '<button type="button" class="vs-choice" data-vs-choice="' + c.key + '"><span>' + c.letter + "</span><div><strong>" + esc(c.label) + (c.promise ? tag("Promesse", C.purple) : "") + "</strong><small>« " + esc(c.quote) + " »" + (c.check ? " " + esc(c.check) : "") + "</small></div></button>";
+      return '<button type="button" class="vs-choice" data-vs-choice="' + c.key + '"><span>' + c.letter + "</span><div><strong>" + esc(c.label) + (c.promise ? tag("Promesse", C.purple) : "") + "</strong><small>« " + esc(c.quote) + " »</small>" + (c.check ? "<small><em>" + esc(c.check) + "</em></small>" : "") + "</div></button>";
     }).join("");
     var ov = document.createElement("div");
     ov.className = "upgrade-confirm-overlay"; ov.id = "vsTalkOverlay";
@@ -591,14 +594,14 @@
     var col = r.out === "pos" ? C.good : r.out === "neg" ? C.bad : "var(--vs-faint)";
     var bits = ['<b style="color:' + col + '">Moral ' + arrow(r.form.after - r.form.before) + "</b>", '<b style="color:' + col + '">Confiance en vous ' + arrow(r.trust.after - r.trust.before) + "</b>"];
     var sp = r.spread || {};
-    if (sp.close && sp.close.length) bits.push(sp.close.length + " proche" + (sp.close.length > 1 ? "s" : "") + " (" + esc(sp.close.slice(0, 3).map(function (x) { return lastName(x.n); }).join(", ")) + ") " + (sp.close[0].d > 0 ? "rassurés" : "solidaires de lui"));
+    if (sp.close && sp.close.length) { var many = sp.close.length > 1; bits.push(sp.close.length + " proche" + (many ? "s" : "") + " (" + esc(sp.close.slice(0, 3).map(function (x) { return lastName(x.n); }).join(", ")) + ") " + (sp.close[0].d > 0 ? (many ? "rassurés" : "rassuré") : (many ? "solidaires de lui" : "solidaire de lui"))); }
     if (sp.group) bits.push("« " + esc(sp.group) + " » " + (r.out === "neg" ? "fait bloc" : "apaisé"));
     if (sp.chem) bits.push("Vestiaire : " + (sp.chem > 0 ? "cohésion ↑" : "tension ↑"));
     var chain = ['<span class="vs-pill">' + esc(lastName(o.name)) + "</span>"];
     if (sp.close && sp.close.length) chain.push('<span class="vs-pill">→ ' + sp.close.length + " proche" + (sp.close.length > 1 ? "s" : "") + "</span>");
     if (sp.group) chain.push('<span class="vs-pill">→ ' + esc(sp.group) + "</span>");
     if (sp.chem) chain.push('<span class="vs-pill">→ Vestiaire : ' + (sp.chem > 0 ? "cohésion ↑" : "tension ↑") + "</span>");
-    return '<p class="vs-eyebrow">Réaction</p><p class="vs-quote">« ' + esc(r.reply) + " » — " + esc(lastName(o.name)) + " " + esc(r.outLabel) + ".</p>" +
+    return '<p class="vs-eyebrow">Réaction</p><p class="vs-quote"><span>« ' + esc(r.reply) + " »</span> — <span>" + esc(lastName(o.name)) + "</span> <span>" + esc(r.outLabel) + "</span>.</p>" +
       '<p class="vs-text">' + bits.join(" · ") + "</p>" + '<div class="vs-chips">' + chain.join("") + "</div>" +
       (r.promise ? '<p class="vs-text">Promesse enregistrée (' + esc(r.promise.k === "minutes" ? "plus de minutes" : r.promise.k === "starter" ? "place de titulaire" : r.promise.k === "role" ? "rôle majeur" : "prolongation") + ") : elle sera vérifiée automatiquement.</p>" : "") +
       (r.requestWithdrawn ? '<p class="vs-text" style="color:' + C.good + '">Il retire sa demande de transfert.</p>' : "") +

@@ -770,7 +770,7 @@
     if (Array.isArray(c.talks)) out.talks = c.talks.filter(t => t && TOPICS[t.topic] && CHOICES.includes(t.c)).slice(0, TALKS_MAX)
       .map(t => ({ at: num(t.at), w: num(t.w), s: num(t.s, 1), p: t.p, n: str(t.n, 60), topic: t.topic, c: t.c, out: ["pos", "neu", "neg"].includes(t.out) ? t.out : "neu" }));
     if (Array.isArray(c.comms)) out.comms = c.comms.filter(x => x && typeof x.q === "string").slice(0, COMMS_MAX)
-      .map(x => ({ at: num(x.at), w: num(x.w), s: num(x.s, 1), k: str(x.k, 30), lbl: str(x.lbl, 80), q: str(x.q, 200), ...(x.p != null ? { p: x.p, n: str(x.n, 60) } : {}), imp: ["pos", "neg", "col", "neu"].includes(x.imp) ? x.imp : "neu", fx: str(x.fx, 200) }));
+      .map(x => ({ at: num(x.at), w: num(x.w), s: num(x.s, 1), k: str(x.k, 30), lbl: str(x.lbl, 80), q: str(x.q, 600), ...(x.p != null ? { p: x.p, n: str(x.n, 60) } : {}), imp: ["pos", "neg", "col", "neu"].includes(x.imp) ? x.imp : "neu", fx: str(x.fx, 200) }));
     if (Array.isArray(c.promises)) out.promises = c.promises.filter(x => x && PROMISE_WEEKS[x.k] && x.p != null).slice(0, PROMISES_MAX)
       .map(x => ({ id: str(x.id, 40), p: x.p, n: str(x.n, 60), k: x.k, src: x.src === "public" ? "public" : "private", at: num(x.at), w: num(x.w), s: num(x.s, 1), due: num(x.due), base: num(x.base), target: num(x.target), ok: num(x.ok), st: ["open", "kept", "broken"].includes(x.st) ? x.st : "open", ...(x.end ? { end: num(x.end) } : {}) }));
     if (c.stance && typeof c.stance === "object") Object.entries(c.stance).forEach(([k, v]) => {
@@ -1157,7 +1157,7 @@
       });
       ctx.players.filter(q => q !== target && q.position === target.position && roleOf(team, q) !== "starter" && num(q.form, 50) < 55).slice(0, 1).forEach(q => { addForm(q, -2, 25); note(q, "concurrent, se sent sous-estimé"); });
     };
-    const proches = (p, sign) => { const cl = closeOf(ctx, p).filter(q => q !== x && q !== y); if (!cl.length) return; cl.forEach(q => { addForm(q, sign * 2, 25); if (sign < 0) addTrust(team, q, -2); }); rx.push({ id: null, n: `${cl.length} proche${cl.length > 1 ? "s" : ""} de ${p.name}`, txt: sign > 0 ? "fiers pour lui" : "prennent sa défense" }); };
+    const proches = (p, sign) => { const cl = closeOf(ctx, p).filter(q => q !== x && q !== y); if (!cl.length) return; cl.forEach(q => { addForm(q, sign * 2, 25); if (sign < 0) addTrust(team, q, -2); }); const many = cl.length > 1; rx.push({ id: null, n: `${cl.length} proche${many ? "s" : ""} de ${p.name}`, txt: sign > 0 ? (many ? "fiers pour lui" : "fier pour lui") : (many ? "prennent sa défense" : "prend sa défense") }); };
     let imp = "neu", chem = 0, promise = null;
     const choice = ans.choice;
     if (choice === "praise") { praise(x); jealousy(x); proches(x, 1); imp = "pos"; }
@@ -1188,7 +1188,7 @@
     const c = coachOf(team);
     const contras = c.contra.filter(k => num(k.at) === now);
     const quote = opt[2].replace(/\{x\}/g, x.name).replace(/\{y\}/g, y ? y.name : "");
-    const fx = rx.slice(0, 3).map(r => `${r.id != null ? lastNameOf(r.n) : r.n} ${r.txt}`).join(" · ") + (contras.length ? " · contradiction relevée" : "");
+    const fx = rx.slice(0, 3).map(r => `${r.id != null ? lastNameOf(r.n) : r.n} : ${r.txt}`).join(" · ") + (contras.length ? " · contradiction relevée" : "");
     const entry = { at: now, w: num(team.week), s: seasonOf(team), k: meta.milestone || "", lbl: meta.label || "Interview", q: quote, p: x.id, n: x.name, imp, fx };
     c.comms.unshift(entry); if (c.comms.length > COMMS_MAX) c.comms.length = COMMS_MAX;
     pushLog(team, { t: imp === "pos" ? "statement-up" : imp === "neg" ? "statement-down" : "statement", p: x.id, n: x.name });
@@ -1197,7 +1197,7 @@
   // Interview de jalon sans question de vestiaire : seulement mémorisée.
   function recordComm(team, meta = {}) {
     const c = coachOf(team);
-    const q = String(meta.quote || "").slice(0, 200); if (!q) return;
+    const q = String(meta.quote || "").slice(0, 600); if (!q) return;
     c.comms.unshift({ at: num(meta.now, Date.now()), w: num(team.week), s: seasonOf(team), k: meta.milestone || "", lbl: meta.label || "Interview", q, imp: meta.chem > 0 ? "col" : meta.chem < 0 ? "neg" : "neu", fx: meta.chem > 0 ? "Cohésion ↑" : meta.chem < 0 ? "Cohésion ↓" : "" });
     if (c.comms.length > COMMS_MAX) c.comms.length = COMMS_MAX;
   }
