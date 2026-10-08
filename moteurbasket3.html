@@ -9050,8 +9050,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-9">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-9">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-10">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-10">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -29588,6 +29588,10 @@ function syncReleaseYouthPlayerToServer(playerId) {
 // pour chacune [des questions]") : `tones` (tableau, un ton par question)
 // envoyé sous cette clé au serveur, voir server/actions.js:respondToInterview
 // qui accepte aussi `tone` (chaîne unique) en compatibilité ascendante.
+// Arène du direct 2D : remplissage estimé (humeur des supporters) et textes des panneaux LED.
+function hmLiveArena(h) {
+  try { return h ? { fill: Math.max(0.35, Math.min(1, 0.35 + (h.fanMorale || 50) / 110)), boards: [h.name, sponsorNameForSlot(h, "salle"), "HOOP MANAGER"].filter(Boolean) } : null; } catch (e) { return null; }
+}
 function syncInterviewToServer(id, tones) {
   try {
     fetchApi("/api/media/interview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, tones }) })
@@ -44878,6 +44882,7 @@ async function spectateMountLiveView(state) {
   const dress = { meta: null, courtLogo: "", arenaSponsor: null, courtStyle: null, referees: hmLiveReferees(live.seed != null ? live.seed : live.kickoffAt) };
   try { dress.courtLogo = homeObj ? liveCourtHomeLogoSvg(homeObj, 470, 250, 52).replace(/liveCourtLogoClip/g, "spectateCourtLogoClip") : ""; } catch (e) { /* pas de logo */ }
   try { dress.arenaSponsor = homeObj ? sponsorNameForSlot(homeObj, "salle") : null; } catch (e) { /* rien */ }
+  dress.arena = hmLiveArena(homeObj);
   // Parquet Premium du club qui reçoit ; une sélection nationale n'en a pas (repli neutre).
   try { dress.courtStyle = homeObj && !live.intl ? courtStyleFor(homeObj) : null; } catch (e) { dress.courtStyle = null; }
   const competition = live.intl ? `Sélections nationales · ${live.intl.label || ""}`.trim() : live.privateLeague ? `Ligue privée · ${live.privateLeague.name}` : live.competition === "cup" ? "Coupe" : live.competition === "friendly" ? "Match amical" : "Championnat";
@@ -45104,7 +45109,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-9";
+const HM_LIVE_ASSET_VERSION = "20261008-10";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45709,6 +45714,7 @@ function hmLiveDress() {
   // Parquet aux couleurs du club qui reçoit (Premium, courtStyleFor).
   try { d.courtStyle = courtStyleFor(homeTeam); } catch (e) { d.courtStyle = null; }
   d.referees = hmLiveReferees(m.seed != null ? m.seed : m.kickoffAt);
+  d.arena = hmLiveArena(homeTeam);
   hmLive.dress = d;
   return d;
 }
@@ -45818,6 +45824,7 @@ function hmLiveBuildState() {
     courtLogo: dress.courtLogo,
     arenaSponsor: dress.arenaSponsor || null,
     arenaSponsorStyle: dress.arenaSponsorStyle || null,
+    arena: dress.arena || null,
     courtStyle: dress.courtStyle || null,
     referees: dress.referees || null,
     teams,

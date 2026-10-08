@@ -13,7 +13,7 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-9";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-10";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -31,7 +31,7 @@ export function showFor(stoppage, quarter) {
 
 export const INTRO_MS = 30000;      // entrée des joueurs (avant-match et reprise)
 const EDGE_MS = 1100;               // entrée / sortie des animateurs
-const COACH_Y = 51.4;               // devant le banc, hors du terrain
+const COACH_Y = 55;                 // debout devant son banc (arène 2026-10-08 : bancs hors du terrain)
 const TUNNEL = { x: 47, y: 53 };
 
 // Petit générateur pseudo-aléatoire stable (graine = début de l'arrêt) :
@@ -359,13 +359,15 @@ export function createStaging(api, getCfg) {
               hold(sp, p.x, p.y, 1.4, late);
             }
           });
-          api.refs().forEach((r, i) => hold(r, 47 + (i - 1) * 3, 49.2, 1.4, late));
+          api.refs().forEach((r, i) => hold(r, 47 + (i - 1) * 3, 50.7, 1.4, late));
         }
       }
     }
 
     // Shows (sous-drapeau shows).
     const name = cfg && cfg.shows && ph.st ? showFor(ph.st, S && S.quarter) : null;
+    // Lumière tamisée + projecteurs mobiles pendant l'entrée des joueurs et les shows.
+    if (api.ambience) api.ambience(ph.kind === "intro" || (name && (ph.kind === "timeout" || ph.kind === "quarter-break")) ? "show" : "");
     if (name && (ph.kind === "timeout" || ph.kind === "quarter-break")) {
       const t0 = ph.st.startAt + EDGE_MS, t1 = ph.st.endsAt - EDGE_MS;
       if (now >= t0 - EDGE_MS && now < t1) {

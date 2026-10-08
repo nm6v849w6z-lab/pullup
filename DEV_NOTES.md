@@ -47,6 +47,29 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   lecture seule, paliers de 5, ~6 Ko par match) → `ev.fat` → `hmLive.fat` /
   adapter `st.fat` → `players[].fatigue`. Matchs déjà calculés : pas de barre.
   Version des fichiers du live : 20261008-4.
+  ARÈNE LOT 1 (2026-10-08, sur la branche, en attente de validation avant
+  prod) : court2d.js — plus de cartes joueurs en haut ni de cadre bleu ;
+  géométrie SIDE/TOP/BOT autour du terrain (OX, OY) ; `drawArena` (statique,
+  une fois par club) : tribunes (sièges en motif + spectateurs déterministes,
+  ~48 % aux couleurs du club qui reçoit, sections `.c2d-fans` qui oscillent,
+  sautent sur un panier à domicile), fondu au noir, panneaux LED (textes
+  `state.arena.boards`), apron, supports des paniers, table de marque,
+  chaises des bancs ; tableau d'affichage suspendu ; énergie (barre) et
+  fautes (pastille ≥ 4) sous chaque jeton, bulle au toucher/survol ; banc
+  des remplaçants (`.c2d-sub`, grisé si 5 fautes / blessé) ; changements :
+  l'entrant marche banc → table → jeu, le sortant retourne à sa place
+  (instantané hors direct / onglet masqué / reduced-motion) ; ombre du
+  ballon selon sa hauteur ; reflets « vernis » ; flash + public debout sur
+  3 pts / dunk / buzzer ; `ambience("show")` (salle tamisée + projecteurs)
+  appelé par staging.js pendant l'entrée des joueurs et les shows.
+  `state.arena` = hmLiveArena(club qui reçoit) : fill estimé
+  (0.35 + humeur/110) et textes LED ; couleurs apron/sièges/LED
+  surchargeables (`arena.apron/seats/led`). Bancs : BENCH (coach) x 22/72,
+  SEAT_Y 58.6 ; table y 52.4 ; officiels STOP_Y 50.7 ; COACH_Y 55
+  (staging). Téléphone : viewBox rogné (tribunes) sous 640 px de large ;
+  paysage tactile : hauteur bornée à l'écran.
+  RESTE arène : validation du lot 1, puis polissage (tape dans la main plus
+  visible, durée des déplacements selon la vitesse de lecture).
   PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`
   (groupe `.c2d-trails` sous le ballon) — chaque vol porte un `kind` :
   "pass" (traînée blanche pointillée) ou "shot0/1" (arc du tir, hauteur

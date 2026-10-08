@@ -60,7 +60,7 @@ const mkTeam = (key, color) => ({ name: key, short: key.slice(0, 3).toUpperCase(
   // --- Temps mort : regroupement autour du coach, show, retour ---
   S.stoppage = { kind: "timeout", team: 0, quarter: 2, startAt: NOW, endsAt: NOW + 60000 };
   NOW += 2500; await go(1700);
-  const huddle = [0, 1].every(t => S.teams[t].players.every(p => { const q = pos(p.id); const bx = [33, 61][t]; return q && Math.hypot(q.sx - bx, q.sy - 51.4) < 9.5; }));
+  const huddle = [0, 1].every(t => S.teams[t].players.every(p => { const q = pos(p.id); const bx = [22, 72][t]; return q && Math.hypot(q.sx - bx, q.sy - 55) < 9.5; }));
   if (!huddle) fail("au temps mort, chaque équipe se regroupe autour de son coach.");
   if (dbg().show !== "pompom" || !host.querySelector(".stg-show-pompom")) fail("temps mort : show des pompom girls attendu.");
   const nDancers = host.querySelectorAll(".stg-dancer").length;

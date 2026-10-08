@@ -105,31 +105,27 @@ const S = {
   trailObs.disconnect();
   if (host.querySelector(".c2d-trail.shot")) fail("l'arc du tir doit s'effacer après l'arrivée du ballon.");
 
-  // v2 (2026-09-30, style BuzzerBeater) : bande des médaillons (les cinq en
-  // jeu avec pts/rb/pd) et chrono des 24 s.
-  const medals = host.querySelectorAll(".c2d-medal");
-  if (medals.length !== 10) fail(`10 médaillons attendus (5 par équipe), obtenu ${medals.length}.`);
-  // 2026-10-08 : cartes sans statistiques, nom seul et toujours contenu.
-  const medalTxt = host.querySelector(".c2d-medals.t0").textContent;
-  if (!/MORO/.test(medalTxt)) fail("la carte du tireur doit porter son nom.");
-  if (/pts|rb|pd/.test(medalTxt)) fail("plus aucune statistique sur les cartes.");
-  const longName = [...host.querySelectorAll(".c2d-medal-name")].find(t => t.textContent === "NAKAMURA");
-  if (!longName || longName.getAttribute("textLength") !== "34") fail("un nom long doit être resserré pour tenir dans sa carte (textLength).");
-  // Priorité 2 (2026-10-08) : numéro de maillot sur le jeton, tableau
-  // central (score, quart-temps, chrono), fautes et énergie sur les cartes.
+  // Arène (2026-10-08) : plus de cartes en haut ; tableau suspendu (score,
+  // quart-temps, chrono, 24 s), énergie et fautes sous chaque jeton,
+  // remplaçants assis sur le banc.
+  if (host.querySelector(".c2d-medal, .c2d-medals")) fail("les cartes joueurs du haut doivent avoir disparu.");
   if (host.querySelectorAll(".c2d-p .c2d-num").length !== 10) fail("numéro de maillot attendu sur chaque jeton.");
   if (host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"] .c2d-num text').textContent !== "4") fail("pastille du numéro : 4 attendu pour Ali Kane.");
   const scores = [...host.querySelectorAll(".c2d-score")].map(t => t.textContent);
-  if (scores.length !== 2 || scores.some(x => !/^\d+$/.test(x))) fail(`score des deux équipes attendu dans le tableau central, obtenu ${scores}.`);
+  if (scores.length !== 2 || scores.some(x => !/^\d+$/.test(x))) fail(`score des deux équipes attendu dans le tableau suspendu, obtenu ${scores}.`);
   if (!/^Q\d · \d+:\d\d$/.test(host.querySelector(".c2d-period").textContent)) fail(`quart-temps et chrono attendus, obtenu « ${host.querySelector(".c2d-period").textContent} ».`);
-  const moroCard = [...host.querySelectorAll(".c2d-medal")].find(m => /MORO/.test(m.textContent));
-  if (moroCard.querySelectorAll(".c2d-pip.on").length !== 4 || !moroCard.querySelector(".c2d-pip.hot")) fail("4 fautes attendues (en rouge) sur la carte de Ben Moro.");
-  const bars = [...host.querySelectorAll(".c2d-medals.t0 .c2d-energy rect:last-child")].map(r => +r.getAttribute("width"));
-  if (!(bars[0] > bars[2] && Math.abs(bars[0] - 31) < 0.1)) fail(`barre d'énergie attendue (100 - fatigue), obtenu ${bars}.`);
-  if (/pts|rb|pd|PTS|REB|AST/.test(host.querySelector(".c2d-medals.t1").textContent)) fail("toujours aucune statistique de jeu sur les cartes.");
+  const moroTok = host.querySelector('.c2d-p[data-id="Gotham:Ben Moro"]');
+  if (moroTok.querySelector(".c2d-foul").getAttribute("opacity") !== "1" || moroTok.querySelector(".c2d-foul text").textContent !== "4") fail("pastille « 4 » fautes attendue sous le jeton de Ben Moro.");
+  if (host.querySelector('.c2d-p[data-id="Gotham:Ali Kane"] .c2d-foul').getAttribute("opacity") !== "0") fail("pas de pastille de fautes sous 4 fautes.");
+  const barW = id => +host.querySelector(`.c2d-p[data-id="${id}"] .c2d-energy rect:last-child`).getAttribute("width");
+  if (!(Math.abs(barW("Gotham:Ali Kane") - 28) < 0.1 && barW("Gotham:Ali Kane") > barW("Gotham:Ben Moro"))) fail(`barre d'énergie attendue sous les jetons (100 − fatigue), obtenu ${barW("Gotham:Ali Kane")} / ${barW("Gotham:Ben Moro")}.`);
+  const subs = host.querySelectorAll(".c2d-bench .c2d-sub");
+  const benchExpected = S.teams.reduce((n, t) => n + t.players.filter(p => !p.onCourt).length, 0);
+  if (subs.length !== benchExpected) fail(`${benchExpected} remplaçants attendus sur les bancs, obtenu ${subs.length}.`);
+  if (subs.length && !subs[0].querySelector(".c2d-energy")) fail("les remplaçants affichent aussi leur énergie.");
   const clock = host.querySelector(".c2d-clock-val").textContent;
   if (!/^\d+(\.\d)?$/.test(clock) || +clock > 24) fail(`chrono des 24 s attendu, obtenu « ${clock} ».`);
-  console.log("✅ Médaillons des cinq en jeu (points à jour) et chrono des 24 s.");
+  console.log("✅ Arène : tableau suspendu, énergie et fautes sous les jetons, remplaçants sur les bancs.");
 
   // Possession jouée À L'AVANCE (state.nextAction) : Rennes attaque à
   // gauche, Wright tire à 3 pts ; le ballon doit être en l'air avant que

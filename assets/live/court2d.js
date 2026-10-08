@@ -28,12 +28,16 @@ import { esc } from "./format.js";
 const RIM = [{ x: 88.75, y: 25 }, { x: 5.25, y: 25 }];   // panier visé par l'équipe t
 const NS = "http://www.w3.org/2000/svg";
 const PX = 10;                                            // 1 pied = 10 unités SVG
-const PAD = 50;                                           // gradins autour du terrain
-const HEAD = 58;                                          // bande des médaillons + chrono
+// Arène (refonte 2026-10-08) : le terrain (940 × 500) au centre d'une salle
+// sombre — dégagement (apron), panneaux LED, premiers rangs de tribunes ;
+// en bas, la table de marque et les deux bancs. Plus de bande de
+// médaillons : le tableau d'affichage est suspendu au-dessus des tribunes.
+const SIDE = 110, TOP = 96, BOT = 176;                    // décor autour du terrain
+const OX = SIDE, OY = TOP;                                // origine du terrain
 // Seuls ces événements donnent lieu à une possession jouée à l'avance ; les
 // autres (changement, début de quart, temps mort…) se jouent à leur arrivée.
 const PLANNED_KINDS = new Set(["shot", "rebound", "freeThrow", "turnover", "foul", "unsportsmanlikeFoul", "technicalFoul"]);
-const VW = 940 + PAD * 2, VH = 500 + PAD * 2 + HEAD;
+const VW = 940 + SIDE * 2, VH = TOP + 500 + BOT;
 const SHOT_CLOCK = 24;
 
 // Postes du moteur → créneau de formation (attaque / défense).
@@ -65,14 +69,20 @@ function slotPos(team, slot, attacking) {
 // traversée complète du terrain, et chaque équipe rejoint TOUJOURS le sien
 // (retour utilisateur 2026-10-08). Les joueurs se regroupent en demi-cercle
 // autour du coach (point BENCH), pas en file.
-const BENCH = [{ x: 33, y: 46 }, { x: 61, y: 46 }];
+// Arène : bancs HORS du terrain, sur la ligne de touche du bas, de part et
+// d'autre de la table de marque (coach debout devant, remplaçants assis).
+const BENCH = [{ x: 22, y: 53.5 }, { x: 72, y: 53.5 }];
+// Sièges du banc (remplaçants), du centre vers l'extérieur.
+const SEAT_Y = 58.6, SEAT_DX = 3.4;
+const seatPos = (team, i) => ({ x: team === 0 ? 33.5 - i * SEAT_DX : 60.5 + i * SEAT_DX, y: SEAT_Y });
 function parkLine(team, i) {
   const b = BENCH[team] || BENCH[0];
   const k = Math.max(0, Math.min(6, i)) - 2;                 // -2 … 4 autour du centre
   return { x: b.x + k * 3.2, y: b.y - (k === 0 || k === 2 ? 3 : (Math.abs(k) === 1 || k === 3 ? 1 : 0)) };
 }
 // Table de marque : où vont les arbitres pendant les arrêts.
-const TABLE = { x: 47, y: 48 };
+const TABLE = { x: 47, y: 52.4 };
+const STOP_Y = 50.7;                                      // officiels debout devant la table
 
 // Avatars rastérisés (2026-10-01, « ça semble laguer ») : dix SVG d'avatar
 // complets déplacés 60 fois par seconde coûtent cher à repeindre ; on les
@@ -111,6 +121,15 @@ export function createCourt2D(host, opts = {}) {
   const now = () => (opts.now ? opts.now() : Date.now());
   const svg = el("svg", { viewBox: `0 0 ${VW} ${VH}`, class: "c2d-svg", role: "img", "aria-label": "Terrain animé du match" }, host);
   const defs = el("defs", {}, svg);
+  // Téléphone (2026-10-08) : si la salle ne tient pas, on rogne les
+  // tribunes — jamais le terrain, la table ni les bancs.
+  const fitView = () => {
+    const w = host.clientWidth || 0;
+    svg.setAttribute("viewBox", w && w < 640 ? `${OX - 70} 0 ${940 + 140} ${OY + 616}` : `0 0 ${VW} ${VH}`);
+  };
+  fitView();
+  let ro = null;
+  try { if (typeof ResizeObserver === "function") { ro = new ResizeObserver(fitView); ro.observe(host); } } catch (e) { /* rien */ }
   const uid = "c2d" + Math.random().toString(36).slice(2, 7);
 
   // --- fond : public, parquet ---
@@ -124,9 +143,9 @@ export function createCourt2D(host, opts = {}) {
   // et un assombrissement des bords — des dégradés statiques, sans filtre,
   // donc sans coût par image.
   const light = el("radialGradient", { id: uid + "-lt", cx: "50%", cy: "46%", r: "64%" }, defs);
-  el("stop", { offset: "0", "stop-color": "#fff3dc", "stop-opacity": ".16" }, light);
+  el("stop", { offset: "0", "stop-color": "#fff3dc", "stop-opacity": ".2" }, light);
   el("stop", { offset: ".55", "stop-color": "#fff3dc", "stop-opacity": ".04" }, light);
-  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".32" }, light);
+  el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".38" }, light);
   const spot = el("radialGradient", { id: uid + "-sp", cx: "50%", cy: "50%", r: "50%" }, defs);
   el("stop", { offset: "0", "stop-color": "#fff8e8", "stop-opacity": ".22" }, spot);
   el("stop", { offset: ".5", "stop-color": "#fff8e8", "stop-opacity": ".07" }, spot);
@@ -134,10 +153,11 @@ export function createCourt2D(host, opts = {}) {
   const glow = el("radialGradient", { id: uid + "-gl", cx: "50%", cy: "50%", r: "50%" }, defs);
   el("stop", { offset: "0", "stop-color": "#ffe9b8", "stop-opacity": ".10" }, glow);
   el("stop", { offset: "1", "stop-color": "#ffe9b8", "stop-opacity": "0" }, glow);
-  el("rect", { width: VW, height: VH, fill: "#0b1220", rx: "14" }, svg);
-  el("rect", { width: VW, height: VH, fill: `url(#${uid}-cw)`, rx: "14" }, svg);
-  el("rect", { width: VW, height: VH, fill: `url(#${uid}-vg)`, rx: "14" }, svg);
-  const floor = el("g", { transform: `translate(${PAD} ${PAD + HEAD})` }, svg);
+  // Décor statique de la salle (tribunes, apron, LED, table, bancs) : dessiné
+  // une fois par club qui reçoit (drawArena), jamais par image.
+  el("rect", { width: VW, height: VH, fill: "#04060b" }, svg);
+  const arenaG = el("g", { transform: `translate(${OX} ${OY})`, class: "c2d-arena" }, svg);
+  const floor = el("g", { transform: `translate(${OX} ${OY})` }, svg);
   const floorBase = el("g", {}, floor);          // parquet + zones (redessiné selon le club)
   // Lumière des projecteurs posée SUR le parquet, SOUS les lignes et les joueurs.
   const lightG = el("g", { class: "c2d-light" }, floor);
@@ -145,6 +165,13 @@ export function createCourt2D(host, opts = {}) {
   el("rect", { width: "940", height: "500", rx: "8", fill: `url(#${uid}-lt)` }, lightG);
   // Halo des projecteurs qui déborde sur les gradins, au-dessus de chaque panier.
   [[52, 250], [888, 250]].forEach(([cx, cy]) => el("ellipse", { cx, cy, rx: 150, ry: 110, fill: `url(#${uid}-gl)` }, lightG));
+  // Parquet vernis : reflets des projecteurs du plafond (taches allongées)
+  // et reflet doux du logo central — calques statiques semi-transparents.
+  const gloss = el("radialGradient", { id: uid + "-gs", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#ffffff", "stop-opacity": ".11" }, gloss);
+  el("stop", { offset: "1", "stop-color": "#ffffff", "stop-opacity": "0" }, gloss);
+  [[150, 70], [320, 60], [620, 60], [790, 70], [210, 440], [730, 440]].forEach(([cx, cy]) => el("ellipse", { cx, cy, rx: 46, ry: 13, fill: `url(#${uid}-gs)`, class: "c2d-gloss" }, lightG));
+  el("ellipse", { cx: 470, cy: 300, rx: 70, ry: 22, fill: `url(#${uid}-gs)`, opacity: ".7" }, lightG);
   const lines = el("g", { class: "c2d-lines", fill: "none", stroke: "rgba(255,255,255,.88)", "stroke-width": "2.5" }, floor);
   el("rect", { x: "2", y: "2", width: "936", height: "496", rx: "4" }, lines);
   el("line", { x1: "470", y1: "2", x2: "470", y2: "498" }, lines);
@@ -224,21 +251,152 @@ export function createCourt2D(host, opts = {}) {
   }
   drawFloor(null);
 
-  // --- bande du haut : médaillons des cinq en jeu + chrono des 24 s ---
-  const head = el("g", { transform: `translate(${PAD} 12)`, class: "c2d-head" }, svg);
-  const medals = [el("g", { class: "c2d-medals t0" }, head), el("g", { class: "c2d-medals t1", transform: "translate(940 0)" }, head)];
-  // Tableau central (2026-10-08) : score des deux équipes autour des 24 s,
-  // quart-temps et chrono du match dessous. Les cartes des cinq sont un peu
-  // plus étroites (76 px) pour lui laisser la place.
-  const board = el("g", { transform: "translate(470 0)", class: "c2d-board" }, head);
-  el("rect", { x: "-66", y: "0", width: "132", height: "50", rx: "10", fill: "rgba(10,16,28,.88)", stroke: "rgba(255,255,255,.12)" }, board);
-  const scoreTxt = [0, 1].map(t => el("text", { x: t ? "46" : "-46", y: "35", "text-anchor": "middle", class: "c2d-score" }, board));
-  const shortTxt = [0, 1].map(t => el("text", { x: t ? "46" : "-46", y: "12", "text-anchor": "middle", class: "c2d-short", "data-no-i18n": "1" }, board));
-  const periodTxt = el("text", { x: "0", y: "45", "text-anchor": "middle", class: "c2d-period", "data-no-i18n": "1" }, board);
+  // ---------- arène (décor statique, 2026-10-08) ----------
+  // Couleurs paramétrables par club qui reçoit : state.arena = { apron,
+  // seats, led, fill (0-1, remplissage des tribunes), boards: [textes] } ;
+  // à défaut, dérivées de la couleur du club et de l'humeur des supporters.
+  const hexRgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || "")); const n = m ? parseInt(m[1], 16) : 0x888888; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const mix = (a, b, k) => { const A = hexRgb(a), B = hexRgb(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, "0")).join(""); };
+  const fansG = [];
+  let arenaKey = null;
+  function drawArena(home, arena, homeName, awayColor) {
+    const a = arena || {};
+    const fill = Math.max(0.15, Math.min(1, typeof a.fill === "number" ? a.fill : 0.82));
+    const key = [home, awayColor, a.apron, a.seats, a.led, fill, (a.boards || []).join("/"), homeName].join("|");
+    if (key === arenaKey) return;
+    arenaKey = key;
+    arenaG.innerHTML = ""; fansG.length = 0;
+    const apron = a.apron || mix(home, "#3a2616", 0.8);
+    const seat = a.seats || mix(home, "#0d1018", 0.72);
+    const led = a.led || home;
+    // Tribunes : un fond de sièges (motif), puis des spectateurs (premiers
+    // rangs) en sections qui oscillent légèrement (CSS, décalées).
+    const pat = el("pattern", { id: uid + "-seat", width: "15", height: "14", patternUnits: "userSpaceOnUse" }, defs);
+    el("rect", { width: "15", height: "14", fill: "#07090f" }, pat);
+    el("rect", { x: "2", y: "3", width: "11", height: "9", rx: "2.5", fill: seat }, pat);
+    el("rect", { x: -OX, y: -OY, width: VW, height: VH, fill: `url(#${uid}-seat)` }, arenaG);
+    const rnd01 = (() => { let k = 0; for (const ch of key) k = (k * 31 + ch.charCodeAt(0)) >>> 0; return () => { k = (k * 1664525 + 1013904223) >>> 0; return k / 4294967296; }; })();
+    const skins = ["#f1c7a3", "#d9a47c", "#b97d55", "#8d5a3b", "#5e3b26", "#e8b48f"];
+    const shirts = ["#2b3445", "#3b4252", "#5a6170", "#e9e4da", "#273a5a", "#4a3b35", awayColor || "#3B8FE0"];
+    const sections = [];
+    const section = k => { if (!sections[k]) { const g = el("g", { class: `c2d-fans s${k % 4}` }, arenaG); sections[k] = g; fansG.push(g); } return sections[k]; };
+    const fan = (x, y, k) => {
+      if (rnd01() > fill) return;
+      const g = section(k);
+      const r = rnd01();
+      const shirt = r < 0.48 ? home : r < 0.56 ? "#ffffff" : r < 0.62 ? (awayColor || "#3B8FE0") : shirts[Math.floor(rnd01() * (shirts.length - 1))];
+      el("ellipse", { cx: x.toFixed(1), cy: (y + 3).toFixed(1), rx: "6.6", ry: "4.2", fill: shirt }, g);
+      el("circle", { cx: x.toFixed(1), cy: (y - 0.8).toFixed(1), r: "3.7", fill: skins[Math.floor(rnd01() * skins.length)] }, g);
+    };
+    // Haut : 3 rangs ; bas : 2 rangs ; côtés : 2 colonnes.
+    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, -55 - row * 16, Math.floor((x + OX) / 170));
+    for (let row = 0; row < 3; row++) for (let x = -OX + 9; x < 940 + OX - 4; x += 17) fan(x + (row % 2) * 8, 640 + row * 16, 10 + Math.floor((x + OX) / 170));
+    for (let col = 0; col < 3; col++) for (let y = -40; y < 640; y += 16) { fan(-60 - col * 17, y + (col % 2) * 8, 20 + Math.floor((y + 60) / 180)); fan(1000 + col * 17, y + (col % 2) * 8, 26 + Math.floor((y + 60) / 180)); }
+    // Les tribunes se fondent dans le noir vers l'extérieur.
+    const fade = el("radialGradient", { id: uid + "-af", cx: "50%", cy: "47%", r: "62%" }, defs);
+    el("stop", { offset: ".62", "stop-color": "#000", "stop-opacity": "0" }, fade);
+    el("stop", { offset: ".86", "stop-color": "#000", "stop-opacity": ".55" }, fade);
+    el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".92" }, fade);
+    el("rect", { x: -OX, y: -OY, width: VW, height: VH, fill: `url(#${uid}-af)` }, arenaG);
+    // Panneaux LED autour du dégagement.
+    const ledG = el("g", { class: "c2d-led" }, arenaG);
+    const boards = (a.boards && a.boards.length ? a.boards : [homeName, "HOOP MANAGER", homeName, "PULL UP"]).map(t => String(t || "").toUpperCase()).filter(Boolean);
+    const strip = (x, y, w, h, vertical) => {
+      el("rect", { x, y, width: w, height: h, fill: "#06080d", stroke: "#1a2030", "stroke-width": "1" }, ledG);
+      el("rect", { x: x + 1, y: y + 1, width: w - 2, height: h - 2, fill: led, opacity: ".16" }, ledG);
+      const len = vertical ? h : w, step = 230;
+      for (let i = 0, o = 30; o < len - 40; o += step, i++) {
+        const tx = vertical ? x + w / 2 : x + o + step / 2 - 20, ty = vertical ? y + o + step / 2 - 20 : y + h / 2 + 3.5;
+        const t = el("text", { x: tx, y: ty, "text-anchor": "middle", class: "c2d-led-txt", fill: i % 2 ? "#ffffff" : mix(led, "#ffffff", 0.35), "data-no-i18n": "1", ...(vertical ? { transform: `rotate(${x < 0 ? -90 : 90} ${tx} ${ty})` } : {}) }, ledG);
+        t.textContent = boards[i % boards.length];
+      }
+    };
+    strip(-42, -44, 1024, 11, false);
+    strip(-53, -44, 11, 673, true);
+    strip(982, -44, 11, 673, true);
+    strip(-42, 618, 1024, 11, false);
+    // Dégagement (apron) : couleur de la salle, éclairé par le haut.
+    el("rect", { x: -42, y: -33, width: 1024, height: 651, fill: apron }, arenaG);
+    const ap = el("radialGradient", { id: uid + "-ap", cx: "50%", cy: "45%", r: "60%" }, defs);
+    el("stop", { offset: "0", "stop-color": "#fff3dc", "stop-opacity": ".10" }, ap);
+    el("stop", { offset: ".7", "stop-color": "#000", "stop-opacity": ".05" }, ap);
+    el("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".45" }, ap);
+    el("rect", { x: -42, y: -33, width: 1024, height: 651, fill: `url(#${uid}-ap)` }, arenaG);
+    // Supports des paniers (base rembourrée) derrière les lignes de fond.
+    [false, true].forEach(flip => {
+      const X = (x, w = 0) => (flip ? 940 - x - w : x);
+      el("ellipse", { cx: X(-24), cy: "254", rx: "20", ry: "34", fill: "#000", opacity: ".35" }, arenaG);
+      el("rect", { x: X(-40, 28), y: "222", width: "28", height: "56", rx: "8", fill: mix(home, "#000000", 0.35), stroke: "#0b0f17", "stroke-width": "1.5" }, arenaG);
+      el("rect", { x: X(-35, 18), y: "228", width: "18", height: "44", rx: "5", fill: mix(home, "#ffffff", 0.08), opacity: ".85" }, arenaG);
+    });
+    // Table de marque, au centre de la ligne de touche du bas.
+    el("rect", { x: "376", y: "520", width: "188", height: "40", rx: "5", fill: "#000", opacity: ".35" }, arenaG);
+    el("rect", { x: "372", y: "512", width: "196", height: "38", rx: "5", fill: "#141a25", stroke: "#0a0d14", "stroke-width": "1.5" }, arenaG);
+    el("rect", { x: "376", y: "514", width: "188", height: "9", rx: "2", fill: "#06080d" }, arenaG);
+    el("rect", { x: "377", y: "515", width: "186", height: "7", rx: "2", fill: led, opacity: ".35" }, arenaG);
+    const tt = el("text", { x: "470", y: "521", "text-anchor": "middle", class: "c2d-led-txt small", fill: "#fff", "data-no-i18n": "1" }, arenaG); tt.textContent = String(homeName || "HOOP MANAGER").toUpperCase();
+    for (let i = 0; i < 6; i++) { el("rect", { x: 392 + i * 28, y: "530", width: "16", height: "10", rx: "2", fill: "#2a3343" }, arenaG); el("rect", { x: 394 + i * 28, y: "532", width: "12", height: "6", rx: "1", fill: "#7fb1ff", opacity: ".35" }, arenaG); }
+    // Chaises des bancs (une par place).
+    [0, 1].forEach(t => {
+      const col = t === 0 ? home : (awayColor || "#3B8FE0");
+      for (let i = 0; i < 9; i++) {
+        const p = seatPos(t, i);
+        el("rect", { x: (p.x * PX - 13).toFixed(1), y: (p.y * PX + 2).toFixed(1), width: "26", height: "15", rx: "4", fill: mix(col, "#000000", 0.45), stroke: "#05070c", "stroke-width": "1" }, arenaG);
+        el("rect", { x: (p.x * PX - 13).toFixed(1), y: (p.y * PX + 14).toFixed(1), width: "26", height: "4", rx: "2", fill: mix(col, "#000000", 0.65) }, arenaG);
+      }
+    });
+    // Le terrain déborde de lumière sur le dégagement.
+    const spill = el("radialGradient", { id: uid + "-spl", cx: "50%", cy: "50%", r: "50%" }, defs);
+    el("stop", { offset: "0", "stop-color": "#ffe9c4", "stop-opacity": ".12" }, spill);
+    el("stop", { offset: "1", "stop-color": "#ffe9c4", "stop-opacity": "0" }, spill);
+    el("ellipse", { cx: "470", cy: "250", rx: "640", ry: "420", fill: `url(#${uid}-spl)` }, arenaG);
+  }
+  // Ambiance lumineuse : « show » (entrée des joueurs, shows des temps
+  // morts) = salle tamisée + projecteurs mobiles ; flash sur un gros panier.
+  const ambG = el("g", { class: "c2d-amb", opacity: "0" }, svg);
+  el("rect", { width: VW, height: VH, fill: "#02030a", opacity: ".5" }, ambG);
+  const beamGr = el("radialGradient", { id: uid + "-bm", cx: "50%", cy: "50%", r: "50%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#fff6dd", "stop-opacity": ".55" }, beamGr);
+  el("stop", { offset: "1", "stop-color": "#fff6dd", "stop-opacity": "0" }, beamGr);
+  [0, 1].forEach(i => el("ellipse", { cx: OX + 470, cy: OY + 250, rx: "120", ry: "90", fill: `url(#${uid}-bm)`, class: "c2d-beam b" + i }, ambG));
+  let ambMode = "";
+  function ambience(mode) {
+    mode = mode || "";
+    if (mode === ambMode) return;
+    ambMode = mode;
+    ambG.setAttribute("opacity", mode === "show" ? "1" : "0");
+    svg.classList.toggle("c2d-show", mode === "show");
+  }
+  const flashR = el("rect", { x: OX, y: OY, width: "940", height: "500", fill: "#fffbe8", opacity: "0", class: "c2d-flash", "pointer-events": "none" }, svg);
+  function bigFlash() {
+    if (reducedMotion) return;
+    flashR.classList.remove("on"); void flashR.getBoundingClientRect(); flashR.classList.add("on");
+  }
+  function crowdJump(strong) {
+    if (reducedMotion) return;
+    fansG.forEach(g => { g.classList.remove("jump", "jump2"); void g.getBoundingClientRect(); g.classList.add(strong ? "jump2" : "jump"); });
+    later(strong ? 1500 : 1000, () => fansG.forEach(g => g.classList.remove("jump", "jump2")));
+  }
+
+  // --- tableau d'affichage suspendu (2026-10-08, refonte arène) : sigles,
+  // score, 24 s, quart-temps et temps restant, au-dessus des tribunes. Les
+  // anciennes cartes des cinq ont disparu : énergie et fautes sont sous
+  // chaque jeton (terrain et banc), le détail au toucher.
+  const board = el("g", { transform: `translate(${OX + 470} 6)`, class: "c2d-board" }, svg);
+  el("path", { d: "M-60 0 V-8 M60 0 V-8", stroke: "#2a3140", "stroke-width": "2" }, board);
+  el("rect", { x: "-104", y: "0", width: "208", height: "66", rx: "9", fill: "#0a0e16", stroke: "#2a3346", "stroke-width": "1.5" }, board);
+  el("rect", { x: "-100", y: "4", width: "200", height: "58", rx: "7", fill: `url(#${uid}-bd)` }, board);
+  const bdGrad = el("linearGradient", { id: uid + "-bd", x1: "0", y1: "0", x2: "0", y2: "1" }, defs);
+  el("stop", { offset: "0", "stop-color": "#1a2233" }, bdGrad);
+  el("stop", { offset: "1", "stop-color": "#0c111b" }, bdGrad);
+  const teamBar = [0, 1].map(t => el("rect", { x: t ? "60" : "-96", y: "8", width: "36", height: "3", rx: "1.5", fill: "#888" }, board));
+  const scoreTxt = [0, 1].map(t => el("text", { x: t ? "66" : "-66", y: "46", "text-anchor": "middle", class: "c2d-score" }, board));
+  const shortTxt = [0, 1].map(t => el("text", { x: t ? "78" : "-78", y: "22", "text-anchor": "middle", class: "c2d-short", "data-no-i18n": "1" }, board));
+  const periodTxt = el("text", { x: "0", y: "57", "text-anchor": "middle", class: "c2d-period", "data-no-i18n": "1" }, board);
   const clockG = el("g", { class: "c2d-clock" }, board);
-  el("rect", { x: "-24", y: "4", width: "48", height: "31", rx: "7", fill: "rgba(255,255,255,.06)" }, clockG);
-  el("text", { x: "0", y: "14", "text-anchor": "middle", class: "c2d-clock-lbl" }, clockG).textContent = "24 S";
-  const clockTxt = el("text", { x: "0", y: "31", "text-anchor": "middle", class: "c2d-clock-val" }, clockG);
+  el("rect", { x: "-26", y: "8", width: "52", height: "36", rx: "6", fill: "rgba(255,255,255,.05)", stroke: "rgba(255,255,255,.08)" }, clockG);
+  el("text", { x: "0", y: "19", "text-anchor": "middle", class: "c2d-clock-lbl" }, clockG).textContent = "24 S";
+  const clockTxt = el("text", { x: "0", y: "39", "text-anchor": "middle", class: "c2d-clock-val" }, clockG);
   clockTxt.textContent = "24";
   let boardKey = "";
   function syncBoard() {
@@ -249,12 +407,12 @@ export function createCourt2D(host, opts = {}) {
     const key = [T[0] && T[0].score, T[1] && T[1].score, T[0] && T[0].short, T[1] && T[1].short, per].join("|");
     if (key === boardKey) return;
     boardKey = key;
-    [0, 1].forEach(t => { scoreTxt[t].textContent = T[t] ? String(T[t].score ?? 0) : "0"; shortTxt[t].textContent = T[t] ? String(T[t].short || "").toUpperCase() : ""; shortTxt[t].setAttribute("fill", colors[t]); });
+    [0, 1].forEach(t => { scoreTxt[t].textContent = T[t] ? String(T[t].score ?? 0) : "0"; shortTxt[t].textContent = T[t] ? String(T[t].short || "").toUpperCase() : ""; shortTxt[t].setAttribute("fill", "#e9eef7"); teamBar[t].setAttribute("fill", colors[t]); });
     periodTxt.textContent = per;
   }
 
   // --- calques animés ---
-  const layer = el("g", { transform: `translate(${PAD} ${PAD + HEAD})`, class: "c2d-players" }, svg);
+  const layer = el("g", { transform: `translate(${OX} ${OY})`, class: "c2d-players" }, svg);
   // Mise en scène (staging.js, 2026-10-08) : coachs SOUS les joueurs (premier
   // enfant du calque, jamais retrié), animateurs des shows AU-DESSUS.
   const coachLayer = el("g", { class: "stg-coaches" }, layer);
@@ -262,7 +420,7 @@ export function createCourt2D(host, opts = {}) {
   // ballon ; une trace par vol, effacée en fondu à l'arrivée.
   const trailG = el("g", { class: "c2d-trails" }, layer);
   const ballG = el("g", { class: "c2d-ball" }, layer);
-  el("ellipse", { cx: "0", cy: "8", rx: "9", ry: "3.6", fill: "rgba(0,0,0,.35)", class: "c2d-ball-sh" }, ballG);
+  const ballSh = el("ellipse", { cx: "0", cy: "8", rx: "9", ry: "3.6", fill: "rgba(0,0,0,.4)", class: "c2d-ball-sh" }, ballG);
   const ballBody = el("g", {}, ballG);
   const ballGrad = el("radialGradient", { id: uid + "-bl", cx: "35%", cy: "30%", r: "70%" }, defs);
   el("stop", { offset: "0", "stop-color": "#ffb76b" }, ballGrad);
@@ -273,7 +431,7 @@ export function createCourt2D(host, opts = {}) {
   el("circle", { r: "9.5", fill: `url(#${uid}-bl)`, stroke: "#4a2308", "stroke-width": "1.4" }, ballBody);
   el("path", { d: "M-9.5 0h19M0 -9.5v19M-6.1 -7.2c3.5 3.3 3.5 11.1 0 14.4M6.1 -7.2c-3.5 3.3-3.5 11.1 0 14.4", fill: "none", stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
   const fxG = el("g", { class: "c2d-fx" }, layer);
-  const frontLayer = el("g", { transform: `translate(${PAD} ${PAD + HEAD})`, class: "stg-front" }, svg);
+  const frontLayer = el("g", { transform: `translate(${OX} ${OY})`, class: "stg-front" }, svg);
   const caption = document.createElement("div");
   caption.className = "c2d-caption";
   host.appendChild(caption);
@@ -354,7 +512,8 @@ export function createCourt2D(host, opts = {}) {
     const w = Math.max(30, txt.textContent.length * 6.6 + 10);
     lab.insertBefore(el("rect", { x: -w / 2, y: "17", width: w, height: "13", rx: "4", fill: colors[t], class: "c2d-plate" }), txt);
     const stat = el("text", { y: "-36", "text-anchor": "middle", class: "c2d-stat", opacity: "0" }, g);
-    const sp = { id: p.id, team: t, g, ring, carrier, stat, lab, labState: "", labHalf: w / 2 / PX, number: Number.isInteger(p.number) ? p.number : null, pos: p.pos || "", ox: 0, oy: 0, x: 47, y: t ? 30 : 20, tx: 47, ty: 25, speed: 1, slot: SLOT[p.pos] ?? 2, name: p.name, avatar: p.avatar };
+    const stats = statsDecor(g, t, 28, 32);
+    const sp = { stats, id: p.id, team: t, g, ring, carrier, stat, lab, labState: "", labHalf: w / 2 / PX, number: Number.isInteger(p.number) ? p.number : null, pos: p.pos || "", ox: 0, oy: 0, x: 47, y: t ? 30 : 20, tx: 47, ty: 25, speed: 1, slot: SLOT[p.pos] ?? 2, name: p.name, avatar: p.avatar };
     sprites.set(p.id, sp);
     return sp;
   }
@@ -378,7 +537,7 @@ export function createCourt2D(host, opts = {}) {
     const lab = el("g", { class: "c2d-lab" }, g);
     el("rect", { x: "-14", y: "15", width: "28", height: "11", rx: "3.5", fill: "#6b7280", class: "c2d-plate" }, lab);
     el("text", { y: "23.5", "text-anchor": "middle", "data-no-i18n": "1" }, lab).textContent = "ARB";
-    const home = [{ x: 47, y: 48 }, { x: 42, y: 48 }, { x: 52, y: 48 }][i];
+    const home = [{ x: 47, y: STOP_Y }, { x: 41, y: STOP_Y }, { x: 53, y: STOP_Y }][i];
     return { id: "ref" + i, g, lab, labState: "", labHalf: 1.4, ref: true, ox: 0, oy: 0, x: home.x, y: home.y, tx: home.x, ty: home.y, speed: 1, moving: false };
   }
   function syncRefs(list) {
@@ -391,7 +550,7 @@ export function createCourt2D(host, opts = {}) {
   // à la table de marque. Entre-deux : un arbitre au centre.
   function refTargets() {
     const live = S && S.status === "live";
-    if (!live || performance.now() < stopUntil) return [{ x: 47, y: 48.5 }, { x: 41, y: 48.5 }, { x: 53, y: 48.5 }];
+    if (!live || performance.now() < stopUntil) return [{ x: 47, y: STOP_Y }, { x: 41, y: STOP_Y }, { x: 53, y: STOP_Y }];
     if (lastPlayed && lastPlayed.kind === "tipoff" && performance.now() < sceneUntil) return [{ x: 47, y: 29 }, { x: 30, y: 2.5 }, { x: 64, y: 47.5 }];
     const rim = RIM[possession], dir = rim.x > 47 ? 1 : -1;
     const ballSide = ball.y < 25 ? -1 : 1;                   // -1 : haut de l'écran
@@ -414,8 +573,13 @@ export function createCourt2D(host, opts = {}) {
     best.forEach((ti, ri) => { const r = refs[ri]; r.tx = T[ti].x + rnd(-0.6, 0.6); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
   }
 
+  // Changements (2026-10-08, arène) : l'entrant se lève, passe par la
+  // table de marque puis rejoint le jeu ; le sortant retourne s'asseoir à
+  // sa place. Visuel seulement (aucune attente côté moteur) ; premier
+  // affichage, onglet masqué ou hors direct : chacun apparaît à sa place.
   function syncRoster() {
     const seen = new Set();
+    const walk = sprites.size > 0 && S.status === "live" && !(typeof document !== "undefined" && document.hidden) && !reducedMotion;
     [0, 1].forEach(t => {
       const on = S.teams[t].players.filter(p => p.onCourt);
       const used = new Set();
@@ -423,7 +587,12 @@ export function createCourt2D(host, opts = {}) {
         let sp = sprites.get(p.id);
         if (!sp) {
           sp = makeSprite(p, t);
-          const park = parkLine(t, used.size); sp.x = sp.tx = park.x; sp.y = sp.ty = park.y;
+          const seat = seatOfId.get(p.id);
+          if (walk && seat) {
+            const s0 = seatPos(seat.team, seat.i);
+            sp.x = s0.x; sp.y = s0.y; sp.tx = TABLE.x + (t ? 2.4 : -2.4) + (used.size - 2) * 0.4; sp.ty = 50.9;
+            sp.speed = 1.9; sp.busy = true; sp.entering = performance.now() + 3000;
+          } else { const park = parkLine(t, used.size); sp.x = sp.tx = park.x; sp.y = sp.ty = park.y; }
         } else if (sp.leaving) { sp.leaving = false; sp.leaveAt = 0; sp.busy = false; }
         let slot = SLOT[p.pos] ?? 2;
         while (used.has(slot)) slot = (slot + 1) % 5;
@@ -432,10 +601,11 @@ export function createCourt2D(host, opts = {}) {
       });
     });
     for (const [id, sp] of sprites) if (!seen.has(id) && !sp.leaving) {
-      const park = parkLine(sp.team, 6);
-      sp.tx = park.x; sp.ty = park.y; sp.leaving = true; sp.busy = false;
+      const idx = benchList(sp.team).findIndex(p => p.id === id);
+      const seat = idx >= 0 ? seatPos(sp.team, idx) : parkLine(sp.team, 6);
+      sp.tx = seat.x; sp.ty = seat.y; sp.speed = 1.9; sp.leaving = true; sp.busy = false; sp.stage = null;
       if (ball.holder === id) ball.holder = null;
-      sp.leaveAt = performance.now() + 1500;
+      sp.leaveAt = performance.now() + (walk ? 3200 : 0);
     }
   }
 
@@ -517,9 +687,10 @@ export function createCourt2D(host, opts = {}) {
   // Saut (tir, contre, rebond) : l'avatar se soulève et grossit un instant.
   function jump(sp, h = 1) { if (!sp) return; sp.jump = { t: 0, h }; }
   // Réaction du banc (sobre) : la bande des médaillons de l'équipe sursaute.
-  function cheer(team) { const g = medals[team]; if (!g) return; g.classList.remove("c2d-cheer"); void g.getBoundingClientRect; g.classList.add("c2d-cheer"); later(700, () => g.classList.remove("c2d-cheer")); }
+  // Le public (aux couleurs du club qui reçoit) se lève sur un panier à domicile.
+  function cheer(team, strong = false) { if (team === 0) crowdJump(strong); }
   // Cibles bornées au terrain (le remiseur peut sortir derrière la ligne de fond, en x seulement).
-  function moveTo(sp, x, y, speed = 1.6) { if (!sp) return; sp.tx = Math.max(-3, Math.min(97, x)); sp.ty = Math.max(1.5, Math.min(48.5, y)); sp.speed = speed; }
+  function moveTo(sp, x, y, speed = 1.6) { if (!sp) return; sp.tx = Math.max(-3, Math.min(97, x)); sp.ty = Math.max(1.5, Math.min(57, y)); sp.speed = speed; }
   function say(text) { caption.innerHTML = text; caption.classList.add("show"); }
   function flash(sp, text, cls = "") {
     if (!sp) return;
@@ -856,7 +1027,10 @@ export function createCourt2D(host, opts = {}) {
           rimFx(offT, !!e.made);
           if (e.made) {
             flash(shooter, e.zone === "three" ? "+3" : "+2", "good");
-            later(350, () => { jump(shooter, 0.6); cheer(offT); });
+            // Gros panier (3 points, dunk, buzzer) : flash de lumière et public debout.
+            const big = e.zone === "three" || /dunk|smash/i.test(String(e.shotType || "")) || (typeof e.clock === "number" && e.clock <= 1);
+            if (big) bigFlash();
+            later(350, () => { jump(shooter, 0.6); cheer(offT, big); });
             ball.x = rim.x + (rim.x > 47 ? -1.5 : 1.5); ball.y = rim.y + 1; ball.holder = null; ball.flight = null;
             // Panier + faute (« and one ») : pas de remise en jeu, les lancers suivent.
             // Panier + faute (« and one ») : le moteur laisse le ballon à
@@ -1034,65 +1208,101 @@ export function createCourt2D(host, opts = {}) {
   }
 
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
-  function syncMedals() {
-    const key = [0, 1].map(t => S.teams[t].players.filter(p => p.onCourt).map(p => p.id).join("|")).join("#") + "#" + colors.join("|");
-    if (key === medalsKey) return;
-    medalsKey = key;
-    medalRefs.clear();
-    [0, 1].forEach(t => {
-      const g = medals[t]; g.innerHTML = "";
-      const on = S.teams[t].players.filter(p => p.onCourt).slice(0, 5);
-      on.forEach((p, i) => {
-        const x = t === 0 ? i * 80 : -(i + 1) * 80 + 4;
-        const m = el("g", { transform: `translate(${x} 0)`, class: "c2d-medal" }, g);
-        el("rect", { width: "76", height: "44", rx: "8", fill: "rgba(10,16,28,.82)", stroke: colors[t], "stroke-width": "1.2", "stroke-opacity": ".7" }, m);
-        if (p.avatar) {
-          const tpl = document.createElement("template"); tpl.innerHTML = p.avatar;
-          const av = tpl.content.querySelector("svg");
-          if (av) {
-            const cid = uid + "-m" + (++clipSeq);
-            const cp = el("clipPath", { id: cid }, defs);
-            // Proportions et arrondi des avatars du jeu (120:130, 18 %).
-            el("rect", { x: "2", y: "3.5", width: "34", height: "37", rx: "6.1" }, cp);
-            av.setAttribute("width", "34"); av.setAttribute("height", "37"); av.setAttribute("x", "2"); av.setAttribute("y", "3.5");
-            const wrap = el("g", { "clip-path": `url(#${cid})` }, m); wrap.appendChild(av);
-          }
-        }
-        // Nom seul, toujours contenu dans la carte (retour 2026-10-08 : plus
-        // de statistiques sur les cartes, aucun nom qui déborde) : largeur
-        // disponible 40 px ; au-delà, les glyphes sont resserrés (textLength).
-        const name = lastName(p.name).toUpperCase();
-        const nm = el("text", { x: "56.5", y: "17", "text-anchor": "middle", class: "c2d-medal-name" }, m);
-        nm.textContent = name;
-        // Mesure réelle quand le navigateur la donne (≈ 8 px par lettre en
-        // 800 10 px), estimation sinon (tests JSDOM).
-        let w = name.length * 8;
-        try { if (typeof nm.getComputedTextLength === "function") { const m = nm.getComputedTextLength(); if (m > 0) w = m; } } catch (e) { /* JSDOM */ }
-        if (w > 34) { nm.setAttribute("textLength", "34"); nm.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
-        // Fautes (5 pastilles) et énergie (barre, 100 - fatigue du moteur) —
-        // pas de statistiques de jeu sur les cartes (décision 2026-10-08).
-        const pips = [];
-        for (let k = 0; k < 5; k++) pips.push(el("circle", { cx: (44.5 + k * 6).toFixed(1), cy: "26", r: "2.1", class: "c2d-pip" }, m));
-        const eg = el("g", { class: "c2d-energy" }, m);
-        el("rect", { x: "41", y: "33", width: "31", height: "4", rx: "2", fill: "rgba(255,255,255,.14)" }, eg);
-        const bar = el("rect", { x: "41", y: "33", width: "31", height: "4", rx: "2", fill: "#3ecf67" }, eg);
-        medalRefs.set(p.id, { pips, bar, eg, pf: -1, en: -2 });
-      });
-    });
+  // ---------- énergie / fautes sous les jetons, banc des remplaçants ----------
+  // (2026-10-08, refonte arène : remplacent les cartes du haut.) Barre
+  // d'énergie fine (100 − fatigue du moteur) sous chaque jeton, pastille de
+  // fautes à partir de 4 ; détail complet au toucher / survol (bulle).
+  const pdata = new Map();               // id → dernière ligne joueur reçue
+  function energyOf(p) { return p && typeof p.fatigue === "number" ? Math.max(0, Math.min(100, 100 - p.fatigue)) : -1; }
+  function paintStats(r, p) {
+    const pf = Math.max(0, Math.min(5, (p && p.pf) || 0)), en = energyOf(p);
+    if (pf !== r.pf) {
+      r.pf = pf;
+      r.foul.setAttribute("opacity", pf >= 4 ? "1" : "0");
+      r.foulC.setAttribute("fill", pf >= 5 ? "#FF4D4D" : "#F5A13A");
+      r.foulT.textContent = String(pf);
+    }
+    if (en !== r.en) {
+      r.en = en;
+      r.eg.setAttribute("opacity", en < 0 ? "0" : "1");
+      if (en >= 0) { r.bar.setAttribute("width", (r.w * en / 100).toFixed(1)); r.bar.setAttribute("fill", en > 60 ? "#3ecf67" : en > 35 ? "#F5A13A" : "#FF5B5B"); }
+    }
   }
-  // Mise à jour légère des cartes (fautes, énergie) sans les reconstruire.
-  const medalRefs = new Map();
-  function syncMedalStats() {
-    [0, 1].forEach(t => S.teams[t].players.forEach(p => {
-      const r = medalRefs.get(p.id); if (!r) return;
-      const pf = Math.max(0, Math.min(5, p.pf || 0));
-      if (pf !== r.pf) { r.pf = pf; r.pips.forEach((c, k) => c.setAttribute("class", "c2d-pip" + (k < pf ? (pf >= 4 ? " on hot" : " on") : ""))); }
-      const en = typeof p.fatigue === "number" ? Math.max(0, Math.min(100, 100 - p.fatigue)) : -1;
-      if (en !== r.en) {
-        r.en = en;
-        r.eg.setAttribute("opacity", en < 0 ? "0" : "1");
-        if (en >= 0) { r.bar.setAttribute("width", (31 * en / 100).toFixed(1)); r.bar.setAttribute("fill", en > 60 ? "#3ecf67" : en > 35 ? "#F5A13A" : "#FF5B5B"); }
+  function statsDecor(g, t, w, y) {
+    const eg = el("g", { class: "c2d-energy", opacity: "0" }, g);
+    el("rect", { x: -w / 2, y, width: w, height: "3.4", rx: "1.7", fill: "rgba(0,0,0,.55)" }, eg);
+    const bar = el("rect", { x: -w / 2, y, width: w, height: "3.4", rx: "1.7", fill: "#3ecf67" }, eg);
+    const foul = el("g", { class: "c2d-foul", opacity: "0", transform: `translate(${t === 0 ? 17 : -17} 4)` }, g);
+    const foulC = el("circle", { r: "6.4", fill: "#F5A13A", stroke: "#0b1220", "stroke-width": "1.4" }, foul);
+    const foulT = el("text", { y: "2.9", "text-anchor": "middle", "data-no-i18n": "1" }, foul);
+    return { eg, bar, w, foul, foulC, foulT, pf: -1, en: -2 };
+  }
+  function syncTokenStats() {
+    for (const sp of sprites.values()) if (sp.stats) paintStats(sp.stats, pdata.get(sp.id));
+    for (const b of benchRefs.values()) paintStats(b.stats, pdata.get(b.id));
+  }
+  // Bulle de détail (toucher / survol d'un jeton ou d'un remplaçant).
+  const tip = document.createElement("div");
+  tip.className = "c2d-tip"; tip.hidden = true;
+  host.appendChild(tip);
+  let tipId = null;
+  function showTip(id, g) {
+    const p = pdata.get(id); if (!p || !g || typeof g.getBoundingClientRect !== "function") return;
+    const en = energyOf(p), pf = p.pf || 0;
+    tip.innerHTML = `<b>${esc(p.name || "")}</b>${Number.isInteger(p.number) ? ` <span>#${p.number}</span>` : ""}` +
+      `<div>Énergie ${en < 0 ? "—" : en + " %"} · Fautes ${pf}${pf >= 5 ? " (exclu)" : ""}</div>` +
+      `<div>${p.pts || 0} pts · ${p.reb || 0} reb · ${p.ast || 0} pd${p.onCourt ? "" : " · sur le banc"}</div>`;
+    const hr = host.getBoundingClientRect(), r = g.getBoundingClientRect();
+    tip.hidden = false; tipId = id;
+    tip.style.left = Math.max(4, Math.min(hr.width - 170, r.left - hr.left + r.width / 2 - 85)) + "px";
+    tip.style.top = Math.max(4, r.top - hr.top - 64) + "px";
+  }
+  function hideTip() { tip.hidden = true; tipId = null; }
+  svg.addEventListener("pointerover", e => { if (e.pointerType === "touch") return; const g = e.target.closest && e.target.closest("[data-id]"); if (g && pdata.has(g.getAttribute("data-id"))) showTip(g.getAttribute("data-id"), g); });
+  svg.addEventListener("pointerout", e => { if (e.pointerType === "touch") return; if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest("[data-id]")) hideTip(); });
+  svg.addEventListener("click", e => { const g = e.target.closest && e.target.closest("[data-id]"); const id = g && g.getAttribute("data-id"); if (id && pdata.has(id) && tipId !== id) showTip(id, g); else hideTip(); });
+
+  // Banc : un jeton réduit par remplaçant, assis à sa place (ordre de
+  // l'effectif) ; grisé s'il est exclu (5 fautes) ou blessé. Un joueur qui
+  // marche encore vers le banc n'y est pas encore dessiné.
+  const benchG = el("g", { class: "c2d-bench" }, layer);
+  const benchRefs = new Map();           // id → { g, stats, seat }
+  const seatOfId = new Map();            // id → { team, i } (dernière place connue)
+  let benchKey = null;
+  function benchList(t) { return (S.teams[t].players || []).filter(p => !p.onCourt); }
+  function syncBench() {
+    const walking = [...sprites.values()].filter(sp => sp.leaving).map(sp => sp.id);
+    const key = [0, 1].map(t => benchList(t).map(p => p.id + (p.pf >= 5 || p.injured ? "x" : "")).join(",")).join("#") + "#" + walking.join(",") + "#" + colors.join("|");
+    if (key === benchKey) return;
+    benchKey = key;
+    benchG.innerHTML = ""; benchRefs.clear();
+    [0, 1].forEach(t => benchList(t).forEach((p, i) => {
+      const seat = seatPos(t, i);
+      seatOfId.set(p.id, { team: t, i });
+      if (walking.includes(p.id)) return;
+      const out = (p.pf || 0) >= 5 || !!p.injured;
+      const g = el("g", { class: "c2d-sub t" + t + (out ? " out" : ""), "data-id": p.id, transform: `translate(${(seat.x * PX).toFixed(1)} ${(seat.y * PX).toFixed(1)}) scale(.78)` }, benchG);
+      el("ellipse", { cx: "0", cy: "12", rx: "17", ry: "6", fill: `url(#${uid}-ts)` }, g);
+      if (p.avatar) {
+        const cid = uid + "-b" + (++clipSeq);
+        const cp = el("clipPath", { id: cid }, defs);
+        el("rect", { x: "-19", y: "-30", width: "38", height: "41", rx: "6.8" }, cp);
+        const wrap = el("g", { "clip-path": `url(#${cid})` }, g);
+        const tpl = document.createElement("template"); tpl.innerHTML = p.avatar; const av = tpl.content.querySelector("svg");
+        if (av) { av.setAttribute("width", "38"); av.setAttribute("height", "41"); av.setAttribute("x", "-19"); av.setAttribute("y", "-30"); wrap.appendChild(av); }
+        if (opts.raster !== false) rasterizeAvatar(p.avatar, 38, 41).then(url => { if (!url || !wrap.isConnected) return; wrap.innerHTML = ""; el("image", { href: url, x: "-19", y: "-30", width: "38", height: "41", preserveAspectRatio: "xMidYMid slice" }, wrap); });
+      } else {
+        el("circle", { r: "12", cy: "-8", fill: colors[t], stroke: "#0b1220", "stroke-width": "2" }, g);
+        el("text", { y: "-4", "text-anchor": "middle", class: "c2d-ini" }, g).textContent = initials(p.name || "");
       }
+      if (Number.isInteger(p.number)) {
+        const nb = el("g", { class: "c2d-num", transform: `translate(${t === 0 ? -17 : 17} -28)` }, g);
+        el("circle", { r: "7.2", fill: colors[t], stroke: "#0b1220", "stroke-width": "1.6" }, nb);
+        el("text", { y: "3", "text-anchor": "middle", "data-no-i18n": "1" }, nb).textContent = String(p.number);
+      }
+      if (out) { const x = el("g", { class: "c2d-out", transform: "translate(0 -10)" }, g); el("circle", { r: "8", fill: "#FF4D4D", stroke: "#0b1220", "stroke-width": "1.4" }, x); el("text", { y: "3.4", "text-anchor": "middle", "data-no-i18n": "1" }, x).textContent = p.injured ? "+" : "5F"; }
+      const stats = statsDecor(g, t, 30, 15);
+      benchRefs.set(p.id, { id: p.id, g, stats });
     }));
   }
 
@@ -1222,7 +1432,15 @@ export function createCourt2D(host, opts = {}) {
       r.g.setAttribute("transform", `translate(${((r.x + r.ox) * PX).toFixed(1)} ${((r.y + r.oy) * PX + bob).toFixed(1)})`);
     }
     for (const [id, sp] of sprites) {
-      if (sp.leaving && nowP > sp.leaveAt) { sp.g.remove(); sprites.delete(id); continue; }
+      // Sortant arrivé à sa place (ou trop long) : il rejoint le banc dessiné.
+      if (sp.leaving && (nowP > sp.leaveAt || Math.hypot(sp.tx - sp.x, sp.ty - sp.y) < 0.4)) { sp.g.remove(); sprites.delete(id); benchKey = null; if (S) syncBench(); continue; }
+      // Entrant arrivé à la table (ou reprise du jeu) : il rejoint sa place.
+      if (sp.entering && (nowP > sp.entering || Math.hypot(sp.tx - sp.x, sp.ty - sp.y) < 0.5)) {
+        sp.entering = 0; sp.busy = false;
+        const pos = slotPos(sp.team, sp.slot, sp.team === possession); sp.tx = pos.x; sp.ty = pos.y; sp.speed = 2.2;
+        // Tape dans la main au passage d'un sortant de la même équipe.
+        for (const o of sprites.values()) if (o.leaving && o.team === sp.team && Math.hypot(o.x - sp.x, o.y - sp.y) < 6) { jump(sp, 0.35); jump(o, 0.35); break; }
+      }
       // Position imposée par la mise en scène (regroupement, banc, entrée).
       if (sp.stage) { sp.tx = sp.stage.x; sp.ty = sp.stage.y; sp.speed = sp.stage.speed; }
       const d = Math.hypot(sp.tx - sp.x, sp.ty - sp.y);
@@ -1267,6 +1485,9 @@ export function createCourt2D(host, opts = {}) {
     const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime"));
     if (hideBall !== ballHidden) { ballHidden = hideBall; ballG.setAttribute("opacity", hideBall ? "0" : "1"); }
     ballBody.setAttribute("transform", `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`);
+    // Ombre du ballon : plus petite et plus pâle quand il monte (tir).
+    const zk = Math.min(1, ball.z / 9);
+    ballSh.setAttribute("rx", (9 - zk * 4).toFixed(1)); ballSh.setAttribute("ry", (3.6 - zk * 1.4).toFixed(1)); ballSh.setAttribute("opacity", (1 - zk * 0.55).toFixed(2));
     if (ball.flight && ball.flight.kind && !reducedMotion && !hideBall) traceTrail(ball.flight);
     // Chrono des 24 s : descend depuis le début de la possession.
     if (S && S.status === "live") {
@@ -1300,7 +1521,7 @@ export function createCourt2D(host, opts = {}) {
     colors: () => colors,
     sprites: () => sprites.values(),
     refs: () => refs,
-    parkLine, slotPos,
+    parkLine, slotPos, seatPos, ambience,
     possession: () => possession,
     raster: opts.raster !== false ? rasterizeAvatar : null,
     formation: () => formation(),
@@ -1318,14 +1539,17 @@ export function createCourt2D(host, opts = {}) {
       S = state;
       if (state.teams && state.teams[0] && state.teams[0].color) colors = [state.teams[0].color, state.teams[1].color];
       drawFloor(state.courtStyle || null, colors[0]);
+      drawArena(colors[0], state.arena || null, (state.teams[0] && (state.teams[0].name || state.teams[0].short)) || "HOOP MANAGER", colors[1]);
       const lk = (state.courtLogo || "") + "|" + (state.arenaSponsor || "");
       if (lk !== logoKey) { logoKey = lk; logoG.innerHTML = state.courtLogo || ""; adTop.textContent = adBot.textContent = (state.arenaSponsor || "HOOP MANAGER").toUpperCase(); }
       const before = sprites.size;
       syncRefs(state.referees);
       syncRoster();
       enforcePossession(true);
-      syncMedals();
-      syncMedalStats();
+      pdata.clear(); [0, 1].forEach(t => (state.teams[t].players || []).forEach(p => pdata.set(p.id, p)));
+      syncBench();
+      syncTokenStats();
+      if (tipId && !pdata.has(tipId)) hideTip();
       syncBoard();
       const quiet = performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
@@ -1382,6 +1606,6 @@ export function createCourt2D(host, opts = {}) {
       placeAt(id, x, y) { const sp = sprites.get(id) || refs.find(r => r.id === id); if (!sp) return; sp.x = sp.tx = x; sp.y = sp.ty = y; if (!sp.ref) busy(sp, 10000); },
       layout() { const out = {}; for (const sp of [...sprites.values(), ...refs]) out[sp.id] = { x: sp.x + sp.ox, y: sp.y + sp.oy, sx: sp.x, sy: sp.y, lab: sp.labState }; return { holder: ball.holder, sprites: out }; },
     },
-    destroy() { destroyed = true; if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
+    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); host.innerHTML = ""; host.classList.remove("c2d"); },
   };
 }
