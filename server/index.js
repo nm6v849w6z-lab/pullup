@@ -39,7 +39,11 @@ const path = require("path");
 const { URL } = require("url");
 const store = require("./store.js");
 // Fonctionnalités activables club par club via /api/admin/beta-feature.
-const BETA_FEATURES = ["live2d"];
+// liveShows (2026-10-08) : mise en scène du direct 2D (coach, entrée des
+// joueurs, shows) — voir aussi server/featureFlags.js (mode global).
+const BETA_FEATURES = ["live2d", "liveShows"];
+const FeatureFlags = require("./featureFlags.js");
+const AdsStats = FeatureFlags.AdsStats;
 const World = require("./world.js");
 const AutoSim = require("./autoSim.js");
 const Calendar = require("./calendar.js");
@@ -1148,6 +1152,8 @@ const ACTION_ROUTES = {
   "/api/club/set-arena-name": actions.setTeamArenaName,
   "/api/club/set-court-style": actions.setTeamCourtStyle,
   "/api/club/set-arena-style": actions.setTeamArenaStyle,
+  "/api/club/set-coach-look": actions.setTeamCoachLook,
+  "/api/club/set-mascot": actions.setTeamMascot,
   "/api/player/set-jersey-number": actions.setPlayerJerseyNumber,
   "/api/player/set-look": actions.setPlayerLook,
   // Hall of Fame + maillots retirés (voir Team.inductHallOfFame).
@@ -1664,6 +1670,21 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Drapeaux globaux (2026-10-08) : body = correctif partiel, ex.
+      // { "liveShows": { "mode": "all" } } pour sortir la mise en scène de
+      // bêta, { "liveShows": { "clubs": ["Gotham Knights","BC Dia"] } } pour
+      // la liste, { "liveShows": { "shows": false } } pour couper une brique.
+      if (route.pathname === "/api/admin/feature-flags" && req.method === "POST") {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        if (!body || typeof body !== "object") { sendJson(res, 400, { ok: false, error: "Corps JSON attendu." }); return; }
+        if (body.liveShows && body.liveShows.mode != null && !FeatureFlags.MODES.includes(body.liveShows.mode)) { sendJson(res, 400, { ok: false, error: `'liveShows.mode' doit être l'un de : ${FeatureFlags.MODES.join(", ")}.` }); return; }
+        const flags = await FeatureFlags.update(store, multiSavePath, body);
+        sendJson(res, 200, { ok: true, ...flags });
+        return;
+      }
+
       // Bêta par club (2026-10-07) : active ou retire une fonctionnalité pour
       // UN club de la ligue partagée (toutes divisions, tous pays), pour la
       // faire tester à un seul manager avant le passage en prod complet.
@@ -2073,6 +2094,26 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // Managers connectés (barre du haut) : uniquement un nombre, aucune
       // donnée personnelle. La présence vient des requêtes authentifiées
       // (resolvePlayerContext) : un jeton non vérifié ne compte jamais.
+      // Drapeaux globaux (server/featureFlags.js), lus par le client au
+      // démarrage : mode de la mise en scène du direct, sous-drapeaux, pub.
+      if (route.pathname === "/api/features" && req.method === "GET") {
+        const flags = await FeatureFlags.load(store, multiSavePath);
+        sendJson(res, 200, { ok: true, ...flags });
+        return;
+      }
+      // Suivi des pubs (2026-10-08, pub des non-premium pendant les shows du
+      // direct) : compteurs du jour par événement, cumulés en mémoire et
+      // enregistrés au plus une fois par minute (store « adsstats »).
+      if (route.pathname === "/api/ads/track" && req.method === "POST") {
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false }); return; }
+        const ev = body && typeof body.event === "string" ? body.event : "";
+        if (!["request", "impression", "click", "dismissed", "failure"].includes(ev)) { sendJson(res, 400, { ok: false, error: "Événement inconnu." }); return; }
+        AdsStats.count(ev, typeof body.placement === "string" ? body.placement.slice(0, 24) : "unknown", typeof body.show === "string" ? body.show.slice(0, 16) : "");
+        AdsStats.scheduleFlush(store, multiSavePath);
+        sendJson(res, 200, { ok: true });
+        return;
+      }
       if (route.pathname === "/api/online" && req.method === "GET") {
         sendJson(res, 200, { online: Math.max(1, LeagueChat.onlineCount(now)) });
         return;

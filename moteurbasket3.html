@@ -1206,6 +1206,15 @@
   .pz-arena-chip.on{color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--amber);}
   .pz-arena-sw:focus-visible, .pz-arena-chip:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
   @media (max-width:900px){ .pz-arena-layout{grid-template-columns:minmax(0,1fr); gap:16px;} }
+  /* Coach (2026-10-08) : aperçu carré arrondi (format unique des avatars). */
+  .pz-coach-layout{grid-template-columns:minmax(0,220px) minmax(0,1fr);}
+  .pz-coach-preview{width:100%; max-width:220px; aspect-ratio:120/130; border-radius:18%; overflow:hidden; background:var(--panel-2);}
+  .pz-coach-preview svg{display:block; width:100%; height:100%;}
+  .pz-mascot-preview{position:relative; background:radial-gradient(circle at 50% 60%, #e2b06d, #b98345);}
+  .pz-mascot-preview.is-locked svg{opacity:.92;}
+  .pz-input{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 10px; font:inherit; font-size:14px; width:100%; max-width:260px; box-sizing:border-box;}
+  .pz-input--num{max-width:90px;}
+  @media (max-width:900px){ .pz-coach-layout{grid-template-columns:minmax(0,1fr);} .pz-coach-preview{max-width:180px; margin:0 auto;} }
   .pz-inline-link{background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--amber); cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
   /* Identité : logo à gauche, trigramme et salle à droite. */
   .pz-id{display:grid; grid-template-columns:200px minmax(0,1fr); gap:28px 40px; align-items:start;}
@@ -9041,8 +9050,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-4">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-4">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-5">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-5">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -9058,6 +9067,7 @@
 <script src="assets/history.js" defer></script>
 <script src="assets/roles.js" defer></script>
 <script src="assets/vestiaire-ui.js" defer></script>
+<script src="assets/club-staging-ui.js" defer></script>
 <script src="assets/medical-ui.js" defer></script>
 <script src="assets/national-visuals.js" defer></script>
 <script src="assets/national.js" defer></script>
@@ -10247,6 +10257,8 @@
         <a href="#persoMaillots" data-pz-anchor="persoMaillots">Maillots</a>
         <a href="#persoParquet" data-pz-anchor="persoParquet">Parquet</a>
         <a href="#persoSalle" data-pz-anchor="persoSalle">Salle</a>
+        <a href="#persoCoach" data-pz-anchor="persoCoach">Coach</a>
+        <a href="#persoMascotte" data-pz-anchor="persoMascotte">Mascotte</a>
       </nav>
       <section class="pz-block" id="persoIdentite" aria-labelledby="persoIdentiteTitle">
         <h3 class="pz-title" id="persoIdentiteTitle">Identité du club</h3>
@@ -10265,6 +10277,18 @@
       <section class="pz-block" id="persoSalle" aria-labelledby="persoSalleTitle">
         <h3 class="pz-title" id="persoSalleTitle">Salle</h3>
         <div class="pz-card" id="persoArenaHolder"></div>
+      </section>
+      <!-- Coach du club (mise en scène du direct, 2026-10-08) : ouvert à tous,
+           visible devant le banc pendant les matchs, voir renderPersoCoach. -->
+      <section class="pz-block" id="persoCoach" aria-labelledby="persoCoachTitle">
+        <h3 class="pz-title" id="persoCoachTitle">Coach</h3>
+        <div class="pz-card" id="persoCoachHolder"></div>
+      </section>
+      <!-- Mascotte du club (Premium, 2026-10-08) : show de fin de 1er quart-temps
+           à domicile, voir renderPersoMascot et assets/live/characters.js. -->
+      <section class="pz-block" id="persoMascotte" aria-labelledby="persoMascotteTitle">
+        <h3 class="pz-title" id="persoMascotteTitle">Mascotte</h3>
+        <div class="pz-card" id="persoMascotHolder"></div>
       </section>
       <p class="pz-foot">Le numéro de maillot de chaque joueur se choisit sur sa fiche (carte « Personnalisation ») et l'apparence des jeunes sur leur carte de l'Académie, avec Premium.</p>
     </div>
@@ -13360,6 +13384,58 @@ function normalizeCourtStyle(raw) {
   return { wood, paint };
 }
 // Couleurs effectives du parquet d'un club (null = parquet par défaut).
+// Mise en scène du direct (2026-10-08) : coach et mascotte du club.
+// MÊMES définitions dans engine.js (serveur) et moteurbasket3.html (client),
+// deux runtimes séparés : à garder synchronisées.
+// Coach : avatar du style des joueurs (AvatarGen), personnalisable par tous
+// (onglet Personnalisation) ; null = coach par défaut, tiré de façon stable
+// du nom du club. Mascotte : personnalisable en Premium seulement ; ignorée
+// (sans être effacée) si le club perd le Premium (mascotFor).
+const COACH_LOOK_OPTIONS = {
+  skins: 10, faces: 5, eyes: 5, hairColors: 10,
+  hairStyles: ["short", "sidepart", "slick", "buzz", "fade", "wavy", "receding", "undercut", "curlytop", "afro", "bald"],
+  beards: ["none", "stubble", "short", "goatee", "boxed", "full", "circle", "mustache"],
+  outfits: ["suit", "tracksuit", "polo"],
+  accessories: ["none", "glasses", "cap", "clipboard", "tablet"],
+};
+function normalizeCoachLook(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const O = COACH_LOOK_OPTIONS;
+  const int = (v, n) => (Number.isInteger(v) && v >= 0 && v < n ? v : null);
+  const one = (v, list) => (list.includes(v) ? v : null);
+  const out = {
+    skin: int(raw.skin, O.skins), face: int(raw.face, O.faces), eyes: int(raw.eyes, O.eyes),
+    hairStyle: one(raw.hairStyle, O.hairStyles), hairColor: int(raw.hairColor, O.hairColors),
+    beard: one(raw.beard, O.beards), outfit: one(raw.outfit, O.outfits) || "suit", accessory: one(raw.accessory, O.accessories) || "none",
+  };
+  return out;
+}
+const MASCOT_OPTIONS = {
+  species: ["kraken", "ours", "aigle", "dragon", "loup", "taureau"],
+  accessories: ["none", "bandeau", "lunettes", "casquette", "couronne"],
+  celebrations: ["salto", "dab", "danse"],
+};
+function normalizeMascot(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const O = MASCOT_OPTIONS;
+  const hex = v => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null);
+  const name = typeof raw.name === "string" ? raw.name.replace(/[<>]/g, "").trim().slice(0, 20) : "";
+  const n = Number(raw.number);
+  return {
+    species: O.species.includes(raw.species) ? raw.species : "kraken",
+    name, primary: hex(raw.primary), secondary: hex(raw.secondary),
+    number: Number.isInteger(n) && n >= 0 && n <= 99 ? n : null,
+    accessory: O.accessories.includes(raw.accessory) ? raw.accessory : "none",
+    celebration: O.celebrations.includes(raw.celebration) ? raw.celebration : "salto",
+  };
+}
+// Mascotte affichée : la personnalisée si le club est Premium, sinon null
+// (le live prend alors la mascotte par défaut, tirée du sigle et des couleurs).
+function mascotFor(team, now = Date.now()) {
+  if (!team || !team.mascot || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
+  return normalizeMascot(team.mascot);
+}
+
 function courtStyleFor(team, now = Date.now()) {
   if (!team || !team.courtStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
   const st = normalizeCourtStyle(team.courtStyle);
@@ -14205,6 +14281,52 @@ const AvatarGen = (function () {
       `<path d="M83 112 l9 -1.4 l0.6 6 l-9 1.4Z" fill="${trim}" opacity="0.85"/>`;
   }
 
+  // Survêtement du coach (2026-10-08) : veste zippée à col montant, deux
+  // bandes de la couleur secondaire sur les épaules. colors = [veste, bandes].
+  function renderTracksuit(colors) {
+    const [main, trim] = colors || ['#1f3a8a', '#ffffff'];
+    const body = 'M0 130 L0 118 Q6 104 26 100 Q36 97 40 86 Q60 92 80 86 Q84 97 94 100 Q114 104 120 118 L120 130Z';
+    const stripe = `<path d="M6 113 Q14 104 27 101 L29 104 Q17 107 9 116Z" fill="${trim}" opacity="0.92"/><path d="M10 119 Q17 109 29 106 L30 108.5 Q19 112 12 121Z" fill="${trim}" opacity="0.92"/>`;
+    return `<path d="${body}" fill="${main}" ${LW}/>` +
+      `<path d="M94 100 Q114 104 120 118 L120 130 L104 130 Q103 110 90 101Z" fill="${shade(main, -22)}"/>` +
+      `<path d="M4 118 Q10 106 24 102 Q16 108 10 122Z" fill="#fff" opacity="0.08"/>` +
+      stripe + mirror(stripe) +
+      `<path d="M40 85 Q60 92 80 85 L80 91 Q60 98 40 91Z" fill="${shade(main, 12)}" ${LW}/>` +
+      `<path d="M60 93 L60 130" stroke="${shade(main, -45)}" stroke-width="1.6"/>` +
+      `<path d="M58.4 95 L61.6 95 L61.6 100 L58.4 100Z" fill="#d9dde3" ${LW}/>`;
+  }
+  // Accessoires du coach : lunettes, casquette (couleur du club), clipboard,
+  // tablette. `which` = 'glasses' | 'cap' | 'clipboard' | 'tablet'.
+  function renderAccessory(which, colors) {
+    const [main, trim] = colors || ['#1f3a8a', '#ffffff'];
+    if (which === 'glasses') {
+      const lens = `<rect x="40.6" y="50.6" width="16" height="10.6" rx="3.6" fill="#cfe3ff" fill-opacity="0.18" stroke="#16181d" stroke-width="1.6"/>`;
+      return lens + mirror(lens) + `<path d="M56.6 54.4 Q60 52.6 63.4 54.4" stroke="#16181d" stroke-width="1.5" fill="none"/>` +
+        `<path d="M40.6 54 L36 52.6 M79.4 54 L84 52.6" stroke="#16181d" stroke-width="1.4"/>`;
+    }
+    if (which === 'cap') {
+      return `<path d="M34.5 45 Q33 14 60 12.5 Q87 14 85.5 45 Q60 37 34.5 45Z" fill="${main}" ${LW}/>` +
+        `<path d="M36 43 Q60 35.5 84 43" stroke="${shade(main, -30)}" stroke-width="1" fill="none"/>` +
+        `<path d="M60 13 L60 39" stroke="${shade(main, -25)}" stroke-width="0.9" opacity="0.7"/>` +
+        `<circle cx="60" cy="13.6" r="1.8" fill="${trim}"/>` +
+        `<path d="M33 45.5 Q60 38.5 87 45.5 Q88 50 84 51 Q60 45.5 36 51 Q32 50 33 45.5Z" fill="${shade(main, -18)}" ${LW}/>` +
+        `<circle cx="60" cy="27" r="5" fill="${trim}" opacity="0.9"/>`;
+    }
+    if (which === 'clipboard') {
+      return `<g transform="rotate(-12 96 112)"><rect x="84" y="96" width="24" height="31" rx="2.5" fill="#a8743f" ${LW}/>` +
+        `<rect x="87" y="101" width="18" height="23" fill="#f6f4ee"/>` +
+        `<path d="M89.5 106 h13 M89.5 110 h13 M89.5 114 h9 M92 118 l3 3 l5 -6" stroke="#5c6b80" stroke-width="1" fill="none"/>` +
+        `<rect x="91" y="93.5" width="10" height="5" rx="1.5" fill="#c9ced6" ${LW}/></g>`;
+    }
+    if (which === 'tablet') {
+      return `<g transform="rotate(-10 96 113)"><rect x="83" y="96" width="26" height="33" rx="3.5" fill="#1b1f27" ${LW}/>` +
+        `<rect x="86" y="99.5" width="20" height="25" rx="1.5" fill="#2d6cdf"/>` +
+        `<path d="M88.5 120 l4 -6 l4 3 l6 -9" stroke="#fff" stroke-width="1.3" fill="none" opacity="0.9"/>` +
+        `<circle cx="96" cy="127" r="0.9" fill="#555"/></g>`;
+    }
+    return '';
+  }
+
   // ---------------------------------------------------------------- apparence aléatoire
 
   /**
@@ -14296,7 +14418,7 @@ const AvatarGen = (function () {
   function renderAvatar(a, options = {}) {
     const [jersey, trim] = options.teamColors || ['#3a3a40', '#55555c'];
     // Costume (présentateur) ou polo (staff) : pas de tatouage de bras/cou ni de chaîne.
-    const dressed = options.outfit === 'suit' || options.outfit === 'polo';
+    const dressed = options.outfit === 'suit' || options.outfit === 'polo' || options.outfit === 'tracksuit';
     const tid = `tx${++UID}`;
     const defs = `<defs>` +
       `<pattern id="${tid}h" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="2.2" stroke="#1a0c06" stroke-width="0.55"/></pattern>` +
@@ -14331,7 +14453,7 @@ const AvatarGen = (function () {
       hair.back +
       renderShoulders(a.skin) + (dressed ? '' : renderArmTattoos(a)) + renderNeck(a.skin) + (dressed ? '' : tattoo) +
       (a.chain && !dressed ? `<path d="M49 94 Q60 107 71 94" stroke="${a.chain}" stroke-width="1.6" fill="none"/>` : '') +
-      (options.outfit === 'suit' ? renderSuit(options.suitColors) : options.outfit === 'polo' ? renderPolo(options.suitColors || options.teamColors) : renderJersey(jersey, trim, a.jerseyStyle || 'round', tid)) +
+      (options.outfit === 'suit' ? renderSuit(options.suitColors) : options.outfit === 'polo' ? renderPolo(options.suitColors || options.teamColors) : options.outfit === 'tracksuit' ? renderTracksuit(options.suitColors || options.teamColors) : renderJersey(jersey, trim, a.jerseyStyle || 'round', tid)) +
       renderHead(a.skin, a.faceShape, { age: a.age, freckles: a.freckles, earrings: a.earrings, bald: a.hairStyle === 'bald', cleft: a.cleft, tex: tid }) +
       mark + hair.front + hairTexture(a, w, tid) + hairSheen(a, w) + headband + beard.body +
       renderBrows(a.brows, a.hairColor) +
@@ -14341,6 +14463,9 @@ const AvatarGen = (function () {
       renderNose(a.nose) +
       renderMouth(a.mouth, a.skin) +
       beard.mustache +
+      (options.accessory === 'glasses' ? renderAccessory('glasses') : '') +
+      (options.accessory === 'cap' ? renderAccessory('cap', options.teamColors) : '') +
+      (options.accessory === 'clipboard' || options.accessory === 'tablet' ? renderAccessory(options.accessory) : '') +
       `</svg>`;
   }
 
@@ -14420,7 +14545,29 @@ const AvatarGen = (function () {
     if (out.age < 18) out.beard = 'none';
     return out;
   }
-  return { generateAppearance, renderAvatar, generateAvatar, applyLook, HAIR_COLORS };
+  // Coach du club (mise en scène du direct, 2026-10-08) : apparence de
+  // staff tirée de `seed` (stable : le même à chaque match), puis les choix
+  // du club (Team.coachLook, voir normalizeCoachLook). colors = [club, liseré].
+  function coachSpec(seed, look) {
+    const a = generateAppearance(seed, { age: 46, staff: true });
+    Object.assign(a, { durag: null, headband: false, earrings: null, neckTattoo: 'none', chain: null, mark: 'none', browSlit: false, armTattoo: 'none' });
+    if (look) {
+      if (Number.isInteger(look.skin) && SKINS[look.skin]) { a.skinIndex = look.skin; a.skin = SKINS[look.skin]; }
+      if (Number.isInteger(look.face)) a.faceShape = look.face % FACE_SHAPES.length;
+      if (Number.isInteger(look.eyes)) a.eyeShape = look.eyes % EYE_SHAPES.length;
+      if (look.hairStyle) a.hairStyle = look.hairStyle;
+      if (Number.isInteger(look.hairColor) && HAIR_COLORS[look.hairColor]) a.hairColor = HAIR_COLORS[look.hairColor];
+      if (look.beard) a.beard = look.beard;
+    }
+    return a;
+  }
+  function coachAvatar(seed, look, colors, opts = {}) {
+    const [p, q] = colors || ['#1f3a8a', '#ffffff'];
+    const outfit = (look && look.outfit) || 'suit';
+    const suitColors = outfit === 'suit' ? ['#1F2A40', p] : [p, q];
+    return renderAvatar(coachSpec(seed, look), { outfit, suitColors, teamColors: [p, q], staff: true, accessory: (look && look.accessory) || 'none', background: opts.background });
+  }
+  return { generateAppearance, renderAvatar, generateAvatar, applyLook, coachSpec, coachAvatar, HAIR_COLORS };
 })();
 
 // Avatar d'un joueur : visage tiré de son id, puis apparence choisie par le
@@ -18049,6 +18196,10 @@ class Team {
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
     this.courtStyle = null;
+    // Mise en scène du direct (2026-10-08) : apparence du coach (tous) et
+    // mascotte (Premium) — voir normalizeCoachLook / mascotFor.
+    this.coachLook = null;
+    this.mascot = null;
     // Salle personnalisée (Premium, voir arenaStyleFor).
     this.arenaStyle = null;
     this.managerRating = null;
@@ -26222,6 +26373,8 @@ function serializeTeam(team) {
     departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
+    coachLook: normalizeCoachLook(team.coachLook) || undefined,
+    mascot: normalizeMascot(team.mascot) || undefined,
     arenaStyle: normalizeArenaStyle(team.arenaStyle),
     managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
     managerRatedGames: team.managerRatedGames || 0,
@@ -26833,6 +26986,8 @@ function teamFromSave(data) {
     : [];
   team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
   team.courtStyle = normalizeCourtStyle(data.courtStyle);
+  team.coachLook = normalizeCoachLook(data.coachLook);
+  team.mascot = normalizeMascot(data.mascot);
   team.arenaStyle = normalizeArenaStyle(data.arenaStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
@@ -28793,6 +28948,15 @@ function liveActiveTimeout(pauses, now) {
   const p = (pauses || []).find(x => x && x.kind === "timeout" && now >= x.airAt && now < x.airAt + x.durationMs);
   if (!p) return null;
   return { team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000), endsAt: p.airAt + p.durationMs };
+}
+// Arrêt de jeu en cours (mise en scène du live 2D, 2026-10-08) : temps mort,
+// pause entre quarts-temps ou mi-temps, avec son début et sa fin réels
+// (pauses de server/liveMatch.js:schedulePlayback) — c'est la durée du show,
+// jamais rallongée.
+function liveActiveStoppage(pauses, now) {
+  const p = (pauses || []).find(x => x && (x.kind === "timeout" || x.kind === "quarter-break" || x.kind === "halftime") && now >= x.airAt && now < x.airAt + x.durationMs);
+  if (!p) return null;
+  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs };
 }
 function livePossessionAt(evs, prevIdx) {
   const prev = evs[prevIdx];
@@ -44698,7 +44862,7 @@ function spectateTeamData(obj, colorIdx, colors, leagueIdx) {
   return { name: obj ? obj.name : "?", short: obj ? teamTrigram(obj) : "?", color: colors[colorIdx], logo, sponsor, players };
 }
 async function spectateMountLiveView(state) {
-  const [mod, adMod] = await Promise.all([hmLiveLoadModule(), hmLiveLoadAdapterModule()]);
+  const [mod, adMod] = await Promise.all([hmLiveLoadModule(), hmLiveLoadAdapterModule(), hmLoadFeatures()]);
   if (!mod || !adMod || spectateState !== state) return false;
   const root = document.getElementById("spectateLiveRoot");
   if (!root) return false;
@@ -44726,7 +44890,10 @@ async function spectateMountLiveView(state) {
   const adapter = adMod.createLiveAdapter({ live, teams, mine: null, quarterLength: QUARTER_SECONDS, overtimeLength: OVERTIME_SECONDS, dress, presenter });
   let view;
   try {
-    view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")) });
+    // Mise en scène (bêta liveShows du club du spectateur) : coachs et shows,
+    // sans l'entrée des joueurs (composition inconnue avant le match).
+    const spectStaging = teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d") ? hmLiveStagingFor(homeObj, awayObj, { intro: false }) : null;
+    view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, staging: spectStaging, court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")) });
   } catch (e) { return false; }
   state.rich = { adapter, view, applied: 0 };
   const box = root.closest(".spectate-box");
@@ -44937,7 +45104,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-4";
+const HM_LIVE_ASSET_VERSION = "20261008-5";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45045,6 +45212,7 @@ function hmLiveReset(liveMatch) {
       match: liveMatch, view: keepView ? prev.view : null, final: false, scheduled: false, tickKey: "",
       events: [], shots: [], fouls: [], raw: [], seq: 0, possession: null, quarter: 1, fat: {},
       dress: keepView ? prev.dress : undefined,
+      staging: keepView ? prev.staging : null,
       // Avant-match : redessine chaque seconde pour le compte à rebours.
       pregameTimer: liveMatch.pregame ? setInterval(() => hmLiveSchedule(), 1000) : null,
     };
@@ -45063,12 +45231,17 @@ function hmLiveReset(liveMatch) {
     // Squelette tant que le module n'a pas répondu (rien quand il est déjà
     // chargé : la promesse est résolue au tour suivant).
     if (root) { root.classList.remove("hm-live"); root.innerHTML = hmLiveSkeletonHtml(); }
-    hmLiveLoadModule().then(mod => {
+    Promise.all([hmLiveLoadModule(), hmLoadFeatures()]).then(([mod]) => {
       if (hmLive !== state) return;
       if (!root) return;
       if (!mod) { hmLiveShowUnavailable(root); return; }
       try {
+        // Mise en scène (bêta liveShows) : seulement avec le terrain animé.
+        const court2dOn = !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d"));
+        const homeObj = liveMatch.isHome ? teamA : teamB, awayObj = liveMatch.isHome ? teamB : teamA;
+        state.staging = court2dOn ? hmLiveStagingFor(homeObj, awayObj) : null;
         state.view = mod.createLiveView(root, {
+          staging: state.staging,
           quarterLength: QUARTER_SECONDS,
           onShowHalftime: () => openHoopShow("halftime"),
           halftimeShowSeen: hoopShowHalftimeSeen,
@@ -45415,6 +45588,104 @@ function hmLiveReferees(seedBase) {
   }
   return out;
 }
+// ---------------------------------------------------------------------
+// Mise en scène du direct 2D (2026-10-08, bêta « liveShows ») : coach devant
+// chaque banc, entrée des joueurs, regroupement au temps mort, shows des
+// arrêts (assets/live/staging.js). Drapeaux globaux lus sur /api/features
+// (server/featureFlags.js) : mode whitelist (clubs listés ou bêta par club
+// Team.betaFeatures "liveShows"), all (tout le monde) ou off. Hors bêta :
+// rien n'est chargé, le direct est inchangé.
+// ---------------------------------------------------------------------
+let HM_FEATURES = null, hmFeaturesPromise = null;
+function hmLoadFeatures() {
+  if (!hmFeaturesPromise) {
+    hmFeaturesPromise = fetchApi("/api/features").then(r => (r && r.ok ? r.json() : null))
+      .then(d => { HM_FEATURES = d && d.ok ? d : null; return HM_FEATURES; })
+      .catch(() => null);
+  }
+  return hmFeaturesPromise;
+}
+function hmLiveShowsFlags() {
+  const f = HM_FEATURES && HM_FEATURES.liveShows;
+  if (!f || f.mode === "off" || !teamA) return null;
+  const mine = (typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("liveShows")) || (Array.isArray(f.clubs) && f.clubs.includes(teamA.name));
+  if (f.mode !== "all" && !mine) return null;
+  if (f.coach === false && f.playerIntro === false && f.shows === false) return null;
+  return f;
+}
+// Mascotte affichée pour le club qui reçoit : la sienne s'il est Premium
+// (mascotFor), sinon null → staging.js prend la mascotte par défaut (sigle).
+function hmLiveMascotCfg(team, colors) {
+  const m = team ? mascotFor(team) : null;
+  if (!m) return null;
+  return { species: m.species, name: m.name, primary: m.primary || colors[0], secondary: m.secondary || colors[1], number: m.number, accessory: m.accessory, celebration: m.celebration };
+}
+// Configuration lue par la mise en scène à chaque mise à jour (null = rien).
+function hmLiveStagingFor(homeObj, awayObj, opts = {}) {
+  const f = hmLiveShowsFlags();
+  if (!f) return null;
+  let base = null;
+  return () => {
+    const fl = hmLiveShowsFlags();
+    if (!fl) return null;
+    if (!base) {
+      let homeColors = ["#d6473f", "#ffd34d"], homeShort = "", mascot = null;
+      try { if (homeObj) homeColors = teamAvatarColors(homeObj); } catch (e) { /* couleurs par défaut */ }
+      try { homeShort = homeObj ? teamTrigram(homeObj) : ""; } catch (e) { homeShort = ""; }
+      try { mascot = hmLiveMascotCfg(homeObj, homeColors); } catch (e) { mascot = null; }
+      base = { coaches: [coachAvatarFor(homeObj), coachAvatarFor(awayObj)], homeColors, homeShort, mascot };
+    }
+    return { coach: fl.coach !== false, playerIntro: fl.playerIntro !== false && opts.intro !== false, shows: fl.shows !== false,
+      ...base, onShow: info => hmLiveShowAd(info, fl), onTshirtLanded: null /* hook : objet à gagner (plus tard) */ };
+  };
+}
+// Pub des non-premium pendant un show (décision 2026-10-08 : interstitiel H5
+// existant, il passe par-dessus le show qui continue dessous). Une par arrêt
+// au plus (staging.js n'appelle onShow qu'une fois par arrêt), plafond par
+// match, jamais si l'arrêt est trop court pour finir avant la reprise.
+// Échec de chargement : rien d'affiché, le show continue seul.
+let hmLiveAdsShown = 0, hmLiveAdsMatchKey = null;
+function hmLiveShowAd(info, flags) {
+  try {
+    const ads = (flags && flags.ads) || {};
+    if (!ads.enabled || !teamA || teamIsPremium(teamA)) return false;
+    const key = hmLive && hmLive.match ? String(hmLive.match.kickoffAt || "") + "|" + (hmLive.match.round || "") : "spect";
+    if (key !== hmLiveAdsMatchKey) { hmLiveAdsMatchKey = key; hmLiveAdsShown = 0; }
+    if (hmLiveAdsShown >= (ads.maxPerMatch ?? 3)) return false;
+    if (!info || !(info.remainingMs >= (ads.minStoppageMs ?? 25000))) return false;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return false;
+    if (!hmAdsEnabled()) { hmAdsTrack("failure", { placement: "liveShow", show: info.show, status: "unavailable" }); return false; }
+    hmLiveAdsShown++;
+    hmAdsTrack("request", { placement: "liveShow", show: info.show });
+    hmAdsShowBreak("liveShow").then(status => {
+      hmAdsTrack(status === "viewed" ? "impression" : status === "dismissed" ? "dismissed" : "failure", { placement: "liveShow", show: info.show, status });
+    }).catch(() => hmAdsTrack("failure", { placement: "liveShow", show: info.show, status: "error" }));
+    return true;
+  } catch (e) { return false; }
+}
+// Suivi des pubs (impression, fermeture, échec ; le clic n'est pas exposé
+// par l'API H5 Games Ads) : compteurs du jour côté serveur (/api/ads/track).
+function hmAdsTrack(event, data = {}) {
+  try {
+    const body = JSON.stringify({ event, ...data });
+    fetchApi("/api/ads/track", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+  } catch (e) { /* jamais bloquant */ }
+}
+// Entrée des joueurs (30 s avant le coup d'envoi) : les titulaires prévus
+// (composition du club, sinon les cinq premiers) apparaissent déjà dans
+// l'avant-match, avec les mêmes identifiants que dans le direct (« A:#id »)
+// pour que rien ne change au coup d'envoi.
+function hmLiveIntroRoster(team, key) {
+  if (!team || !Array.isArray(team.players)) return [];
+  const ids = Object.values((team.lineup && team.lineup.starters) || {}).filter(Boolean);
+  let five = ids.map(id => team.players.find(p => p.id === id)).filter(Boolean);
+  if (five.length < 5) five = five.concat(team.players.filter(p => !five.includes(p))).slice(0, 5);
+  return five.slice(0, 5).map(p => ({
+    id: key + ":#" + p.id, name: p.name, pos: POS_SHORT[p.position] || "", avatar: hmLiveAvatar(p, team),
+    starter: true, onCourt: true, seconds: 0, number: Number.isInteger(p.number) ? p.number : null, fatigue: null,
+    pts: 0, reb: 0, oreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, ftm: 0, fta: 0,
+  }));
+}
 function hmLiveDress() {
   if (hmLive.dress) return hmLive.dress;
   const m = hmLive.match;
@@ -45477,7 +45748,9 @@ function hmLiveBuildState() {
   // Équipes et joueurs (la partie coûteuse : 24 lignes, avatars, minutes)
   // reconstruits au plus une fois par seconde ou par événement ; les ticks
   // intermédiaires (chrono des 24 s en dixièmes) réutilisent le cache.
-  const teamsKey = [hmLive.seq, hmLive.final, hmLive.quarter, Math.floor(liveBoxScoreNowElapsed), hmLive.match.pregame].join("|");
+  // Entrée des joueurs (mise en scène) : titulaires visibles 30 s avant.
+  const introOn = !!(hmLive.match.pregame && hmLive.staging && hmLive.match.kickoffAt && hmLive.match.kickoffAt - Date.now() <= 30000);
+  const teamsKey = [hmLive.seq, hmLive.final, hmLive.quarter, Math.floor(liveBoxScoreNowElapsed), hmLive.match.pregame, introOn].join("|");
   const teams = hmLive.teamsCache && hmLive.teamsCache.key === teamsKey ? hmLive.teamsCache.teams : keys.map((key, t) => {
     const team = key === "A" ? teamA : teamB;
     const starterIds = new Set(liveStarters[key] && liveStarters[key].size ? liveStarters[key].keys() : Object.values((team && team.lineup && team.lineup.starters) || {}).filter(Boolean));
@@ -45507,6 +45780,7 @@ function hmLiveBuildState() {
         fatigue: pObj && hmLive.fat && typeof hmLive.fat[pObj.id] === "number" ? hmLive.fat[pObj.id] : null,
       };
     });
+    if (introOn && !players.length) players.push(...hmLiveIntroRoster(team, key));
     return {
       name: team ? team.name : (t ? "Extérieur" : "Domicile"),
       short: team ? teamTrigram(team) : hmLiveShort(null),
@@ -45536,6 +45810,9 @@ function hmLiveBuildState() {
     shotClock: hmLive.final || liveState.shotClock === null ? null : liveState.shotClock,
     possession: hmLive.final ? null : (liveState.possession ? hmLiveIdx(liveState.possession) : hmLive.possession),
     timeout: hmLive.final ? null : liveActiveTimeout(m.pauses, Date.now()),
+    // Mise en scène (staging.js) : arrêt de jeu en cours et heure du coup d'envoi.
+    stoppage: hmLive.final ? null : liveActiveStoppage(m.pauses, Date.now()),
+    kickoffAt: m.kickoffAt || null,
     halftimeResumeIn: half ? half.resumeIn : null,
     meta: dress.meta,
     courtLogo: dress.courtLogo,
@@ -49276,6 +49553,8 @@ function renderPersonnalisationSection() {
   renderClubIdentityPanel();
   renderPersoCourt();
   renderPersoArena();
+  if (typeof renderPersoCoach === "function") renderPersoCoach();
+  if (typeof renderPersoMascot === "function") renderPersoMascot();
 }
 
 // Petit sommaire (Identité · Maillots · Parquet) : défilement doux vers la
@@ -49420,7 +49699,7 @@ function commitJerseyColor(key, hex) {
     if (r.ok) { if (home) syncJerseyTwoToneToServer(teamA.jerseyTwoTone); else syncAwayJerseyTwoToneToServer(teamA.awayJerseyTwoTone); }
   }
   saveMyTeam();
-  renderClubIdentityPanel(); renderPersoCourt(); renderPersoArena();
+  renderClubIdentityPanel(); renderPersoCourt(); renderPersoArena(); if (typeof renderPersoCoach === "function") { renderPersoCoach(); renderPersoMascot(); }
   return true;
 }
 document.addEventListener("input", (e) => {
@@ -50113,7 +50392,7 @@ document.addEventListener("click", (e) => {
   if (resetLogoBtn) syncLogoToServer(null);
   if (togglePayingBtn) syncPayingToServer(teamA.isPaying);
   if (resetLogoBtn || togglePayingBtn) renderPersonnalisationSection();
-  else { renderClubIdentityPanel(); renderPersoCourt(); renderPersoArena(); }
+  else { renderClubIdentityPanel(); renderPersoCourt(); renderPersoArena(); if (typeof renderPersoCoach === "function") { renderPersoCoach(); renderPersoMascot(); } }
 });
 
 // Trigramme : validation locale puis serveur (ligue partagée) ; en solo,
@@ -55170,6 +55449,13 @@ function freeColorApply(key, hex) {
     renderPersoArena();
     return true;
   }
+  // Mascotte (Premium) : couleurs libres principale / secondaire.
+  if ((key === "mascot-primary" || key === "mascot-secondary") && typeof persoMascotSet === "function") {
+    const f = key === "mascot-primary" ? "primary" : "secondary";
+    if (persoMascotCurrent()[f] === hex) return true;
+    persoMascotSet({ [f]: hex });
+    return true;
+  }
   const field = { "arena-main": "main", "arena-second": "second", "arena-facade": "facade", "arena-roof": "roof" }[key];
   if (!field) return false;
   const cur = persoArenaCurrent();
@@ -55570,6 +55856,22 @@ function renderPersoArena() {
   html += `</div></div>`;
   holder.innerHTML = html;
 }
+// ---------------------------------------------------------------------
+// Coach du club (mise en scène du direct 2D, 2026-10-08) : avatar du style
+// des joueurs (AvatarGen.coachAvatar), ouvert à tous, sauvegardé sur le club
+// (Team.coachLook, /api/club/set-coach-look) et vu par l'adversaire en
+// direct. Sans choix : coach par défaut tiré du nom du club (stable).
+// ---------------------------------------------------------------------
+function coachSeedFor(team) {
+  let h = 2166136261;
+  for (const ch of String((team && team.name) || "club")) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return (h % 2147483000) + 101;
+}
+function coachAvatarFor(team, look, opts = {}) {
+  if (!team) return "";
+  try { return AvatarGen.coachAvatar(coachSeedFor(team), look === undefined ? team.coachLook : look, teamAvatarColors(team), opts); } catch (e) { return ""; }
+}
+// Interface Coach / Mascotte de Personnalisation : assets/club-staging-ui.js.
 async function persoArenaSave(style) {
   const fb = () => document.getElementById("persoArenaFeedback");
   try {
@@ -60750,13 +61052,21 @@ const TOUR_STEPS = [
     tip: "Le Premium ne donne aucun avantage sportif. Pendant la phase de test, il est gratuit.",
   },
 
+  // Dernière étape (2026-10-08) : personnaliser le coach, visible devant le
+  // banc pendant les matchs en direct.
+  { kind: "spotlight", topic: "Coach", page: "personnalisation", target: "#persoCoach", wide: true,
+    title: "Votre coach",
+    text: "C'est vous, devant le banc pendant les matchs en direct : choisissez son visage, sa coiffure, sa tenue et un accessoire.",
+    tip: "Vous pourrez le modifier à tout moment dans Personnalisation.",
+  },
+
   { kind: "center", emoji: "🏆", final: true,
     title: "Prêt à jouer !",
     text: "Le club est entre vos mains. Bonne saison, coach.",
   },
 ];
 
-const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie", effectif: "effectif", humeur: "humeur", entrainement: "entrainement", calendrier: "calendrier", coupe: "coupe", ligue: "ligue", tactiques: "tactiques", amicaux: "amicaux", lp: "lp", premium: "premium" };
+const TOUR_PAGE_KEY_TO_TAB = { dashboard: "club", ordres: "ordres", salle: "salle", academie: "academie", effectif: "effectif", humeur: "humeur", entrainement: "entrainement", calendrier: "calendrier", coupe: "coupe", ligue: "ligue", tactiques: "tactiques", amicaux: "amicaux", lp: "lp", premium: "premium", personnalisation: "personnalisation" };
 let tourStepIdx = 0;
 let tourEarnedRewards = []; // { title, reward }, remis à zéro à chaque lancement
 let tourRootEl = null, tourToastEl = null;

@@ -1516,6 +1516,22 @@ function setTeamArenaStyle(team, teamIndex, league, body, now) {
   team.arenaStyle = Engine.normalizeArenaStyle(raw);
   return { ok: true, arenaStyle: team.arenaStyle };
 }
+// Mise en scène du direct (2026-10-08) : apparence du coach, ouverte à tous ;
+// mascotte du club, réservée au Premium (gardée si le Premium expire,
+// simplement ignorée à l'affichage — voir mascotFor).
+function setTeamCoachLook(team, teamIndex, league, body, now) {
+  const raw = body && body.coachLook;
+  if (raw != null && typeof raw !== "object") return fail("Apparence du coach invalide.");
+  team.coachLook = raw == null ? null : Engine.normalizeCoachLook(raw);
+  return { ok: true, coachLook: team.coachLook };
+}
+function setTeamMascot(team, teamIndex, league, body, now) {
+  if (!requirePremium(team, now)) return fail("La mascotte personnalisée est réservée au Premium.");
+  const raw = body && body.mascot;
+  if (raw != null && typeof raw !== "object") return fail("Mascotte invalide.");
+  team.mascot = raw == null ? null : Engine.normalizeMascot(raw);
+  return { ok: true, mascot: team.mascot };
+}
 function setPlayerJerseyNumber(team, teamIndex, league, body, now) {
   if (!requirePremium(team, now)) return fail("Choisir les numéros de maillot est réservé au Premium.");
   const player = team.players.find(p => String(p.id) === String(body && body.playerId));
@@ -1642,7 +1658,7 @@ function markAchievementsSeen(team, teamIndex, league, body, now = Date.now()) {
 
 module.exports = {
   markAchievementsSeen,
-  setTeamCourtStyle, setTeamArenaStyle, setPlayerJerseyNumber, setPlayerLook,
+  setTeamCourtStyle, setTeamArenaStyle, setTeamCoachLook, setTeamMascot, setPlayerJerseyNumber, setPlayerLook,
   validateOrdersSnapshot,
   setLineup, setTactics, setTraining, setPlan, setTacticPresets, listPlayer, sellListedPlayer, bidOnListing, bidOnCoachListing, setAutoBid, viewListing,
   upgradeArena, buildArenaSeats, setTicketPrices, upgradeFanShop, fireTrainer,

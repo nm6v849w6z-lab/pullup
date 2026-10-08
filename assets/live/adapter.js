@@ -78,6 +78,15 @@ export function activeTimeout(pauses, now) {
   if (!p) return null;
   return { team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000), endsAt: p.airAt + p.durationMs };
 }
+// Arrêt de jeu en cours (mise en scène du live 2D, 2026-10-08) : temps mort,
+// pause entre quarts-temps ou mi-temps, avec son début et sa fin réels
+// (pauses de server/liveMatch.js:schedulePlayback) — c'est la durée du show,
+// jamais rallongée.
+export function activeStoppage(pauses, now) {
+  const p = (pauses || []).find(x => x && (x.kind === "timeout" || x.kind === "quarter-break" || x.kind === "halftime") && now >= x.airAt && now < x.airAt + x.durationMs);
+  if (!p) return null;
+  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs };
+}
 export function clockSeconds(str) {
   if (typeof str === "number") return str;
   const m = /^(\d+):(\d+)$/.exec(String(str || ""));
@@ -319,6 +328,7 @@ export function createLiveAdapter(opts) {
       quarter: st.quarter, clock: st.final ? 0 : st.clock, shotClock: st.final ? null : st.shotClock,
       possession: st.final ? null : st.possession, halftimeResumeIn: half,
       timeout: st.final ? null : activeTimeout(live.pauses, now),
+      stoppage: st.final ? null : activeStoppage(live.pauses, now), kickoffAt: live.kickoffAt || null,
       meta: dress.meta || null, courtLogo: dress.courtLogo || "", arenaSponsor: dress.arenaSponsor || null, courtStyle: dress.courtStyle || null, referees: dress.referees || null,
       teams: teamsOut, shots: st.shots, events: st.events, nextAction: st.final ? null : nextAction(now),
     };

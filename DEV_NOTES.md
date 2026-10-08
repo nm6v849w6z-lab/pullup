@@ -48,7 +48,44 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   adapter `st.fat` → `players[].fatigue`. Matchs déjà calculés : pas de barre.
   Version des fichiers du live : 20261008-4.
   RESTE : priorité 3 (traînée de passe, arc de tir ; « +2/+3 » existe déjà ;
-  PAS de marqueurs de tirs), puis mise en scène.
+  PAS de marqueurs de tirs) — reportée à plus tard (ordre validé).
+  MISE EN SCÈNE FAITE (bêta liveShows, en prod pour Gotham Knights + BC Dia
+  via la liste par défaut de server/featureFlags.js) :
+  - Drapeaux : `server/featureFlags.js` (store « featureflags »),
+    `GET /api/features`, `POST /api/admin/feature-flags` (correctif partiel),
+    bêta par club `liveShows` (/api/admin/beta-feature). Client :
+    `hmLoadFeatures` / `hmLiveShowsFlags` ; exige aussi `live2d`.
+  - Module `assets/live/staging.js` (+ `characters.js`) branché sur
+    court2d (`opts.staging` / `stagingModule`, calques `stg-coaches` sous les
+    joueurs et `stg-front` au-dessus, `sp.stage` = position imposée à
+    l'affichage). Piloté par `state.stoppage` (pauses serveur, quart fini
+    dans `pause.quarter`) et `state.kickoffAt` : entrée 30 s avant le coup
+    d'envoi (titulaires via `hmLiveIntroRoster`, ids « A:#id ») et 30 s avant
+    la reprise, regroupement au temps mort, banc en fin de quart, shows
+    `SHOW_FOR` (temps mort → pompom, fin Q1 → mascotte, fin Q3 → canon),
+    durée = l'arrêt, arrivée en retard / saut = chacun à sa place.
+  - Coach : `Team.coachLook` (tous, `/api/club/set-coach-look`),
+    `AvatarGen.coachAvatar` (tenues costume / survêtement / polo, lunettes,
+    casquette, clipboard, tablette), défaut stable (`coachSeedFor`, nom du
+    club). Mascotte : `Team.mascot` (Premium, `/api/club/set-mascot`,
+    `mascotFor` l'ignore sans Premium sans l'effacer), défaut = sigle.
+    UI Personnalisation : `assets/club-staging-ui.js` (sorti de la page :
+    limite 4 Mo). Tutoriel : étape « Votre coach » avant la fin.
+  - Pub non premium : interstitiel H5 (`hmLiveShowAd`), une par arrêt,
+    plafond `ads.maxPerMatch` (3), arrêt ≥ `ads.minStoppageMs` (25 s), repli
+    silencieux ; suivi `/api/ads/track` (store « adsstats », compteurs du
+    jour ; le clic n'est pas exposé par l'API H5).
+  - Tests : live_staging_test.js, live_shows_access_test.js (+ court2d,
+    onboarding_tour_test.js mis à jour).
+  RESTE : traductions des nouveaux libellés (Coach, Mascotte, cartes de
+  présentation) dans assets/i18n/* ; sur les matchs déjà calculés, pas de
+  `pause.quarter` (repli sur state.quarter) ; mode spectateur sans entrée
+  des joueurs ; remplaçants pas dessinés sur le banc (pas de jetons de banc).
+  SORTIE DE BÊTA (sans redéploiement) :
+    1. ouvrir le terrain 2D à tous (prérequis : `live2d`, voir plus haut) ;
+    2. `POST /api/admin/feature-flags` avec `{"liveShows":{"mode":"all"}}`
+       (en-tête X-Admin-Token) ; retour arrière : `"mode":"whitelist"` ou
+       `"off"` ; couper une brique : `{"liveShows":{"shows":false}}`.
 
 - **🟡 EN BÊTA EN PROD (2026-10-08) — live 2D v2, activé pour Gotham
   Knights et BC Dia seulement** (poussé 79b1fce, drapeaux posés en prod le

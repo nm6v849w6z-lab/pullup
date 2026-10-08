@@ -3422,6 +3422,58 @@ function normalizeCourtStyle(raw) {
   return { wood, paint };
 }
 // Couleurs effectives du parquet d'un club (null = parquet par défaut).
+// Mise en scène du direct (2026-10-08) : coach et mascotte du club.
+// MÊMES définitions dans engine.js (serveur) et moteurbasket3.html (client),
+// deux runtimes séparés : à garder synchronisées.
+// Coach : avatar du style des joueurs (AvatarGen), personnalisable par tous
+// (onglet Personnalisation) ; null = coach par défaut, tiré de façon stable
+// du nom du club. Mascotte : personnalisable en Premium seulement ; ignorée
+// (sans être effacée) si le club perd le Premium (mascotFor).
+const COACH_LOOK_OPTIONS = {
+  skins: 10, faces: 5, eyes: 5, hairColors: 10,
+  hairStyles: ["short", "sidepart", "slick", "buzz", "fade", "wavy", "receding", "undercut", "curlytop", "afro", "bald"],
+  beards: ["none", "stubble", "short", "goatee", "boxed", "full", "circle", "mustache"],
+  outfits: ["suit", "tracksuit", "polo"],
+  accessories: ["none", "glasses", "cap", "clipboard", "tablet"],
+};
+function normalizeCoachLook(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const O = COACH_LOOK_OPTIONS;
+  const int = (v, n) => (Number.isInteger(v) && v >= 0 && v < n ? v : null);
+  const one = (v, list) => (list.includes(v) ? v : null);
+  const out = {
+    skin: int(raw.skin, O.skins), face: int(raw.face, O.faces), eyes: int(raw.eyes, O.eyes),
+    hairStyle: one(raw.hairStyle, O.hairStyles), hairColor: int(raw.hairColor, O.hairColors),
+    beard: one(raw.beard, O.beards), outfit: one(raw.outfit, O.outfits) || "suit", accessory: one(raw.accessory, O.accessories) || "none",
+  };
+  return out;
+}
+const MASCOT_OPTIONS = {
+  species: ["kraken", "ours", "aigle", "dragon", "loup", "taureau"],
+  accessories: ["none", "bandeau", "lunettes", "casquette", "couronne"],
+  celebrations: ["salto", "dab", "danse"],
+};
+function normalizeMascot(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const O = MASCOT_OPTIONS;
+  const hex = v => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null);
+  const name = typeof raw.name === "string" ? raw.name.replace(/[<>]/g, "").trim().slice(0, 20) : "";
+  const n = Number(raw.number);
+  return {
+    species: O.species.includes(raw.species) ? raw.species : "kraken",
+    name, primary: hex(raw.primary), secondary: hex(raw.secondary),
+    number: Number.isInteger(n) && n >= 0 && n <= 99 ? n : null,
+    accessory: O.accessories.includes(raw.accessory) ? raw.accessory : "none",
+    celebration: O.celebrations.includes(raw.celebration) ? raw.celebration : "salto",
+  };
+}
+// Mascotte affichée : la personnalisée si le club est Premium, sinon null
+// (le live prend alors la mascotte par défaut, tirée du sigle et des couleurs).
+function mascotFor(team, now = Date.now()) {
+  if (!team || !team.mascot || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
+  return normalizeMascot(team.mascot);
+}
+
 function courtStyleFor(team, now = Date.now()) {
   if (!team || !team.courtStyle || typeof team.hasActivePremium !== "function" || !team.hasActivePremium(now)) return null;
   const st = normalizeCourtStyle(team.courtStyle);
@@ -7050,6 +7102,10 @@ class Team {
     this.rivalries = {};
     // Parquet aux couleurs du club (Premium, voir courtStyleFor).
     this.courtStyle = null;
+    // Mise en scène du direct (2026-10-08) : apparence du coach (tous) et
+    // mascotte (Premium) — voir normalizeCoachLook / mascotFor.
+    this.coachLook = null;
+    this.mascot = null;
     // Salle personnalisée (Premium, voir arenaStyleFor).
     this.arenaStyle = null;
     this.managerRating = null;
@@ -18352,6 +18408,8 @@ function serializeTeam(team) {
     departedMatchLog: Array.isArray(team.departedMatchLog) ? team.departedMatchLog.map(r => ({ ...r })) : [],
     rivalries: team.rivalries && typeof team.rivalries === "object" ? team.rivalries : {},
     courtStyle: normalizeCourtStyle(team.courtStyle),
+    coachLook: normalizeCoachLook(team.coachLook) || undefined,
+    mascot: normalizeMascot(team.mascot) || undefined,
     arenaStyle: normalizeArenaStyle(team.arenaStyle),
     managerRating: typeof team.managerRating === "number" ? team.managerRating : null,
     managerRatedGames: team.managerRatedGames || 0,
@@ -19049,6 +19107,8 @@ function teamFromSave(data) {
     : [];
   team.rivalries = data.rivalries && typeof data.rivalries === "object" && !Array.isArray(data.rivalries) ? data.rivalries : {};
   team.courtStyle = normalizeCourtStyle(data.courtStyle);
+  team.coachLook = normalizeCoachLook(data.coachLook);
+  team.mascot = normalizeMascot(data.mascot);
   team.arenaStyle = normalizeArenaStyle(data.arenaStyle);
   team.managerRating = typeof data.managerRating === "number" ? data.managerRating : null;
   team.managerRatedGames = typeof data.managerRatedGames === "number" ? data.managerRatedGames : 0;
@@ -21542,7 +21602,7 @@ return {
   RELEASE_INDEMNITY_RATE, releaseIndemnityFor, medicalCheckFor, MEDICAL_HISTORY_WINDOW_MS,
   MIN_ROSTER_SIZE, MAX_ROSTER_SIZE, estimateMarketValue, transferMinIncrement, minNextBidFor, FOREIGN_BIDDER_IDX, AUTO_BID_FIELDS, autoBidKey, transferPlayerBetweenTeams,
   FORFEIT_SCORE, simulateOrForfeit, recordMatchStatsForTeam, awardMatchMvp, recordMatchStatsAndAwardMvp,
-  COURT_WOODS, normalizeCourtStyle, courtStyleFor, courtWoodColors, arenaFacadeColors, hexShade, hexLuminance, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
+  COURT_WOODS, normalizeCourtStyle, courtStyleFor, COACH_LOOK_OPTIONS, normalizeCoachLook, MASCOT_OPTIONS, normalizeMascot, mascotFor, courtWoodColors, arenaFacadeColors, hexShade, hexLuminance, ARENA_FACADES, ARENA_ROOFS, ARENA_MOODS, normalizeArenaStyle, arenaStyleFor, PLAYER_LOOK_OPTIONS, PLAYER_LOOK_LABELS, normalizePlayerLook, canCustomizePlayerLook, ensureJerseyNumbers,
   RIVALRY_RECENT_MAX, DERBY_MORALE_MULT, DERBY_ATTENDANCE_BOOST, MANAGER_RATING_START, MANAGER_RATING_K, rivalryKeyFor, rivalryBetween, managerRatingOf, recordHumanRivalry,
   tacticsSnapshotFor,
   ARENA_LEVELS, arenaInfo,

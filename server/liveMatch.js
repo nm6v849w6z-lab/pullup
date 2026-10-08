@@ -160,6 +160,9 @@ function schedulePlayback(events, kickoffAt) {
       pauses.push({
         kind: q === 2 ? "halftime" : "quarter-break",
         label: q === 2 ? "🏀 Mi-temps" : "Pause entre les quarts-temps",
+        // Quart-temps qui vient de finir (mise en scène : fin Q1 → mascotte,
+        // fin Q3 → canon à t-shirts, voir assets/live/staging.js).
+        quarter: q,
         airAt: kickoffAt + cursor,
         durationMs: brk,
       });

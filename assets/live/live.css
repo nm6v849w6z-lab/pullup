@@ -598,3 +598,46 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 .c2d-banner.block .c2d-banner-text{fill:#5fd6ae}
 .c2d-banner-shadow{fill:rgba(0,0,0,.45);font:italic 900 96px/1 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:4px;filter:blur(2px)}
 @keyframes c2dBanner{0%{opacity:0;transform:translate(470px,250px) scale(2.4) rotate(-6deg)}14%{opacity:1;transform:translate(470px,250px) scale(.92) rotate(2deg)}22%{transform:translate(466px,252px) scale(1.06) rotate(-1deg)}30%{transform:translate(473px,249px) scale(1) rotate(0)}75%{opacity:1;transform:translate(470px,250px) scale(1.02)}100%{opacity:0;transform:translate(470px,236px) scale(1.15)}}
+/* ---- Mise en scène du direct 2D (staging.js / characters.js, 2026-10-08,
+   bêta liveShows) : coach, entrée des joueurs, shows. Animations en
+   transform / opacity uniquement ; tout s'arrête avec prefers-reduced-motion. */
+.stg-coaches,.stg-front{pointer-events:none}
+.stg-coach-in{transform-box:fill-box;transform-origin:center bottom}
+.stg-coach-in.is-clap{animation:stgClap .28s ease-in-out 5}
+.stg-coach-in.is-gesture{animation:stgGesture .32s ease-in-out 4}
+.stg-coach-in.is-instruct{animation:stgInstruct 1s ease-in-out infinite}
+@keyframes stgClap{50%{transform:scale(1.12) translateY(-2px)}}
+@keyframes stgGesture{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+@keyframes stgInstruct{50%{transform:translateY(-2.5px) rotate(-2deg)}}
+.stg-coach .c2d-lab text{fill:#fff;font:800 7.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.8px}
+.stg-card-name{fill:#fff;font:900 11px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.6px}
+.stg-card-sub{fill:rgba(255,255,255,.75);font:700 8.5px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px}
+.stg-intro{animation:stgFadeIn .25s ease-out}
+@keyframes stgFadeIn{from{opacity:0}}
+.stg-spot{transform-box:fill-box;transform-origin:center;animation:stgSpot 1s ease-in-out infinite}
+@keyframes stgSpot{50%{transform:scale(1.15);opacity:.7}}
+/* Pompom girls : bras et pompons en boucle, une sur deux décalée. */
+.stg-dancer .stg-arm-l,.stg-dancer .stg-arm-r{transform-box:fill-box;transform-origin:center bottom}
+.stg-dancer .stg-arm-l{animation:stgArmL .55s ease-in-out infinite alternate}
+.stg-dancer .stg-arm-r{animation:stgArmR .55s ease-in-out infinite alternate}
+.stg-dancer.alt .stg-arm-l,.stg-dancer.alt .stg-arm-r{animation-delay:-.27s}
+.stg-dancer .stg-pom{transform-box:fill-box;transform-origin:center;animation:stgPom .3s ease-in-out infinite alternate}
+.stg-dancer .stg-ch{animation:stgHop .55s ease-in-out infinite alternate}
+@keyframes stgArmL{to{transform:rotate(-22deg)}}
+@keyframes stgArmR{to{transform:rotate(22deg)}}
+@keyframes stgPom{to{transform:scale(1.18)}}
+@keyframes stgHop{to{transform:translateY(-2px)}}
+/* Mascotte. */
+.stg-mascot-in .stg-ch{transform-box:fill-box;transform-origin:center bottom}
+.stg-mascot-in.is-run .stg-ch{animation:stgHop .22s ease-in-out infinite alternate}
+.stg-mascot-in.is-dunk .stg-arm-r{transform-box:fill-box;transform-origin:center bottom;transform:rotate(-30deg)}
+.stg-mascot-in.is-celebrate-dab .stg-ch{transform:rotate(-14deg)}
+.stg-mascot-in.is-celebrate-danse .stg-ch{animation:stgGesture .4s ease-in-out infinite}
+.stg-mascot-in.is-sad .stg-ch{transform:scaleY(.92) translateY(1px)}
+.stg-rimflash{transition:opacity .2s}
+/* Canon à t-shirts : recul au tir. */
+.stg-launcher-g .stg-cannon{transform-box:fill-box;transform-origin:center bottom;transition:transform .12s}
+.stg-launcher-g.is-fire .stg-cannon{transform:translateY(3px) rotate(-4deg)}
+@media (prefers-reduced-motion:reduce){
+  .stg-coach-in,.stg-dancer *,.stg-mascot-in *,.stg-spot,.stg-intro{animation:none!important;transition:none!important}
+}
