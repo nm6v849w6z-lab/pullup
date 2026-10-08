@@ -2893,6 +2893,10 @@ function moraleLabel(morale) {
 // derniers) : uniquement des ÉTIQUETTES d'affichage ici, la mécanique elle-
 // même (tons/citations/deltas) est dans MILESTONE_INTERVIEW_TONES/
 // MILESTONE_INTERVIEW_QUOTES juste en dessous.
+// Événements qui arrêtent le jeu (voir MatchEngine.isDeadBall) : seuls
+// moments où un changement de joueur est possible.
+const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "freeThrow"]);
+
 const MILESTONE_INTERVIEW_TYPES = {
   "debut-saison": { label: "Interview de début de saison" },
   "mi-saison": { label: "Interview de mi-saison" },
@@ -19761,6 +19765,23 @@ class MatchEngine {
     return weightedPick(pool, p => Math.pow(p.eff(defKey) + 15, 1.6));
   }
 
+  // Arrêt de jeu pendant la possession qui vient d'être jouée (événements
+  // depuis `from`) : faute (personnelle, technique, antisportive), exclusion,
+  // blessure, ballon perdu hors interception (sortie, marcher, 24 s…),
+  // temps mort. Un panier, un rebond ou une interception laissent le ballon
+  // vivant : aucun changement.
+  // La possession doit SE TERMINER sur l'arrêt (dernier événement) : une
+  // faute en cours de possession suivie d'une remise en jeu et d'un panier
+  // ou d'un rebond n'est plus un arrêt au moment du changement.
+  isDeadBall(events, from) {
+    for (let i = events.length - 1; i >= Math.max(0, from); i--) {
+      const e = events[i];
+      if (!e || e.type === "substitution") continue;
+      return DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal");
+    }
+    return false;
+  }
+
   substituteIfNeeded(team, quarter, clock, events) {
     // NOTE (calibrage 2026-09) : l'ancienne version faisait `p.onCourt = false` dès
     // l'exclusion pour fautes, PUIS testait `if (!p.onCourt) continue;` juste après —
@@ -21344,6 +21365,10 @@ class MatchEngine {
       // l'entre-deux (voir commentaire ci-dessus) — ne pas le dupliquer ici.
       if (q > 1) {
         this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart", possession: possessionTeam, possessionAfter: possessionTeam });
+        // Pause entre les quarts-temps : arrêt de jeu, les changements en
+        // attente se font avant la reprise.
+        this.substituteIfNeeded(this.teamA, q, clock, events);
+        this.substituteIfNeeded(this.teamB, q, clock, events);
       }
       const startScoreA = score.A, startScoreB = score.B;
       // Fautes d'équipe remises à zéro à chaque quart-temps (bonus, voir
@@ -21470,9 +21495,7 @@ class MatchEngine {
         this.applyFatigue(this.teamA, this.teamA.rhythm, possessionLength, q, clock, events, paceMult);
         this.applyFatigue(this.teamB, this.teamB.rhythm, possessionLength, q, clock, events, paceMult);
 
-        this.substituteIfNeeded(this.teamA, q, clock, events);
-        this.substituteIfNeeded(this.teamB, q, clock, events);
-
+        let timeoutCalled = false;
         if (!result.possessionOffense) {
           possessionTeam = possessionTeam === "A" ? "B" : "A";
           // Ballon mort après des points encaissés : l'équipe qui va
@@ -21480,8 +21503,18 @@ class MatchEngine {
           const conceded = possessionTeam === "A" ? gainB : gainA;
           if (conceded > 0 && clock > 0) {
             const caller = possessionTeam === "A" ? this.teamA : this.teamB;
-            if (this.maybeCallTimeout(caller, q, clock, score, run, events)) run = { team: null, points: 0 };
+            if (this.maybeCallTimeout(caller, q, clock, score, run, events)) { run = { team: null, points: 0 }; timeoutCalled = true; }
           }
+        }
+        // Changements UNIQUEMENT sur un arrêt de jeu (retour utilisateur
+        // 2026-10-08 : « jamais à la volée ») : faute, temps mort, ballon
+        // sorti / violation, blessure, exclusion. Ballon vivant (panier en
+        // jeu, rebond, interception) : le changement voulu par le coach
+        // (fatigue, fautes, temps de jeu cible) attend le prochain arrêt —
+        // substituteIfNeeded le réévalue alors.
+        if (timeoutCalled || this.isDeadBall(events, possFirstEvent)) {
+          this.substituteIfNeeded(this.teamA, q, clock, events);
+          this.substituteIfNeeded(this.teamB, q, clock, events);
         }
         // Possession du ballon pour le direct (audit possession live,
         // 2026-10-07) : SOURCE DE VÉRITÉ unique côté client. `possession` =

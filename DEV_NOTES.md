@@ -104,6 +104,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   dunk / buzzer (agitation plus forte, plus longue) ; arbitre de ligne de
   fond DERRIÈRE la ligne (REF_BEHIND 2,5 pieds, `bl`, borné après
   l'anti-chevauchement), en coordonnées terrain donc indépendant du zoom.
+  CHANGEMENTS SUR ARRÊT DE JEU (2026-10-08) : engine.js `isDeadBall` (la
+  possession doit SE TERMINER sur faute / lancers / ballon perdu hors
+  interception / temps mort / blessure / exclusion) + pause entre deux
+  quarts ; sinon le changement voulu (fatigue, fautes, minutes cibles)
+  attend le prochain arrêt. Même règle dans le moteur miroir de
+  moteurbasket3.html. ~34 changements / match (35,8 avant). Test :
+  engine_dead_ball_subs_test.js. Pas de changement manuel en direct dans le
+  jeu (les ordres sont fixés avant le match).
   RESTE arène : polissage (tape dans la main plus
   visible, durée des déplacements selon la vitesse de lecture).
   PRIORITÉ 3 FAITE (2026-10-08) : court2d.js `traceTrail`/`endTrail`
