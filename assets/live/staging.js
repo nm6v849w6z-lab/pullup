@@ -13,7 +13,7 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-6";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-7";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -239,8 +239,11 @@ export function createStaging(api, getCfg) {
       }, destroy() { g.remove(); } };
     }
     if (name === "tshirt") {
-      const spots = [{ x: 38, y: 6 }, { x: 56, y: 6 }];
-      const ls = spots.map((p, i) => { const l = el("g", { transform: `translate(${p.x * PX} ${p.y * PX}) scale(${i ? -1 : 1} 1)`, class: "stg-launcher-g" }, g); l.innerHTML = launcher({ primary: colors[0], secondary: colors[1] }); return l; });
+      // Côté des bancs (comme le coach et la table), aux coins libres :
+      // les bancs occupent x ≈ 26–40 et 54–68, la table ≈ 43–51. Canon
+      // tourné vers l'extérieur, tirs vers les gradins derrière les bancs.
+      const spots = [{ x: 15, y: 49.2, dir: -1 }, { x: 79, y: 49.2, dir: 1 }];
+      const ls = spots.map((p, i) => { const l = el("g", { transform: `translate(${p.x * PX} ${p.y * PX}) scale(${p.dir} 1)`, class: "stg-launcher-g" }, g); l.innerHTML = launcher({ primary: colors[0], secondary: colors[1] }); return l; });
       const pool = [];
       for (let i = 0; i < 6; i++) { const s = el("g", { opacity: "0", class: "stg-shirt-g" }, g); s.innerHTML = tshirt({ primary: colors[0], secondary: colors[1] }); pool.push(s); }
       const puffs = spots.map(p => { const s = el("g", { opacity: "0" }, g); s.innerHTML = smoke(); return s; });
@@ -256,9 +259,9 @@ export function createStaging(api, getCfg) {
           const tShot = shotIdx * FIRE, age = el0 - tShot;
           if (shotIdx < 0 || age < 0 || age > FLY || now > t1 - EDGE_MS) { s.setAttribute("opacity", "0"); return; }
           const rr = rng(seed + shotIdx * 13);
-          const from = spots[shotIdx % 2], to = { x: from.x + (rr() - 0.5) * 28, y: -4.2 - rr() * 1.4 };
+          const from = spots[shotIdx % 2], to = { x: from.x + from.dir * (3 + rr() * 12), y: 53.2 + rr() * 1.4 };
           const k = age / FLY;
-          const x = lerp(from.x, to.x, k), y = lerp(from.y - 3.4, to.y, k) - Math.sin(k * Math.PI) * 2.5;
+          const x = lerp(from.x, to.x, k), y = lerp(from.y - 3.4, to.y, k) - Math.sin(k * Math.PI) * 6;
           s.setAttribute("opacity", k > 0.85 ? String(((1 - k) / 0.15).toFixed(2)) : "1");
           s.setAttribute("transform", `translate(${(x * PX).toFixed(1)} ${(y * PX).toFixed(1)}) rotate(${(k * 540 * (shotIdx % 2 ? -1 : 1)).toFixed(0)}) scale(${(1.1 + Math.sin(k * Math.PI) * 0.6).toFixed(2)})`);
           // Hook « objet à gagner » (plus tard) : t-shirt attrapé en tribune.
@@ -269,7 +272,7 @@ export function createStaging(api, getCfg) {
           const last = Math.floor(el0 / FIRE); const side = last % 2; const age = el0 - last * FIRE;
           const on = side === i && age < 600;
           p.setAttribute("opacity", on ? String((1 - age / 600).toFixed(2)) : "0");
-          p.setAttribute("transform", `translate(${(spots[i].x * PX + (i ? -4 : 4)).toFixed(1)} ${(spots[i].y * PX - 38).toFixed(1)}) scale(${(1 + age / 300).toFixed(2)})`);
+          p.setAttribute("transform", `translate(${(spots[i].x * PX + spots[i].dir * 4).toFixed(1)} ${(spots[i].y * PX - 38).toFixed(1)}) scale(${(1 + age / 300).toFixed(2)})`);
         });
         ls.forEach((l, i) => l.setAttribute("class", "stg-launcher-g" + (Math.floor(el0 / FIRE) % 2 === i && el0 % FIRE < 250 ? " is-fire" : "")));
       }, destroy() { g.remove(); } };
