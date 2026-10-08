@@ -40,8 +40,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   « Entretiens » du Vestiaire (assets/vestiaire-ui.js, club seulement),
   boîte d'entretien en bottom sheet sur téléphone, bloc de la question dans
   le popup d'interview. Tests : vestiaire_talks_test.js.
-  RESTE : traductions (en / it) des nouveaux libellés ; équilibrage après
-  quelques semaines de jeu réel (poids des réactions, seuils).
+  Traductions EN / IT faites (bloc en tête de en.js / it.js, aussi la bulle
+  des jetons de l'arène). Ancienneté au club : même règle que le moteur
+  (playerClubSinceSeason), plus de « 2e saison » par défaut.
+  RESTE : équilibrage après quelques semaines de jeu réel (poids des
+  réactions, seuils) ; autres langues (es, de, pt, pl, el, lt, zh).
 
 - **🔵 EN COURS (2026-10-08) — Terrain 2D (rendu) puis mise en scène du
   live (coach, entrée des joueurs, shows)**. Décisions utilisateur : bêta

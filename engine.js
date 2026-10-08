@@ -7889,7 +7889,7 @@ class Team {
     let statement = null;
     if (vestiaireApi()) {
       const V = vestiaireApi();
-      V.recordComm(this, { quote, milestone: entry.milestone, label: milestoneLabel, now, chem: chemistryDelta });
+      V.recordComm(this, { quote: quotes.map(q => q.answer).filter(Boolean).join("\n"), milestone: entry.milestone, label: milestoneLabel, now, chem: chemistryDelta });
       if (lockerAns) statement = V.applyStatement(this, lockerAns, { milestone: entry.milestone, label: milestoneLabel, now, applyChemistry: d => this.applyChemistryDelta(d) });
     }
     this.pendingInterviews.splice(idx, 1);

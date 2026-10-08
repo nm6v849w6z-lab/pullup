@@ -160,4 +160,18 @@ const ok = msg => console.log("✅ " + msg);
   assert.ok(v.quota && Array.isArray(v.recommended) && v.consistency && Array.isArray(v.others), "vue complète");
   ok("Vue Entretiens : recommandations, cohérence, promesses, communication, historique.");
 })();
+// 8) Ancienneté : effectif de départ en 1re saison = « nouveau / 1re saison »,
+//    jamais « 2e saison » (retour utilisateur 2026-10-08).
+(function () {
+  const t = team("Ancienneté");
+  t.seasonHistory = [];
+  const p = t.players[0];
+  delete p.clubSinceSeason; p.historyLog = [];
+  assert.strictEqual(V.talkOptions(t, p.id, "checkin", { now: T0 }).tenure, 0, "1re saison au club");
+  t.seasonHistory = [{}, {}];
+  assert.strictEqual(V.talkOptions(t, p.id, "checkin", { now: T0 }).tenure, 2, "3e saison : là depuis la 1re");
+  p.historyLog = [{ type: "transfer", season: 3, to: t.name }];
+  assert.strictEqual(V.talkOptions(t, p.id, "checkin", { now: T0 }).tenure, 0, "arrivé cette saison");
+  ok("Ancienneté au club : 1re saison correcte (plus de « 2e saison » par défaut).");
+})();
 console.log("✅ Tous les tests des entretiens sont passés.");

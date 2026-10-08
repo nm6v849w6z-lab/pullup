@@ -185,8 +185,18 @@
       nationName: opts.nationName || null,
     };
   }
+  // Saisons complètes au club : même règle que le moteur
+  // (playerClubSinceSeason) — clubSinceSeason, sinon la dernière arrivée dans
+  // l'historique, sinon là depuis la 1re saison (effectif de départ). Avant
+  // le 2026-10-08, l'absence du champ comptait pour 1 saison : un joueur de
+  // l'effectif de départ s'affichait « 2e saison au club » dès la 1re.
   function tenureOf(ctx, p) {
-    return typeof p.clubSinceSeason === "number" ? Math.max(0, ctx.season - p.clubSinceSeason) : 1;
+    let since = typeof p.clubSinceSeason === "number" ? p.clubSinceSeason : null;
+    if (since === null) {
+      const ev = (Array.isArray(p.historyLog) ? p.historyLog : []).find(e => e && (e.type === "transfer" || e.type === "promotion") && e.to === ctx.team.name);
+      since = ev && typeof ev.season === "number" ? ev.season : 1;
+    }
+    return Math.max(0, ctx.season - since);
   }
   function isHomegrown(ctx, p) { return !!(p.homegrownClub && p.homegrownClub === ctx.club); }
   function bigGamesThisSeason(ctx, p) {

@@ -543,7 +543,7 @@
     }).join("") || '<p class="vs-empty">Aucune promesse en cours.</p>') + "</section>";
     var comms = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Communication récente</h2>' + (cv.comms.map(function (x) {
       var im = IMP[x.imp] || IMP.neu;
-      return '<div class="vs-mini"><div class="vs-row"><small><span>' + esc(dateFr(x.at)) + "</span> · <span>" + esc(x.lbl) + "</span></small>" + tag(im[0], im[1]) + "</div><span>« " + esc(x.q) + " »</span>" + (x.fx ? "<small>" + String(x.fx).split(" · ").map(function (f) { return "<span>" + esc(f) + "</span>"; }).join(" · ") + "</small>" : "") + "</div>";
+      return '<div class="vs-mini"><div class="vs-row"><small><span>' + esc(dateFr(x.at)) + "</span> · <span>" + esc(x.lbl) + "</span></small>" + tag(im[0], im[1]) + "</div><span>« " + String(x.q).split("\n").map(function (q) { return "<span>" + esc(q) + "</span>"; }).join(" ") + " »</span>" + (x.fx ? "<small>" + String(x.fx).split(" · ").map(function (f) { return "<span>" + esc(f) + "</span>"; }).join(" · ") + "</small>" : "") + "</div>";
     }).join("") || '<p class="vs-empty">Vos déclarations publiques (interviews) apparaîtront ici.</p>') + "</section>";
     var V2 = window.HM_VESTIAIRE;
     var hist = '<section class="vs-card" style="display:flex;flex-direction:column;gap:4px"><h2 class="vs-h2">Historique des discussions</h2>' + (cv.talks.map(function (x) {
@@ -562,7 +562,7 @@
     closeTalk();
     var tp = teamPlayer({ id: pid }) || {};
     var lvl = V.LEVELS[o.level] ? V.LEVELS[o.level].label : "";
-    var head = '<div class="vs-row" style="justify-content:flex-start;gap:12px">' + avatar({ id: pid, name: o.name }, topicColor(topic), 52) + '<div><strong style="font-size:17px">' + esc(o.name) + '</strong> <span class="vs-text">' + [o.position, o.age ? o.age + " ans" : "", o.tenure ? (o.tenure + 1) + "e saison au club" : "nouveau au club"].filter(Boolean).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join(" · ") + '</span><br><span class="vs-text" style="font-size:12.5px"><span>' +
+    var head = '<div class="vs-row" style="justify-content:flex-start;gap:12px">' + avatar({ id: pid, name: o.name }, topicColor(topic), 52) + '<div><strong style="font-size:17px">' + esc(o.name) + '</strong> <span class="vs-text">' + [o.position, o.age ? o.age + " ans" : "", o.tenure ? (o.tenure + 1) + "e saison au club" : "1re saison au club"].filter(Boolean).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join(" · ") + '</span><br><span class="vs-text" style="font-size:12.5px"><span>' +
       (o.lastTalkAt ? "Dernier entretien : " + esc(dateFr(o.lastTalkAt)) : "Premier entretien") + "</span> · <span>" + esc(o.topicLabel) + "</span></span></div></div>";
     var roleWord = { starter: "Titulaire", rotation: "Rotation", reserve: "Réserve" };
     var kpis = '<div class="vs-talk-kpis"><div><small>Moral</small><b style="color:' + toneColor(o.form) + '">' + o.form + '</b></div><div><small>Confiance en vous</small><b style="color:' + toneColor(o.trust) + '">' + o.trust + '</b></div><div><small>Temps de jeu</small><b>' + o.minutes + ' min</b></div><div><small>Influence</small><b>' + esc(lvl || roleWord[o.role] || "") + "</b></div></div>";
