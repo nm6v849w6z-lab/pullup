@@ -177,7 +177,11 @@ export function createCourt2D(host, opts = {}) {
     if (!r.width) return;
     const st = under.style, l = r.left - h.left - (host.clientLeft || 0), t = r.top - h.top - (host.clientTop || 0);
     st.left = l.toFixed(2) + "px"; st.top = t.toFixed(2) + "px"; st.width = r.width.toFixed(2) + "px"; st.height = r.height.toFixed(2) + "px";
+    if (showCv) { const cs = showCv.style; cs.left = st.left; cs.top = st.top; cs.width = st.width; cs.height = st.height; }
   }
+  // Calque canvas des shows (showfx.js, 2026-10-09) : créé à la demande de
+  // la mise en scène, posé exactement sur le terrain animé, retiré après.
+  let showCv = null;
   fitView();
   let ro = null;
   try { if (typeof ResizeObserver === "function") { ro = new ResizeObserver(fitView); ro.observe(host); ro.observe(svg); } } catch (e) { /* rien */ }
@@ -2040,7 +2044,7 @@ export function createCourt2D(host, opts = {}) {
   // Module chargé à la demande (live-view.js) : objet ou promesse.
   let stage = null, destroyed = false;
   const makeStage = mod => (mod && typeof mod.createStaging === "function" && typeof opts.staging === "function" ? mod.createStaging({
-    el, PX, uid, defs, coachLayer, frontLayer, BENCH, TABLE, RIM,
+    el, PX, OX, OY, uid, defs, coachLayer, frontLayer, BENCH, TABLE, RIM,
     now, nowP: () => performance.now(), reduced: reducedMotion,
     colors: () => colors,
     sprites: () => sprites.values(),
@@ -2053,6 +2057,20 @@ export function createCourt2D(host, opts = {}) {
     formation: () => formation(),
     hold(sp, x, y, speed = 1.4, snap = false) { sp.stage = { x, y, speed }; if (snap) { sp.x = sp.tx = x; sp.y = sp.ty = y; halt(sp); } },
     release(sp) { if (!sp) return; delete sp.stage; if (sp.g) sp.g.setAttribute("opacity", "1"); },
+    // Canvas des shows : { canvas, vb: [x, y, w, h], w, h } (px CSS) ; null
+    // sans canvas 2D (rendu SVG de repli dans staging.js).
+    overlay() {
+      if (!showCv) {
+        if (typeof document === "undefined") return null;
+        const c = document.createElement("canvas");
+        let ok = false; try { ok = !!(c.getContext && c.getContext("2d")); } catch (e) { ok = false; }
+        if (!ok) return null;
+        c.className = "c2d-showfx"; c.setAttribute("aria-hidden", "true");
+        host.appendChild(c); showCv = c; placeUnder();
+      }
+      return { canvas: showCv, vb: viewBox.split(/\s+/).map(Number), w: parseFloat(showCv.style.width) || svg.clientWidth || 0, h: parseFloat(showCv.style.height) || svg.clientHeight || 0 };
+    },
+    dropOverlay() { if (showCv) { showCv.remove(); showCv = null; } },
   }, opts.staging) : null);
   if (opts.stagingModule && typeof opts.stagingModule.then === "function") opts.stagingModule.then(mod => { if (!destroyed && !stage) { stage = makeStage(mod); if (stage && S) stage.update(S, []); } }).catch(() => {});
   else if (opts.stagingModule) stage = makeStage(opts.stagingModule);

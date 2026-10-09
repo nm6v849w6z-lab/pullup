@@ -20,6 +20,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Live 2D : visuels des shows repris de la
+  maquette « Shows Live 2D »** (artifact CwXapZZvuernfxLUvwjC8w : pompom
+  girls au centre, mascotte A dunk au trampoline / B tour d'honneur, canon
+  rotatif sur chariot). `assets/live/showfx.js` = moteur canvas de la
+  maquette (squelette + IK, poses, ombres, éclairage de show, public qui
+  se lève, t-shirts), aux couleurs du club qui reçoit (`showColors` :
+  principale, secondaire claire ou crème, trigramme, numéro de mascotte),
+  styles de la maquette (pom/masc A cartoon, masc B réaliste, canon
+  tokens). Repère : maquette 2000 × 1277, parquet `DESIGN.court`
+  (193,120,1615,855) ↔ terrain 940 × 500 ; `staging.js:makeFxShow` pose
+  la transformation (viewBox « meet », rognage téléphone compris) sur un
+  canvas `.c2d-showfx` créé par `court2d` (`api.overlay()` /
+  `dropOverlay()`, posé comme `under` par `placeUnder`), tableau
+  d'affichage exclu du dessin (`DESIGN.board`), fondu 0,4 s / 0,9 s,
+  boucle `SHOW_CYCLE` (scène + respiration), image fixe en mouvement
+  réduit. Sans canvas 2D (jsdom) : rendu SVG d'origine. Mascotte de fin de
+  Q1 : `mascotVariant(cfg, S)` — parité de la journée (`cfg.round`, passé
+  par `hmLiveStagingFor(…, { round })`), à défaut jour du coup d'envoi :
+  A et B un match sur deux. Temps mort suivant : autre ordre des trois
+  mesures de danse. Test navigateur : `live_shows_canvas_test.js`
+  (captures si `SHOWS_SHOTS=dossier`).
+
 - **🟢 LIVRÉ (2026-10-08) — Live 2D : pub du parquet, logo au rond
   central, panneaux LED, ballon libre, remplaçants au temps mort**.
   (1) `format.js:floorAdInk(floor)` : encre de la pub (claire / sombre,

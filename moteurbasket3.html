@@ -9051,8 +9051,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-17">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-17">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-18">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-18">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -44950,7 +44950,7 @@ async function spectateMountLiveView(state) {
   try {
     // Mise en scène (bêta liveShows du club du spectateur) : coachs et shows,
     // sans l'entrée des joueurs (composition inconnue avant le match).
-    const spectStaging = teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d") ? hmLiveStagingFor(homeObj, awayObj, { intro: false }) : null;
+    const spectStaging = teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d") ? hmLiveStagingFor(homeObj, awayObj, { intro: false, round: live.privateLeague ? live.privateLeague.round : live.round }) : null;
     view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, staging: spectStaging, court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")) });
   } catch (e) { return false; }
   state.rich = { adapter, view, applied: 0 };
@@ -45162,7 +45162,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-17";
+const HM_LIVE_ASSET_VERSION = "20261008-18";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45297,7 +45297,7 @@ function hmLiveReset(liveMatch) {
         // Mise en scène (bêta liveShows) : seulement avec le terrain animé.
         const court2dOn = !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d"));
         const homeObj = liveMatch.isHome ? teamA : teamB, awayObj = liveMatch.isHome ? teamB : teamA;
-        state.staging = court2dOn ? hmLiveStagingFor(homeObj, awayObj) : null;
+        state.staging = court2dOn ? hmLiveStagingFor(homeObj, awayObj, { round: liveMatch.round }) : null;
         state.view = mod.createLiveView(root, {
           staging: state.staging,
           quarterLength: QUARTER_SECONDS,
@@ -45694,7 +45694,7 @@ function hmLiveStagingFor(homeObj, awayObj, opts = {}) {
       base = { coaches: [coachAvatarFor(homeObj), coachAvatarFor(awayObj)], homeColors, homeShort, mascot };
     }
     return { coach: fl.coach !== false, playerIntro: fl.playerIntro !== false && opts.intro !== false, shows: fl.shows !== false,
-      ...base, onShow: info => hmLiveShowAd(info, fl), onTshirtLanded: null /* hook : objet à gagner (plus tard) */ };
+      ...base, round: Number.isFinite(+opts.round) && opts.round !== null ? +opts.round : null, onShow: info => hmLiveShowAd(info, fl), onTshirtLanded: null /* hook : objet à gagner (plus tard) */ };
   };
 }
 // Pub des non-premium pendant un show (décision 2026-10-08 : interstitiel H5

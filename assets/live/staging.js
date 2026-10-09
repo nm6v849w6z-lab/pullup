@@ -13,7 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-17";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-18";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261008-18";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -27,6 +28,16 @@ export function showFor(stoppage, quarter) {
   if (stoppage.kind === "timeout") return SHOW_FOR.timeout || null;
   if (stoppage.kind === "quarter-break") return SHOW_FOR["quarter-break:" + (stoppage.quarter || quarter)] || null;
   return SHOW_FOR[stoppage.kind] || null;
+}
+
+// Mascotte de fin de Q1 (2026-10-09) : dunk au trampoline (A) et tour
+// d'honneur avec check des fans (B) en alternance, un match sur deux —
+// parité de la journée (cfg.round), à défaut du jour du coup d'envoi.
+// Même variante pour tous les spectateurs d'un même match.
+export function mascotVariant(cfg, state) {
+  const r = cfg && cfg.round != null && Number.isFinite(+cfg.round) ? Math.floor(+cfg.round) : null;
+  const k = r != null ? r : (state && state.kickoffAt ? Math.floor(state.kickoffAt / 86400000) : 0);
+  return Math.abs(k) % 2 === 0 ? "A" : "B";
 }
 
 export const INTRO_MS = 30000;      // entrée des joueurs (avant-match et reprise)
@@ -173,10 +184,62 @@ export function createStaging(api, getCfg) {
   function hideIntroCard() { if (introCard) { introCard.g.remove(); introCard = null; } }
 
   // ---------- shows ----------
+  // Shows dessinés (showfx.js, visuels de la maquette « Shows Live 2D ») :
+  // un canvas posé sur le terrain, dans le repère de la maquette. Sans
+  // canvas 2D, rendu SVG d'origine ci-dessous.
+  const FX_OF = { pompom: "pom", mascot: "masc", tshirt: "tee" };
+  function makeFxShow(name, st, colors) {
+    const fx = FX_OF[name];
+    if (!fx || typeof createShowFx !== "function" || typeof api.overlay !== "function") return null;
+    const ov = api.overlay();
+    if (!ov) return null;
+    const ctx = ov.canvas.getContext("2d");
+    if (!ctx) { api.dropOverlay(); return null; }
+    const variant = fx === "pom" ? "A" : fx === "tee" ? "C" : mascotVariant(cfg, S);
+    const mcfg = cfg.mascot || null;
+    const fxr = createShowFx(showColors(colors[0], colors[1], cfg.homeShort, mcfg && mcfg.number != null ? mcfg.number : 8));
+    const cycle = (SHOW_CYCLE[fx === "pom" ? "pom" : fx + variant] || 14) * 1000;
+    const STILL = { pom: 6, mascA: 2.5, mascB: 3, teeC: 3.3 };      // image fixe (mouvement réduit)
+    let ci = null;
+    if (fx === "pom") { ci = Math.floor(rng(Math.floor(st.startAt / 1000))() * 4); if (ci === lastChoreo) ci = (ci + 1) % 4; lastChoreo = ci; }
+    ov.canvas.classList.add("stg-show", "stg-show-" + name);
+    ov.canvas.setAttribute("data-variant", variant);
+    const LEAD = 400;                                                // ms après le début de l'arrêt
+    let frame = null;
+    return { name, variant, key: st.startAt, choreo: ci, renderer: "canvas", render(now) {
+      const o = api.overlay();
+      if (!o) return;
+      const cv = o.canvas;
+      const dpr = Math.min(2, (typeof window !== "undefined" && window.devicePixelRatio) || 1);
+      const cw = Math.round(o.w * dpr), ch = Math.round(o.h * dpr);
+      if (!cw || !ch) return;
+      if (cv.width !== cw) cv.width = cw;
+      if (cv.height !== ch) cv.height = ch;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
+      const el0 = now - st.startAt - LEAD;
+      if (el0 < 0) return;
+      // Fondu d'entrée et de sortie (le show finit avec l'arrêt, jamais après).
+      cv.style.opacity = String(Math.max(0, Math.min(1, el0 / 400, (st.endsAt - now) / 900)).toFixed(3));
+      // Écran ← arène (viewBox, « meet ») ← maquette (parquet ↔ terrain 940 × 500).
+      const [vx, vy, vw, vh] = o.vb;
+      const sc = Math.min(cw / vw, ch / vh), ox = (cw - vw * sc) / 2 - vx * sc, oy = (ch - vh * sc) / 2 - vy * sc;
+      const [dx, dy, dw, dh] = DESIGN.court, kx = (940 / dw) * sc, ky = (500 / dh) * sc;
+      ctx.setTransform(kx, 0, 0, ky, ox + sc * api.OX - dx * kx, oy + sc * api.OY - dy * ky);
+      // Le tableau d'affichage reste au-dessus des personnages.
+      ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.clip("evenodd");
+      const key = fx === "pom" ? "pom" : fx + variant;
+      const t = api.reduced ? STILL[key] : (el0 % cycle) / 1000;
+      try { frame = fxr.draw(ctx, { show: fx, variant, t, q: kx, order: ci || 0 }); } catch (e) { frame = null; }
+      ctx.restore();
+    }, frame: () => frame, destroy() { api.dropOverlay(); } };
+  }
+
   function makeShow(name, st) {
     const seed = Math.floor(st.startAt / 1000);
     const r = rng(seed);
     const colors = cfg.homeColors || [api.colors()[0], "#ffd34d"];
+    const fxShow = makeFxShow(name, st, colors);
+    if (fxShow) return fxShow;
     const g = el("g", { class: "stg-show stg-show-" + name }, api.frontLayer);
     const t0 = st.startAt + EDGE_MS, t1 = st.endsAt - EDGE_MS;
     const enterK = now => clamp01((now - t0 + EDGE_MS) / EDGE_MS);     // 0 → 1 pendant l'entrée
@@ -420,6 +483,7 @@ export function createStaging(api, getCfg) {
     tick,
     debug() {
       return { phase: phaseKey, show: show ? show.name : null, choreo: show && show.choreo != null ? show.choreo : null, held: held.size,
+        variant: show && show.variant ? show.variant : null, renderer: show ? show.renderer || "svg" : null, frame: show && show.frame ? show.frame() : null,
         coaches: coaches.map(c => (c ? { x: c.x, y: c.y, anim: c.cls || "" } : null)), shownFor: [...shownFor] };
     },
     destroy() { destroyed = true; musicOff(); releaseAll(false); endShow(); hideIntroCard(); coaches.forEach(c => c && c.g.remove()); },

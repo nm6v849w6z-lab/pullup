@@ -19,7 +19,7 @@ const strip = src => src.replace(/^import .*$/mg, "").replace(/^export\s+(functi
 window.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/format.js"), "utf8")));
 window.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/court2d.js"), "utf8")));
 // staging.js + characters.js dans une même portée (les import sont retirés).
-window.eval("window.__staging = (function(){" + strip(fs.readFileSync(path.join(__dirname, "assets/live/characters.js"), "utf8")) + "; const mascotSvg = mascot;" +
+window.eval("window.__staging = (function(){" + strip(fs.readFileSync(path.join(__dirname, "assets/live/characters.js"), "utf8")) + "; const mascotSvg = mascot;" + strip(fs.readFileSync(path.join(__dirname, "assets/live/showfx.js"), "utf8")) + ";" +
   strip(fs.readFileSync(path.join(__dirname, "assets/live/staging.js"), "utf8")) + "; return { createStaging, showFor, SHOW_FOR, CHOREOS, INTRO_MS }; })();");
 
 const avatar = id => `<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg" data-avatar="${id}"><circle cx="60" cy="60" r="40"/></svg>`;
