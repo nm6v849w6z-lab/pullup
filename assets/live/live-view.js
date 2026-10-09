@@ -16,7 +16,7 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de, floorAdInk } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261008-22";
+import { createCourt2D } from "./court2d.js?v=20261009-23";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -42,6 +42,9 @@ const TEMPLATE = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
   </button>
 </div>
+<!-- Rediffusion en plein écran (2026-10-09) : le curseur de temps de la
+     page (makeReplaySeekBar, hors de la vue) est accueilli ici. -->
+<div class="fs-seek" data-ref="fsseek"></div>
 
 <!-- Mini-tableau d'affichage collé sous le topbar dès que le grand bandeau
      sort de l'écran (retour utilisateur, 2026-09-26 : « même si on scrolle,
@@ -256,7 +259,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261008-22").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261009-23").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -315,7 +318,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261008-22").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261009-23").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
@@ -370,7 +373,38 @@ export function createLiveView(root, opts = {}) {
       else if (!on && document.fullscreenElement === root && document.exitFullscreen) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
     } catch (e) { /* plein écran CSS seul */ }
     if (on) { feed.scrollTop = 0; pending = 0; $("newpill").classList.remove("show"); }
+    if (on) adoptSeek(); else releaseSeek();
     if (S) { renderBoard(); }
+  }
+  // Rediffusion en plein écran (BUG 2026-10-09 : « impossible d'avancer le
+  // temps en plein écran ») : le curseur (.replay-seek) est posé par la page
+  // À CÔTÉ de la vue, or le plein écran ne montre que la vue. Il est donc
+  // déplacé dans la bande .fs-seek le temps du plein écran (même élément,
+  // mêmes boutons −30 s / +30 s et glissière), puis remis à sa place. Un
+  // curseur recréé par la page pendant le plein écran (saut dans le temps)
+  // est repris au rendu suivant. Clavier : ← / → = −30 s / +30 s.
+  let seekHome = null;
+  function replayBar() {
+    for (let e = root.parentElement; e && e !== root.ownerDocument.body; e = e.parentElement) {
+      const b = [...e.querySelectorAll(".replay-seek")].find(x => !root.contains(x));
+      if (b) return b;
+    }
+    return null;
+  }
+  function adoptSeek() {
+    const slot = $("fsseek");
+    if (!full || !slot || slot.querySelector(".replay-seek")) return;
+    const bar = replayBar();
+    if (!bar) return;
+    if (!seekHome || !seekHome.isConnected) seekHome = root.ownerDocument.createComment("replay-seek");
+    bar.parentNode.insertBefore(seekHome, bar);
+    slot.appendChild(bar);
+  }
+  function releaseSeek() {
+    const bar = $("fsseek") && $("fsseek").querySelector(".replay-seek");
+    if (bar && seekHome && seekHome.parentNode) seekHome.parentNode.insertBefore(bar, seekHome);
+    if (seekHome && seekHome.parentNode) seekHome.remove();
+    seekHome = null;
   }
   $("fsBtn").addEventListener("click", () => setFull(!full));
   $("commBtn").addEventListener("click", () => { if (!comm) return; comm.setOn(!comm.on); syncCommBtn(); });
@@ -378,7 +412,13 @@ export function createLiveView(root, opts = {}) {
   if (typeof document !== "undefined") {
     // Échap / geste système : le navigateur quitte le vrai plein écran.
     document.addEventListener("fullscreenchange", () => { if (full && document.fullscreenElement !== root) setFull(false); });
-    document.addEventListener("keydown", e => { if (full && e.key === "Escape" && !document.fullscreenElement) setFull(false); });
+    document.addEventListener("keydown", e => {
+      if (full && e.key === "Escape" && !document.fullscreenElement) setFull(false);
+      if (full && (e.key === "ArrowLeft" || e.key === "ArrowRight") && !(e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))) {
+        const b = root.querySelector(`.fs-seek [data-seek="${e.key === "ArrowLeft" ? "-30000" : "30000"}"]`);
+        if (b) { e.preventDefault(); b.click(); }
+      }
+    });
   }
 
   // Temps mort en cours (state.timeout, calé sur la pause du moteur) :
@@ -397,6 +437,7 @@ export function createLiveView(root, opts = {}) {
   // ---------- API ----------
   let lightKey = null, lightTicks = 0, lastClock = null, lastHalf = null, lastTmo = null;
   function update(state) {
+    if (full) adoptSeek();
     S = state;
     const first = seenEvents === null;
     if (ui.box === null) {

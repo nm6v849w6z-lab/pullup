@@ -54,8 +54,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   rétrécit plus sous les messages (`.cp-bench{flex:1 0 auto}`), messages
   sur une ligne avec texte au survol — test nt_tactics_layout_test.
   ⚠️ moteurbasket3.html ≈ 3 998 400 octets : plus de place, le code des
-  lots suivants va dans des fichiers assets/ séparés. RESTE : P1 plein
-  écran de la rediffusion, P2, P3. Préexistant (échoue aussi sans ces
+  lots suivants va dans des fichiers assets/ séparés. P1 plein écran de
+  la rediffusion : le curseur (.replay-seek, posé hors de la vue par
+  renderLiveReplaySeekBar / spectateSeekHolder) est déplacé dans
+  `.fs-seek` de live-view.js le temps du plein écran (`adoptSeek` /
+  `releaseSeek`, repris au rendu suivant s'il est recréé), ← / → = −30 s /
+  +30 s — test live_replay_fullscreen_test. RESTE : P2, P3. Préexistant (échoue aussi sans ces
   changements) : cup_ordres_planning_test.
 
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.

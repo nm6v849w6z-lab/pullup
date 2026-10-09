@@ -557,7 +557,11 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
    écran — sinon la zone centrale n'a plus de hauteur et la carte des tirs
    (100 % de haut) s'étire hors de l'écran. */
 .hm-live.is-full{position:fixed!important;inset:0!important;z-index:2147483000;max-width:none!important;width:100%!important;height:100%!important;margin:0!important;background:var(--bg);display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;overflow:hidden!important;padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
-.hm-live.is-full > :not(.fsbar):not(.grid):not(.toast){display:none!important}
+.hm-live.is-full > :not(.fsbar):not(.grid):not(.toast):not(.fs-seek){display:none!important}
+.hm-live .fs-seek{display:none}
+.hm-live.is-full:has(.fs-seek:not(:empty)){grid-template-rows:auto auto minmax(0,1fr)!important}
+.hm-live.is-full .fs-seek:not(:empty){display:block;padding:6px 16px;background:#121B2E;border-bottom:1px solid #22304A}
+.hm-live.is-full .fs-seek .replay-seek{margin:0}
 .hm-live.is-full .fsbar{display:flex;align-items:center;gap:14px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top,0px));background:#121B2E;border-bottom:1px solid #22304A;min-width:0}
 .hm-live .fs-team{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:44px}
 .hm-live.is-full .fs-score{flex:none}
