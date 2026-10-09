@@ -1762,6 +1762,8 @@ window.HM_I18N_ES = {
   "{player} sort, {replacement} entre en jeu ({team}).": "Sale {player}, entra {replacement} ({team}).",
   "{replacement} remplace {player} ({team}).": "{replacement} sustituye a {player} ({team}).",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} {made}/{n} en tiros libres.",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter} anota el tiro libre ({i}/{n}).",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter} falla el tiro libre ({i}/{n}).",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "{shooter} ajusta su tiro de media distancia ({quality}) para {team}.",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "{shooter} enciende la mecha desde el triple ({quality}) para {team}.",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "{shooter} anota con contacto cerca del aro ({quality}) para {team}.",

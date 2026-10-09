@@ -351,29 +351,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   chaque possession ; `isDeadBall` n'est plus qu'un alias). Fenêtre = la
   possession SE TERMINE sur faute / ballon perdu hors interception / temps
   mort / blessure / exclusion, + pause entre deux périodes (quarterStart).
-  Lancers francs : la FAUTE ouvre la fenêtre, changements insérés AVANT le
-  premier lancer (score de la faute, énergie la plus récente), tireurs
-  protégés (`_subLocked`) ; puis, si le DERNIER lancer est réussi
+  Lancers francs : UN ÉVÉNEMENT PAR LANCER depuis le 2026-10-09
+  (`freeThrow` : made 0/1, attempts 1, attempt/of, lastMade ; phrases
+  freeThrowMade / freeThrowMissed traduites dans les 9 langues ; les
+  feuilles additionnent made/attempts, les anciens directs enregistrés
+  — un événement par série — restent lisibles). La FAUTE ouvre la fenêtre,
+  changements insérés ENTRE deux lancers (avant le dernier de la série ;
+  avant le lancer s'il est seul), score du moment, énergie la plus récente,
+  tireurs protégés (`_subLocked`) ; puis, si le DERNIER lancer est réussi
   (`lastMade` sur l'événement freeThrow) ou si ce sont des lancers de faute
   technique / antisportive, seconde fenêtre APRÈS le lancer, avant la
   remise en jeu (le tireur peut sortir). Dernier lancer manqué = rebond,
   ballon vivant : rien. JAMAIS après un panier en jeu, un tir manqué, un
-  rebond, une interception ni pendant la remise en jeu. Le moteur ne
-  journalise qu'UN événement par série de lancers : pas de changement
-  « entre deux lancers » (permis par la règle, mais il faudrait découper
-  l'événement freeThrow — adaptateur, feuille, terrain).
+  rebond, une interception ni pendant la remise en jeu. Terrain 2D : avant
+  le dernier lancer d'une série (`attempt < of`), le tireur reste sur la
+  ligne et récupère le ballon, joueurs alignés (ni rebond ni remise en jeu).
   Demande vs exécution : la demande (fatigue, fautes, minutes cibles,
   blessure, exclusion) est une condition réévaluée par substituteIfNeeded ;
   elle n'est EXÉCUTÉE qu'à une fenêtre, sinon elle attend.
   Terrain 2D (court2d.js `inbound` / `heldInbound`) : une remise en jeu
   attend les changements en file ou annoncés (nextAction) — changement
   PUIS remise en jeu ; filet de sécurité 6 s ; debug() `inbounds` /
-  `inboundHeld`. Test : live_court2d_sub_inbound_test.js.
+  `inboundHeld`. Test : live_court2d_sub_inbound_test.js (dont 2 lancers
+  avec changement entre les deux).
   Moteur miroir de moteurbasket3.html (simulation hors direct) : fenêtre à
   la faute avant les lancers seulement (tireur protégé par nom, ses
   événements n'ont pas d'id) ; pas de fenêtre après le dernier lancer
   (fichier plein, ~146 octets libres). ~35 changements / match. Test :
-  engine_dead_ball_subs_test.js (scénarios 1-5 + 4b + 30 matchs). Pas de
+  engine_dead_ball_subs_test.js (scénarios 1-5 + 4b/4c + 30 matchs). Pas de
   changement manuel en direct (ordres fixés avant le match). Règle FIBA
   « panier encaissé dans les 2 dernières minutes » NON appliquée (consigne :
   jamais de changement sur un panier en jeu).

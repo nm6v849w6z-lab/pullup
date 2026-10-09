@@ -1762,6 +1762,8 @@ window.HM_I18N_ZH = {
   "{player} sort, {replacement} entre en jeu ({team}).": "{player} 下场，{replacement} 替补登场（{team}）。",
   "{replacement} remplace {player} ({team}).": "{replacement} 换下 {player}（{team}）。",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} 罚球 {made}/{n}。",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter} 罚球命中（{i}/{n}）。",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter} 罚球不中（{i}/{n}）。",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "{shooter} 中距离出手命中（{quality}），为 {team} 得分。",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "{shooter} 三分线外点燃战火（{quality}），为 {team} 得分。",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "{shooter} 篮下顶着身体接触完成得分（{quality}），为 {team} 得分。",

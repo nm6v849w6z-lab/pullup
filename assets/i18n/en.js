@@ -2066,6 +2066,8 @@ window.HM_I18N_EN = {
   "{player} sort, {replacement} entre en jeu ({team}).": "{player} goes out, {replacement} comes into the game ({team}).",
   "{replacement} remplace {player} ({team}).": "{replacement} replaces {player} ({team}).",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} {made}/{n} at the free throw line.",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter} makes the free throw ({i}/{n}).",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter} misses the free throw ({i}/{n}).",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "{shooter} adjusts a mid-range shot ({quality}) for {team}.",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "{shooter} lights it up from 3 ({quality}) for {team}.",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "{shooter} finishes through contact near the basket ({quality}) for {team}.",

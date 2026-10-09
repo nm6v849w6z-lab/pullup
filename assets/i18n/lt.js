@@ -1762,6 +1762,8 @@ window.HM_I18N_LT = {
   "{player} sort, {replacement} entre en jeu ({team}).": "{player} išeina, {replacement} įeina į aikštelę ({team}).",
   "{replacement} remplace {player} ({team}).": "{replacement} pakeičia {player} ({team}).",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} {made}/{n} baudų metimų.",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter} pataiko baudos metimą ({i}/{n}).",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter} nepataiko baudos metimo ({i}/{n}).",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "{shooter} pataiko iš vidutinio nuotolio ({quality}), {team}.",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "{shooter} įžiebia ugnį tritaškiu ({quality}), {team}.",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "{shooter} užbaigia per kontaktą prie krepšio ({quality}), {team}.",

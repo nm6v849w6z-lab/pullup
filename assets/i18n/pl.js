@@ -1762,6 +1762,8 @@ window.HM_I18N_PL = {
   "{player} sort, {replacement} entre en jeu ({team}).": "{player} schodzi, {replacement} wchodzi na boisko ({team}).",
   "{replacement} remplace {player} ({team}).": "{replacement} zmienia {player} ({team}).",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} {made}/{n} z linii rzutów wolnych.",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter} trafia rzut wolny ({i}/{n}).",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter} pudłuje rzut wolny ({i}/{n}).",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "{shooter} trafia z półdystansu ({quality}) dla {team}.",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "{shooter} odpala z dystansu za 3 ({quality}) dla {team}.",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "{shooter} kończy z kontaktem pod koszem ({quality}) dla {team}.",

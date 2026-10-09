@@ -752,6 +752,11 @@ const PHRASES = {
     "Tir manqué de {shooter}. Rebond défensif de {rebounder}.",
     "{shooter} manque, {rebounder} capte le rebond défensif.",
   ],
+  // Un événement PAR lancer (2026-10-09, changements possibles entre deux
+  // lancers) : freeThrowMade / freeThrowMissed. `freeThrows` (série résumée)
+  // reste pour les anciens directs enregistrés et le moteur miroir.
+  freeThrowMade: ["{shooter} réussit son lancer franc ({i}/{n})."],
+  freeThrowMissed: ["{shooter} manque son lancer franc ({i}/{n})."],
   freeThrows: [
     "{shooter} {made}/{n} aux lancers francs.",
   ],
@@ -19778,9 +19783,10 @@ class MatchEngine {
   //    exclusion, une blessure, un ballon perdu hors interception (sortie,
   //    marcher, 24 s…), un temps mort ; les pauses entre périodes sont
   //    gérées par simulate (quarterStart) ;
-  //  - lancers francs : la FAUTE qui les a provoqués ouvre la fenêtre, AVANT
-  //    le premier lancer (`at` = index du premier lancer), les tireurs
-  //    restant sur le terrain pour les tirer (`locked`). Dernier lancer
+  //  - lancers francs : la FAUTE qui les a provoqués ouvre la fenêtre, qui
+  //    dure jusqu'au dernier lancer ; les changements entrent ENTRE deux
+  //    lancers (`at` = index du dernier lancer de la série ; avant le lancer
+  //    s'il est seul), les tireurs restant sur le terrain (`locked`). Dernier lancer
   //    RÉUSSI (ou lancers d'une faute technique / antisportive) : le ballon
   //    est mort, seconde fenêtre APRÈS le lancer et AVANT la remise en jeu
   //    (`after`, retour utilisateur 2026-10-09). Dernier lancer manqué :
@@ -19802,7 +19808,10 @@ class MatchEngine {
       const locked = new Set();
       for (let k = j; k <= i; k++) if (events[k].shooterId != null) locked.add(events[k].shooterId);
       const after = e.lastMade === true || stop.type === "technicalFoul" || stop.type === "unsportsmanlikeFoul";
-      return { at: j, locked, after };
+      // Série de 2-3 lancers (un événement par lancer) : les changements
+      // entrent ENTRE les lancers, avant le dernier (usage courant) ; un
+      // lancer seul (and-one, technique) : avant lui.
+      return { at: i > j ? i : j, locked, after };
     }
     if (DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal")) return { at: events.length, locked: null };
     return null;
@@ -20076,24 +20085,26 @@ class MatchEngine {
     // (au lieu de 0.50 + 0.42 × attr) — un lanceur à 30 passe de 63 % à
     // 69 %, un lanceur à 100 reste à 93 %.
     const ftPct = clamp(0.58 + (shooter.eff("freeThrow") / 100) * 0.35 + (shooter.eff("focus") - 50) * 0.0006, 0.55, 0.93);
-    let made = 0, lastMade = false;
+    // Un événement PAR lancer (retour utilisateur 2026-10-09 : « on peut
+    // avoir un changement entre deux lancers francs ») : `made` 0/1,
+    // `attempts` 1 (les feuilles de match additionnent toujours made /
+    // attempts), `attempt`/`of` = rang du lancer dans la série, `lastMade`
+    // = ce lancer est réussi (lu sur le DERNIER de la série par
+    // substitutionWindow). Toujours journalisé, même manqué (audit moteur
+    // 2026-09-29 : les séries entièrement manquées n'apparaissaient pas).
+    let made = 0;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
-      lastMade = false;
-      if (rand01() < ftPct) {
-        made++; lastMade = true; shooter.stats.ftm++; shooter.stats.pts++;
+      const ok = rand01() < ftPct;
+      if (ok) {
+        made++; shooter.stats.ftm++; shooter.stats.pts++;
         // Origine des points (voir emptyStats) : lancers obtenus sur une
         // seconde chance ou une contre-attaque.
         if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
+        this.applyPlusMinusForPoints(team, 1);
       }
+      this.log(events, quarter, clock, say(ok ? PHRASES.freeThrowMade : PHRASES.freeThrowMissed, { shooter: shooter.name, i: i + 1, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made: ok ? 1 : 0, attempts: 1, attempt: i + 1, of: n, lastMade: ok, possession: this.teamKey(team) });
     }
-    if (made > 0) this.applyPlusMinusForPoints(team, made);
-    // Toujours journalisé, même 0/2 (audit moteur 2026-09-29 : ~5 % des
-    // lancers francs, ceux des séries entièrement manquées, n'apparaissaient
-    // ni dans le fil du direct ni dans la feuille de match en direct, qui se
-    // reconstruit événement par événement — la feuille finale, elle, les
-    // comptait, d'où un écart de tentatives entre les deux).
-    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made, attempts: n, lastMade, possession: this.teamKey(team) });
     return made;
   }
 

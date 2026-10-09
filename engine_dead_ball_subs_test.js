@@ -131,6 +131,25 @@ reset();
   console.log("✅ 4b. Dernier lancer franc réussi : changement après le lancer, avant la remise en jeu.");
 }
 
+// 4c. Série de deux lancers (un événement par lancer) : le changement entre
+// ENTRE les deux lancers ; le tireur reste pour le second.
+reset();
+{
+  const p = wantsOut();
+  const shooter = wantsOut(new Set(), eng.teamB);
+  const ft1 = { type: "freeThrow", team: other, shooterId: shooter.id, made: 0, attempts: 1, attempt: 1, of: 2, lastMade: false, score: { A: 8, B: 9 } };
+  const ft2 = { type: "freeThrow", team: other, shooterId: shooter.id, made: 1, attempts: 1, attempt: 2, of: 2, lastMade: true, score: { A: 8, B: 10 } };
+  const evs = [{ type: "shot", team: other, made: false, foulType: "shooting", score: { A: 8, B: 9 } }, ft1, ft2];
+  const win = eng.runSubstitutionWindow(evs, 0, q, clock, false);
+  assert.ok(win, "fenêtre de la faute");
+  const s = subsIn(evs).find(e => e.playerId === p.id);
+  assert.ok(s && evs.indexOf(s) > evs.indexOf(ft1) && evs.indexOf(s) < evs.indexOf(ft2), "changement entre le 1er et le 2e lancer");
+  assert.deepStrictEqual(s.score, ft1.score, "score après le 1er lancer");
+  const out = subsIn(evs).find(e => e.playerId === shooter.id);
+  assert.ok(out && evs.indexOf(out) > evs.indexOf(ft2), "le tireur tire ses deux lancers, puis peut sortir (dernier réussi)");
+  console.log("✅ 4c. Deux lancers : changement entre les deux lancers, tireur protégé jusqu'au dernier.");
+}
+
 // 5. Temps mort (même après un panier encaissé) : changements autorisés.
 reset();
 {
@@ -145,13 +164,17 @@ reset();
 // ---------- Matchs simulés : aucun changement hors fenêtre ----------
 const STOPS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "quarterStart"]);
 const isStop = e => e && (STOPS.has(e.type) || e.foulType || (e.type === "turnover" && e.tovType !== "steal"));
-let subs = 0, atQuarter = 0, atTimeout = 0, beforeFt = 0, afterFt = 0;
+let subs = 0, atQuarter = 0, atTimeout = 0, beforeFt = 0, afterFt = 0, between = 0, ftEvents = 0;
 const games = 30;
 const bad = [];
 for (let g = 0; g < games; g++) {
   const r = new E.MatchEngine(a, b).simulate();
   const ev = r.events || r.log || [];
   for (let i = 0; i < ev.length; i++) {
+    if (ev[i].type === "freeThrow") {
+      ftEvents++;
+      if (ev[i].attempts !== 1 || !(ev[i].made === 0 || ev[i].made === 1) || !(ev[i].attempt >= 1 && ev[i].attempt <= ev[i].of)) bad.push({ before: "lancer mal formé", text: ev[i].text });
+    }
     if (ev[i].type !== "substitution" && ev[i].type !== "shortHanded") continue;
     if (ev[i].type === "substitution") subs++;
     let j = i - 1;
@@ -166,8 +189,10 @@ for (let g = 0; g < games; g++) {
     }
     // Jamais après un panier en jeu, un tir manqué, un rebond, une
     // interception ni un dernier lancer franc manqué.
-    if (prev && prev.type === "freeThrow" && ev[i].type === "substitution") afterFt++;
-    if (!(isStop(prev) || (prev && prev.type === "freeThrow" && prev.lastMade)) || (prev.type === "shot" && !prev.foulType)) bad.push({ before: prev && prev.type, tov: prev && prev.tovType, made: prev && prev.made, text: ev[i].text });
+    const betweenFt = prev && prev.type === "freeThrow" && ev[k] && ev[k].type === "freeThrow" && ev[k].shooterId === prev.shooterId && ev[k].attempt === prev.attempt + 1;
+    if (ev[i].type === "substitution" && betweenFt) between++;
+    else if (prev && prev.type === "freeThrow" && ev[i].type === "substitution") afterFt++;
+    if (!(isStop(prev) || betweenFt || (prev && prev.type === "freeThrow" && prev.lastMade)) || (prev.type === "shot" && !prev.foulType)) bad.push({ before: prev && prev.type, tov: prev && prev.tovType, made: prev && prev.made, text: ev[i].text });
   }
 }
 assert.strictEqual(bad.length, 0, `changements hors fenêtre : ${JSON.stringify(bad.slice(0, 3))}`);
@@ -176,6 +201,7 @@ assert.ok(atQuarter > 0, "5b. des changements entre les périodes");
 assert.ok(atTimeout > 0, "5c. des changements pendant les temps morts");
 assert.ok(beforeFt > 0, "des changements à la faute, avant les lancers francs");
 assert.ok(afterFt > 0, "des changements après un dernier lancer réussi");
-console.log(`✅ 5. Fenêtres conservées : ${atQuarter} entre deux périodes, ${atTimeout} en temps mort, ${beforeFt} à la faute avant les lancers, ${afterFt} après un dernier lancer réussi.`);
+assert.ok(between > 0, "des changements entre deux lancers francs");
+console.log(`✅ 5. Fenêtres conservées : ${atQuarter} entre deux périodes, ${atTimeout} en temps mort, ${beforeFt} à la faute (avant ou entre les lancers, dont ${between} entre deux lancers), ${afterFt} après un dernier lancer réussi ; ${ftEvents} lancers, un événement chacun.`);
 assert.ok(subs / games >= 20, `la rotation doit rester vivante (≥ 20 changements par match), obtenu ${(subs / games).toFixed(1)}`);
 console.log(`✅ Rotation conservée : ${(subs / games).toFixed(1)} changements par match en moyenne.`);

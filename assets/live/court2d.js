@@ -1405,11 +1405,23 @@ export function createCourt2D(host, opts = {}) {
         // général ; l'équipe qui tire si la possession continue (faute
         // technique / antisportive au milieu d'une action).
         const nextT = after !== null ? after : 1 - t;
+        // Un événement par lancer (moteur 2026-10-09) : avant le dernier de la
+        // série, l'arbitre rend le ballon au tireur, tout le monde reste
+        // aligné (un changement peut se glisser entre deux lancers).
+        const more = e.of > 1 && e.attempt < e.of;
         const finish = () => {
           rimFx(t, made); if (made) { flash(shooter, "+" + e.made, "good"); netDrop(rim); }
           crowdReact(made ? "score" : "miss", t);
           moment(made ? "lancer_reussi" : "lancer_rate", { team: t });
-          scene(1500);
+          scene(more ? 2400 : 1500);
+          if (more) {
+            const line = { x: rim.x + dir * 13.75, y: 25 };
+            later(450, () => {
+              if (shooter) { busy(shooter, 2200); moveTo(shooter, line.x, line.y, 1.4); flyTo(shooter, 420, 2, () => giveBall(shooter)); }
+              else { ball.flight = null; ball.x = line.x; ball.y = line.y; }
+            });
+            return;
+          }
           later(500, () => {
             for (const sp of sprites.values()) sp.busy = false;
             if (nextT === t) { startPossession(t); const h = handlerOf(t); if (h) flyTo(h, 420, 2, () => { giveBall(h); formation(); }); return; }

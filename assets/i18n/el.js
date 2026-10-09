@@ -1762,6 +1762,8 @@ window.HM_I18N_EL = {
   "{player} sort, {replacement} entre en jeu ({team}).": "Βγαίνει ο {player}, μπαίνει ο {replacement} ({team}).",
   "{replacement} remplace {player} ({team}).": "Ο {replacement} αντικαθιστά τον {player} ({team}).",
   "{shooter} {made}/{n} aux lancers francs.": "{shooter} {made}/{n} στις ελεύθερες βολές.",
+  "{shooter} réussit son lancer franc ({i}/{n}).": "{shooter}: εύστοχη βολή ({i}/{n}).",
+  "{shooter} manque son lancer franc ({i}/{n}).": "{shooter}: άστοχη βολή ({i}/{n}).",
   "{shooter} ajuste son tir à mi-distance ({quality}) pour {team}.": "Ο {shooter} ευστοχεί από μέση απόσταση ({quality}) για τη {team}.",
   "{shooter} allume la mèche à 3 points ({quality}) pour {team}.": "Ο {shooter} «καίει» από τα 6,75 ({quality}) για τη {team}.",
   "{shooter} conclut au contact près du panier ({quality}) pour {team}.": "Ο {shooter} τελειώνει με επαφή κοντά στο καλάθι ({quality}) για τη {team}.",
