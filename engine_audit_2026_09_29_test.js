@@ -30,8 +30,9 @@ for (let i = 0; i < N; i++) {
     if (e.type === "freeThrow") { ftEv++; if (e.made === 0) ft0++; }
     if (e.type === "shot" || e.type === "rebound") { const z = e.zone === "inside" ? "paint" : e.zone; zone[z][1]++; if (e.made) zone[z][0]++; }
     // Faute hors tir (texte de commonFoul, sans tir ni and-one au même
-    // instant) immédiatement suivie de 2 lancers francs = bonus.
-    if (e.type === "foul" && ev[k + 1] && ev[k + 1].type === "freeThrow" && ev[k + 1].attempts === 2 && ev[k + 1].clock === e.clock &&
+    // instant) immédiatement suivie de 2 lancers francs = bonus (un
+    // événement par lancer depuis le 2026-10-09 : `of` = taille de la série).
+    if (e.type === "foul" && ev[k + 1] && ev[k + 1].type === "freeThrow" && (ev[k + 1].of || ev[k + 1].attempts) === 2 && ev[k + 1].clock === e.clock &&
         !(ev[k - 1] && ev[k - 1].type === "shot" && ev[k - 1].clock === e.clock)) bonusFt++;
   }
   for (const p of [...r.boxScoreA, ...r.boxScoreB]) { oreb += p.oreb || 0; reb += p.reb; }
