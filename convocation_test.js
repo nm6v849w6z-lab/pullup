@@ -8,7 +8,7 @@ const fs = require("fs");
 const E = require("./engine.js");
 const actions = require("./server/actions.js");
 const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const { POSITIONS, CONVOCATION_MAX } = E;
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); };
 const reset = players => players.forEach(p => { p.injuryUntil = null; p.injuryType = null; p.condition = 100; });

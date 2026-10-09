@@ -55,7 +55,7 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush, patchDateNow, readRawSave } = require("./test_helpers.js");
 const { scheduledTimeForRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // « Ordres » : bouton de la barre du haut (plus d'onglet du menu, 2026-10-04).
 function clickTab(doc, key) { if (key === "ordres") { doc.getElementById("topbarOrdersBtn").click(); return; } [...doc.querySelectorAll(".tab-btn")].find(b => b.dataset.tab === key).click(); }

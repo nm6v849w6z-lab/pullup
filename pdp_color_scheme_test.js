@@ -17,7 +17,7 @@
 // l'Effectif garde bien son ancienne échelle, inchangée.
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // Calcul indépendant du palier attendu, pour ne jamais dépendre de
 // attrColorTier elle-même (sinon le test ne vérifierait rien).

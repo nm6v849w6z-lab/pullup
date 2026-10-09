@@ -13,7 +13,7 @@
 // (ORtg/DRtg/Pace/domicile-extérieur/mi-temps/tendance récente).
 const fs = require("fs");
 const { startTestServer, openGame, flush, writeRawSave, readRawSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 (async () => {
 

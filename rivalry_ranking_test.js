@@ -8,7 +8,7 @@ const World = require("./server/world.js");
 const Adapter = require("./server/showsAdapter.js");
 const ShowData = require("./server/shows/showData.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const qs = (h, a) => ({ home: [h, 0, 0, 0], away: [a, 0, 0, 0] });
 
 const league = store.createMultiManagerCareer(["Lyon Rival", "Paris Rival"], Date.now(), "Lyon Rival").league;

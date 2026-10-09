@@ -134,7 +134,7 @@ function mountAt(show, i) {
     if (/hs-sponsor-(big|small)[^"]*"><img[^>]*><i>/.test(html)) fail("pas de pastille en plus du logo sponsor.");
   });
   if (!fs.existsSync(path.join(__dirname, "assets/brand/logo-hoop-manager-premium.png"))) fail("fichier du logo sponsor manquant.");
-  if (!/sponsorLogo: "assets\/brand\/logo-hoop-manager-premium.png"/.test(fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8"))) fail("le jeu doit fournir le logo sponsor au lecteur.");
+  if (!/sponsorLogo: "assets\/brand\/logo-hoop-manager-premium.png"/.test(require("./test_game_html.js").readGameHtml())) fail("le jeu doit fournir le logo sponsor au lecteur.");
   console.log("✅ Émissions « présentées par » le logo Hoop Manager Premium (avant-match et mi-temps).");
 }
 {

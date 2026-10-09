@@ -401,7 +401,7 @@ function withFixedRandom(fn) {
     const j = src.indexOf("// FIN ENTRAÎNEMENT V2");
     return i >= 0 && j > i ? src.slice(i, j) : null;
   };
-  const e = block(fs.readFileSync("engine.js", "utf8")), h = block(fs.readFileSync("moteurbasket3.html", "utf8"));
+  const e = block(fs.readFileSync("engine.js", "utf8")), h = block(require("./test_game_html.js").readGameHtml());
   assert(e && e === h, "bloc « ENTRAÎNEMENT V2 » identique dans engine.js et moteurbasket3.html");
 }
 

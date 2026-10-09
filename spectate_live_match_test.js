@@ -23,7 +23,7 @@ const { createHandler } = require("./server/index.js");
 const { scheduledTimeForLeagueRound, MATCH_BROADCAST_DURATION_MS } = require("./server/calendar.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const T0 = Date.UTC(2026, 8, 7); // un lundi arbitraire, fixe pour tout le fichier
 
@@ -263,7 +263,7 @@ try {
   // principe que les autres tests "reconstitution indépendante" de ce
   // projet (live_boxscore_minutes_totals_test.js, boxscore_quarter_scores_
   // test.js) — ne fait jamais confiance qu'au code déjà testé lui-même.
-  const savedMulti = JSON.parse(fs.readFileSync(multiSavePath, "utf-8"));
+  const savedMulti = require("./server/store.js").rehydrateLiveBlobsSync(JSON.parse(fs.readFileSync(multiSavePath, "utf-8")), multiSavePath);
   const savedKey = `${targetRound}:${match.home}:${match.away}`;
   const savedEntry = savedMulti.league.liveMatches && savedMulti.league.liveMatches[savedKey];
   if (!savedEntry) throw new Error("❌ (setup) l'entrée league.liveMatches de ce match devrait exister côté fichier de sauvegarde.");

@@ -171,7 +171,7 @@ const T0 = Date.UTC(2026, 8, 21);
 //    d'évaluation pour un joueur qui a déjà joué des matchs.
 // ---------------------------------------------------------------------
 (async function testRosterDisplaysInjuryAndEvaluation() {
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server, savePath, baseUrl } = await startTestServer();
   try {
     const dom1 = await openGame(html, baseUrl);

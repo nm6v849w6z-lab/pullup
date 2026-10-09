@@ -155,9 +155,12 @@ async function runMatch(label, viewerIdx, seed, fraction) {
     // Changement de possession : un porteur de la bonne équipe dans les 4,5 s
     // (si l'action suivante ne vient pas avant).
     const prevAfter = i > 0 ? played[i - 1].possessionAfter : null;
-    if (e.possessionAfter && prevAfter && e.possessionAfter !== prevAfter && !inPauseNear(e.airAt) && e.type !== "quarterEnd" && (!nx || nx.airAt - e.airAt > 5000)) {
+    // Dernier lancer franc réussi : l'arbitre récupère le ballon, les
+    // changements passent avant la remise en jeu (2026-10-09) — jusqu'à 6 s.
+    const recoverMs = e.type === "freeThrow" ? 6000 : 4500;
+    if (e.possessionAfter && prevAfter && e.possessionAfter !== prevAfter && !inPauseNear(e.airAt) && e.type !== "quarterEnd" && (!nx || nx.airAt - e.airAt > recoverMs + 500)) {
       stats.recover[1]++;
-      const h = firstHolderAfter(e.airAt, e.airAt + 4500);
+      const h = firstHolderAfter(e.airAt, e.airAt + recoverMs);
       const team = h ? (h.holder.startsWith("A:") ? idxOf("A") : idxOf("B")) : null;
       if (team === idxOf(e.possessionAfter)) stats.recover[0]++;
       else if (stats.recover[1] - stats.recover[0] <= 3) console.log(`   ✗ ${e.type} ${e.quarter}Q ${e.clock} : ballon pas rendu à ${e.possessionAfter} (${h ? h.holder : "personne"})`);
@@ -172,7 +175,7 @@ async function runMatch(label, viewerIdx, seed, fraction) {
   if (pct(stats.recover) < 97) fail(`${label} : ballon pas rendu à la bonne équipe après un changement de possession`);
   if (pct(stats.shooters) < 97) fail(`${label} : le tireur n'est pas le dernier porteur`);
   // Même possession côté direct de son club (copie inline).
-  const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+  const html = require("./test_game_html.js").readGameHtml();
   const src = ["livePossessionAfterOf", "livePossessionAt"].map(n => { const m = new RegExp("function " + n + "\\([\\s\\S]*?\\n}\\n").exec(html); if (!m) fail("copie inline introuvable : " + n); return m[0]; }).join("\n");
   const inline = new Function(src + "; return livePossessionAt;")();
   for (let i = 0; i < evs.length; i++) if (inline(evs, i) !== possessionAt(evs, i)) fail(`${label} : moteurbasket3.html et adapter.js divergent à l'événement ${i}`);

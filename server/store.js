@@ -118,8 +118,27 @@ function worldStorage(savePath) {
 
 // Registre du monde (voir server/world.js) : JSON brut, sans version de
 // moteur — `null` si absent ou illisible.
+// Registre du monde partagé en mémoire (performance, 2026-10-09) : même
+// objet pour toutes les requêtes et pour le rattrapage du monde, qui peut
+// ainsi relâcher le verrou entre deux ligues sans qu'une requête intercalée
+// perde ses modifications (même règle de validité que les championnats).
+const worldCache = new Map();   // fichier → { world, stamp, at }
+function worldStamp(where) {
+  if (upstashConfigured()) return "redis";
+  try { const st = fs.statSync(where.file); return `${st.mtimeMs}:${st.size}`; } catch (e) { return null; }
+}
 async function loadWorldRaw(savePath = defaultMultiLeaguePath()) {
   const where = worldStorage(savePath);
+  if (leagueCacheOn()) {
+    const hit = worldCache.get(where.file);
+    if (hit && (upstashConfigured() ? Date.now() - hit.at < LEAGUE_CACHE_TTL_MS : hit.stamp && hit.stamp === worldStamp(where))) return hit.world;
+    worldCache.delete(where.file);
+  }
+  const world = await loadWorldRawFromStorage(where);
+  if (world && world !== WORLD_READ_FAILED && leagueCacheOn()) worldCache.set(where.file, { world, stamp: worldStamp(where), at: Date.now() });
+  return world;
+}
+async function loadWorldRawFromStorage(where) {
   try {
     if (upstashConfigured()) {
       const raw = await redisGet(where.redis);
@@ -144,12 +163,14 @@ async function saveWorldRaw(world, savePath = defaultMultiLeaguePath()) {
   const body = JSON.stringify(world);
   if (upstashConfigured()) {
     try { await redisSet(where.redis, body); } catch (e) { console.warn("Écriture Redis du registre du monde échouée :", e.message); }
+    if (leagueCacheOn() && world && typeof world === "object") worldCache.set(where.file, { world, stamp: "redis", at: Date.now() });
     return;
   }
   fs.mkdirSync(path.dirname(where.file), { recursive: true });
   const tmpPath = `${where.file}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmpPath, body, "utf-8");
   fs.renameSync(tmpPath, where.file);
+  if (leagueCacheOn() && world && typeof world === "object") worldCache.set(where.file, { world, stamp: worldStamp(where), at: Date.now() });
 }
 
 // Deux bases possibles (bascule du 2026-10-02 vers Render Key Value) :
@@ -205,7 +226,7 @@ const REDIS_CACHE_MAX_BYTES = 120 * 1024 * 1024;
 const REDIS_CACHE_MAX_ENTRY = 8 * 1024 * 1024;
 const redisCache = new Map(); // key -> { value, at, size }
 let redisCacheBytes = 0;
-function clearRedisCache() { redisCache.clear(); redisCacheBytes = 0; }
+function clearRedisCache() { redisCache.clear(); redisCacheBytes = 0; invalidateLeagueCache(); }
 function redisCacheGet(key) {
   const e = redisCache.get(key);
   if (!e) return undefined;
@@ -279,6 +300,140 @@ async function redisSet(key, value) {
   if (!res.ok) throw new Error(`Upstash SET ${key} a échoué (HTTP ${res.status}).`);
   const data = typeof res.json === "function" ? await Promise.resolve().then(() => res.json()).catch(() => null) : null;
   if (data && data.error) throw new Error(`Upstash SET ${key} : ${data.error}`);
+}
+
+async function redisDel(key) {
+  const old = redisCache.get(key);
+  if (old) { redisCache.delete(key); redisCacheBytes -= old.size; }
+  if (nativeRedisConfigured()) { await nativeRedis().command("DEL", key); return; }
+  const url = `${process.env.UPSTASH_REDIS_REST_URL}/del/${encodeURIComponent(key)}`;
+  const res = await fetchImpl(url, { method: "POST", headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` } });
+  if (!res.ok) throw new Error(`Upstash DEL ${key} a échoué (HTTP ${res.status}).`);
+}
+
+// ---------------------------------------------------------------------
+// DIRECTS RANGÉS À PART (performance, 2026-10-09) : les directs en cours
+// (league.liveMatches) pesaient ~0,9 Mo sur 1,4 Mo de championnat, relus,
+// reconstruits et réécrits à CHAQUE requête alors qu'un direct ne change
+// plus une fois calculé. Leurs parties lourdes (LIVE_HEAVY) sont rangées
+// une fois pour toutes sous un identifiant (`_liveBlob`) et la ligue n'en
+// garde que la référence ; au chargement elles sont remises en place (copie
+// gardée en mémoire : un direct ne change jamais). En mémoire, la ligue est
+// identique à avant (rien à changer ailleurs). Ancienne sauvegarde (directs
+// complets dans la ligue) : lue telle quelle, allégée à la sauvegarde
+// suivante. Pièce manquante (perte de stockage) : ce direct est retiré, la
+// ligue se charge quand même.
+// ---------------------------------------------------------------------
+const LIVE_HEAVY = ["events", "pauses", "boxScoreA", "boxScoreB", "tacticsUsed"];
+const LIVE_BLOB_MEM_MAX = 400;
+const liveBlobMem = new Map();    // id → { events, pauses, … } (immuable)
+const liveBlobSaved = new Set();  // ids déjà écrits par ce processus
+function liveBlobMemSet(id, blob) {
+  liveBlobMem.delete(id); liveBlobMem.set(id, blob);
+  if (liveBlobMem.size > LIVE_BLOB_MEM_MAX) liveBlobMem.delete(liveBlobMem.keys().next().value);
+}
+function liveBlobId(leagueId, key, e) {
+  const raw = `${leagueId || HISTORIC_LEAGUE_ID}~${key}~${e.kickoffAt || 0}~${(e.events || []).length}~${e.seed == null ? "" : e.seed}`;
+  return raw.replace(/[^A-Za-z0-9_.~:-]/g, "_");
+}
+function liveBlobStorage(id, savePath) {
+  const safe = id.replace(/:/g, "_");
+  return { redis: `${redisPrefix()}pullup:liveblob:${id}`, file: path.join(savePath.replace(/\.json$/, "") + ".live", `${safe}.json`) };
+}
+// Version allégée de la sauvegarde + pièces à ranger : { data, blobs: [{ id, blob }] }.
+function serializeForStorage(league) {
+  const data = serializeMultiLeague(league);
+  const blobs = [];
+  const lm = data.league && data.league.liveMatches;
+  if (lm && typeof lm === "object") {
+    const out = {};
+    for (const [key, e] of Object.entries(lm)) {
+      if (!e || !Array.isArray(e.events) || !e.events.length) { out[key] = e; continue; }
+      const id = liveBlobId(league && league.leagueId, key, e);
+      const blob = {}; const light = {};
+      for (const [k, v] of Object.entries(e)) { if (LIVE_HEAVY.includes(k)) blob[k] = v; else light[k] = v; }
+      light._liveBlob = id;
+      out[key] = light;
+      blobs.push({ id, blob });
+    }
+    data.league = { ...data.league, liveMatches: out };
+  }
+  return { data, blobs };
+}
+async function writeLiveBlobs(blobs, savePath) {
+  for (const { id, blob } of blobs) {
+    if (liveBlobSaved.has(id)) continue;
+    const where = liveBlobStorage(id, savePath);
+    const body = JSON.stringify(blob);
+    if (upstashConfigured()) await redisSet(where.redis, body);
+    else {
+      fs.mkdirSync(path.dirname(where.file), { recursive: true });
+      const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+      fs.writeFileSync(tmp, body, "utf-8"); fs.renameSync(tmp, where.file);
+    }
+    liveBlobSaved.add(id);
+    liveBlobMemSet(id, blob);
+  }
+}
+async function readLiveBlob(id, savePath) {
+  const hit = liveBlobMem.get(id);
+  if (hit) return hit;
+  const where = liveBlobStorage(id, savePath);
+  let raw = null;
+  if (upstashConfigured()) raw = await redisGet(where.redis);
+  else if (fs.existsSync(where.file)) raw = fs.readFileSync(where.file, "utf-8");
+  if (raw == null) return null;
+  const blob = JSON.parse(raw);
+  liveBlobMemSet(id, blob);
+  liveBlobSaved.add(id);
+  return blob;
+}
+// Remet les pièces des directs dans la sauvegarde lue (avant reconstruction).
+// Version synchrone, stockage fichier seulement (outils et tests qui lisent
+// la sauvegarde brute, voir test_helpers.js:readMultiFile).
+function rehydrateLiveBlobsSync(data, savePath) {
+  const lm = data && data.league && data.league.liveMatches;
+  if (!lm || typeof lm !== "object") return data;
+  for (const e of Object.values(lm)) {
+    if (!e || !e._liveBlob) continue;
+    const where = liveBlobStorage(e._liveBlob, savePath);
+    if (!fs.existsSync(where.file)) continue;
+    const blob = JSON.parse(fs.readFileSync(where.file, "utf-8"));
+    delete e._liveBlob;
+    Object.assign(e, blob);
+  }
+  return data;
+}
+async function rehydrateLiveBlobs(data, savePath) {
+  const lm = data && data.league && data.league.liveMatches;
+  if (!lm || typeof lm !== "object") return;
+  for (const [key, e] of Object.entries(lm)) {
+    if (!e || !e._liveBlob) continue;
+    let blob = null;
+    try { blob = await readLiveBlob(e._liveBlob, savePath); } catch (err) { blob = null; }
+    if (!blob) { console.warn(`[directs] pièce introuvable (${e._liveBlob}) : direct ${key} retiré.`); delete lm[key]; continue; }
+    const id = e._liveBlob;
+    delete e._liveBlob;
+    Object.assign(e, blob);
+    void id;
+  }
+}
+// Pièces des directs qui ne sont plus référencés par ce championnat
+// (stockage fichier : ménage des fichiers de plus de 6 h ; Redis : clés
+// supprimées à la sauvegarde qui les retire).
+const liveBlobRefs = new Map();   // leagueId → Set(ids) à la dernière sauvegarde
+async function pruneLiveBlobs(leagueId, ids, savePath) {
+  const prev = liveBlobRefs.get(leagueId || HISTORIC_LEAGUE_ID);
+  liveBlobRefs.set(leagueId || HISTORIC_LEAGUE_ID, new Set(ids));
+  if (!prev) return;
+  for (const id of prev) {
+    if (ids.includes(id)) continue;
+    const where = liveBlobStorage(id, savePath);
+    try {
+      if (upstashConfigured()) await redisDel(where.redis);
+      else if (fs.existsSync(where.file) && Date.now() - fs.statSync(where.file).mtimeMs > 6 * 3600e3) fs.unlinkSync(where.file);
+    } catch (e) { /* ménage facultatif */ }
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -379,7 +534,55 @@ function deserializeMultiLeague(data) {
 // utilisée à la place, jamais dérivée de ce chemin.
 // `leagueId` (2026-09-28) : championnat à charger (voir leagueStorage) —
 // omis = la ligue partagée historique ("fr-1"), comme avant.
+// ---------------------------------------------------------------------
+// CHAMPIONNATS EN MÉMOIRE (performance, 2026-10-09) : chaque requête
+// relisait et reconstruisait tout son championnat (~50 ms). Le serveur (une
+// seule instance, requêtes une par une sous le verrou de server/index.js)
+// garde désormais l'objet en mémoire et le resert tant que le stockage n'a
+// pas changé : fichier → même date et même taille ; Redis → relu au plus
+// tard après LEAGUE_CACHE_TTL_MS (même règle que le cache Redis existant).
+// Toute sauvegarde met l'entrée à jour (même objet). Les plus anciennes
+// sortent au-delà de LEAGUE_CACHE_MAX. Interrupteur : HM_LEAGUE_CACHE=0.
+// Une requête en erreur vide le cache (server/index.js) : jamais un objet à
+// moitié modifié resservi.
+// ---------------------------------------------------------------------
+const LEAGUE_CACHE_TTL_MS = 10 * 60 * 1000;
+const leagueCache = new Map();   // fichier de la ligue → { league, stamp, at }
+function leagueCacheOn() { return !/^(0|off|false|no)$/i.test(String(process.env.HM_LEAGUE_CACHE || "")); }
+function leagueCacheMax() { return Math.max(1, Number(process.env.HM_LEAGUE_CACHE_MAX) || 40); }
+function leagueStamp(where) {
+  if (upstashConfigured()) return "redis";
+  try { const st = fs.statSync(where.file); return `${st.mtimeMs}:${st.size}`; } catch (e) { return null; }
+}
+function leagueCachePut(where, league) {
+  if (!leagueCacheOn() || !league) return;
+  leagueCache.delete(where.file);
+  leagueCache.set(where.file, { league, stamp: leagueStamp(where), at: Date.now() });
+  while (leagueCache.size > leagueCacheMax()) leagueCache.delete(leagueCache.keys().next().value);
+}
+function invalidateLeagueCache() { leagueCache.clear(); worldCache.clear(); }
 async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = HISTORIC_LEAGUE_ID) {
+  const metrics = require("./metrics.js");
+  let where = null;
+  try { where = leagueStorage(leagueId, savePath); } catch (e) { where = null; }
+  if (where && leagueCacheOn()) {
+    const hit = leagueCache.get(where.file);
+    if (hit && (upstashConfigured() ? Date.now() - hit.at < LEAGUE_CACHE_TTL_MS : hit.stamp && hit.stamp === leagueStamp(where))) {
+      await loadPlayerIdRegistry(savePath);
+      leagueCache.delete(where.file); leagueCache.set(where.file, hit);   // plus récemment utilisée
+      metrics.record("ligue · mémoire", 0);
+      return { league: hit.league };
+    }
+    if (hit) leagueCache.delete(where.file);
+  }
+  const stop = metrics.start("ligue · chargement");
+  try {
+    const loaded = await loadMultiLeagueRaw(savePath, leagueId);
+    if (loaded && where) leagueCachePut(where, loaded.league);
+    return loaded;
+  } finally { stop(); }
+}
+async function loadMultiLeagueRaw(savePath, leagueId) {
   // Registre des IDs de joueurs chargé AVANT toute ligue (voir
   // loadPlayerIdRegistry) : aucun nouvel ID ne peut reprendre un ID déjà donné.
   await loadPlayerIdRegistry(savePath);
@@ -391,6 +594,7 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
       if (raw == null) return null;
       const data = JSON.parse(raw);
       if (!data || data.version !== MULTI_SAVE_VERSION || !data.league || data.team) return null;
+      await rehydrateLiveBlobs(data, savePath);
       return deserializeMultiLeague(data);
     } catch (e) {
       // Échec de lecture Redis (réseau, Upstash indisponible, réponse
@@ -414,6 +618,7 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
     // ci-dessus) : "pas encore de ligue multi-manager", jamais une migration
     // silencieuse ni un plantage.
     if (!data || data.version !== MULTI_SAVE_VERSION || !data.league || data.team) return null;
+    await rehydrateLiveBlobs(data, savePath);
     return deserializeMultiLeague(data);
   } catch (e) {
     console.warn("Sauvegarde multi-manager illisible :", e.message);
@@ -434,7 +639,27 @@ async function loadMultiLeague(savePath = defaultMultiLeaguePath(), leagueId = H
 // `body` (facultatif) : sérialisation JSON déjà calculée (voir
 // server/world.js:catchUpWorld, qui compare avant/après pour n'écrire que
 // les championnats modifiés).
+// Nombre de sauvegardes d'un objet ligue (empreintes du rattrapage du
+// monde, voir world.js:catchUpWorld).
+const LEAGUE_SAVES = new WeakMap();
+function leagueSaveCount(league) { return (league && LEAGUE_SAVES.get(league)) || 0; }
 async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body = null) {
+  const stop = require("./metrics.js").start("ligue · sauvegarde");
+  try {
+    if (league && typeof league === "object") LEAGUE_SAVES.set(league, leagueSaveCount(league) + 1);
+    await saveMultiLeagueRaw(league, savePath, body);
+    // Ne garde en mémoire que l'objet déjà servi par le cache (celui du
+    // serveur) ; un autre objet (script, test, ligue neuve) : l'entrée est
+    // retirée et la ligue sera relue du stockage au prochain chargement.
+    try {
+      const where = leagueStorage(league && league.leagueId, savePath);
+      const hit = leagueCache.get(where.file);
+      if (hit && hit.league === league) leagueCachePut(where, league);
+      else leagueCache.delete(where.file);
+    } catch (e) { /* identifiant invalide : pas de cache */ }
+  } finally { stop(); }
+}
+async function saveMultiLeagueRaw(league, savePath, body) {
   // Nouveaux IDs de joueurs inscrits au registre (jamais réattribués).
   await flushPlayerIdRegistry(savePath);
   // Mémoire historique (assets/history.js) : événements en file, rangés à
@@ -454,10 +679,25 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body
     } catch (e) { console.warn("Enregistrement des directs à revoir échoué :", e.message); }
   }
   const where = leagueStorage(league && league.leagueId, savePath);
+  const basePath = savePath;
   savePath = where.file;
+  // Directs : pièces lourdes rangées AVANT la ligue qui les référence (un
+  // arrêt entre les deux ne laisse jamais une référence sans pièce).
+  let stored = body;
+  if (!stored) {
+    const { data, blobs } = serializeForStorage(league);
+    try { await writeLiveBlobs(blobs, basePath); } catch (e) {
+      console.warn("Écriture des directs échouée : sauvegarde complète.", e.message);
+      stored = JSON.stringify(serializeMultiLeague(league));
+    }
+    if (!stored) {
+      stored = JSON.stringify(data);
+      pruneLiveBlobs(league && league.leagueId, blobs.map(b => b.id), basePath).catch(() => {});
+    }
+  }
   if (upstashConfigured()) {
     try {
-      await redisSet(where.redis, body || JSON.stringify(serializeMultiLeague(league)));
+      await redisSet(where.redis, stored);
     } catch (e) {
       console.warn("Écriture Redis (Upstash) de la ligue multi-manager échouée :", e.message);
     }
@@ -465,7 +705,7 @@ async function saveMultiLeague(league, savePath = defaultMultiLeaguePath(), body
   }
   fs.mkdirSync(path.dirname(savePath), { recursive: true });
   const tmpPath = `${savePath}.tmp-${process.pid}-${Date.now()}`;
-  fs.writeFileSync(tmpPath, body || JSON.stringify(serializeMultiLeague(league)), "utf-8");
+  fs.writeFileSync(tmpPath, stored, "utf-8");
   fs.renameSync(tmpPath, savePath);
 }
 
@@ -1046,6 +1286,7 @@ async function storageHealth(savePath = defaultMultiLeaguePath()) {
   }
 }
 module.exports = {
+  rehydrateLiveBlobsSync,
   storageHealth, storageBackendName, redisGet, redisSet, clearRedisCache, redisEncode, redisDecode,
   SAVE_VERSION, defaultSavePath, createNewCareer,
   serialize, deserialize, load, save, loadOrCreate,
@@ -1059,7 +1300,7 @@ module.exports = {
   loadClubHistory, appendClubHistory, replaceClubHistory, saveMigrationBackup, flushHistoryQueue,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   saveNationalLives, loadNationalLive, NATIONAL_LIVE_SLOTS,
-  loadPlayerLinks, savePlayerLinks, loadMatchLinks, saveMatchLinks,
+  loadPlayerLinks, savePlayerLinks, loadMatchLinks, saveMatchLinks, serializeForStorage, invalidateLeagueCache, leagueSaveCount,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

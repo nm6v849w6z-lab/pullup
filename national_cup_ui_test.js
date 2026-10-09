@@ -15,7 +15,7 @@ const World = require("./server/world.js");
 const Calendar = require("./server/calendar.js");
 const NC = require("./server/nationalCup.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const fail = m => { throw new Error("❌ " + m); };
 const ok = m => console.log("✅ " + m);
 const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond()) return; await new Promise(r => setTimeout(r, 50)); } fail(`délai dépassé : ${what}`); };

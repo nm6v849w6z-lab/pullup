@@ -9,7 +9,7 @@ const fs = require("fs");
 const Engine = require("./engine.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const H = Engine.History;
 const check = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅ " + m); };
 const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (fn()) return; } catch (e) { /* encore */ } await new Promise(r => setTimeout(r, 100)); } throw new Error("❌ attente : " + label); };

@@ -6,7 +6,7 @@ const fs = require("fs");
 const { startTestServer, openGame } = require("./test_helpers.js");
 const fail = m => { console.error("❌ " + m); process.exit(1); };
 (async () => {
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server, baseUrl } = await startTestServer();
   const dom = await openGame(html, baseUrl);
   const w = dom.window, doc = w.document;

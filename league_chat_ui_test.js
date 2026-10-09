@@ -13,7 +13,7 @@ const Engine = require("./engine.js");
 const Calendar = require("./server/calendar.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 function check(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.log("✅ " + msg); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));

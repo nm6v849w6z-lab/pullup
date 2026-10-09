@@ -26,7 +26,7 @@ for (const f of files) {
     if (hit) fail(`${f} : « ${sel.slice(-80)} » met un avatar joueur en cercle`);
   }
 }
-const html = fs.readFileSync("moteurbasket3.html", "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 if (!/AVATAR JOUEUR : FORMAT UNIQUE/.test(html) || !/--player-av-radius:18% \/ 16\.6%/.test(html)) fail("règle globale d'avatar joueur absente de moteurbasket3.html");
 if (/class: "c2d-frame"/.test(fs.readFileSync("assets/live/court2d.js", "utf8"))) fail("terrain 2D : cadre coloré autour des avatars");
 if (/box-shadow:0 0 0 2px ' \+ ring/.test(fs.readFileSync("assets/vestiaire-ui.js", "utf8"))) fail("Vestiaire : anneau coloré autour des avatars");

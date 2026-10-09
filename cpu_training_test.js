@@ -6,7 +6,7 @@
 // joueur, mais sans jamais refermer un écart déjà creusé).
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 // ATTRS repris directement d'engine.js (13 caractéristiques désormais, voir
 // le grand commentaire au-dessus d'ATTRS dans engine.js) plutôt que dupliqué
 // en dur ici : la simulation de l'écart de niveau (INFLATE ci-dessous) et sa

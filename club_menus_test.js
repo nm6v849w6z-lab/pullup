@@ -6,7 +6,7 @@
 // un clic sur le 2e onglet change bien la vue.
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 const wait = async (fn, label) => { for (let i = 0; i < 150; i++) { try { if (fn()) return; } catch (e) { /* encore */ } await new Promise(r => setTimeout(r, 100)); } throw new Error("❌ attente : " + label); };
 

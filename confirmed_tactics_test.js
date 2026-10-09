@@ -18,7 +18,7 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
 const Engine = require("./engine.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 (async () => {
 

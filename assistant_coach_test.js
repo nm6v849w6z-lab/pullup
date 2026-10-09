@@ -122,7 +122,7 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
   check(/"\/api\/market\/assistant-bid": actions\.bidOnAssistantCoachListing/.test(idx) && /"\/api\/staff\/fire-assistant": actions\.fireAssistantCoach/.test(idx), "routes /api/market/assistant-bid et /api/staff/fire-assistant");
   check(typeof A.bidOnAssistantCoachListing === "function" && typeof A.fireAssistantCoach === "function", "actions serveur exportées");
   check(/refreshAssistantCoachMarket\(now\)/.test(auto), "marché rafraîchi à chaque passage serveur");
-  const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   // Staff v2 (2026-10-01) : carte de poste sur la page Staff (id staffAssistantCurrent), recrutement dans le Marché.
   check(html.includes('currentId: "staffAssistantCurrent"') && html.includes('key: "assistant", label: "Entraîneur adjoint"'), "poste Entraîneur adjoint sur la page Staff");
 }
@@ -132,7 +132,7 @@ check(Math.abs(tot.pass / N) < 0.5, "l'adjoint défensif ne touche pas la passe"
 //    adjoints ; oui ajoute").
 (async () => {
   const { startTestServer, openGame, flush } = require("./test_helpers.js");
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server } = await startTestServer();
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   try {

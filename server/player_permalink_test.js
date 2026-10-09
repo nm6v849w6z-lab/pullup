@@ -79,7 +79,7 @@ async function main() {
     const bytes = JSON.stringify(p.weeklyHistory.slice(0, 1)).length;
     check(bytes < 140, `instantané compact (${bytes} octets)`);
     // Miroir navigateur : sérialisation identique.
-    const html = fs.readFileSync(path.join(__dirname, "..", "moteurbasket3.html"), "utf-8");
+    const html = require("../test_game_html.js").readGameHtml();
     check(html.includes("weeklyHistory: Array.isArray(p.weeklyHistory) ? p.weeklyHistory.map(e => e.slice()) : [],")
       && html.includes("p.weeklyHistory = Array.isArray(pdata.weeklyHistory)"), "miroir moteurbasket3.html : historique sérialisé et restauré");
     const fnSrc = src => { const i = src.indexOf("function ppChartHtml("); return src.slice(i, src.indexOf("\n}\n", i) + 2); };

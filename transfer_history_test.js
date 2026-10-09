@@ -10,7 +10,7 @@ require("./test_transfer_agreement_helper.js")(Engine);
 const store = require("./server/store.js");
 const WorldMarket = require("./server/worldMarket.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const DAY = 24 * 3600 * 1000;
 

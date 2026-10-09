@@ -13,7 +13,7 @@ const E = require("./engine.js");
 const {
   generateTeam, generateLeague, POSITIONS, FORFEIT_SCORE, simulateOrForfeit,
 } = E;
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // Retire TOUS les joueurs d'un poste donné (le poste devient introuvable
 // dans l'effectif) puis réassigne la feuille de match — reproduit

@@ -14,7 +14,7 @@ process.env.BASKET_ADMIN_TOKEN = process.env.BASKET_ADMIN_TOKEN || "admintest-mg
 const fs = require("fs");
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const wait = async (fn, label, ms = 20000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (fn()) return; } catch (e) { /* encore */ } await sleep(100); } throw new Error("❌ attente : " + label); };

@@ -21,7 +21,7 @@ const { scheduledTimeForLeagueCupRound } = require("./server/calendar.js");
 const { ensureCupLiveMatchStarted, finalizeCupRound } = require("./server/liveMatch.js");
 const PL = require("./server/privateLeague.js");
 const { startTestServer, openGame, flush, readRawSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const DEFS = ["Homme à homme", "Zone press", "Box and one", "Zone extérieure", "Zone intérieure"];
 

@@ -6,7 +6,7 @@ const Engine = require("./engine.js");
 const store = require("./server/store.js");
 const actions = require("./server/actions.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const now = Date.now();
 
 const league = store.createMultiManagerCareer(["Kappa Perso"], now, "Kappa Perso").league;

@@ -75,6 +75,7 @@ const Ads = require("./ads.js");
 const Site = require("./site.js");
 const PlayerLinks = require("./playerLinks.js");
 const MatchLinks = require("./matchLinks.js");
+const Metrics = require("./metrics.js");
 const MatchPage = require("./matchPage.js");
 const PlayerPage = require("./playerPage.js");
 const WeeklyDigest = require("./weeklyDigest.js");
@@ -142,8 +143,32 @@ function compressBody(body, encoding, cacheable) {
 }
 // Envoie `body` (Buffer ou texte), compressé si utile. `cacheable` : contenu
 // stable (fichier), dont la version compressée peut être gardée en mémoire.
+// Empreintes des contenus statiques (ETag), par Buffer : la page du jeu et
+// les assets ne sont pas réempreints à chaque visite tant qu'ils ne changent
+// pas (WeakMap : libérée avec le Buffer).
+const ETAG_OF = new WeakMap();
+function etagOf(buf) {
+  let e = ETAG_OF.get(buf);
+  if (!e) { e = `"${cryptoForCompression.createHash("sha1").update(buf).digest("base64url").slice(0, 22)}"`; ETAG_OF.set(buf, e); }
+  return e;
+}
 function sendBody(res, statusCode, headers, body, cacheable = false) {
   const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body), "utf-8");
+  // Contenu stable (page du jeu, assets) : ETag + réponse 304 si le
+  // navigateur a déjà cette version (performance 2026-10-09 : la page de
+  // 4 Mo / 880 Ko compressés n'est plus retéléchargée à chaque ouverture).
+  if (cacheable && statusCode === 200) {
+    const etag = etagOf(buf);
+    const inm = res.req && res.req.headers ? String(res.req.headers["if-none-match"] || "") : "";
+    if (inm && inm.split(/\s*,\s*/).some(x => x.replace(/^W\//, "") === etag)) {
+      const h304 = { ETag: etag };
+      for (const k of ["Cache-Control", "Vary", "Content-Language"]) if (headers[k]) h304[k] = headers[k];
+      res.writeHead(304, h304);
+      res.end();
+      return;
+    }
+    headers = { ...headers, ETag: etag };
+  }
   const type = String(headers["Content-Type"] || "");
   const compressible = buf.length > 1400 && /^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type);
   const encoding = compressible ? pickEncoding(res.req) : null;
@@ -176,6 +201,28 @@ const ASSET_CONTENT_TYPES = {
   ".mp3": "audio/mpeg", ".json": "application/json; charset=utf-8",
 };
 
+// Fichiers statiques gardés en mémoire tant qu'ils ne changent pas sur le
+// disque (date + taille) : plus de lecture ni de nouvelle empreinte (ETag)
+// à chaque visite. Gros fichiers (> 6 Mo, audio surtout) jamais gardés.
+const STATIC_CACHE = new Map();
+const STATIC_CACHE_MAX = 300;
+function readStaticCached(file, cb) {
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { cb(err || new Error("not a file")); return; }
+    const key = `${st.mtimeMs}:${st.size}`;
+    const hit = STATIC_CACHE.get(file);
+    if (hit && hit.key === key) { cb(null, hit.data); return; }
+    fs.readFile(file, (e2, data) => {
+      if (e2) { cb(e2); return; }
+      if (data.length <= 6 * 1048576) {
+        STATIC_CACHE.delete(file);
+        STATIC_CACHE.set(file, { key, data });
+        if (STATIC_CACHE.size > STATIC_CACHE_MAX) STATIC_CACHE.delete(STATIC_CACHE.keys().next().value);
+      }
+      cb(null, data);
+    });
+  });
+}
 function serveAsset(res, pathname) {
   const relative = pathname.replace(/^\/assets\//, "");
   const contentType = ASSET_CONTENT_TYPES[path.extname(relative).toLowerCase()];
@@ -185,7 +232,7 @@ function serveAsset(res, pathname) {
   // "traite/.." reste malgré tout un chemin relatif qui commence par ".."
   // une fois sorti — c'est exactement ce qu'on rejette ici.
   if (path.relative(ASSETS_DIR, resolved).startsWith("..")) { sendJson(res, 403, { error: "Chemin invalide" }); return; }
-  fs.readFile(resolved, (err, data) => {
+  readStaticCached(resolved, (err, data) => {
     if (err) { sendJson(res, 404, { error: "Fichier introuvable" }); return; }
     // Audio (musiques des émissions, commentaire) : requêtes partielles
     // (Range) — Safari / iPhone refuse de lire un mp3 sans réponse 206.
@@ -282,7 +329,20 @@ function serveManifest(res, token) {
 // lui-même une fois chargé), donc aucun changement de routage ici.
 const HTML_PATH = path.join(__dirname, "..", "moteurbasket3.html");
 
+// Page du jeu préparée une fois par version du fichier (et réglage des
+// pubs) : même Buffer servi à tous, donc même empreinte (ETag → 304).
+let INDEX_CACHE = null;
+// Réponses des directs suivis en spectateur (voir /api/spectate).
+const SPECTATE_MEMO = new Map();
 function serveIndexHtml(res) {
+  let st = null;
+  try { st = fs.statSync(HTML_PATH); } catch (e) { st = null; }
+  const adsKey = JSON.stringify(Ads.adsConfig() || null);
+  const key = st ? `${st.mtimeMs}:${st.size}:${adsKey}` : null;
+  if (key && INDEX_CACHE && INDEX_CACHE.key === key) {
+    sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" }, INDEX_CACHE.buf, true);
+    return;
+  }
   let html;
   try {
     html = fs.readFileSync(HTML_PATH, "utf-8");
@@ -315,7 +375,9 @@ function serveIndexHtml(res) {
   html = Ads.injectHead(html, Ads.adsConfig());
   // Même contenu pour tous les visiteurs → version compressée gardée en
   // mémoire (sendBody, cacheable).
-  sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" }, Buffer.from(html, "utf-8"), true);
+  const buf = Buffer.from(html, "utf-8");
+  if (key) INDEX_CACHE = { key, buf };
+  sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" }, buf, true);
 }
 
 // Page d'accueil / inscription (assets/site/index.html) — voir
@@ -351,9 +413,12 @@ function acquireSaveLock() {
   const held = new Promise(resolve => { release = resolve; });
   const previous = saveLockTail;
   saveLockTail = saveLockTail.then(() => held);
+  const waited = Metrics.start("verrou · attente");
   return previous.then(() => {
+    waited();
+    const heldFor = Metrics.start("verrou · tenu");
     let done = false;
-    return () => { if (!done) { done = true; release(); } };
+    return () => { if (!done) { done = true; heldFor(); release(); } };
   });
 }
 
@@ -369,16 +434,24 @@ const lastWorldCatchUpAt = new Map();
 // diffusion) : rattrapage forcé dès qu'elle est passée, pour que le direct
 // démarre à l'heure et pas jusqu'à 10 minutes plus tard.
 const nextWorldDeadlineAt = new Map();
-async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath = store.defaultAccountsPath()) {
+// Un seul rattrapage à la fois (il relâche le verrou entre deux ligues,
+// voir catchUpWorld : une requête intercalée n'en relance pas un second).
+const worldCatchUpRunning = new Set();
+async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath = store.defaultAccountsPath(), yieldLock = null) {
+  if (worldCatchUpRunning.has(multiSavePath)) return [];
   const last = lastWorldCatchUpAt.get(multiSavePath) || 0;
   const deadline = nextWorldDeadlineAt.get(multiSavePath);
   const due = deadline != null && now >= deadline;
   if (!force && !due && now - last < WORLD_CATCHUP_INTERVAL_MS && now >= last) return [];
   lastWorldCatchUpAt.set(multiSavePath, now);
+  worldCatchUpRunning.add(multiSavePath);
   try {
+    const stopCatchUp = Metrics.start("monde · rattrapage");
     const events = await World.catchUpWorld(multiSavePath, now, {
       tickLeague: (lg, t) => { const evs = tick(lg, t).events; stashRecapEvents(lg, evs); return evs; },
+      yieldLock,
     });
+    stopCatchUp();
     nextWorldDeadlineAt.set(multiSavePath, events.nextDeadlineAt == null ? null : events.nextDeadlineAt);
     // Clubs rendus à l'IA (managers inactifs) : le compte garde la trace du
     // club pour le lui rendre s'il revient (voir World.reclaimClub).
@@ -406,6 +479,8 @@ async function maybeCatchUpWorld(multiSavePath, now, force = false, accountsPath
   } catch (e) {
     console.warn("[monde] rattrapage des championnats échoué :", e.message);
     return [];
+  } finally {
+    worldCatchUpRunning.delete(multiSavePath);
   }
 }
 
@@ -690,7 +765,20 @@ async function persistContext(ctx) {
 // fiable est de toujours considérer la ligue comme modifiée après un tick :
 // coûte une écriture disque de plus par requête (fichier JSON minuscule),
 // largement acceptable pour la correction que ça garantit.
+// Requêtes de routine légères (performance, 2026-10-09) : avec les
+// championnats gardés en mémoire (store.js), une même ligue n'est pas
+// refaite avancer plus d'une fois toutes les TICK_MIN_INTERVAL_MS — les
+// rafraîchissements (chat, messages, amis, enchères, direct) ne recalculent
+// ni ne réécrivent plus tout le championnat à chaque appel. Les actions des
+// joueurs sauvegardent toujours elles-mêmes ; une échéance (coup d'envoi)
+// est vue au plus 5 s plus tard. Ligue relue (cache coupé) : nouvel objet,
+// donc toujours rattrapée comme avant.
+const TICK_MIN_INTERVAL_MS = 5000;
+const lastTickOf = new WeakMap();
 function tick(league, now) {
+  const last = league ? lastTickOf.get(league) : undefined;
+  if (last != null && now >= last && now - last < TICK_MIN_INTERVAL_MS) return { events: [], changed: false, skipped: true };
+  if (league) lastTickOf.set(league, now);
   // Bascule en pleine saison vers le rythme hebdomadaire (retour
   // utilisateur, 2026-09-27 : "bascule en pleine saison oui") : toute ligue
   // encore au rythme quotidien passe au rythme mardi/samedi (coupe le jeudi)
@@ -1353,6 +1441,12 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
   });
   return async function handler(req, res) {
     let releaseSaveLock = null;
+    // Mesures (server/metrics.js) : temps total par route, réponse comprise.
+    const t0 = process.hrtime.bigint();
+    res.on("finish", () => {
+      let p = req.url || "/"; const q = p.indexOf("?"); if (q >= 0) p = p.slice(0, q);
+      Metrics.record(Metrics.routeLabel(req.method, p), Number(process.hrtime.bigint() - t0) / 1e6, res.statusCode >= 500);
+    });
     try {
       let route;
       try {
@@ -1440,15 +1534,32 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         }
       }
 
+      // Mesures serveur (server/metrics.js) : page admin et JSON (jeton admin),
+      // servis hors verrou pour rester lisibles même quand le serveur sature.
+      if (route.pathname === "/admin/metrics" && req.method === "GET") {
+        sendBody(res, 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" }, Buffer.from(Metrics.adminPageHtml(), "utf-8"));
+        return;
+      }
+      if (route.pathname === "/api/admin/metrics" && (req.method === "GET" || req.method === "POST")) {
+        if (!isAdminAuthorized(req)) { sendJson(res, 403, { ok: false, error: "Jeton administrateur invalide ou manquant (X-Admin-Token)." }); return; }
+        if (req.method === "POST" && route.searchParams.get("reset") === "1") Metrics.reset();
+        sendJson(res, 200, { ok: true, ...Metrics.snapshot() });
+        return;
+      }
+
       // Page d'accueil / inscription (voir serveSiteHtml).
       if ((route.pathname === "/bienvenue" || route.pathname === "/welcome") && req.method === "GET") {
         serveSiteHtml(res, route.searchParams.get("lang"));
         return;
       }
 
-      releaseSaveLock = await acquireSaveLock();
+      const lockRef = { release: await acquireSaveLock() };
+      releaseSaveLock = () => lockRef.release();
       const now = nowFn();
-      if (getManagerToken(req)) await maybeCatchUpWorld(multiSavePath, now, false, accountsPath);
+      // Rattrapage du monde : relâche le verrou entre deux championnats
+      // (les autres joueurs sont servis pendant ce temps), puis le reprend.
+      const yieldLock = async () => { lockRef.release(); lockRef.release = await acquireSaveLock(); };
+      if (getManagerToken(req)) await maybeCatchUpWorld(multiSavePath, now, false, accountsPath, yieldLock);
 
       // Comptes joueurs + Discord (voir server/accountRoutes.js).
       if (await handleAccountRoutes(req, res, route, now)) return;
@@ -2359,14 +2470,25 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           sendJson(res, 400, { ok: false, error: "'team' (index d'équipe valide) requis." });
           return;
         }
-        const live = LiveMatch.viewLiveMatchForTeam(ctx.league, teamIdx);
-        if (!live) {
+        // Direct figé (performance 2026-10-09) : un direct ne change plus une
+        // fois calculé — réponse préparée UNE fois par match et par côté,
+        // puis servie à tous les spectateurs (ETag → 304, compression gardée).
+        const entry = Object.values(ctx.league.liveMatches || {}).find(m => m && (m.homeIdx === teamIdx || m.awayIdx === teamIdx));
+        if (!entry) {
           sendJson(res, 404, { ok: false, error: "Cette équipe n'est pas actuellement en direct." });
           return;
         }
         const watchedTeam = ctx.league.teams[teamIdx];
-        const opponent = ctx.league.teams[live.opponentIdx];
-        sendJson(res, 200, { ok: true, teamName: watchedTeam.name, opponentName: opponent ? opponent.name : (live.guestName || "Club invité"), live });
+        const memoKey = `${ctx.leagueId || ""}|${teamIdx}|${entry.kickoffAt}|${(entry.events || []).length}|${entry.seed}|${watchedTeam.name}`;
+        let body = SPECTATE_MEMO.get(memoKey);
+        if (!body) {
+          const live = LiveMatch.viewLiveMatchForTeam(ctx.league, teamIdx);
+          const opponent = ctx.league.teams[live.opponentIdx];
+          body = Buffer.from(JSON.stringify({ ok: true, teamName: watchedTeam.name, opponentName: opponent ? opponent.name : (live.guestName || "Club invité"), live }), "utf-8");
+          SPECTATE_MEMO.set(memoKey, body);
+          if (SPECTATE_MEMO.size > 300) SPECTATE_MEMO.delete(SPECTATE_MEMO.keys().next().value);
+        }
+        sendBody(res, 200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-cache" }, body, true);
         return;
       }
 
@@ -2384,6 +2506,33 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // pas d'invitation dans match amical" — la page gardait la liste
       // chargée à l'ouverture du jeu). Lecture seule, sans rattrapage de la
       // ligue (appelée régulièrement, comme la messagerie).
+      // Rafraîchissement regroupé (performance, 2026-10-09) : UNE requête
+      // toutes les 30 s au lieu de cinq minuteries (en ligne, amicaux, mes
+      // enchères, messagerie, chat de ligue). Même contenu que les routes
+      // séparées (qui restent pour les actions ponctuelles), contexte
+      // résolu une seule fois, lecture seule, sans rattrapage de la ligue.
+      // Une partie en échec vaut null : le navigateur garde son dernier état.
+      if (route.pathname === "/api/heartbeat" && req.method === "GET") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        if (ctx.leagueId && !ctx.league.leagueId) ctx.league.leagueId = ctx.leagueId;
+        const part = async fn => { try { return await fn(); } catch (e) { return null; } };
+        const out = { ok: true, now, online: Math.max(1, LeagueChat.onlineCount(now)) };
+        out.friendly = await part(async () => {
+          const fstore = ctx.world ? await loadWorldFriendlies(multiSavePath) : null;
+          const merged = mergedFriendlies(ctx, fstore, now);
+          return { ok: true, friendlies: merged.friendlies, guestTeams: merged.guests };
+        });
+        out.auctions = await part(async () => {
+          const index = ctx.world ? await store.loadWorldAuxRaw("market", multiSavePath) : null;
+          return { ok: true, now, ...MyAuctions.collect(ctx.league, ctx.teamIndex, now, index ? { index, leagueId: ctx.leagueId } : null) };
+        });
+        out.messages = await part(async () => { const r = await messages.summary(ctx.league, ctx.teamIndex); return r && r.status === 200 ? r.body : null; });
+        out.chat = await part(async () => { const r = await leagueChat.view(ctx, now, true); return r && r.status === 200 ? r.body : null; });
+        sendJson(res, 200, out);
+        return;
+      }
+
       if (route.pathname === "/api/friendly/list" && req.method === "GET") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
@@ -3306,6 +3455,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
 
       sendJson(res, 404, { error: "Route inconnue", path: route.pathname });
     } catch (e) {
+      // Championnats en mémoire (store.js) : une requête en erreur a pu
+      // laisser un objet à moitié modifié — tout est relu au prochain accès.
+      store.invalidateLeagueCache();
       if (!res.headersSent) sendJson(res, 500, { error: `Erreur serveur inattendue : ${e.message}` });
     } finally {
       if (releaseSaveLock) releaseSaveLock();
@@ -3324,10 +3476,11 @@ function startServer(port = DEFAULT_PORT, savePath = store.defaultSavePath(), mu
   })();
   // Tâche de fond : les ligues du monde avancent même sans visite.
   const worldTimer = setInterval(async () => {
-    const release = await acquireSaveLock();
+    const lockRef = { release: await acquireSaveLock() };
     // Toutes les minutes : ne fait réellement quelque chose que toutes les
     // 10 minutes, ou dès qu'une échéance de Coupe nationale est passée.
-    try { await maybeCatchUpWorld(multiSavePath, Date.now()); } finally { release(); }
+    const yieldLock = async () => { lockRef.release(); lockRef.release = await acquireSaveLock(); };
+    try { await maybeCatchUpWorld(multiSavePath, Date.now(), false, store.defaultAccountsPath(), yieldLock); } finally { lockRef.release(); }
   }, 60 * 1000);
   if (worldTimer.unref) worldTimer.unref();
   server.on("close", () => clearInterval(worldTimer));

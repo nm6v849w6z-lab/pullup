@@ -16,7 +16,7 @@ const store = require("./server/store.js");
 const Push = require("./server/push.js");
 const MyAuctions = require("./server/myAuctions.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const wait = async (cond, what) => { for (let i = 0; i < 100; i++) { if (cond()) return; await new Promise(r => setTimeout(r, 50)); } throw new Error(`délai dépassé : ${what}`); };
 const clone = lg => Engine.leagueFromSave(JSON.parse(JSON.stringify(Engine.serializeLeague(lg))));

@@ -26,7 +26,7 @@ const {
   generateMultiManagerLeague, serializeTeam, teamFromSave, MatchEngine,
 } = E;
 const actions = require("./server/actions.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const T0 = Date.UTC(2026, 8, 7);
 

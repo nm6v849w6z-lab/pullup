@@ -6,7 +6,7 @@ const assert = require("assert");
 const fs = require("fs");
 const E = require("./engine.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 
 (async () => {

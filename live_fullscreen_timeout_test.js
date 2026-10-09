@@ -56,7 +56,7 @@ const assert = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅
   S = at(tmo.airAt + tmo.durationMs + 50);
   assert(!S.timeout && $("tmo").hidden && $("fstmo").hidden && $("mtmo").hidden, "fin du temps mort : timer disparu");
   // Même règle côté direct de son club (copie inline).
-  const html = fs.readFileSync("moteurbasket3.html", "utf8");
+  const html = require("./test_game_html.js").readGameHtml();
   const src = /function liveActiveTimeout\([\s\S]*?\n}\n/.exec(html);
   assert(src, "copie liveActiveTimeout présente pour le direct de son club");
   const inline = new Function(src[0] + "; return liveActiveTimeout;")();

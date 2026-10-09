@@ -20,7 +20,7 @@ const Calendar = require("./server/calendar.js");
 const { dailyAnchoredCalendarConfig } = Calendar;
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const T0 = Date.UTC(2026, 8, 24, 7, 0, 0); // 24 septembre 2026, jeudi arbitraire (même jour que le retour utilisateur)
 

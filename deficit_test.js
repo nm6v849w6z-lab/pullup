@@ -14,7 +14,7 @@ const E = require("./engine.js");
 const {
   generateTeam, DEFICIT_ALERT_THRESHOLD, DEFICIT_GRACE_WEEKS,
 } = E;
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // ---------------------------------------------------------------------
 // Partie 1 : logique moteur pure (Team.trainWeek) — budget forcé bien en

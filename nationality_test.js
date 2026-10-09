@@ -64,7 +64,7 @@ if (frLegacy / 4000 < 0.55 || frLegacy / 4000 > 0.65) fail(`Noms inconnus : ${(f
 console.log("✅ Anciennes sauvegardes : nationalité déduite du nom (déterministe), puis sauvegardée/relue telle quelle.");
 
 // 5. Miroir navigateur identique.
-const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 const js = fs.readFileSync(path.join(__dirname, "engine.js"), "utf8");
 const cut = src => { const i = src.indexOf("const FRANCE_SHARE"); const j = src.indexOf("function nationName"); return src.slice(i, j); };
 if (!cut(html) || cut(html) !== cut(js)) fail("Le bloc NATIONS de moteurbasket3.html diffère de celui d'engine.js");

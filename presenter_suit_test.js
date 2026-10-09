@@ -2,7 +2,7 @@
 // « utilise la tete de l'avatar mais mets lui un costume quand meme »).
 const fs = require("fs");
 const { JSDOM } = require("jsdom");
-const html = fs.readFileSync(__dirname + "/moteurbasket3.html", "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 const start = html.indexOf("const AvatarGen = (function () {");
 const end = html.indexOf("})();", start) + 5;
 const dom = new JSDOM("<!doctype html>", { runScripts: "outside-only" });

@@ -311,11 +311,8 @@ function parisUtcOffsetMs(utcMs) {
 // Composants civils (année/mois/jour/heure/minute/seconde) de `utcMs` tels
 // qu'affichés à Paris — pur formatage, aucune arithmétique de fuseau ici.
 function parisLocalDateParts(utcMs) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: calendarTimeZone, hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(calendarTimeZone);   // formateur gardé par fuseau
+
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {
@@ -361,12 +358,24 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
 // hebdomadaire reste, elle, à une heure UNIQUE pour tous : lundi 6h à
 // Paris). Mêmes principes que parisLocalDateParts/parisEpochForLocalTime
 // ci-dessus, pour n'importe quel fuseau IANA. `timeZone` absent = Paris.
+// Formateur gardé par fuseau (performance, 2026-10-09 : en recréer un à
+// chaque appel coûtait ~40 % du rattrapage du monde).
+const ZONED_DTF = new Map();
+function zonedDtf(timeZone) {
+  const tz = timeZone || "Europe/Paris";
+  let dtf = ZONED_DTF.get(tz);
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+    ZONED_DTF.set(tz, dtf);
+  }
+  return dtf;
+}
 function zonedLocalDateParts(utcMs, timeZone) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: timeZone || "Europe/Paris", hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(timeZone);
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {

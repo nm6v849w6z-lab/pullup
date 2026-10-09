@@ -94,7 +94,7 @@ function fail(msg) { throw new Error("❌ " + msg); }
     console.log("✅ Suivi des pubs : impression comptée et enregistrée, événement inconnu refusé.");
 
     // --- Côté client : matrice d'accès, coach par défaut stable, pub ---
-    const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
+    const html = require("./test_game_html.js").readGameHtml();
     const game = await openGame(html, baseUrl);
     const w = game.window;
     const flagsFor = (ls, beta) => w.eval(`(() => { HM_FEATURES = { ok: true, liveShows: ${JSON.stringify(ls)} }; teamA.betaFeatures = ${JSON.stringify(beta || [])}; return !!hmLiveShowsFlags(); })()`);

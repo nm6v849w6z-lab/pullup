@@ -6,7 +6,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const { JSDOM } = require("jsdom");
-const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 const m = /\/\/ FILET DE SÉCURITÉ GÉNÉRIQUE[\s\S]*?let crashScreenShown = false;([\s\S]*?)\n\/\/ =====/.exec(html);
 assert.ok(m, "bloc du filet de sécurité trouvé");
 const fire = (init) => {

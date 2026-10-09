@@ -9,7 +9,7 @@
 // canvas, win.eval() pour lire l'état réel du jeu).
 const fs = require("fs");
 const { startTestServer, openGame, flush, editSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 (async () => {
 

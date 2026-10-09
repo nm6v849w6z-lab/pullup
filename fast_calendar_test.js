@@ -30,7 +30,7 @@ const {
 const Calendar = require("./server/calendar.js");
 const { DAY_MS, FAST_MATCH_INTERVAL_MS, FAST_WEEK_MS, FAST_CHAMPIONSHIP_SLOT_OFFSETS_MS } = Calendar;
 const Engine = require("./engine.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const HOUR_MS = 60 * 60 * 1000;
 
 (async () => {

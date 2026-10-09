@@ -39,6 +39,6 @@ assert.strictEqual(E.TRAINING_PROGRAMS.quickShots, undefined);
 console.log("✅ engine.js : les 21 entraînements reprennent exactement le tableau.");
 // Miroir du jeu : même bloc de chiffres.
 const grab = src => src.slice(src.indexOf("const TRAINING_POSITION_EFFICIENCY = {"), src.indexOf("};", src.indexOf("const TRAINING_POSITION_EFFICIENCY = {")));
-assert.strictEqual(grab(fs.readFileSync("moteurbasket3.html", "utf8")), grab(fs.readFileSync("engine.js", "utf8")), "tableau différent entre engine.js et moteurbasket3.html");
+assert.strictEqual(grab(require("./test_game_html.js").readGameHtml()), grab(fs.readFileSync("engine.js", "utf8")), "tableau différent entre engine.js et moteurbasket3.html");
 console.log("✅ moteurbasket3.html : tableau identique à engine.js.");
 console.log("\n🏁 Tableau d'entraînement des fondamentaux conforme.");

@@ -5,7 +5,7 @@ const http = require("http");
 const zlib = require("zlib");
 const assert = require("assert");
 const { startTestServer } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = fs.readFileSync("moteurbasket3.html", "utf-8");   // sans la feuille de styles (assets/game.css, en cache à part)
 const b64 = (html.match(/data:(image|font)\/[a-z+]+;base64,[A-Za-z0-9+/=]{20000,}/g) || []);
 assert.strictEqual(b64.length, 0, "aucune grosse image en base64 ne doit rester dans la page du jeu");
 // Plafond relevé de 3,5 à 4 Mo le 2026-10-04 : croissance du code (3,65 Mo),

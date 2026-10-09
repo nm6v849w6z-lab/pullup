@@ -31,7 +31,7 @@
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const E = require("./engine.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // Regonfle l'effectif de 15 joueurs débutants supplémentaires (3 par poste),
 // directement dans la sauvegarde brute : remplace l'ancien clic sur

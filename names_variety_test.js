@@ -38,6 +38,6 @@ const back = E.teamFromSave(JSON.parse(JSON.stringify(E.serializeTeam(team))));
 check(back.players.map(p => p.name).join("|") === names.join("|"), "joueurs déjà créés : noms inchangés après sauvegarde/rechargement");
 
 // Staff : nom déterministe calculé sur NAME_POOLS, intact.
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 check(/function staffIdentity[\s\S]{0,1500}NAME_POOLS\[/.test(html) && !/function staffIdentity[\s\S]{0,1500}namePoolOf/.test(html), "staff : toujours nommé depuis NAME_POOLS (noms existants inchangés)");
 console.log("\n🏁 names_variety_test.js : réservoirs de noms enrichis conformes.");

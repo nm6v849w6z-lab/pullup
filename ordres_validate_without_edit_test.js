@@ -16,7 +16,7 @@ const { generateMultiManagerLeague } = Engine;
 const Calendar = require("./server/calendar.js");
 const { dailyAnchoredCalendarConfig } = Calendar;
 const store = require("./server/store.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 function calendarBtnForRound(doc, round) {
   return [...doc.querySelectorAll(`.calendar-order-btn[data-round="${round}"][data-competition="championship"]`)][0] || null;

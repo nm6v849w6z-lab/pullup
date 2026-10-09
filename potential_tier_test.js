@@ -54,7 +54,7 @@ const { potentialTierLabel, POTENTIAL_TIERS } = E;
 // désormais — voir ROSTER_SORT_COLUMNS/rosterHeaderCellHtml.
 // ---------------------------------------------------------------------
 (async () => {
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server, savePath, baseUrl } = await startTestServer();
   const dom = await openGame(html, baseUrl);
   const doc = dom.window.document;

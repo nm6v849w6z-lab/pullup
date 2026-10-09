@@ -459,8 +459,14 @@ function applyCountryMoves(world, moves, leagues) {
 // passage met à jour (voir League.refreshCoachMarket & co : « ne conditionne
 // plus rien »).
 const FINGERPRINT_IGNORED = ["lastCoachGenerationCheckAt", "lastAnalystGenerationCheckAt", "lastRecruiterGenerationCheckAt"];
+// Empreinte de fin du rattrapage précédent, par objet ligue (championnats
+// gardés en mémoire, store.js) : réutilisée au chargement si la ligue n'a
+// pas été sauvegardée depuis — une sérialisation par ligue au lieu de deux.
+const FP_MEMO = new WeakMap();
 function leagueFingerprint(lg) {
-  const data = store.serializeMultiLeague(lg);
+  // Version allégée (directs réduits à leur référence, voir
+  // store.serializeForStorage) : un direct ne change jamais une fois calculé.
+  const data = store.serializeForStorage(lg).data;
   FINGERPRINT_IGNORED.forEach(k => { delete data.league[k]; });
   return JSON.stringify(data);
 }
@@ -562,7 +568,13 @@ async function reclaimClub(world, savePath, ref, now) {
 
 // Le chat de la ligue ne reçoit plus aucun message automatique (2026-10-05,
 // voir server/leagueChat.js) : le rattrapage n'y écrit rien.
-async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = {}) {
+// `yieldLock` (performance, 2026-10-09) : appelé après chaque championnat
+// rattrapé — relâche puis reprend le verrou des requêtes (server/index.js),
+// pour que les joueurs soient servis pendant un long rattrapage (coups
+// d'envoi de toutes les ligues à la même heure). Championnats et registre
+// du monde sont les mêmes objets en mémoire (store.js) : une requête
+// intercalée ne perd rien et ne voit jamais une ligue à moitié rattrapée.
+async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null, yieldLock = null } = {}) {
   const world = await loadWorld(savePath, now);
   if (!world) return [];
   const events = [];
@@ -623,7 +635,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
       if (!lg) { allRead = false; continue; }
       leagues.set(e.id, lg);
       allLeagues.set(e.id, lg);
-      fingerprints.set(e.id, leagueFingerprint(lg));
+      const memo = FP_MEMO.get(lg);
+      fingerprints.set(e.id, memo && memo.saves === store.leagueSaveCount(lg) ? memo.fp : leagueFingerprint(lg));
       if (recalcSalaries) applyBestPositionSalaries(lg);
     }
     // Anciennes ligues privées (League.privateLeagues) rangées au niveau du
@@ -643,6 +656,8 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
         lg.barrageHasStakes = lg.divisionMoves.barrage;
         useLeagueTimeZone(lg);
         (tick(lg, now) || []).forEach(ev => events.push({ leagueId: id, ...ev }));
+        useLeagueTimeZone(null);
+        if (yieldLock) await yieldLock();
       }
       useLeagueTimeZone(null);
       // Archives de saison préparées par la fin de saison (voir
@@ -862,9 +877,10 @@ async function catchUpWorld(savePath, now = Date.now(), { tickLeague = null } = 
   }
   let saved = 0;
   for (const [id, lg] of allLeagues) {
-    if (leagueFingerprint(lg) === fingerprints.get(id)) continue;
-    await store.saveMultiLeague(lg, savePath);
-    saved++;
+    const fp = leagueFingerprint(lg);
+    if (fp !== fingerprints.get(id)) { await store.saveMultiLeague(lg, savePath); saved++; }
+    FP_MEMO.set(lg, { fp, saves: store.leagueSaveCount(lg) });
+    if (yieldLock) await yieldLock();
   }
   events.savedLeagues = saved;
   if (recalcSalaries && allRead) { world.salaryBestPositionAt = now; worldDirty = true; }

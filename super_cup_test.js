@@ -14,7 +14,7 @@ const World = require("./server/world.js");
 const Calendar = require("./server/calendar.js");
 const NC = require("./server/nationalCup.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const H = 3600 * 1000;
 const fmt = (ms, tz) => new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));

@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 
-const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const rule = html.match(/\.topbar-hidden-on-page\s*~\s*\.content-scroll\s+\.ordres-actionbar\s*\{([^}]*)\}/);
 assert(rule, "règle de la barre d'action des Ordres quand le topbar est masqué absente");

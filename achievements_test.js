@@ -9,7 +9,7 @@ const store = require("./server/store.js");
 const { finalizeRound } = require("./server/liveMatch.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
 const A = require("./assets/achievements.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const DAY = 864e5;
 const fresh = () => { const lg = store.createMultiManagerCareer(["Ach A", "Ach B"], Date.UTC(2026, 9, 1, 10)).league; lg.leagueId = "fr-1"; return lg; };

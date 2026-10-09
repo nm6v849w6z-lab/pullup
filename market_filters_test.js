@@ -55,7 +55,7 @@ function check(cond, msg) { if (!cond) throw new Error(`❌ ${msg}`); console.lo
 // 2) Page Marché.
 (async () => {
   const { startTestServer, openGame, flush } = require("./test_helpers.js");
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server } = await startTestServer();
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   try {

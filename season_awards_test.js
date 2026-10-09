@@ -11,7 +11,7 @@ const Calendar = require("./server/calendar.js");
 const AutoSim = require("./server/autoSim.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const ok = m => console.log("✅ " + m);
 const H = 3600 * 1000;
 

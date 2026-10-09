@@ -24,7 +24,7 @@
 // ça, aucun navigateur ne bascule son popup natif sur le thème sombre.
 const fs = require("fs");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 (async () => {
 

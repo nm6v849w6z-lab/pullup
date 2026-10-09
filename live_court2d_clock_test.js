@@ -73,7 +73,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- 1 bis. Miroir de son club (moteurbasket3.html) ----------
   {
-    const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+    const html = require("./test_game_html.js").readGameHtml();
     const grab = name => { const m = new RegExp(`function ${name}\\([^]*?\\n}\\n`).exec(html); if (!m) fail(`fonction ${name} introuvable`); return m[0]; };
     const ctx = {};
     const src = `${grab("clockSecondsFromStr")}${grab("secondsToClockStr")}${grab("livePossessionAt")}${grab("updateLiveClockTick")}

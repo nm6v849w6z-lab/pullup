@@ -6,7 +6,7 @@ const Engine = require("./engine.js");
 const Calendar = require("./server/calendar.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " + m); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitFor(fn, label) { for (let i = 0; i < 200; i++) { let v; try { v = fn(); } catch (e) { v = null; } if (v) return v; await sleep(50); } throw new Error("❌ délai dépassé : " + label); }

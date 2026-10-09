@@ -32,7 +32,7 @@ const hist = [
   if (ser) check(ser.prestige === 64, "prestige sauvegardé");
 
   const { server, baseUrl } = await startTestServer();
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const dom = await openGame(html, baseUrl);
   const win = dom.window, doc = win.document;
   win.eval(`teamA.seasonHistory = ${JSON.stringify(hist)};`);

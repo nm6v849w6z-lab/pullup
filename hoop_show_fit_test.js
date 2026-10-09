@@ -172,7 +172,7 @@ const el = win.document.getElementById("m");
 
 // --- 6) intégration dans le jeu : page figée pendant l'émission, encoches, acquis conservés
 {
-  const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+  const html = require("./test_game_html.js").readGameHtml();
   const sec = html.match(/#hoopShowSection\{position:fixed;[^}]*\}/);
   if (!sec || !/env\(safe-area-inset-left/.test(sec[0]) || !/env\(safe-area-inset-right/.test(sec[0])) fail("iPhone en paysage : encoches gauche/droite réservées.");
   if (!/html\.hoop-show-open, html\.hoop-show-open body\{overflow:hidden;/.test(html)) fail("la page du jeu ne doit plus défiler sous l'émission.");

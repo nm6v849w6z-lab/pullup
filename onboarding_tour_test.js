@@ -9,7 +9,7 @@ const Calendar = require("./server/calendar.js");
 const { dailyAnchoredCalendarConfig } = Calendar;
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush, flushTourNext } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 (async () => {
 

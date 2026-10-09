@@ -12,7 +12,7 @@ const Engine = require("./engine.js");
 const Calendar = require("./server/calendar.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 function check(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.log("✅ " + msg); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitFor(fn, label, tries = 100) { for (let i = 0; i < tries; i++) { try { const v = fn(); if (v) return v; } catch (e) { /* pas encore */ } await sleep(50); } throw new Error("❌ délai dépassé : " + label); }

@@ -135,7 +135,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   M.stop(); await sleep(1100);
 
   // ---------- Branchements dans le jeu ----------
-  const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf8");
+  const html = require("./test_game_html.js").readGameHtml();
   const fnOf = name => { const m = new RegExp(`(?:async )?function ${name}\\([^]*?\\n}\\n`).exec(html); return m ? m[0] : ""; };
   if (!/<script src="assets\/audio\/music\.js\?v=\d+" defer><\/script>/.test(html)) fail("music.js chargé par la page du jeu.");
   if (!/HMMusic\.play\("emission"\)/.test(fnOf("openHoopShow"))) fail("openHoopShow lance la musique de l'émission (avant-match et mi-temps).");

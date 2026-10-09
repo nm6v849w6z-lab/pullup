@@ -2,7 +2,7 @@
 // « afficher la date de dernière connexion sur le profil du club »).
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const assert = (c, msg) => { if (!c) throw new Error("❌ " + msg); console.log("✅ " + msg); };
 
 (async () => {

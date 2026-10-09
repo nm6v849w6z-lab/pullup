@@ -5,7 +5,7 @@
 // la semaine (amical : tactique grisée), parrainage, persistance serveur.
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, editSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 function assert(cond, msg) { if (!cond) throw new Error("❌ " + msg); console.log("✅ " + msg); }
 const D = 24 * 60 * 60 * 1000;
 

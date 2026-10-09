@@ -7,7 +7,7 @@
 // au budget du club AVANT de régénérer la ligue de la saison suivante.
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // ---------------------------------------------------------------------
 // Partie 1 : logique moteur pure (League.divisionOutcomeForUserTeam /

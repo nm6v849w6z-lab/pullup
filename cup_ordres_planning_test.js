@@ -25,7 +25,7 @@ const { dailyAnchoredCalendarConfig, scheduledTimeForLeagueCupRound } = Calendar
 const { ensureCupLiveMatchStarted, finalizeCupRound } = require("./server/liveMatch.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame, flush } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const T0 = Date.UTC(2026, 8, 22, 7, 0, 0); // 22 septembre 2026, 09h Paris (CEST), mardi arbitraire
 
@@ -292,7 +292,7 @@ if (!backupsAfterForCandidate.includes("Pivot") || backupsAfterForCandidate.leng
 console.log("✅ Ajouter un remplaçant sur un tour de Coupe (planProxyForRound) fonctionne — starterPosition bien porté par le proxy.");
 
 await flush(dom);
-const multiSaveAfterBackup = JSON.parse(fs.readFileSync(multiSavePath, "utf-8"));
+const multiSaveAfterBackup = require("./server/store.js").rehydrateLiveBlobsSync(JSON.parse(fs.readFileSync(multiSavePath, "utf-8")), multiSavePath);
 const savedBackupsForCandidate = multiSaveAfterBackup.league.teams[0].plannedTactics?.[`cup:${round0.index}`]?.lineup?.backupPositions?.[backupCandidateId];
 console.log("Côté serveur (fichier de sauvegarde), postes remplaçant de ce joueur :", JSON.stringify(savedBackupsForCandidate));
 if (!savedBackupsForCandidate || !savedBackupsForCandidate.includes("Pivot")) {
@@ -305,7 +305,7 @@ console.log("✅ Le remplaçant ajouté sur un tour de Coupe est bien persisté 
 //    page (nouvelle session JSDOM, même lien manager, même serveur).
 // ---------------------------------------------------------------------
 await flush(dom);
-const multiSaveAfter = JSON.parse(fs.readFileSync(multiSavePath, "utf-8"));
+const multiSaveAfter = require("./server/store.js").rehydrateLiveBlobsSync(JSON.parse(fs.readFileSync(multiSavePath, "utf-8")), multiSavePath);
 const savedPlanKey = `cup:${round0.index}`;
 const savedTeam0 = multiSaveAfter.league.teams[0];
 console.log("Plan de Coupe sauvegardé (fichier ligue partagée) :", savedTeam0.plannedTactics && savedTeam0.plannedTactics[savedPlanKey] && savedTeam0.plannedTactics[savedPlanKey].defense);

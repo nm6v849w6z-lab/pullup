@@ -9,7 +9,7 @@ const C = require("./server/calendar.js");
 const A = require("./server/autoSim.js");
 const store = require("./server/store.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const fail = m => { throw new Error("❌ " + m); };
 const ok = m => console.log("✅ " + m);
 

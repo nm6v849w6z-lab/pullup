@@ -5,7 +5,7 @@
 // une sauvegarde / rechargement complet de la page (nouvelle instance jsdom).
 const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, fastForwardCalendar, editSave } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // Depuis le passage au calendrier réel (tâche #21), l'entraînement
 // hebdomadaire n'est plus déclenché à la main (bouton "Valider la semaine",

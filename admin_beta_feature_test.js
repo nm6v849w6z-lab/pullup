@@ -50,7 +50,7 @@ function fail(msg) { throw new Error("❌ " + msg); }
 
     // --- Côté client : le club rechargé dans le navigateur porte bien le drapeau
     // (la copie de Team embarquée dans moteurbasket3.html doit le désérialiser).
-    const html0 = require("fs").readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
+    const html0 = require("./test_game_html.js").readGameHtml();
     const game = await openGame(html0, baseUrl);
     const flag = game.window.eval('typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")');
     await game.window.close();
@@ -60,7 +60,7 @@ function fail(msg) { throw new Error("❌ " + msg); }
     // --- Côté client : la vue live n'ouvre le terrain animé qu'au club en bêta.
     const dom = new JSDOM(`<!doctype html><div id="root"></div>`, { pretendToBeVisual: true, runScripts: "outside-only" });
     const { window } = dom;
-    const html = require("fs").readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
+    const html = require("./test_game_html.js").readGameHtml();
     // Sortie de bêta (2026-10-09) : hmLive2dOn() = drapeau global live2d
     // (« all » par défaut), la bêta par club reste valable en « whitelist ».
     if (!/court2d: hmLive2dOn\(\)/.test(html) || !/function hmLive2dOn\(\) \{[^]*?teamA\.hasBetaFeature\("live2d"\)[^]*?f\.mode === "all" \|\| \(f\.mode !== "off" && beta\)/.test(html)) fail("l'adaptateur doit passer court2d = hmLive2dOn() (drapeau global + bêta par club) à createLiveView.");

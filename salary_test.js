@@ -9,7 +9,7 @@ const fs = require("fs");
 const { startTestServer, openGame, flush, readRawSave, writeRawSave, fastForwardCalendar } = require("./test_helpers.js");
 const E = require("./engine.js");
 const { salaryForOverall, levelCoefficientFor, Player } = E;
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 // --- Le poste EFFECTIF (celui qui détermine le coefficient de niveau, donc
 // le salaire) est bien déterminé D'APRÈS LES CARACTÉRISTIQUES, pas d'après

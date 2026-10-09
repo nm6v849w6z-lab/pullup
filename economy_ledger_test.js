@@ -17,7 +17,7 @@ function check(c, m) { if (!c) throw new Error("❌ " + m); console.log("✅ " +
   check(Engine.serializeTeam(t).financeLedger["1:4"].tv === 10000, "bilan sauvegardé");
 
   const { server, baseUrl } = await startTestServer();
-  const dom = await openGame(fs.readFileSync("moteurbasket3.html", "utf-8"), baseUrl);
+  const dom = await openGame(require("./test_game_html.js").readGameHtml(), baseUrl);
   const win = dom.window, doc = win.document;
   win.eval(`teamA.financeLedger = {}; teamA.week = 2;
     teamA.recordTransaction("Salaires des joueurs", -40000); teamA.recordTransaction("Billetterie vs A (3000 spect.)", 90000);

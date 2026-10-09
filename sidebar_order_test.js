@@ -4,7 +4,7 @@
 // Discord (lien externe) et Se déconnecter.
 const fs = require("fs");
 const { JSDOM } = require("jsdom");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const doc = new JSDOM(html).window.document;
 const sections = [...doc.querySelectorAll("#sidebar .sidebar-section, .sidebar .sidebar-section")];
 const got = sections.map(sec => {

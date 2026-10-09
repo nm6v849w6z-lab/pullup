@@ -27,7 +27,7 @@ const Scouting = require("./server/scouting.js");
 const store = require("./server/store.js");
 const { createHandler } = require("./server/index.js");
 const { startTestServer, openGame, patchDateNow } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 const T0 = Date.UTC(2026, 8, 7);
 

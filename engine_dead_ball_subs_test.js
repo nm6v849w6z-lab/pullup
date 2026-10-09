@@ -192,7 +192,11 @@ for (let g = 0; g < games; g++) {
     const betweenFt = prev && prev.type === "freeThrow" && ev[k] && ev[k].type === "freeThrow" && ev[k].shooterId === prev.shooterId && ev[k].attempt === prev.attempt + 1;
     if (ev[i].type === "substitution" && betweenFt) between++;
     else if (prev && prev.type === "freeThrow" && ev[i].type === "substitution") afterFt++;
-    if (!(isStop(prev) || betweenFt || (prev && prev.type === "freeThrow" && prev.lastMade)) || (prev.type === "shot" && !prev.foulType)) bad.push({ before: prev && prev.type, tov: prev && prev.tovType, made: prev && prev.made, text: ev[i].text });
+    // Lancers d'une faute technique / antisportive : ballon rendu en touche,
+    // arrêt de jeu même si le dernier lancer est manqué.
+    let f = j; while (f >= 0 && ["freeThrow", "substitution", "shortHanded"].includes(ev[f].type)) f--;
+    const techFt = prev && prev.type === "freeThrow" && ev[f] && (ev[f].type === "technicalFoul" || ev[f].type === "unsportsmanlikeFoul");
+    if (!(isStop(prev) || betweenFt || techFt || (prev && prev.type === "freeThrow" && prev.lastMade)) || (prev.type === "shot" && !prev.foulType)) bad.push({ stop: ev[f] && ev[f].type, before: prev && prev.type, tov: prev && prev.tovType, made: prev && prev.made, text: ev[i].text });
   }
 }
 assert.strictEqual(bad.length, 0, `changements hors fenêtre : ${JSON.stringify(bad.slice(0, 3))}`);

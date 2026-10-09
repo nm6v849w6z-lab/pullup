@@ -35,7 +35,7 @@ const TAC = [
   assert(!cards[0].getAttribute("style").includes("--tc-ink"), "direct : maillot foncé → chiffre blanc");
 
   // --- Feuille de match -----------------------------------------------------
-  const html = fs.readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const src = html.slice(html.indexOf("const TACTIC_RHYTHM_LEVEL"), html.indexOf("function matchQuarterScoresFromTeam"));
   const fn = new Function("escapeHtml", "teamLogoHtml", "hmLiveColors", src + "; return matchTacticsHtml;")(
     s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"), t => `<svg data-logo="${t.name}"></svg>`, () => ["#e08a2e", "#f4f4f4"]);

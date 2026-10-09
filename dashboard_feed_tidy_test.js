@@ -3,7 +3,7 @@
 // et, pour « Journée 6 : 5 résultats / A 34-45 B · C 66-48 D… » :
 // « fais mieux que ça, un match une ligne ».
 const fs = require("fs");
-const html = fs.readFileSync(__dirname + "/moteurbasket3.html", "utf8");
+const html = require("./test_game_html.js").readGameHtml();
 function grab(name) {
   const i = html.indexOf("function " + name + "(");
   if (i < 0) throw new Error("❌ " + name + " introuvable.");

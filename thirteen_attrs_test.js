@@ -336,7 +336,7 @@ const T0 = Date.now();
 // l'en-tête Effectif, mais bien présents sur la fiche joueur ouverte depuis
 // cet onglet.
 async function testRosterTableShowsNewColumns() {
-  const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server, baseUrl } = await startTestServer();
   try {
     const dom = await openGame(html, baseUrl);

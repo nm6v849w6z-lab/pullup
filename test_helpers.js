@@ -49,7 +49,8 @@ const testServers = new Map(); // savePath -> { multiSavePath, token, baseUrl }
 const testServersByUrl = new Map(); // baseUrl -> même objet
 
 function readMultiFile(multiSavePath) {
-  try { return JSON.parse(fs.readFileSync(multiSavePath, "utf-8")); } catch (e) { return null; }
+  // Directs : parties lourdes rangées à part (store.js, « ligue allégée »).
+  try { return require("./server/store.js").rehydrateLiveBlobsSync(JSON.parse(fs.readFileSync(multiSavePath, "utf-8")), multiSavePath); } catch (e) { return null; }
 }
 function defaultTokenStillValid(entry) {
   const data = readMultiFile(entry.multiSavePath);

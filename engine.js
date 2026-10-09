@@ -17387,11 +17387,8 @@ function parisUtcOffsetMs(utcMs) {
 }
 
 function parisLocalDateParts(utcMs) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: calendarTimeZone, hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(calendarTimeZone);   // formateur gardé par fuseau
+
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {
@@ -17446,12 +17443,24 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
 // hebdomadaire reste, elle, à une heure UNIQUE pour tous : lundi 6h à
 // Paris). Mêmes principes que parisLocalDateParts/parisEpochForLocalTime
 // ci-dessus, pour n'importe quel fuseau IANA. `timeZone` absent = Paris.
+// Formateur gardé par fuseau (performance, 2026-10-09 : en recréer un à
+// chaque appel coûtait ~40 % du rattrapage du monde).
+const ZONED_DTF = new Map();
+function zonedDtf(timeZone) {
+  const tz = timeZone || "Europe/Paris";
+  let dtf = ZONED_DTF.get(tz);
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+    ZONED_DTF.set(tz, dtf);
+  }
+  return dtf;
+}
 function zonedLocalDateParts(utcMs, timeZone) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: timeZone || "Europe/Paris", hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(timeZone);
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {
@@ -20510,9 +20519,21 @@ class MatchEngine {
         const elapsed = Math.max(2, Math.min(ctx0.possLen - 3, ctx0.possLen * (0.3 + rand01() * 0.3)));
         foulClock = Math.round((ctx0.possStart - elapsed) * 10) / 10;
       }
+      const foulIdx = events.length;
       this.log(events, quarter, foulClock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", foulType: "common", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, player: foulTarget.name, playerId: foulTarget.id, possession: this.teamKey(offTeam), ...(inBonus ? null : { inbound: true }) });
       this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, foulClock, events);
       this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, foulClock, events);
+      // Faute simple hors bonus = arrêt de jeu AVANT la remise en jeu :
+      // fenêtre de changement tout de suite (exclusion pour 5 fautes,
+      // fatigue…), à l'instant de la faute. Sans elle, un joueur à 5 fautes
+      // restait en jeu jusqu'au prochain arrêt (jusqu'à 7 fautes vues,
+      // engine_invariants_test). Les cinq en jeu sont relus pour la suite.
+      if (!inBonus && this.runSubstitutionWindow(events, foulIdx, quarter, foulClock, false)) {
+        onCourtOff.splice(0, onCourtOff.length, ...offTeam.onCourtPlayers());
+        onCourtDef.splice(0, onCourtDef.length, ...defTeam.onCourtPlayers());
+        // Plus personne d'un côté (effectif minuscule, tous exclus) : l'action s'arrête là.
+        if (!onCourtOff.length || !onCourtDef.length) return { possessionOffense: false, scored: false };
+      }
       // Après la remise en jeu, la suite de l'action est une nouvelle phase
       // de jeu : elle part de l'instant de la faute (direct 2D, 24 s).
       if (foulClock !== clock && ctx0) this._possCtx = { ...ctx0, possStart: foulClock, possLen: Math.round((foulClock - clock) * 10) / 10 };

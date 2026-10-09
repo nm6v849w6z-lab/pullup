@@ -17,7 +17,7 @@ const { createHandler } = require("./server/index.js");
 const { openGame, patchDateNow } = require("./test_helpers.js");
 const { generateTeam, generateLeague, simulateOrForfeit, recordMatchStatsAndAwardMvp } = Engine;
 
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const T0 = Date.UTC(2026, 8, 7);
 function assertTrue(cond, label) { if (!cond) throw new Error(`❌ ${label}`); }
 

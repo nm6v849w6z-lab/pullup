@@ -5,7 +5,7 @@ const assert = require("assert");
 const store = require("./server/store.js");
 const World = require("./server/world.js");
 const { startTestServer, openGame } = require("./test_helpers.js");
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const { server, baseUrl, multiSavePath } = await startTestServer();

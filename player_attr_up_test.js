@@ -5,7 +5,7 @@ process.chdir(__dirname);
 const { startTestServer, openGame } = require(path.resolve("test_helpers.js"));
 const fs = require("fs");
 (async () => {
-  const html = fs.readFileSync("moteurbasket3.html", "utf8");
+  const html = require("./test_game_html.js").readGameHtml();
   const { server, baseUrl } = await startTestServer();
   const dom = await openGame(html, baseUrl);
   const w = dom.window, d = w.document;

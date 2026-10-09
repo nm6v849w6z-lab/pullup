@@ -20,6 +20,60 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Performance serveur (8 points, « tenir 1000
+  directs »)**. Charge mesurée avant/après (même machine, ligue de test) :
+  ~12 → ~900 req/s sur `/api/spectate`, verrou tenu 84 ms → ~1 ms par
+  requête, rattrapage du monde 1,28 s bloquant → 350–400 ms qui rend la
+  main entre les ligues, ligue stockée 1,4 Mo → 426 Ko.
+  1. **Ligues en mémoire** (`server/store.js`, `leagueCache`) : validité =
+     `stat` du fichier, ou 10 min sur Redis (un seul processus écrit).
+     Coupe-circuit : `HM_LEAGUE_CACHE=0` ; taille : `HM_LEAGUE_CACHE_MAX`
+     (40). Toute erreur dans le handler → `store.invalidateLeagueCache()`.
+  2. **Requêtes de routine légères** (`server/index.js`, `tick`) : au plus
+     un rattrapage de ligue toutes les 5 s (`TICK_MIN_INTERVAL_MS`) ;
+     `changed: false` → pas de sauvegarde.
+  3. **Rafraîchissement regroupé** : `GET /api/heartbeat` (en ligne,
+     amicaux, mes enchères, résumé messagerie, non-lus du chat) ; client
+     `hbTick` (moteurbasket3.html, après la messagerie) toutes les 30 s,
+     onglet visible. Les fonctions `refreshTopbarOnline`, `frRefreshList`,
+     `myAuctionsRefresh`, `msgRefreshSummary`, `lgcRefreshCount` prennent
+     la réponse en `pre` ; appelées sans argument elles refont leur propre
+     requête (actions ponctuelles). Restent à part : fil de messagerie
+     ouvert (6 s), tiroir du chat ouvert (15 s). Test : server/heartbeat_test.js.
+  4. **Directs servis figés** : `/api/spectate` mémorisé (`SPECTATE_MEMO`)
+     + ETag/304 (`sendBody`).
+  5. **Rattrapage du monde étalé** : `World.catchUpWorld(…, { yieldLock })`
+     relâche le verrou après chaque ligue ; empreinte réutilisée
+     (`FP_MEMO`, via `store.leagueSaveCount`). Limite connue : le tick
+     d'UNE ligue au coup d'envoi (simulation, 0,4–1 s) reste d'un bloc.
+  6. **Ouverture du jeu** : CSS extrait dans `assets/game.css` (⚠️ y
+     modifier le CSS du jeu et changer son `?v=` dans moteurbasket3.html),
+     ETag/304 sur la page et les assets (`readStaticCached`, `INDEX_CACHE`).
+  7. **Ligue allégée** : les parties lourdes des directs (`events`,
+     `pauses`, box scores, `tacticsUsed`) vivent à part
+     (`pullup:liveblob:<id>` sur Redis, `<base>.live/` en fichiers) et sont
+     réhydratées au chargement (`rehydrateLiveBlobs`).
+  8. **Mesures en prod** : `server/metrics.js`, page `/admin/metrics`
+     (jeton admin saisi dans la page), `GET/POST /api/admin/metrics`.
+     Série « verrou · attente » = file d'attente à surveiller.
+  Tests : `test_game_html.js` (`readGameHtml()`) remet game.css en ligne
+  pour les tests qui lisent le CSS ou calculent des styles dans jsdom ;
+  `test_helpers.js:readMultiFile` réhydrate les directs
+  (`store.rehydrateLiveBlobsSync`). Cache : un objet ligue sauvegardé qui
+  n'est pas celui servi par le cache retire l'entrée (pas de partage avec un
+  script / test) ; `store.clearRedisCache()` vide aussi les ligues en mémoire.
+  Suite possible : découper moteurbasket3.html en modules JS (au-delà du
+  CSS), alléger encore la ligue (historique des saisons).
+- **🟢 LIVRÉ (2026-10-09) — Moteur : exclusion à 5 fautes sur faute simple**.
+  Une faute simple hors bonus (arrêt + remise en jeu en cours de
+  possession) ouvre la fenêtre de changement tout de suite
+  (`runSubstitutionWindow` depuis la faute, cinq en jeu relus) : avant, un
+  joueur à 5 fautes restait jusqu'au prochain arrêt (7 fautes vues,
+  engine_invariants_test). Tests : engine_invariants, engine_dead_ball_subs
+  (lancers d'une antisportive : changement possible même après un dernier
+  lancer manqué), live_possession_sync (remise après un dernier lancer
+  réussi : jusqu'à 6 s).
+
 - **🟢 LIVRÉ (2026-10-09) — Direct 2D pour tout le monde (sortie de bêta)**.
   `server/featureFlags.js` : nouveau drapeau `live2d` (`all` par défaut,
   `whitelist` = bêta par club, `off`), `liveShows` passe en `all` ; version

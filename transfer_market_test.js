@@ -22,7 +22,7 @@ const {
   TRANSFER_MIN_INCREMENT_FLAT, TRANSFER_MIN_INCREMENT_PCT, TRANSFER_CPU_BID_CHANCE,
   MAX_ROSTER_SIZE,
 } = E;
-const html = fs.readFileSync("moteurbasket3.html", "utf-8");
+const html = require("./test_game_html.js").readGameHtml();
 
 function freshLeague(budget = 5000000) {
   const user = generateTeam("User", 1.0);
