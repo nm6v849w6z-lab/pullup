@@ -505,6 +505,7 @@ export function createShowFx(team) {
   // Ordre des trois mesures (temps mort suivant : autre enchaînement).
   const ORDERS = [[B1, B2, B3], [B2, B1, B3], [B1, B3, B2], [B3, B2, B1]];
   let seqOrder = 0;
+  let pomTotal = 18.6;           // pompom A : fin du show (s), posée par draw
   const bar = k => ORDERS[seqOrder % ORDERS.length][k];
   function dancePose(seq, tl) {
     const n = clamp(Math.floor(tl / BEAT), 0, seq.length - 1);
@@ -548,40 +549,56 @@ export function createShowFx(team) {
   function scenePom(variant, look, t) {
     const out = { chars: [], dim: 0, spots: [], fx: [], guides: { paths: [] }, period: 18.6 };
     if (variant === 'A') {
+      // Retour 2026-10-09 : entrée une seule fois, danse pendant TOUT le
+      // temps mort (phrases de 4 mesures : lignes → V → V → lignes, ordre
+      // des pas renouvelé à chaque phrase), sortie seulement à la fin
+      // (pomTotal = instant où la dernière doit être sortie).
       const E = [200, 102];
       const rows = [[868, 492], [956, 492], [1044, 492], [1132, 492], [822, 606], [930, 610], [1070, 610], [1178, 606]];
       const vee = [[812, 470], [906, 512], [1094, 512], [1188, 470], [858, 600], [950, 642], [1050, 642], [1142, 600]];
-      const D0 = 3.5, D1 = D0 + 3 * BAR, X0 = D1 + 0.3;
+      const D0 = 3.5, PH = 4 * BAR;
+      const X0 = Math.max(D0 + BAR, pomTotal - 4.2);
+      out.period = pomTotal;
       out.dim = 0.38 * sm((t - 1.2) / 1.6) * (1 - sm((t - X0 - 1.2) / 1.6));
       out.spots = [{ x: 1000, y: 552, r: 330, i: 1 }];
+      const seqOf = k => ORDERS[(seqOrder + Math.floor(k / 4)) % ORDERS.length][(k % 4) % 3];
+      // Place (et pas) de la danseuse i, td s après le début de la danse.
+      const danceAt = (i, td) => {
+        const k = Math.floor(td / BAR), tl = td - k * BAR, ph = k % 4;
+        const from = ph === 1 ? rows[i] : ph === 3 ? vee[i] : null;
+        if (from && tl < 2 * BEAT) {
+          const to = ph === 1 ? vee[i] : rows[i], u = sm(tl / (2 * BEAT));
+          return { x: lerp(from[0], to[0], u), y: lerp(from[1], to[1], u), run: tl };
+        }
+        const at = ph === 0 || ph === 3 ? rows[i] : vee[i];
+        const lag = ph === 1 ? i * 0.07 : 0;
+        return { x: at[0], y: at[1], seq: seqOf(k), tl: from ? tl - 2 * BEAT - lag : tl - lag };
+      };
       for (let i = 0; i < 8; i++) {
+        const tOut = X0 + 0.1 * (7 - i);
+        const last = tOut > D0 ? danceAt(i, tOut - D0) : { x: rows[i][0], y: rows[i][1] };
         const pin = mkPath([E, [rows[i][0], 100 + 40 * (i % 4)], rows[i]]);
-        const pout = mkPath([vee[i], [vee[i][0], 140], E]);
-        const c = travelOrDance(i, look, pin, pout, 0.17 * i, X0 + 0.1 * (7 - i), 430, t, (c) => {
+        const pout = mkPath([[last.x, last.y], [last.x, 140], E]);
+        const c = travelOrDance(i, look, pin, pout, 0.17 * i, tOut, 430, t, (c) => {
           const td = t - D0;
           if (td < 0) { c.pose = idlePose(t, i); return; }
-          if (td < BAR) { const d = dancePose(bar(0), td); Object.assign(c, { pose: d.pose, shake: d.shake, flare: d.flare }); return; }
-          const tb = td - BAR;
-          if (tb < BAR) {
-            if (tb < 2 * BEAT) {
-              const u = sm(tb / (2 * BEAT));
-              c.x = lerp(rows[i][0], vee[i][0], u); c.y = lerp(rows[i][1], vee[i][1], u);
-              c.pose = runPose(tb * 14, 0.55); c.shake = 0.4; return;
-            }
-            c.x = vee[i][0]; c.y = vee[i][1];
-            const d = dancePose(bar(1), tb - 2 * BEAT - i * 0.07);
-            Object.assign(c, { pose: d.pose, shake: d.shake, flare: d.flare }); return;
-          }
-          c.x = vee[i][0]; c.y = vee[i][1];
-          const tc = tb - BAR;
-          const d = dancePose(bar(2), tc);
+          const d0 = danceAt(i, td);
+          c.x = d0.x; c.y = d0.y;
+          if (d0.run != null) { c.pose = runPose(d0.run * 14, 0.55); c.shake = 0.4; return; }
+          if (d0.tl < 0) { c.pose = idlePose(t, i); return; }
+          const d = dancePose(d0.seq, d0.tl);
           Object.assign(c, { pose: d.pose, shake: d.shake, flare: d.flare });
         });
-        if (c) { if (t > D0 + BAR + 2 * BEAT && t < X0 + 0.1 * (7 - i)) { c.x = vee[i][0]; c.y = vee[i][1]; } out.chars.push(c); }
+        if (c) out.chars.push(c);
         out.guides.paths.push(pin);
       }
-      const tf = D0 + 2 * BAR + 6 * BEAT;
-      out.fx.push(['burst', 48, 420, tf, 3, 11], ['burst', 52, 760, tf + 0.1, 3, 21], ['burst', 1950, 380, tf + 0.05, 3, 31], ['burst', 1948, 800, tf + 0.15, 3, 41], ['burst', 600, 1240, tf + 0.2, 4, 51], ['burst', 1400, 1240, tf + 0.1, 4, 61]);
+      // Le public se lève à la fin de chaque phrase.
+      for (let p = 0; ; p++) {
+        const tf = D0 + p * PH + 2 * BAR + 6 * BEAT;
+        if (tf > X0) break;
+        if (t < tf - 0.5 || t > tf + 1.5) continue;
+        out.fx.push(['burst', 48, 420, tf, 3, 11 + p], ['burst', 52, 760, tf + 0.1, 3, 21 + p], ['burst', 1950, 380, tf + 0.05, 3, 31 + p], ['burst', 1948, 800, tf + 0.15, 3, 41 + p], ['burst', 600, 1240, tf + 0.2, 4, 51 + p], ['burst', 1400, 1240, tf + 0.1, 4, 61 + p]);
+      }
     } else if (variant === 'B') {
       const xs = [330, 450, 570, 690, 1310, 1430, 1550, 1670], y = 106;
       const D0 = 3.2, D1 = D0 + 3 * BAR, X0 = D1 + 0.3;
@@ -962,13 +979,15 @@ export function createShowFx(team) {
   }
 
   // Une image de la scène, temps t (s) depuis le début de la boucle.
-  // opts : { show: "pom" | "masc" | "tee", variant: "A" | "B" | "C", t, q, order }
+  // opts : { show: "pom" | "masc" | "tee", variant: "A" | "B" | "C", t, q, order, total }
+  // (total : pompom — durée du show, entrée et sortie comprises, en s)
   function draw(context, opts) {
     ctx = context; setQ(opts.q);
     const show = opts.show, variant = opts.variant;
     const look = SHOW_LOOK[show === "pom" ? "pom" : show + variant] || "cartoon";
     const t = Math.max(0, opts.t || 0);
     seqOrder = opts.order || 0;
+    pomTotal = opts.total > 0 ? opts.total : 18.6;
     const sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t) : sceneTee(variant, look, t);
     drawLighting(sc.dim, sc.spots);
     const env = makeEnv(sc.dim, sc.spots);

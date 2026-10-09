@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-19";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261008-19";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-20";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261008-20";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -228,8 +228,11 @@ export function createStaging(api, getCfg) {
       // Le tableau d'affichage reste au-dessus des personnages.
       ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.clip("evenodd");
       const key = fx === "pom" ? "pom" : fx + variant;
-      const t = api.reduced ? STILL[key] : (el0 % cycle) / 1000;
-      try { frame = fxr.draw(ctx, { show: fx, variant, t, q: kx, order: ci || 0 }); } catch (e) { frame = null; }
+      // Pompom girls : un seul show sur tout le temps mort (entrée, danse,
+      // sortie juste avant la reprise) ; les autres shows bouclent.
+      const total = (st.endsAt - st.startAt - LEAD - 1000) / 1000;
+      const t = api.reduced ? STILL[key] : fx === "pom" ? el0 / 1000 : (el0 % cycle) / 1000;
+      try { frame = fxr.draw(ctx, { show: fx, variant, t, q: kx, order: ci || 0, total }); } catch (e) { frame = null; }
       ctx.restore();
     }, frame: () => frame, destroy() { api.dropOverlay(); } };
   }

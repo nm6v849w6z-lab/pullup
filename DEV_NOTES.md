@@ -41,6 +41,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   A et B un match sur deux. Temps mort suivant : autre ordre des trois
   mesures de danse. Test navigateur : `live_shows_canvas_test.js`
   (captures si `SHOWS_SHOTS=dossier`).
+  POMPOM GIRLS SUR TOUT LE TEMPS MORT (retour 2026-10-09) : plus de boucle
+  de 20 s (sortie puis retour) — `scenePom` A : entrée une fois, phrases de
+  4 mesures (lignes → V → V → lignes, ordre des pas renouvelé) jusqu'à
+  `pomTotal − 4,2 s`, sortie juste avant la reprise ; `staging.js` passe
+  `total` = durée de l'arrêt − 1,4 s et le temps écoulé sans modulo.
   MUSIQUES DES SHOWS (2026-10-09, fichiers fournis tels quels) :
   `assets/audio/music/pompom.mp3`, `mascotte.mp3`, `lanceur-maillot.mp3`
   (pistes `pompom` / `mascotte` / `lanceur` de `HMMusic`) ;

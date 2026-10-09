@@ -104,6 +104,16 @@ const server = http.createServer((req, res) => {
     if (r.boardInk) fail("le tableau d'affichage ne doit jamais être recouvert par le show.");
     await snap("show-pompom.png");
     ok(`Temps mort : 8 pompom girls au centre (canvas, ${r.ink} points dessinés), tableau dégagé.`);
+    // Retour 2026-10-09 : elles ne sortent pas au bout de 20 s — elles dansent
+    // au centre pendant TOUT le temps mort et ne sortent qu'à la fin.
+    for (const sec of [18, 21, 25, 32, 40, 47, 53]) {
+      r = await at(TO, 400 + sec * 1000, 2);
+      const d = r.frame ? r.frame.chars.filter(c => c.kind === "dancer") : [];
+      if (d.length !== 8 || !d.every(c => c.x > 780 && c.x < 1220 && c.y > 440 && c.y < 680)) fail(`à ${sec} s du temps mort, les 8 pompom girls dansent encore au centre ` + JSON.stringify(r.frame));
+    }
+    r = await at(TO, 58500, 2);
+    if (r.frame && r.frame.chars.length) fail("juste avant la reprise, les pompom girls sont sorties " + JSON.stringify(r.frame));
+    ok("Pompom girls : une seule entrée, danse au centre pendant tout le temps mort, sortie juste avant la reprise.");
     r = await at(null, 61000);
     if (r.show || r.cls) fail("le show doit disparaître à la fin du temps mort " + JSON.stringify(r));
     ok("Fin du temps mort : canvas retiré.");
