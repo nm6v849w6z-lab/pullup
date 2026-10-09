@@ -126,6 +126,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   match_share_ui_test.js. Choix produit à confirmer : un lien de DIRECT
   (créé sans Premium) reste lisible en rediffusion après le match.
 
+- **🟢 LIVRÉ (2026-10-09) — Drapeaux des tribunes « dans le vide » (plein
+  écran, écran large)**. Cause : `placeFlags` posait les drapeaux en % de
+  la BOÎTE du terrain, alors que le dessin y est centré (« meet ») avec des
+  bandes vides quand la boîte est plus large que lui. Correctif : position
+  en px dans le DESSIN (échelle min(W/vw, H/vh) + décalage du centrage) ;
+  vue recadrée (téléphone) : drapeau hors du dessin masqué au lieu d'être
+  coupé. Mesuré dans Chromium : 0 drapeau hors des tribunes à 1438×808,
+  1920×900 et 844×390 (9 / 11 / 15 avant).
+- **🟢 LIVRÉ (2026-10-09) — Ballon tenu par un arbitre pendant les pauses**
+  (temps mort, fin de quart-temps, fin de match) : `court2d.js`
+  `inLongStop` (scène `stopUntil` OU moteur `S.stoppage`, 0,6 s de marge
+  pour la reprise), `refKeeper` (arbitre du milieu, à la table) ; à chaque
+  image le ballon suit cet arbitre (il glisse jusqu'à lui) ; `giveBall`
+  refusé pendant la pause ; durée du temps mort = max(fil, S.stoppage).
+  Mi-temps (parquet vidé) ou pause sans arbitre à l'écran : ballon retiré,
+  jamais posé au sol. Page publique /m/ : arbitres ajoutés. Test :
+  live_court2d_ref_ball_test.js ; debug() `ball` / `keeper`.
+
 - **🟢 LIVRÉ (2026-10-09) — Écran « Une erreur est survenue » au retour
   de la carte des tirs (plein écran, téléphone)**. Cause : `court2d.js`
   recadrait le terrain (viewBox téléphone) DANS le callback de son

@@ -193,8 +193,26 @@ export function createCourt2D(host, opts = {}) {
   // la mise en scène, posé exactement sur le terrain animé, retiré après.
   let showCv = null;
   // Drapeaux : position en % de la boîte (suit le rognage téléphone).
+  // Boîte plus large (ou plus haute) que le dessin — plein écran sur un
+  // écran large, paysage : le terrain est centré (« meet ») avec des bandes
+  // vides ; les drapeaux suivent le DESSIN, pas la boîte (retour
+  // 2026-10-09 : drapeaux « dans le vide », hors des tribunes).
   function placeFlags() {
     const [vx, vy, vw, vh] = viewBox.split(/\s+/).map(Number);
+    // Vue recadrée (téléphone) : un drapeau qui sortirait du dessin est
+    // masqué plutôt que coupé au bord.
+    for (const f of flags) f.el.style.display = f.x < vx || f.x + FLAG_W > vx + vw || f.y - FLAG_H < vy || f.y > vy + vh ? "none" : "";
+    let W = 0, H = 0;
+    try { const r = svg.getBoundingClientRect(); W = r.width; H = r.height; } catch (e) { /* pas de mise en page */ }
+    if (W > 0 && H > 0) {
+      const k = Math.min(W / vw, H / vh), ox = (W - vw * k) / 2, oy = (H - vh * k) / 2;
+      for (const f of flags) {
+        const st = f.el.style;
+        st.left = (ox + (f.x - vx) * k).toFixed(2) + "px"; st.top = (oy + (f.y - FLAG_H - vy) * k).toFixed(2) + "px";
+        st.width = (FLAG_W * k).toFixed(2) + "px"; st.height = (FLAG_H * k).toFixed(2) + "px";
+      }
+      return;
+    }
     for (const f of flags) {
       const st = f.el.style;
       st.left = ((f.x - vx) / vw * 100).toFixed(3) + "%"; st.top = ((f.y - FLAG_H - vy) / vh * 100).toFixed(3) + "%";
@@ -774,6 +792,24 @@ export function createCourt2D(host, opts = {}) {
     const home = [{ x: 47, y: STOP_Y }, { x: 41, y: STOP_Y }, { x: 53, y: STOP_Y }][i];
     return { id: "ref" + i, g, lab, labState: "", labHalf: 1.4, ref: true, ox: 0, oy: 0, x: home.x, y: home.y, tx: home.x, ty: home.y, speed: 1, moving: false };
   }
+  // Arrêt prolongé (temps mort, fin de quart-temps, mi-temps, fin de match)
+  // : selon la scène (stopUntil) OU le moteur (S.stoppage). Le ballon du
+  // match est alors confié à un arbitre (retour utilisateur 2026-10-09) :
+  // jamais laissé au milieu des joueurs ni posé sur le parquet.
+  function inLongStop() {
+    if (performance.now() < stopUntil) return true;
+    // (la reprise prépare le jeu 0,6 s avant la fin de l'arrêt)
+    return !!(S && S.stoppage && S.stoppage.endsAt - 600 > now());
+  }
+  function inLongPause() {
+    return !!S && S.status !== "pregame" && (S.status === "halftime" || S.status === "final" || (S.status === "live" && inLongStop()));
+  }
+  function refKeeper() {
+    if (!refs.length || !inLongPause()) return null;
+    let best = null;
+    for (const r of refs) if (!best || Math.abs(r.tx - 47) < Math.abs(best.tx - 47)) best = r;   // l'arbitre du milieu, à la table
+    return best;
+  }
   function syncRefs(list) {
     if (refs.length || !Array.isArray(list)) return;
     for (let i = 0; i < 3; i++) refs.push(makeRef(list[i] || null, i));
@@ -882,7 +918,7 @@ export function createCourt2D(host, opts = {}) {
     if (sp && ((own !== null && sp.team !== own) || sp.leaving || !sprites.has(sp.id))) { audit.refusals++; if (opts.onAudit) opts.onAudit({ kind: "refusal", id: sp.id, team: sp.team, owner: own, leaving: !!sp.leaving, stack: new Error().stack }); ball.holder = null; ball.flight = null; return false; }
     // Arrêt de jeu en cours (temps mort, fin de quart) : le ballon reste à la
     // table ; la reprise (fin de l'arrêt) le redonne elle-même.
-    if (sp && performance.now() < stopUntil) { ball.holder = null; ball.flight = null; return false; }
+    if (sp && inLongStop()) { ball.holder = null; ball.flight = null; return false; }
     ball.holder = sp ? sp.id : null; ball.flight = null; ball.loose = null;
     return true;
   }
@@ -1536,7 +1572,9 @@ export function createCourt2D(host, opts = {}) {
         // Au banc pendant toute la pause (durée réelle du temps mort si le
         // fil la donne, 60 s côté serveur) ; la reprise vient de la
         // possession suivante (buildPlan attend la fin de scène).
-        const hold = e.durationMs || 4200;
+        // Durée : celle du fil, sinon celle de l'arrêt du moteur (S.stoppage).
+        const stRem = S && S.stoppage && S.stoppage.endsAt ? S.stoppage.endsAt - now() : 0;
+        const hold = Math.max(e.durationMs || 0, stRem) || 4200;
         moment("temps_mort", { team: t });
         scene(hold);
         stopUntil = performance.now() + hold;
@@ -2097,6 +2135,13 @@ export function createCourt2D(host, opts = {}) {
         ball.x = h.x + (h.team === 0 ? 2.2 : -2.2); ball.y = h.y + 0.3; ball.z = Math.abs(Math.sin(ball.drib)) * amp;
       }
     }
+    // Pause prolongée : le ballon est dans les mains de l'arbitre (il glisse
+    // jusqu'à lui grâce à la continuité ci-dessous, puis le suit).
+    const keeper = refKeeper();
+    if (keeper) {
+      ball.holder = null; ball.flight = null; ball.loose = null;
+      ball.x = keeper.x + 1.5; ball.y = keeper.y - 0.4; ball.z = 0.6;
+    }
     // Garde-fou : jamais de porteur dans l'équipe qui n'a pas le ballon selon
     // le moteur (ex. scène encore en retard sur le fil) — le ballon est
     // libéré, la resynchronisation le rend à la bonne équipe.
@@ -2126,7 +2171,11 @@ export function createCourt2D(host, opts = {}) {
     if (Math.abs(ballFix.y) < 0.01) ballFix.y = 0;
     ballG.setAttribute("transform", `translate(${((lx + ballFix.x) * PX).toFixed(1)} ${((ly + ballFix.y) * PX).toFixed(1)})`);
     // Avant-match (entrée des joueurs) : pas de ballon par terre sans porteur.
-    const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime"));
+    // (Pauses prolongées : ballon tenu par l'arbitre, voir refKeeper.)
+    // Mi-temps (parquet vidé : arbitres et joueurs aux vestiaires) ou pause
+    // sans arbitre à l'écran : ballon retiré (jamais posé sur le parquet) ;
+    // sinon il est dans les mains d'un arbitre (refKeeper).
+    const hideBall = !!(S && (S.status === "pregame" || S.status === "halftime" || (!refs.length && inLongPause())));
     if (hideBall !== ballHidden) { ballHidden = hideBall; ballG.setAttribute("opacity", hideBall ? "0" : "1"); }
     const bt = `translate(0 ${(-ball.z * 4).toFixed(1)}) scale(${(1 + ball.z / 14).toFixed(2)})`;
     if (bt !== ballBodyTf) { ballBodyTf = bt; ballBody.setAttribute("transform", bt); }
@@ -2289,7 +2338,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
-        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, inboundHeld: !!heldInbound,
+        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, inboundHeld: !!heldInbound, ball: [+ball.x.toFixed(2), +ball.y.toFixed(2)], keeper: (k => (k ? [+k.x.toFixed(2), +k.y.toFixed(2)] : null))(refKeeper()),
         staging: stage ? stage.debug() : null };
     },
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de

@@ -124,7 +124,7 @@ function mount(live) {
   root.innerHTML = "";
   cur = live;
   const m = data.meta || {};
-  const dress = { meta: { competition: [data.status === "replay" ? S.replay : S.live, m.competition].filter(Boolean).join(" · "), round: m.round || "", venue: "" }, courtLogo: "", arenaSponsor: null, courtStyle: null };
+  const dress = { meta: { competition: [data.status === "replay" ? S.replay : S.live, m.competition].filter(Boolean).join(" · "), round: m.round || "", venue: "" }, courtLogo: "", arenaSponsor: null, courtStyle: null, referees: [0, 1, 2].map(i => ({ id: "ref" + i, avatar: "" })) };
   adapter = createLiveAdapter({ live, teams: data.teams, mine: null, quarterLength: QL, overtimeLength: OL, dress, presenter: null });
   view = createLiveView(root, { quarterLength: QL, halftimeShowSeen: true, staging: null, court2d: true });
   items = itemsOf(live); applied = 0;

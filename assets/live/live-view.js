@@ -16,8 +16,8 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de, floorAdInk } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261009-27";
-import { createHighlights } from "./highlights.js?v=20261009-27";
+import { createCourt2D } from "./court2d.js?v=20261009-29";
+import { createHighlights } from "./highlights.js?v=20261009-29";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -271,7 +271,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261009-27").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261009-29").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -330,7 +330,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261009-27").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261009-29").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
