@@ -22,13 +22,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   // Fichiers fournis, intacts.
   const up = "/root/.claude/uploads/c939ee43-4ee9-577a-8871-07f47979dac5/";
-  for (const f of ["emission.mp3", "entree-joueurs.mp3"]) {
+  for (const f of ["emission.mp3", "entree-joueurs.mp3", "pompom.mp3", "mascotte.mp3", "lanceur-maillot.mp3"]) {
     const p = path.join(__dirname, "assets/audio/music", f);
     if (!fs.existsSync(p) || fs.statSync(p).size < 100000) fail(`musique manquante : ${f}`);
     if (fs.readFileSync(p).subarray(0, 3).toString("hex") !== "494433" && fs.readFileSync(p)[0] !== 0xff) fail(`${f} n'est pas un mp3`);
   }
   if (fs.existsSync(up + "837c1693-e_mission_de_la_mi_temps.mp3") && !fs.readFileSync(up + "837c1693-e_mission_de_la_mi_temps.mp3").equals(fs.readFileSync(path.join(__dirname, "assets/audio/music/emission.mp3")))) fail("emission.mp3 doit être le fichier fourni, tel quel.");
-  ok("Fichiers fournis en place, tels quels : assets/audio/music/emission.mp3 et entree-joueurs.mp3.");
+  for (const [u, f] of [["2af1efac-pompom_girl.mp3", "pompom.mp3"], ["dac988f9-mascotte.mp3", "mascotte.mp3"], ["4c8dcd23-lanceur_maillot.mp3", "lanceur-maillot.mp3"]])
+    if (fs.existsSync(up + u) && !fs.readFileSync(up + u).equals(fs.readFileSync(path.join(__dirname, "assets/audio/music", f)))) fail(`${f} doit être le fichier fourni, tel quel.`);
+  const mjs = fs.readFileSync(path.join(__dirname, "assets/audio/music.js"), "utf8");
+  if (!/pompom: "pompom\.mp3", mascotte: "mascotte\.mp3", lanceur: "lanceur-maillot\.mp3"/.test(mjs)) fail("music.js : pistes des shows déclarées.");
+  ok("Fichiers fournis en place, tels quels : emission, entree-joueurs, pompom, mascotte, lanceur-maillot.");
 
   // ---------- Module HMMusic, audio simulé ----------
   const dom = new JSDOM(`<!doctype html><body></body>`, { runScripts: "outside-only", url: "http://localhost/" });
@@ -173,8 +177,25 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     NOW = S.kickoffAt + 100; S.status = "live"; court.update(S, []); await sleep(700);
     const last = calls.filter(c => c[1] === "entree").pop();
     if (!last || last[0] !== "stop") fail("coup d'envoi : fin de la séquence, musique arrêtée.");
-    court.destroy();
     ok("Mise en scène : musique demandée pendant les 30 s d'entrée des joueurs seulement, arrêtée au coup d'envoi ou si la page du direct est quittée.");
+    // Shows : une musique par show, le temps du show seulement.
+    S.events = [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: NOW - 1000, text: "" }];
+    for (const [st, key] of [[{ kind: "timeout", team: 0, quarter: 1 }, "pompom"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 3 }, "lanceur"]]) {
+      S.quarter = st.quarter; S.stoppage = { ...st, startAt: NOW, endsAt: NOW + 60000 };
+      NOW += 2000; court.update(S, []); await sleep(900);
+      const mine = calls.filter(c => c[0] === "play" && c[1] === key && c[2] === 1500);
+      if (!mine.length) fail(`show « ${key} » : musique demandée, obtenu ${JSON.stringify(calls.slice(-4))}.`);
+      if (calls.slice(-3).some(c => c[0] === "play" && c[1] !== key)) fail(`show « ${key} » : une seule musique à la fois.`);
+      NOW = S.stoppage.endsAt - 500; court.update(S, []); await sleep(700);
+      if (!calls.slice(-3).some(c => c[0] === "stop" && c[1] === key)) fail(`show « ${key} » : musique arrêtée avec le fondu de sortie du show.`);
+      NOW = S.stoppage.endsAt + 10; S.stoppage = null; court.update(S, []); await sleep(500);
+    }
+    S.stoppage = { kind: "quarter-break", quarter: 2, startAt: NOW, endsAt: NOW + 60000 }; S.quarter = 2;
+    const before = calls.length; NOW += 2000; court.update(S, []); await sleep(800);
+    if (calls.slice(before).some(c => c[0] === "play")) fail("pas de show en fin de Q2 : aucune musique.");
+    S.stoppage = null; NOW += 60000; court.update(S, []);
+    court.destroy();
+    ok("Shows : pompom.mp3 aux temps morts, mascotte.mp3 en fin de Q1, lanceur-maillot.mp3 en fin de Q3, le temps du show seulement.");
   }
 
   // ---------- Serveur : mp3 avec requêtes partielles ----------

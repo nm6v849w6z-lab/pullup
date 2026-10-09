@@ -1,6 +1,7 @@
 // =====================================================================
 // Musiques des séquences (2026-10-08) : émissions d'avant-match et de
-// mi-temps (« emission »), entrée des joueurs du direct 2D (« entree »).
+// mi-temps (« emission »), entrée des joueurs du direct 2D (« entree »),
+// shows du direct 2D (« pompom », « mascotte », « lanceur », 2026-10-09).
 // Fichiers fournis, utilisés tels quels : assets/audio/music/*.mp3.
 //
 //   HMMusic.play("emission")            // lance (fondu d'entrée), en boucle
@@ -19,7 +20,8 @@
   if (typeof window === "undefined" || window.HMMusic) return;
   const script = document.currentScript;
   const BASE = script && script.src ? new URL("music/", script.src).href : "assets/audio/music/";
-  const TRACKS = { emission: "emission.mp3", entree: "entree-joueurs.mp3" };
+  const TRACKS = { emission: "emission.mp3", entree: "entree-joueurs.mp3",
+    pompom: "pompom.mp3", mascotte: "mascotte.mp3", lanceur: "lanceur-maillot.mp3" };   // shows du direct 2D
   const VOLUME = 0.55, FADE_IN = 1500, FADE_OUT = 900, FADE_SWITCH = 400;
   let ctx = null;
   let cur = null;        // { key, el, gain, state: "play" | "out", lease, blocked, ducked }

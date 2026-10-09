@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-18";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261008-18";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261008-19";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261008-19";
 
 // Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
 // pas de show pour l'instant : ajouter une ligne ici suffit.
@@ -345,21 +345,28 @@ export function createStaging(api, getCfg) {
   }
   function endShow() { if (show) { show.destroy(); show = null; } }
 
-  // ---------- musique de l'entrée des joueurs (2026-10-08) ----------
-  // Fichier fourni (assets/audio/music/entree-joueurs.mp3) joué pendant la
-  // phase « intro » seulement, page du direct affichée ; bail renouvelé
-  // ici : la séquence finie (coup d'envoi), la page quittée ou la vue
-  // détruite, la musique s'efface d'elle-même (assets/audio/music.js).
-  let musicAt = 0, musicOn = false;
+  // ---------- musiques des séquences (2026-10-08, shows 2026-10-09) ----------
+  // Fichiers fournis (assets/audio/music/*.mp3) : entrée des joueurs pendant
+  // la phase « intro », puis une musique par show — pompom girls, mascotte,
+  // lanceurs de maillots — tant que le show est à l'écran (page du direct
+  // affichée). Bail renouvelé ici : séquence finie, page quittée ou vue
+  // détruite, la musique s'efface d'elle-même (assets/audio/music.js), en
+  // même temps que le fondu de sortie du show.
+  const SHOW_MUSIC = { pompom: "pompom", mascot: "mascotte", tshirt: "lanceur" };
+  let musicAt = 0, musicKey = null;
   function music(ph, nowP) {
     const M = typeof window !== "undefined" ? window.HMMusic : null;
     if (!M || nowP - musicAt < 400) return;
     musicAt = nowP;
-    const want = ph.kind === "intro" && (!api.shown || api.shown());
-    if (want) { M.play("entree", { lease: 1500 }); musicOn = true; }
-    else if (musicOn) { M.stop("entree"); musicOn = false; }
+    const on = !api.shown || api.shown();
+    let want = null;
+    if (on && ph.kind === "intro") want = "entree";
+    else if (on && show && SHOW_MUSIC[show.name] && ph.st && api.now() < ph.st.endsAt - 900) want = SHOW_MUSIC[show.name];
+    if (musicKey && musicKey !== want) { M.stop(musicKey); musicKey = null; }
+    if (want === "entree") { M.play("entree", { lease: 1500 }); musicKey = want; }
+    else if (want) { M.play(want, { lease: 1500 }); musicKey = want; }
   }
-  function musicOff() { const M = typeof window !== "undefined" ? window.HMMusic : null; if (M && musicOn) M.stop("entree"); musicOn = false; }
+  function musicOff() { const M = typeof window !== "undefined" ? window.HMMusic : null; if (M && musicKey) M.stop(musicKey); musicKey = null; }
 
   // ---------- boucle ----------
   function tick(nowP) {

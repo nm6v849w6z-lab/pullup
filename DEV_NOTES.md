@@ -41,6 +41,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   A et B un match sur deux. Temps mort suivant : autre ordre des trois
   mesures de danse. Test navigateur : `live_shows_canvas_test.js`
   (captures si `SHOWS_SHOTS=dossier`).
+  MUSIQUES DES SHOWS (2026-10-09, fichiers fournis tels quels) :
+  `assets/audio/music/pompom.mp3`, `mascotte.mp3`, `lanceur-maillot.mp3`
+  (pistes `pompom` / `mascotte` / `lanceur` de `HMMusic`) ;
+  `staging.js:music()` joue celle du show en cours (bail 1,5 s renouvelé),
+  arrêt 0,9 s avant la fin de l'arrêt (fondu avec le show), page quittée
+  ou show coupé ; une seule musique à la fois, l'émission garde la main.
+  Test : `music_sequences_test.js`. music.js chargé en `?v=2`.
 
 - **🟢 LIVRÉ (2026-10-08) — Live 2D : pub du parquet, logo au rond
   central, panneaux LED, ballon libre, remplaçants au temps mort**.
