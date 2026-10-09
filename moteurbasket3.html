@@ -9075,6 +9075,7 @@
 <script src="assets/club-staging-ui.js" defer></script>
 <script src="assets/medical-ui.js?v=20261009-1" defer></script>
 <script src="assets/market-presets.js?v=20261009-1" defer></script>
+<script src="assets/match-share.js?v=20261009-1" defer></script>
 <script src="assets/national-visuals.js?v=20261009-1" defer></script>
 <script src="assets/national.js?v=20261009-3" defer></script>
 <script src="assets/national-coach.js?v=20261009-3" defer></script>
@@ -43953,13 +43954,7 @@ function liveMatchScoreAB(liveMatch) {
 // page c'est bon" / "il n'y a plus le score en direct sur le live") :
 // permet de rejouer intégralement l'état d'un direct (score, cases par
 // quart-temps, mini bandeau du topbar) SANS forcer la navigation vers
-// l'onglet Live, pour pouvoir resynchroniser en arrière-plan pendant que le
-// joueur consulte une autre page (Ordres, Effectif...), voir le
-// gestionnaire `visibilitychange` plus bas, qui appelle ceci quand l'onglet
-// du NAVIGATEUR redevient visible après avoir été masqué, moment où les
-// setTimeout/setInterval programmés pour la diffusion peuvent avoir été
-// mis en pause par le navigateur lui-même (onglet en arrière-plan) et donc
-// avoir pris du retard sur les événements réellement déjà survenus.
+// l'onglet Live (resynchronisation en arrière-plan, voir `visibilitychange`).
 function enterLiveMatch(liveMatch, opts) {
   const keepCurrentPage = !!(opts && opts.keepCurrentPage);
   clearLiveTimers();
@@ -43968,6 +43963,7 @@ function enterLiveMatch(liveMatch, opts) {
   resetPlaybackTrackers();
   hmLiveReset(liveMatch);
   renderLiveReplaySeekBar(liveMatch);
+  window.HM_SHARE && HM_SHARE.own(liveMatch);
 
   // Retour utilisateur (2026-09) : "bc dia est à l'exterieur et doit donc
   // être à droite pas à gauche" : voir .score-row.my-team-away plus haut
@@ -44936,6 +44932,7 @@ async function showSpectateMatch(teamIdx, pre) {
   // chargent (spectateMountLiveView), sinon le rendu texte chaque seconde.
   const state = spectateState;
   if (!data.live.forfeit) spectateMountLiveView(state).catch(() => {});
+  window.HM_SHARE && HM_SHARE.spectate(state);
   state.timer = setInterval(() => {
     if (spectateState !== state || !document.getElementById("spectateOverlay")) { clearInterval(state.timer); return; }
     if (state.rich) { spectateSyncRich(state); return; }
@@ -46609,6 +46606,7 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
     : ctx.replay.lp
     ? openPrivateLeagueLive(ctx.replay, document.getElementById("matchReplayFeedback"))
     : startMatchReplay(ctx.replay, document.getElementById("matchReplayFeedback"))));
+  if (ctx.replay && window.HM_SHARE) HM_SHARE.replayButton(document.getElementById("matchReplayFeedback"), ctx.replay);
   renderMatchBoxscoreTab("A");
 }
 

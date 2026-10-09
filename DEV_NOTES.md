@@ -97,8 +97,34 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   play-offs = 2e victoire de la série) + finale des tournois NT via
   S.meta — test live_highlights_test. ⚠️ moteurbasket3.html ≈ 3 999 600
   octets (limite 4 000 000) : plus RIEN à y ajouter sans en retirer.
-  RESTE : partage de match / rediffusion. Préexistant (échoue aussi sans ces
-  changements) : cup_ordres_planning_test.
+  Préexistant (échoue aussi sans ces changements) : cup_ordres_planning_test.
+
+- **🟢 LIVRÉ (2026-10-09) — Partage d'un match / d'une rediffusion (P3)**.
+  Lien public stable `/m/<code>` (8 caractères, un seul par match, le même
+  pour tous). Serveur : `server/matchLinks.js` (createLink / resolveLink /
+  publicLive ; stockage store.loadMatchLinks/saveMatchLinks, fichier
+  `*.matchlinks.json` ou clé Redis `pullup:matchlinks`), `server/matchPage.js`
+  (page : contexte compétition / journée / date / équipes, score final
+  MASQUÉ derrière « Voir le score final », terrain 2D du jeu = live-view.js
+  + adapter.js, curseur ⏮ / −30 s / +30 s en rediffusion, suivi du direct
+  toutes les 10 s ; 9 langues), routes publiques `GET /m/<code>` et
+  `GET /m/<code>/data` (avant le garde 401, noindex, no-cache), route
+  `POST /api/match/share-link` (jeton manager). Droits : match officiel du
+  championnat du manager (direct : tout manager de la ligue ; rediffusion :
+  Premium, comme « Revoir le direct ») ; sélections : tout manager ; ligues
+  privées : refusé (matchs réservés aux membres). Contenu public : noms,
+  postes, numéros, événements ; jamais caractéristiques, tactiques, stats de
+  feuille, jeton ; pendant le direct ni score final ni actions à venir
+  (LIVE_LOOKAHEAD_MS 5 s). Le lien d'un direct devient la rediffusion à la
+  fin (même après archivage). Match purgé (REPLAYS_MAX, emplacements des
+  sélections recyclés) : page « Ce match n'est plus disponible » (404).
+  Jeu : `assets/match-share.js` (HM_SHARE.own / spectate / replayButton) —
+  « 🔗 Partager le match » (écran du direct de son club, fenêtre
+  spectateur) et « 🔗 Partager la rediffusion » (feuille de match, à côté de
+  « Revoir le direct ») ; lien copié et affiché dans le flux, feuille de
+  partage du téléphone (pointer: coarse). Tests : server/match_share_test.js,
+  match_share_ui_test.js. Choix produit à confirmer : un lien de DIRECT
+  (créé sans Premium) reste lisible en rediffusion après le match.
 
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
   `court2d.js` : calque `.c2d-flags` (dans `under`, au-dessus du public),

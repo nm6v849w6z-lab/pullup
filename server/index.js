@@ -74,6 +74,8 @@ const WebPush = require("./webpush.js");
 const Ads = require("./ads.js");
 const Site = require("./site.js");
 const PlayerLinks = require("./playerLinks.js");
+const MatchLinks = require("./matchLinks.js");
+const MatchPage = require("./matchPage.js");
 const PlayerPage = require("./playerPage.js");
 const WeeklyDigest = require("./weeklyDigest.js");
 const Engine = require("../engine.js");
@@ -1498,6 +1500,42 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         return;
       }
 
+      // Match partagé (`/m/<code>`, server/matchLinks.js et
+      // server/matchPage.js) : page publique, sans connexion, en lecture
+      // seule ; `/m/<code>/data` = données du terrain 2D (JSON). Lien
+      // inconnu ou match purgé : page « plus disponible » (404).
+      if (req.method === "GET" && /^\/m\/[^/]+(\/data)?\/?$/.test(route.pathname)) {
+        const isData = /\/data\/?$/.test(route.pathname);
+        let code = "";
+        try { code = decodeURIComponent(route.pathname.slice(3).replace(/\/data\/?$/, "").replace(/\/$/, "")); } catch (e) { code = ""; }
+        const qLang = I18n.normLang(route.searchParams.get("lang"));
+        const lang = I18n.siteLang({ query: qLang, cookie: req.headers.cookie, acceptLanguage: req.headers["accept-language"] });
+        const origin = originFor(req);
+        let resolved = null;
+        try {
+          resolved = await MatchLinks.resolveLink(multiSavePath, code, {
+            loadLeague: async (id) => {
+              const world = await World.loadWorld(multiSavePath, now);
+              const entry = world ? world.leagues.find(e => e.id === id) : null;
+              return entry ? World.loadLeague(world, id, multiSavePath) : null;
+            },
+          }, now);
+        } catch (e) {
+          console.warn("[match partagé]", e.message);
+        }
+        const common = { "Cache-Control": "private, no-cache", "X-Robots-Tag": "noindex" };
+        if (isData) {
+          if (!resolved) { sendJson(res, 404, { ok: false, error: "Ce match n'est plus disponible." }); return; }
+          sendBody(res, 200, { "Content-Type": "application/json; charset=utf-8", ...common },
+            Buffer.from(JSON.stringify({ ok: true, status: resolved.status, live: resolved.live, teams: resolved.teams, meta: resolved.meta }), "utf-8"), true);
+          return;
+        }
+        const page = resolved ? MatchPage.renderMatchPage({ resolved, code, origin, lang }) : MatchPage.renderMatchNotFoundPage({ lang, origin });
+        sendBody(res, resolved ? 200 : 404, { "Content-Type": "text/html; charset=utf-8", "Content-Language": lang, Vary: "Accept-Language, Cookie", ...common },
+          Buffer.from(page, "utf-8"), true);
+        return;
+      }
+
       // Plus de carrière solo (2026-09-29) : sans jeton manager, seules
       // restent ouvertes /api/health, les routes admin (secret
       // X-Admin-Token) et les comptes (ci-dessus).
@@ -2688,6 +2726,24 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
       // POST /api/player/share-link { playerId } crée (ou renvoie) le code,
       // POST /api/player/share-link/revoke { playerId } le coupe. Réservé au
       // manager du club (jeton) ; stockage à part, la ligue n'est pas réécrite.
+      // Partage d'un match (P3, 2026-10-09) : POST /api/match/share-link
+      // { kind: "official", round, competition, home, away, key } ou
+      // { kind: "national", id } → { code, url } (`/m/<code>`). Droits et
+      // contenu public : voir server/matchLinks.js.
+      if (route.pathname === "/api/match/share-link" && req.method === "POST") {
+        const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
+        if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }
+        let body;
+        try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
+        let natStore = null;
+        if (body && body.kind === "national") { try { natStore = await NationalTeams.loadStore(multiSavePath); } catch (e) { natStore = null; } }
+        const out = await MatchLinks.createLink(multiSavePath, ctx, body || {}, now, { natStore });
+        if (!out.ok) { sendJson(res, out.status || 400, out); return; }
+        out.url = `${originFor(req)}/m/${out.code}`;
+        sendJson(res, 200, out);
+        return;
+      }
+
       if ((route.pathname === "/api/player/share-link" || route.pathname === "/api/player/share-link/revoke") && req.method === "POST") {
         const ctx = await resolvePlayerContext(req, savePath, multiSavePath, now);
         if (!ctx.ok) { sendJson(res, ctx.status, { ok: false, error: ctx.error }); return; }

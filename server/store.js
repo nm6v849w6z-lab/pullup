@@ -869,6 +869,30 @@ async function savePlayerLinks(data, savePath = defaultMultiLeaguePath()) {
   fs.renameSync(tmp, where.file);
 }
 
+// Liens de partage des matchs (server/matchLinks.js), même principe que
+// les liens de joueur ci-dessus.
+function matchLinksStorage(savePath) {
+  return { redis: `${redisPrefix()}pullup:matchlinks`, file: savePath.replace(/\.json$/, "") + ".matchlinks.json" };
+}
+async function loadMatchLinks(savePath = defaultMultiLeaguePath()) {
+  const where = matchLinksStorage(savePath);
+  if (upstashConfigured()) {
+    const raw = await redisGet(where.redis);
+    return raw == null ? null : JSON.parse(raw);
+  }
+  if (!fs.existsSync(where.file)) return null;
+  return JSON.parse(fs.readFileSync(where.file, "utf-8"));
+}
+async function saveMatchLinks(data, savePath = defaultMultiLeaguePath()) {
+  const where = matchLinksStorage(savePath);
+  const body = JSON.stringify(data);
+  if (upstashConfigured()) { await redisSet(where.redis, body); return; }
+  fs.mkdirSync(path.dirname(where.file), { recursive: true });
+  const tmp = `${where.file}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, body, "utf-8");
+  fs.renameSync(tmp, where.file);
+}
+
 // Résout le manager qui a fait CETTE requête à partir de son jeton privé
 // (voir Team.managerLinkToken) : un simple parcours linéaire (N ≤ 10, jamais
 // besoin d'un index) des équipes de la ligue, à la recherche d'une équipe
@@ -1035,7 +1059,7 @@ module.exports = {
   loadClubHistory, appendClubHistory, replaceClubHistory, saveMigrationBackup, flushHistoryQueue,
   loadReplays, appendReplays, loadLpReplays, appendLpReplays, REPLAYS_MAX, LP_REPLAYS_MAX, isLpReplayKey, loadLeagueChat, saveLeagueChat,
   saveNationalLives, loadNationalLive, NATIONAL_LIVE_SLOTS,
-  loadPlayerLinks, savePlayerLinks,
+  loadPlayerLinks, savePlayerLinks, loadMatchLinks, saveMatchLinks,
   // Comptes joueurs (voir server/accounts.js) :
   defaultAccountsPath, loadAccountsRaw, saveAccountsRaw,
   // Backend Redis (Upstash) optionnel (voir grand commentaire dédié plus

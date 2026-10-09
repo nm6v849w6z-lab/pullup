@@ -344,4 +344,4 @@ function renderNotFoundPage({ lang = "fr", origin = "" } = {}) {
     extraCss: ".nf{max-width:620px;margin:40px auto}.nf h1{font-size:36px;margin-bottom:10px}.nf .btn{margin-top:14px}" }) + "\n" + shell(lang, body, t);
 }
 
-module.exports = { renderPlayerPage, renderNotFoundPage, ppChartHtml, CHART_CSS, ATTR_GROUPS };
+module.exports = { renderPlayerPage, renderNotFoundPage, ppChartHtml, CHART_CSS, ATTR_GROUPS, head, shell, esc, translator };
