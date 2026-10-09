@@ -162,7 +162,7 @@ reset();
 }
 
 // ---------- Matchs simulés : aucun changement hors fenêtre ----------
-const STOPS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "quarterStart"]);
+const STOPS = new Set(["outOfBounds", "foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "quarterStart"]);
 const isStop = e => e && (STOPS.has(e.type) || e.foulType || (e.type === "turnover" && e.tovType !== "steal"));
 let subs = 0, atQuarter = 0, atTimeout = 0, beforeFt = 0, afterFt = 0, between = 0, ftEvents = 0;
 const games = 30;
@@ -177,10 +177,13 @@ for (let g = 0; g < games; g++) {
     }
     if (ev[i].type !== "substitution" && ev[i].type !== "shortHanded") continue;
     if (ev[i].type === "substitution") subs++;
+    // (une exclusion pour 5 fautes est annoncée dans le même arrêt que les
+    // changements : elle ne compte pas comme une action de jeu)
+    const sameStop = x => x.type === "substitution" || x.type === "shortHanded" || x.type === "foulOut";
     let j = i - 1;
-    while (j >= 0 && (ev[j].type === "substitution" || ev[j].type === "shortHanded")) j--;
+    while (j >= 0 && sameStop(ev[j])) j--;
     let k = i + 1;
-    while (k < ev.length && (ev[k].type === "substitution" || ev[k].type === "shortHanded")) k++;
+    while (k < ev.length && sameStop(ev[k])) k++;
     const prev = ev[j];
     if (ev[i].type === "substitution") {
       if (prev && prev.type === "quarterStart") atQuarter++;

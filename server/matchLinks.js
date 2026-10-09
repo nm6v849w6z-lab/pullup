@@ -117,12 +117,12 @@ function teamDisplay(team, color) {
   const players = (team.players || []).map(p => ({ id: p.id, name: p.name, pos: POS_SHORT[p.matchPosition || p.position] || "", number: Number.isInteger(p.number) ? p.number : null }));
   return { name: team.name || "?", short: team.shortName || trigram(team.name), color, players };
 }
+// Tenues du match : même choix que le jeu (assets/live/kits.js, ΔE 2000).
 function colorsFor(home, away) {
   const hex = k => (k && typeof Engine.jerseyHex === "function" ? Engine.jerseyHex(k) : null);
-  const h = hex(home && home.jerseyColor);
-  let ak = away && away.jerseyColor;
-  if (ak && home && ak === home.jerseyColor && away.awayJerseyColor) ak = away.awayJerseyColor;
-  const a = hex(ak);
+  const kitOf = t => ({ primary: hex(t && t.jerseyColor), secondary: hex(t && t.awayJerseyColor) });
+  const k = require("../assets/live/kits.js").pickMatchKits(kitOf(home), kitOf(away));
+  const h = k.colors[0], a = k.colors[1];
   return [h || "#e08a2e", a && a !== h ? a : "#3b8fe0"];
 }
 
@@ -195,4 +195,4 @@ async function resolveLink(savePath, code, deps = {}, now = Date.now()) {
     meta: { competition: competitionLabel(entry), round, season: link.season, kickoffAt: entry.kickoffAt || null, home: (home || {}).name || "", away: (away || {}).name || "" } };
 }
 
-module.exports = { createLink, resolveLink, publicLive, findOfficial, trigram, LIVE_LOOKAHEAD_MS };
+module.exports = { createLink, resolveLink, publicLive, findOfficial, trigram, colorsFor, LIVE_LOOKAHEAD_MS };

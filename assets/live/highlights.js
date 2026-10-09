@@ -32,11 +32,20 @@ export function createHighlights(root, opts = {}) {
   let layer = null, busyUntil = 0, queue = [];
   const reduced = (() => { try { return !!(doc.defaultView.matchMedia && doc.defaultView.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { return false; } })();
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Couche des moments forts, posée DANS la zone de jeu (opts.anchor : le
+  // terrain 2D ou la carte des tirs affichés) et non sur toute la vue live :
+  // centrée sur le terrain réel quelle que soit sa taille (inset: 0 sur son
+  // conteneur), au-dessus du terrain et des joueurs. Avant le 2026-10-09 elle
+  // couvrait toute la vue (score, feuille de match, fil…) : « 3 POINTS »
+  // apparaissait au milieu de la PAGE, donc bien en dessous du terrain.
   function ensureLayer() {
-    if (layer && layer.isConnected) return layer;
+    let host = root;
+    try { const a = typeof opts.anchor === "function" ? opts.anchor() : null; if (a && a.isConnected && !a.hasAttribute("hidden")) host = a; } catch (e) { host = root; }
+    if (layer && layer.isConnected && layer.parentNode === host) return layer;
+    if (layer && layer.isConnected) layer.remove();
     layer = doc.createElement("div");
-    layer.className = "hl-layer"; layer.setAttribute("aria-live", "polite");
-    root.appendChild(layer);
+    layer.className = "hl-layer" + (host === root ? "" : " hl-layer--court"); layer.setAttribute("aria-live", "polite");
+    host.appendChild(layer);
     return layer;
   }
   function playerName(state, id) {

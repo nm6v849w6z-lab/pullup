@@ -736,6 +736,11 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 .hm-live{position:relative}
 .hl-layer{position:absolute;inset:0;pointer-events:none;z-index:40;overflow:hidden}
 .hm-live.is-full .hl-layer{position:fixed;z-index:2147483001}
+/* Couche posée dans la zone de jeu (terrain 2D / carte des tirs, 2026-10-09) :
+   centrée sur le terrain réel, plein écran compris, au-dessus du décor et
+   des joueurs. */
+.hm-live .hl-layer--court,.hm-live.is-full .hl-layer--court{position:absolute;inset:0;z-index:60;border-radius:10px}
+.hl-layer--court .hl{top:50%;max-width:96%}
 .hl{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;width:min(92%,760px);animation:hl-in .5s cubic-bezier(.2,1.4,.4,1) both}
 .hl.is-out{animation:hl-out .45s ease-in both}
 .hl-big{font:900 clamp(34px,8.5vw,92px)/1 system-ui,sans-serif;letter-spacing:.02em;color:#fff;text-shadow:0 4px 0 var(--hl-c),0 8px 26px rgba(0,0,0,.65);white-space:nowrap}

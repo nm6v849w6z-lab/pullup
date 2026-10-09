@@ -16,8 +16,8 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de, floorAdInk } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261009-30";
-import { createHighlights } from "./highlights.js?v=20261009-30";
+import { createCourt2D } from "./court2d.js?v=20261009-32";
+import { createHighlights } from "./highlights.js?v=20261009-32";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -128,6 +128,9 @@ const TEMPLATE = `
       <button type="button" class="comm-btn" data-ref="commBtn" aria-pressed="false" title="Commentaire audio du match" hidden>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 6 6M22 9l-6 6"/></svg><span>Commentaire</span>
       </button>
+      <button type="button" class="comm-btn sfx-btn" data-ref="sfxBtn" aria-pressed="false" title="Bruitages du match" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span data-ref="sfxLbl">Bruitages</span>
+      </button>
       <button type="button" class="fs-btn" data-ref="fsBtn" aria-pressed="false" title="Suivre le match en plein écran">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Plein écran</span>
       </button>
@@ -237,6 +240,8 @@ export function createLiveView(root, opts = {}) {
   // Trophée : opts.trophyFor (direct de son club), sinon finale d'un tournoi
   // des sélections (S.meta.competition « … · finale »).
   const highlights = createHighlights(root, {
+    // Zone de jeu affichée (terrain 2D ou carte des tirs) : les moments forts y sont centrés.
+    anchor: () => (ui.view === "2d" ? $("court2d") : $("courtWrap")),
     trophyFor: S0 => (typeof opts.trophyFor === "function" ? opts.trophyFor(S0) : null) || ntTrophy(S0),
   });
   function ntTrophy(S0) {
@@ -271,7 +276,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261009-30").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261009-32").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -281,6 +286,21 @@ export function createLiveView(root, opts = {}) {
     const b = $("commBtn"); if (!b) return;
     b.toggleAttribute("hidden", !court2dAllowed || !comm);
     b.setAttribute("aria-pressed", String(!!(comm && comm.on)));
+  }
+  // Bruitages (sfx.js, 2026-10-09) : déclenchés par les événements réels du
+  // fil (une fois chacun), pas par le terrain. Niveau réglé au bouton
+  // (coupés → bas → moyen → fort), gardé dans ce navigateur.
+  let sfx = null;
+  import("./sfx.js?v=20261009-32").then(m => { if (sfx === false) return; sfx = m.createSfx(); syncSfxBtn(); }).catch(() => {});
+  const SFX_LABELS = ["coupés", "bas", "moyen", "fort"];
+  function syncSfxBtn() {
+    const b = $("sfxBtn"); if (!b) return;
+    b.toggleAttribute("hidden", !sfx);
+    if (!sfx) return;
+    b.setAttribute("aria-pressed", String(sfx.level > 0));
+    b.setAttribute("data-level", String(sfx.level));
+    b.title = `Bruitages : ${SFX_LABELS[sfx.level] || ""} (toucher pour changer)`;
+    const l = $("sfxLbl"); if (l) l.textContent = sfx.level > 0 ? `Bruitages · ${SFX_LABELS[sfx.level]}` : "Bruitages coupés";
   }
   let S = null;                 // dernier état reçu
   let seenEvents = null;        // Set des id d'événements déjà affichés
@@ -330,7 +350,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261009-30").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261009-32").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
@@ -420,6 +440,7 @@ export function createLiveView(root, opts = {}) {
   }
   $("fsBtn").addEventListener("click", () => setFull(!full));
   $("commBtn").addEventListener("click", () => { if (!comm) return; comm.setOn(!comm.on); syncCommBtn(); });
+  $("sfxBtn").addEventListener("click", () => { if (!sfx) return; sfx.setLevel((sfx.level + 1) % 4); syncSfxBtn(); if (sfx.level > 0) sfx.play("whistle", "essai"); });
   $("fsExit").addEventListener("click", () => setFull(false));
   if (typeof document !== "undefined") {
     // Échap / geste système : le navigateur quitte le vrai plein écran.
@@ -494,6 +515,8 @@ export function createLiveView(root, opts = {}) {
       const jump = fresh.length > 8 || (air.length > 1 && Math.max(...air) - Math.min(...air) > 8000);
       if (first || jump) highlights.prime(S.events);
       else if (fresh.length) highlights.detect(fresh, S);
+      // Bruitages : jamais à l'arrivée sur la page ni sur un saut dans le temps.
+      if (sfx && !first && !jump && fresh.length) { try { sfx.onEvents(fresh, S, { home: 0 }); } catch (e) { /* jamais bloquant */ } }
       if (!first && lastStatus && lastStatus !== "final" && S.status === "final") highlights.onFinal(S);
     } catch (e) { /* jamais bloquant */ }
     lastStatus = S.status;
@@ -543,6 +566,7 @@ export function createLiveView(root, opts = {}) {
     if (miniRaf) cancelAnimationFrame(miniRaf);
     if (court2d) { try { court2d.destroy(); } catch (e) { /* rien */ } court2d = null; }
     if (comm) { try { comm.destroy(); } catch (e) { /* rien */ } } comm = false;
+    if (sfx) { try { sfx.destroy(); } catch (e) { /* rien */ } } sfx = false;
     root.innerHTML = ""; root.classList.remove("hm-live");
   }
 

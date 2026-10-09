@@ -20,6 +20,65 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Live 2D : arrêts de jeu, pertes de balle,
+  maillots, bruitages**.
+  - **États du terrain** (`assets/live/court2d.js`, `setPhase`) : PREGAME,
+    LIVE, DEAD_BALL, INBOUND_SETUP, INBOUND, TIMEOUT, PERIOD_END. Ballon
+    mort : ni dérive, ni dribble, ni possession planifiée (buildPlan attend
+    LIVE, garde-fou 9 s). Une remise en jeu par arrêt (`inboundOnce`, clé
+    de l'événement) ; la fin de période passe avant (`periodEndPending`).
+    Journal : `debug().log` / `phase` / `anomalies` / `inbounder`, console
+    si `window.__hmLiveDebug = true`.
+  - **Remises en jeu** pilotées par les positions (`runInbound`) : remiseur
+    = coéquipier le plus proche, DERRIÈRE la ligne (touche ou fond ;
+    `moveTo(…, out)` — l'ancienne borne y ≥ 1,5 le remettait dans le
+    terrain côté haut), ballon donné une fois qu'il y est, passe, reprise
+    à la réception dans le terrain (`completeInbound`). Sortie : `ballOut`
+    (ligne de fond près des paniers). Reprise après temps mort : touche.
+  - **Moteur** : `outOfBounds` (ballon dévié dehors par la DÉFENSE,
+    l'attaque garde le ballon, chrono des 24 s conservé, 4 % des
+    possessions de 8 s ou plus) ; pertes en situation
+    (`chooseTurnoverSituation` : intercept, strip, passOut, passLoose,
+    fumble, missedMove — stats et taux de pertes inchangés, `deadBall`
+    seulement pour une passe sortie) ; faute simple et sortie = fenêtre de
+    changement immédiate ; les changements ne portent plus le contexte de
+    possession. Textes : PHRASES.turnover* (9 langues).
+  - **Chrono** arrêté pendant la remise en jeu (`deadBallHoldMs`,
+    `shotClockBase` dans adapter.js ; copie `liveDeadBallHoldMs` /
+    `liveShotClockBase` dans moteurbasket3.html).
+  - **Recalage** (`resync`) en douceur quand le terrain est visible (plus
+    de téléportation) ; instantané seulement si rien n'était affiché ou
+    sur un saut dans le temps. Rafale = plus de 8 événements ou 8 s.
+  - **Maillots** : `assets/live/kits.js` (ΔE 2000, seuil
+    `KIT_MIN_DELTA_E` = 22, 2e maillot à domicile prioritaire), utilisé
+    par `hmLiveColors` et `server/matchLinks.js:colorsFor`.
+  - **Bruitages** : `assets/live/sfx.js` (règles `SFX_RULES`, déclenchés
+    par les nouveaux événements dans live-view.js), sons SYNTHÉTISÉS ;
+    fichiers optionnels dans `assets/audio/sfx/` (voir README.md du
+    dossier). Bouton « Bruitages » (coupés / bas / moyen / fort).
+  - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
+    toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
+    `busy()` à jeton (seul le dernier minuteur libère le joueur) ;
+    `formation()` saute le remiseur. Diagnostic 2 matchs complets :
+    0 anomalie, 0 téléportation, toutes les sorties défensives remises.
+  - **Pertes** : poids RELATIFS à la pression défensive (même répartition
+    à tous les niveaux : passe sortie ~20–30 %, passe ratée ~31–37 %,
+    ballon échappé ~20–26 %, mauvaise lecture ~14–19 %).
+  - **« 3 POINTS »** : la couche des temps forts (`highlights.js`) était
+    posée sur toute la vue du direct → texte au milieu de la PAGE. Elle
+    s'attache désormais au terrain affiché (`anchor`, `.hl-layer--court`),
+    texte centré dans l'aire de jeu (vérifié 1440×900, 1024×700, 390×844,
+    844×390).
+  - Reste : la copie du moteur dans moteurbasket3.html (matchs simulés
+    côté client) ne produit pas encore `outOfBounds` ni les types de
+    pertes (les directs serveur, eux, oui) ; tests instables connus :
+    engine_balance « D sans banc ».
+  - Tests : live_court2d_dead_ball_test, live_court2d_turnovers_test
+    (banc d'essai partagé `test_court2d_harness.js`), live_kits_test,
+    live_sfx_test, server/national_friendlies_admin_test.
+  - Admin : `POST /api/admin/national { action: "friendly", home, away,
+    count | date, time, force }` (amicaux internationaux).
+
 - **🟢 LIVRÉ (2026-10-09) — Performance serveur (8 points, « tenir 1000
   directs »)**. Charge mesurée avant/après (même machine, ligue de test) :
   ~12 → ~900 req/s sur `/api/spectate`, verrou tenu 84 ms → ~1 ms par

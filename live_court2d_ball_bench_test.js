@@ -133,7 +133,7 @@ const mkTeam = (key, n) => ({ name: key, short: key.slice(0, 3).toUpperCase(), s
     court.update(S, [e2.id]);
     await sleep(500);
     S.possession = 1; court.update(S, []);   // le moteur : ballon à l'adversaire après le panier
-    await sleep(3700);
+    await sleep(6000);   // remise en jeu pilotée par les positions (remiseur derrière la ligne) : un peu plus longue
     on = false;
     const fr = tr.filter(p => p.loose);
     const pk = []; for (let k = 1; k < fr.length - 1; k++) if (fr[k].z > 0.05 && fr[k].z >= fr[k - 1].z && fr[k].z >= fr[k + 1].z) pk.push(fr[k].z);

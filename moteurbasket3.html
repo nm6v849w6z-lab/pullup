@@ -104,8 +104,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261009-30">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261009-30">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261009-32">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261009-32">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -125,6 +125,7 @@
 <script src="assets/medical-ui.js?v=20261009-1" defer></script>
 <script src="assets/market-presets.js?v=20261009-1" defer></script>
 <script src="assets/match-share.js?v=20261009-1" defer></script>
+<script src="assets/live/kits.js?v=20261009-1" defer></script>
 <script src="assets/national-visuals.js?v=20261009-1" defer></script>
 <script src="assets/national.js?v=20261009-3" defer></script>
 <script src="assets/national-coach.js?v=20261009-3" defer></script>
@@ -20103,6 +20104,24 @@ function startLiveClockTick() {
   updateLiveClockTick();
 }
 
+// Arrêt du chrono pendant une remise en jeu et chrono des 24 s conservé
+// quand la défense sort le ballon ou commet une faute simple (2026-10-09) :
+// copie de assets/live/adapter.js (deadBallHoldMs / shotClockBase).
+function liveDeadBallHoldMs(ev) {
+  const LIVE_DEAD_BALL_HOLD_MS = 2600;   // = DEAD_BALL_HOLD_MS de l'adaptateur
+  if (!ev) return 0;
+  if (ev.type === "outOfBounds") return LIVE_DEAD_BALL_HOLD_MS;
+  if (ev.type === "turnover" && ev.tovType !== "steal" && ev.deadBall !== false) return LIVE_DEAD_BALL_HOLD_MS;
+  if (ev.type === "foul" && ev.inbound) return LIVE_DEAD_BALL_HOLD_MS;
+  if (ev.type === "freeThrow" && ev.lastMade === true && (ev.of || 1) === (ev.attempt || 1)) return LIVE_DEAD_BALL_HOLD_MS;
+  if (ev.type === "shot" && ev.made && (ev.quarter || 0) >= 4 && ev.clockSec <= 120) return LIVE_DEAD_BALL_HOLD_MS;
+  return 0;
+}
+function liveShotClockBase(ev, sec) {
+  const keep = ev && ((ev.type === "outOfBounds" && ev.lastTouch === "defense") || (ev.type === "foul" && ev.inbound));
+  if (!keep || typeof ev.possStart !== "number") return 24;
+  return Math.max(14, Math.min(24, 24 - Math.max(0, ev.possStart - sec)));
+}
 function updateLiveClockTick() {
   syncTopbarLiveStrip();
   hmLiveOnTick();
@@ -20177,7 +20196,14 @@ function updateLiveClockTick() {
   }
 
   if (nextDiff) {
-    const fraction = Math.min(1, Math.max(0, (now - runStart.airAt) / (nextDiff.airAt - runStart.airAt)));
+    // Ballon mort (sortie, faute, dernier lancer réussi, panier des deux
+    // dernières minutes) : chrono ARRÊTÉ pendant la remise en jeu — même
+    // règle que assets/live/adapter.js (deadBallHoldMs / shotClockBase).
+    let stopEv = null;
+    for (let i = runStartIdx; i <= prevIdx; i++) if (liveDeadBallHoldMs(liveTickEvents[i]) || liveShotClockBase(liveTickEvents[i], prev.clockSec) !== 24) stopEv = liveTickEvents[i];
+    const t0 = runStart.airAt, t1 = nextDiff.airAt;
+    const start = stopEv ? Math.min(Math.max(t0, stopEv.airAt + liveDeadBallHoldMs(stopEv)), t0 + (t1 - t0) * 0.6) : t0;
+    const fraction = Math.min(1, Math.max(0, (now - start) / Math.max(1, t1 - start)));
     const interpSec = prev.clockSec - (prev.clockSec - nextDiff.clockSec) * fraction;
     // Le chrono des 24s est dérivé de la valeur ARRONDIE du chrono de match
     // (pas de la valeur brute) pour que les deux restent TOUJOURS cohérents
@@ -20191,7 +20217,7 @@ function updateLiveClockTick() {
     // Chrono des 24 s : SOURCE UNIQUE (le bandeau et le terrain 2D lisent
     // liveState.shotClock), en dixièmes pour que le terrain soit fluide.
     const elapsedSinceEvent = Math.max(0, prev.clockSec - interpSec);
-    const shotSec = Math.max(0, Math.min(24, 24 - elapsedSinceEvent));
+    const shotSec = Math.max(0, Math.min(24, liveShotClockBase(stopEv, prev.clockSec) - elapsedSinceEvent));
     liveState.shotClock = shotSec;
     badge.classList.remove("off");
     badge.classList.toggle("low", shotSec <= 5);
@@ -35125,7 +35151,8 @@ function enterLiveMatch(liveMatch, opts) {
   ].sort((a, b) => a.airAt - b.airAt);
 
   liveTickEvents = liveMatch.events
-    .map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSecondsFromStr(ev.clock), possession: ev.possession || null, possessionAfter: ev.possessionAfter || null, type: ev.type, team: ev.team }))
+    .map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSecondsFromStr(ev.clock), possession: ev.possession || null, possessionAfter: ev.possessionAfter || null, type: ev.type, team: ev.team,
+      made: ev.made, tovType: ev.tovType, deadBall: ev.deadBall, inbound: !!ev.inbound, lastTouch: ev.lastTouch || null, lastMade: ev.lastMade, of: ev.of, attempt: ev.attempt, possStart: ev.possStart }))
     .sort((a, b) => a.airAt - b.airAt);
   liveTickPauses = liveMatch.pauses.map(p => ({ airAt: p.airAt, endAt: p.airAt + p.durationMs }));
   startLiveClockTick();
@@ -36249,7 +36276,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261009-30";
+const HM_LIVE_ASSET_VERSION = "20261009-32";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -36440,7 +36467,7 @@ function hmLiveOnEvent(ev) {
       case "freeThrow": out.type = "ft"; if ((ev.made || 0) > 0) out.score = sc; break;
       case "foul": case "technicalFoul": case "unsportsmanlikeFoul": out.type = "foul"; break;
       case "foulOut": case "technicalEjection": out.type = "foul"; out.highlight = true; break;
-      case "turnover": out.type = "turnover"; break;
+      case "turnover": case "outOfBounds": out.type = "turnover"; break;
       case "substitution": case "shortHanded": out.type = "sub"; break;
       case "injury": out.type = "injury"; out.highlight = true; break;
       case "quarterStart": case "quarterEnd": out.type = "period"; out.team = null; break;
@@ -36484,7 +36511,7 @@ function hmLiveActors(ev) {
   // victime sur une faute (ev.team = équipe qui commet la faute), sinon
   // ev.team. Tous les défenseurs (défenseur du tir, contreur, voleur,
   // fautif) sont dans l'autre camp.
-  const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul";
+  const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul" || ev.type === "outOfBounds";   // outOfBounds : ev.team = défense
   const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : other) : foul ? other : ev.team;
   const defKey = offKey === "A" ? "B" : "A";
   return {
@@ -36494,6 +36521,7 @@ function hmLiveActors(ev) {
     // antisportive, perte, changement, blessure, exclusion) dans ev.team.
     stealer: pid(defKey, ev.stealer, ev.stealerId), player: pid(ev.type === "foul" ? other : ev.team, ev.player, ev.playerId), replacement: pid(ev.team, ev.replacement, ev.replacementId),
     handler: pid(offKey, ev.handler, ev.handlerId), creator: pid(offKey, ev.creator, ev.creatorId),
+    receiver: pid(offKey, ev.receiver, ev.receiverId), recoverer: pid(defKey, ev.recoverer, ev.recovererId),
   };
 }
 
@@ -36503,7 +36531,7 @@ function hmLiveActors(ev) {
 function hmLivePossessionFacts(ev) {
   if (ev.team !== "A" && ev.team !== "B") return {};
   const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : (ev.team === "A" ? "B" : "A"))
-    : (ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul") ? (ev.team === "A" ? "B" : "A") : ev.team;
+    : (ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul" || ev.type === "outOfBounds") ? (ev.team === "A" ? "B" : "A") : ev.team;
   const pid = (name, id) => (name ? offKey + ":" + liveRowKey(offKey, name, id) : null);
   // Porteur → créateur → tireur ; seuls les doublons CONSÉCUTIFS tombent
   // (porteur = tireur avec un créateur distinct = passe et va, réelle).
@@ -36514,6 +36542,8 @@ function hmLivePossessionFacts(ev) {
     shotType: ev.shotType || undefined, quality: ev.quality || undefined, situation: ev.situation || undefined,
     possLen: typeof ev.possLen === "number" ? ev.possLen : undefined, spot: ev.spot || undefined,
     tovType: ev.tovType || undefined, foulType: ev.foulType || undefined,
+    lastTouch: ev.lastTouch || undefined, inbound: ev.inbound || undefined,
+    tovKind: ev.tovKind || undefined, deadBall: typeof ev.deadBall === "boolean" ? ev.deadBall : undefined,
   };
 }
 
@@ -36678,11 +36708,22 @@ function hmLiveTeamIdx(team) {
   const i = team && league && league.teams ? league.teams.indexOf(team) : -1;
   return i >= 0 ? i : null;
 }
+// Tenues du match (2026-10-09) : premier / deuxième maillot de chaque club
+// choisis par distance perceptuelle des couleurs (ΔE 2000, voir
+// assets/live/kits.js : seuil, règles, deuxième maillot à domicile
+// prioritaire). Les couleurs du club ne changent jamais ; le choix ne dépend
+// que des couleurs (stable pendant tout le match).
+function hmLiveKits(homeTeam, awayTeam) {
+  const kitOf = t => ({ primary: t ? jerseyHex(t.jerseyColor) : null, secondary: t ? jerseyHex(t.awayJerseyColor) : null });
+  try { if (window.HMKits) return window.HMKits.pickMatchKits(kitOf(homeTeam), kitOf(awayTeam)); } catch (e) { /* repli ci-dessous */ }
+  return null;
+}
 function hmLiveColors(homeTeam, awayTeam) {
+  const k = hmLiveKits(homeTeam, awayTeam);
+  if (k) return [k.colors[0] || null, k.colors[1] || null];
+  // Repli (module des tenues indisponible) : règle d'origine, couleur identique → maillot extérieur.
   const homeKey = homeTeam && homeTeam.jerseyColor;
   let awayKey = awayTeam && awayTeam.jerseyColor;
-  // Deux clubs de même couleur : l'équipe qui se déplace joue en maillot
-  // extérieur, comme sur un vrai parquet.
   if (awayKey && awayKey === homeKey && awayTeam.awayJerseyColor) awayKey = awayTeam.awayJerseyColor;
   const home = jerseyHex(homeKey) || null;
   const away = jerseyHex(awayKey) || null;

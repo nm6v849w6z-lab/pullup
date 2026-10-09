@@ -36,7 +36,7 @@ const SIDE = 110, TOP = 96, BOT = 176;                    // décor autour du te
 const OX = SIDE, OY = TOP;                                // origine du terrain
 // Seuls ces événements donnent lieu à une possession jouée à l'avance ; les
 // autres (changement, début de quart, temps mort…) se jouent à leur arrivée.
-const PLANNED_KINDS = new Set(["shot", "rebound", "freeThrow", "turnover", "foul", "unsportsmanlikeFoul", "technicalFoul"]);
+const PLANNED_KINDS = new Set(["shot", "rebound", "freeThrow", "turnover", "outOfBounds", "foul", "unsportsmanlikeFoul", "technicalFoul"]);
 const VW = 940 + SIDE * 2, VH = TOP + 500 + BOT;
 const SHOT_CLOCK = 24;
 const FLAG_W = 34, FLAG_H = 40;                            // drapeau des tribunes (mât compris), unités de l'arène
@@ -705,6 +705,42 @@ export function createCourt2D(host, opts = {}) {
   // représentation seulement — le moteur ne siffle pas de violation) ; et
   // il traverse dans les 8 s de possession (règle des 8 s).
   let crossed = false;
+  // ---------- états du match (2026-10-09) ----------
+  // Une seule machine à états pour la scène, posée sur l'existant (arrêts
+  // longs `stopUntil`, chorégraphies `sceneUntil`) :
+  //   PREGAME → LIVE (entre-deux) ;
+  //   LIVE → DEAD_BALL (panier, sortie, faute, lancers francs) ;
+  //   DEAD_BALL → INBOUND_SETUP (remiseur hors du terrain, ballon donné,
+  //     changements attendus) → INBOUND (passe de remise en jeu) → LIVE ;
+  //   * → TIMEOUT (temps mort) → INBOUND_SETUP ; * → PERIOD_END (fin de
+  //     quart) → INBOUND_SETUP (quart suivant) ou fin du match.
+  // Ballon mort : aucun mouvement de jeu (dérive, dribble, possession
+  // planifiée, « remise en ordre ») ; la possession ne bouge plus jusqu'à la
+  // remise en jeu ; une remise en jeu n'est jouée qu'une fois par arrêt
+  // (clé de l'événement). Journal de diagnostic : debug().log, et la console
+  // si window.__hmLiveDebug = true.
+  let phase = "PREGAME", phaseWhy = "", phaseAt = 0, lastInboundKey = null, anomalies = 0;
+  const diagLog = [];
+  const debugOn = () => { try { return typeof window !== "undefined" && !!window.__hmLiveDebug; } catch (e) { return false; } };
+  function diag(kind, info) {
+    const x = { t: Math.round(performance.now()), ...(info || null), kind };
+    diagLog.push(x); if (diagLog.length > 150) diagLog.shift();
+    if (debugOn()) try { console.debug("[court2d]", kind, info || ""); } catch (e) { /* rien */ }
+  }
+  function setPhase(p, why = "") {
+    if (p === phase && why === phaseWhy) return;
+    diag("phase", { from: phase, to: p, why, possession: S && S.possession });
+    phase = p; phaseWhy = why; phaseAt = performance.now();
+  }
+  const deadBall = () => phase === "DEAD_BALL" || phase === "INBOUND_SETUP" || phase === "INBOUND";
+  // Ballon mort : chacun s'arrête là où il est (freinage naturel, pas de saut).
+  function freezePlayers(ms) {
+    for (const sp of sprites.values()) {
+      if (sp.leaving || sp.stage) continue;
+      sp.tx = Math.max(-3, Math.min(97, sp.x + (sp.vx || 0) * 0.12)); sp.ty = Math.max(1.5, Math.min(57, sp.y + (sp.vy || 0) * 0.12)); sp.speed = 1;
+      busy(sp, ms);
+    }
+  }
   // Audit possession (2026-10-07) : dernier événement joué, compteurs du
   // garde-fou (voir giveBall / tick) lus par les tests via debug().
   let lastPlayed = null;
@@ -885,8 +921,9 @@ export function createCourt2D(host, opts = {}) {
   // (même créneau) et le cercle, pas sur un créneau figé.
   function formation() {
     if (performance.now() < stopUntil) return;   // arrêt de jeu : tout le monde reste au banc
+    if (phase === "DEAD_BALL") return;            // ballon mort : on attend la remise en jeu
     for (const sp of sprites.values()) {
-      if (sp.leaving || sp.busy) continue;
+      if (sp.leaving || sp.busy || (inbounder && sp.id === inbounder)) continue;   // le remiseur reste derrière sa ligne
       if (sp.team === possession) {
         const p = slotPos(sp.team, sp.slot, true);
         sp.tx = p.x + rnd(-1.5, 1.5); sp.ty = p.y + rnd(-1.5, 1.5); sp.speed = 1;
@@ -1002,14 +1039,35 @@ export function createCourt2D(host, opts = {}) {
   // où il est animé ; rien quand l'onglet est masqué (pas de rattrapage).
   const moment = (k, info) => { if (suspended || !opts.onMoment) return; try { opts.onMoment(k, info || {}); } catch (err) { /* jamais bloquant */ } };
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, Math.max(0, ms)); timers.add(id); return id; };
-  function busy(sp, ms) { if (!sp) return; sp.busy = true; later(ms, () => { sp.busy = false; }); }
+  // Joueur tenu par une chorégraphie pendant `ms`. Jeton : seule la DERNIÈRE
+  // demande le libère (une minuterie plus ancienne — mise en place des
+  // lancers, rebond… — ne relâche plus un joueur repris entre-temps, cause du
+  // remiseur ramené dans le terrain par la formation).
+  function busy(sp, ms) { if (!sp) return; sp.busy = true; const tok = sp.busyTok = (sp.busyTok || 0) + 1; later(ms, () => { if (sp.busyTok === tok) sp.busy = false; }); }
   // Saut (tir, contre, rebond) : l'avatar se soulève et grossit un instant.
   function jump(sp, h = 1) { if (!sp) return; sp.jump = { t: 0, h }; }
   // Réaction du banc (sobre) : la bande des médaillons de l'équipe sursaute.
   // Le public (aux couleurs du club qui reçoit) se lève sur un panier à domicile.
   function cheer(team, strong = false) { crowdReact("score", team, strong); }
-  // Cibles bornées au terrain (le remiseur peut sortir derrière la ligne de fond, en x seulement).
-  function moveTo(sp, x, y, speed = 1.6) { if (!sp) return; sp.tx = Math.max(-3, Math.min(97, x)); sp.ty = Math.max(1.5, Math.min(57, y)); sp.speed = speed; }
+  // Cibles bornées au terrain et à ses abords. `out` : remiseur, qui DOIT
+  // pouvoir se tenir derrière n'importe quelle ligne (touche du haut
+  // comprise — avant le 2026-10-09 la borne y ≥ 1,5 le ramenait DANS le
+  // terrain pour une remise en jeu côté haut).
+  let inbounder = null;   // id du remiseur en place (voir runInbound)
+  function moveTo(sp, x, y, speed = 1.6, out = false) {
+    if (!sp) return;
+    // Remiseur en place : aucune autre consigne (plan, formation, entrée,
+    // ballon perdu…) ne le fait rentrer avant la passe.
+    if (!out && inbounder && sp.id === inbounder && !outside(x, y)) {
+      if (window.__hmLiveDebug) diag("blocked", { what: "inbounder-move", id: sp.id, target: [+x.toFixed(1), +y.toFixed(1)], stack: String(new Error().stack).split("\n").slice(2, 4).join(" | ") });
+      return;
+    }
+    sp.tx = Math.max(out ? -4.5 : -3, Math.min(out ? 98.5 : 97, x));
+    sp.ty = Math.max(out ? -4.5 : 1.5, Math.min(57, y));
+    sp.speed = speed;
+  }
+  // Le joueur est-il HORS du terrain (derrière une ligne) ? Lignes : x 0–94, y 0–50.
+  const outside = (x, y) => x < 0 || x > 94 || y < 0 || y > 50;
   function say(text) { caption.innerHTML = text; caption.classList.add("show"); }
   // « +1 / +2 / +3 » (retour utilisateur 2026-10-08) : élément à part, attaché
   // au jeton, qui apparaît vite, reste ~2 s puis s'efface et est SUPPRIMÉ ;
@@ -1094,68 +1152,287 @@ export function createCourt2D(host, opts = {}) {
   let heldInbound = null, inboundCount = 0;
   const subsPending = () => queue.some(q => q.kind === "substitution" || q.kind === "shortHanded")
     || !!(S && S.nextAction && (S.nextAction.kind === "substitution" || S.nextAction.kind === "shortHanded") && S.nextAction.airAt - now() < 1500);
+  // Fin d'une remise en jeu : le jeu ne reprend QUE quand le ballon est
+  // entré dans le terrain (reçu par un joueur dans les lignes). Remiseur
+  // encore ballon en main (passe pas encore partie) : il passe d'abord, la
+  // reprise suit la réception — il ne rentre jamais sur le terrain avec le
+  // ballon.
+  // Déroulé d'une remise en jeu, piloté par les positions (pas par des
+  // délais fixes) : 1) le remiseur rejoint son point DERRIÈRE la ligne ;
+  // 2) l'arbitre lui donne le ballon une fois qu'il y est (au plus 3 s) ;
+  // 3) il le tient un instant puis passe au meneur (état INBOUND) ;
+  // 4) reprise à la réception dans le terrain (completeInbound).
+  function runInbound(nt, pg, inb, why, keepClock, stopped) {
+    const t0 = performance.now();
+    const goal = inb ? { x: inb.tx, y: inb.ty } : null;
+    const ready = () => !inb || (outside(inb.x, inb.y) && Math.hypot(inb.tx - inb.x, inb.ty - inb.y) < 2) || performance.now() - t0 > 5000;
+    let nudged = false;
+    const wait = () => {
+      if (stopped()) return;
+      // Cible du remiseur modifiée entre-temps (ou pas encore dehors après
+      // 3 s) : on le renvoie derrière sa ligne, tracé.
+      if (inb && goal && !outside(inb.tx, inb.ty)) { diag("anomaly", { what: "inbounder-retargeted", id: inb.id, target: [+inb.tx.toFixed(1), +inb.ty.toFixed(1)] }); anomalies++; moveTo(inb, goal.x, goal.y, 2.9, true); }
+      if (inb && !nudged && performance.now() - t0 > 3000 && !outside(inb.x, inb.y)) { nudged = true; busy(inb, 3000); moveTo(inb, goal.x, goal.y, 3.2, true); }
+      if (!ready()) { later(100, wait); return; }
+      if (inb && !outside(inb.x, inb.y)) { anomalies++; diag("anomaly", { what: "inbounder-inside", id: inb.id, at: [+inb.x.toFixed(1), +inb.y.toFixed(1)], target: [+inb.tx.toFixed(1), +inb.ty.toFixed(1)], busy: !!inb.busy, leaving: !!inb.leaving, stage: !!inb.stage, entering: !!inb.entering, why }); }
+      const src = inb || pg;
+      flyTo(src, 280, 1, () => {
+        giveBall(src);
+        later(inb ? 420 : 150, () => {
+          if (stopped()) return;
+          setPhase("INBOUND", why);
+          if (inb && ball.holder === inb.id) pass(inb, pg);
+          later(inb ? 520 : 100, () => { if (!stopped()) completeInbound(nt, pg, inb, why, keepClock); });
+        });
+      });
+    };
+    later(150, wait);
+  }
+  function completeInbound(nt, pg, inb, why, keepClock, tries = 0) {
+    if (inb && ball.holder === inb.id && pg && pg !== inb && tries < 3) {
+      pass(inb, pg);
+      later(650, () => { if (performance.now() >= stopUntil) completeInbound(nt, pg, inb, why, keepClock, tries + 1); });
+      return;
+    }
+    if (ball.flight && tries < 3) { later(300, () => { if (performance.now() >= stopUntil) completeInbound(nt, pg, inb, why, keepClock, tries + 1); }); return; }
+    pg.busy = false; if (inb) inb.busy = false;
+    if (!ball.holder || ball.holder === (inb && inb.id)) giveBall(pg);
+    inbounder = null;
+    if (!keepClock) startPossession(nt); else possession = nt;   // ballon touché dans le terrain : le jeu (et les 24 s) reprend
+    setPhase("LIVE", "remise en jeu effectuée");
+    formation();
+  }
   function releaseInbound(force) {
     if (!heldInbound || (!force && subsPending())) return;
     const h = heldInbound; heldInbound = null;
-    inbound(h.nt, h.rim);
+    if (h.side) sidelineInbound(h.nt, h.at, { ...h.opts, key: null }); else inbound(h.nt, h.rim, null, h.why);
   }
-  function inbound(nt, rim) {
+  // Fin de période déjà connue (dans la file, ou action suivante du moteur) :
+  // elle passe avant toute remise en jeu (panier ou sortie au buzzer).
+  const periodEndPending = () => queue.some(q => q.kind === "quarterEnd")
+    || !!(S && (S.status === "final" || (S.nextAction && S.nextAction.kind === "quarterEnd" && S.nextAction.airAt - now() < 2500)));
+  // Remise en jeu déjà jouée pour cet arrêt (même événement) : ignorée.
+  function inboundOnce(key) {
+    if (key == null) return true;
+    if (key === lastInboundKey) { diag("inbound-duplicate", { key }); return false; }
+    lastInboundKey = key; return true;
+  }
+  // Remise en jeu depuis la LIGNE DE FOND (après un panier, un dernier
+  // lancer réussi, en début de quart) : le remiseur DERRIÈRE la ligne de fond
+  // du panier où le point a été marqué, le meneur vient chercher le ballon,
+  // les autres remontent, la défense se replace ; le jeu (et le chrono des
+  // 24 s) ne reprend qu'à la réception dans le terrain.
+  function inbound(nt, rim, key = null, why = "panier") {
     if (performance.now() < stopUntil) return;   // temps mort / fin de quart déjà sifflé : pas de remise en jeu
+    if (periodEndPending()) { diag("inbound-skipped", { why: "fin de période", key }); return; }
+    if (!inboundOnce(key)) return;
+    if (nt !== 0 && nt !== 1) { diag("anomaly", { what: "inbound-team", nt }); anomalies++; setPhase("LIVE", "remise sans équipe"); return; }
+    possession = nt; crossed = false;
     if (subsPending()) {
-      const h = heldInbound = { nt, rim };
+      setPhase("INBOUND_SETUP", "changements avant la remise en jeu");
+      const h = heldInbound = { nt, rim, why };
       scene(6000);   // ni possession planifiée ni « remise en ordre » pendant l'attente
       later(6000, () => { if (heldInbound === h) releaseInbound(true); });
       return;
     }
     inboundCount++;
-    startPossession(nt); scene(2400);
+    setPhase("INBOUND_SETUP", why);
+    scene(2400);
     const dir = rim.x > 47 ? 1 : -1;
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
     const pg = team[0], inb = team[team.length - 1];
-    if (!pg) return;
+    if (!pg) { setPhase("LIVE", "remise sans joueur"); return; }
     for (const sp of sprites.values()) sp.busy = false;
     // Le remiseur sort DERRIÈRE la ligne de fond (hors du terrain), le
     // meneur vient chercher le ballon à l'intérieur ; les autres remontent
     // déjà (retour utilisateur 2026-10-01 : « devant la ligne de fond et pas
     // derrière, ça ne va pas »).
     const baseline = dir > 0 ? 94 : 0;
-    if (inb && inb !== pg) { busy(inb, 2400); moveTo(inb, baseline + dir * 2.2, 25 + rnd(-6, 6), 2.2); }
+    if (inb && inb !== pg) { busy(inb, 3000); moveTo(inb, baseline + dir * 2.4, 25 + rnd(-6, 6), 2.9, true); }
+    inbounder = inb && inb !== pg ? inb.id : null;
     busy(pg, 2400); moveTo(pg, baseline - dir * 9, 30 + rnd(-4, 4), 2);
     for (const sp of onCourt(nt)) if (sp !== pg && sp !== inb) { busy(sp, 1200); moveTo(sp, lerp(sp.x, 47, 0.5), sp.y + rnd(-4, 4), 1.4); }
     formation();
     // Un arrêt de jeu survenu entre-temps (temps mort, fin de quart) annule
     // la suite de la remise en jeu : personne ne revient du banc.
     const stopped = () => performance.now() < stopUntil;
-    later(800, () => { if (stopped()) return; const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 300, 1, () => giveBall(src)); });
-    later(1650, () => { if (stopped()) return; if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
-    later(2200, () => { if (stopped()) return; pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
+    runInbound(nt, pg, inb !== pg ? inb : null, why, false, stopped);
   }
 
-  // Remise en jeu en TOUCHE après une faute simple sans lancers francs
-  // (2026-10-09) : le jeu s'arrête, un joueur de l'équipe fautée sort sur la
-  // ligne de touche à hauteur de la faute et passe au meneur ; l'action
-  // suivante du moteur (tir, perte…) ne part qu'ensuite (scène).
+  // Remise en jeu en TOUCHE (2026-10-09) : ballon sorti, faute simple sans
+  // lancers francs, reprise après un temps mort. Le remiseur (équipe `nt`)
+  // sort sur la ligne de touche à hauteur de l'arrêt (`at`), passe au meneur
+  // qui s'est démarqué ; la défense se replace ; l'action suivante du moteur
+  // ne part qu'ensuite. `opts.keepClock` : l'attaque garde le ballon après
+  // un contact défensif — le chrono des 24 s n'est pas remis à zéro.
   let sideInbounds = 0;
-  function sidelineInbound(nt, at) {
+  function sidelineInbound(nt, at, opts = {}) {
     if (inLongStop()) return;
+    if (periodEndPending()) { diag("inbound-skipped", { why: "fin de période", key: opts.key }); return; }
+    if (!inboundOnce(opts.key)) return;
+    if (nt !== 0 && nt !== 1) { diag("anomaly", { what: "sideline-team", nt }); anomalies++; setPhase("LIVE", "touche sans équipe"); return; }
+    possession = nt; crossed = false;
+    const why = opts.why || "touche";
+    if (subsPending()) {
+      setPhase("INBOUND_SETUP", "changements avant la remise en jeu");
+      const h = heldInbound = { side: true, nt, at, opts };
+      scene(6000);
+      later(6000, () => { if (heldInbound === h) releaseInbound(true); });
+      return;
+    }
     sideInbounds++;
-    startPossession(nt); scene(2600);
+    setPhase("INBOUND_SETUP", why);
+    scene(2600);
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
-    const pg = team[0], inb = team[2] || team[team.length - 1];
-    if (!pg) return;
-    const top = at ? at.y < 25 : ball.y < 25;
-    const x = Math.max(12, Math.min(82, at ? at.x : ball.x));
+    const pg = team[0];
+    if (!pg) { setPhase("LIVE", "touche sans joueur"); return; }
+    // Remiseur : le coéquipier le plus proche de l'endroit de la remise.
+    const spot0 = at && Number.isFinite(at.x) ? at : { x: ball.x, y: ball.y };
+    const inb = team.filter(sp => sp !== pg).sort((a, b) => Math.hypot(a.x - spot0.x, a.y - spot0.y) - Math.hypot(b.x - spot0.x, b.y - spot0.y))[0] || pg;
+    // Endroit réglementaire : à hauteur de l'arrêt, derrière la ligne de
+    // TOUCHE (jamais dans les coins : ±12 pieds des lignes de fond), ou
+    // derrière la ligne de FOND si le ballon est sorti par là.
     const dir = RIM[nt].x > 47 ? 1 : -1;
     for (const sp of sprites.values()) sp.busy = false;
     ball.flight = null; ball.loose = null;
-    if (inb && inb !== pg) { busy(inb, 2600); moveTo(inb, x, top ? -2.4 : 52.4, 2.2); }
-    busy(pg, 2600); moveTo(pg, x + dir * 5, top ? 9 : 41, 2);
+    if (opts.edge === "baseline") {
+      const left = at ? at.x < 47 : ball.x < 47;
+      const y = Math.max(4, Math.min(46, at && Number.isFinite(at.y) ? at.y : ball.y));
+      if (inb && inb !== pg) { busy(inb, 3200); moveTo(inb, left ? -2.4 : 96.4, y, 2.9, true); }
+      busy(pg, 2600); moveTo(pg, left ? 7 : 87, y + (y < 25 ? 6 : -6), 2);
+    } else {
+      const top = at ? at.y < 25 : ball.y < 25;
+      const x = Math.max(12, Math.min(82, at && Number.isFinite(at.x) ? at.x : ball.x));
+      if (inb && inb !== pg) { busy(inb, 3200); moveTo(inb, x, top ? -2.4 : 52.4, 2.9, true); }
+      busy(pg, 2600); moveTo(pg, x + dir * 5, top ? 9 : 41, 2);
+    }
+    inbounder = inb && inb !== pg ? inb.id : null;
     for (const sp of onCourt(nt)) if (sp !== pg && sp !== inb) { busy(sp, 1400); moveTo(sp, Math.max(4, Math.min(90, sp.x + dir * 4)), sp.y, 1.4); }
+    formation();   // défense : chacun sur son vis-à-vis
     const stopped = () => performance.now() < stopUntil;
-    later(700, () => { if (stopped()) return; const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 320, 1, () => giveBall(src)); });
-    later(1700, () => { if (stopped()) return; if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
-    later(2400, () => { if (stopped()) return; pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
+    runInbound(nt, pg, inb !== pg ? inb : null, why, !!opts.keepClock, stopped);
   }
+  // ---------- pertes de balle en situation (2026-10-09) ----------
+  // Bornes du terrain jouable pour un ballon libre (il reste DANS le terrain).
+  const inCourt = p => ({ x: Math.max(3, Math.min(91, p.x)), y: Math.max(3, Math.min(47, p.y)) });
+  // Passe trop longue : la trajectoire passeur → receveur, prolongée
+  // au-delà du receveur jusqu'à la ligne qu'elle franchit réellement.
+  function overthrowExit(passer, recv) {
+    if (!passer || !recv) return null;
+    let dx = recv.x - passer.x, dy = recv.y - passer.y;
+    const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return null;
+    // Premier franchissement d'une ligne (x 0/94, y 0/50) en partant du receveur.
+    let best = Infinity;
+    for (const [lim, v, p] of [[0, dx, recv.x], [94, dx, recv.x], [0, dy, recv.y], [50, dy, recv.y]]) {
+      if (Math.abs(v) < 1e-6) continue;
+      const k = (lim - p) / v;
+      if (k > 0 && k < best) best = k;
+    }
+    if (!Number.isFinite(best) || best > 40) return null;   // trop loin : sortie latérale classique
+    const k = best + 2.2;
+    return { x: recv.x + dx * k, y: recv.y + dy * k };
+  }
+  // Interception dans la ligne de passe : le défenseur lit la passe vers le
+  // receveur et coupe la trajectoire (55 % du chemin).
+  function interceptPass(nt, passer, recv, st) {
+    const from = passer ? { x: passer.x, y: passer.y } : { x: ball.x, y: ball.y };
+    const to = recv ? { x: recv.x, y: recv.y } : { x: from.x + (nt === 0 ? -8 : 8), y: from.y };
+    const L = inCourt({ x: lerp(from.x, to.x, 0.55), y: lerp(from.y, to.y, 0.55) });
+    startPossession(nt);
+    setPhase("LIVE", "passe interceptée");
+    for (const sp of [st, recv]) if (sp) busy(sp, 1000);
+    moveTo(st, L.x, L.y, 2.8);
+    if (recv) moveTo(recv, lerp(recv.x, L.x, 0.4), lerp(recv.y, L.y, 0.4), 1.6);
+    moment("interception", { team: nt });
+    ball.holder = null; ball.loose = null;
+    fly(L, 460, 2.2, () => { if (giveBall(st)) { flash(st, "INT", "good"); jump(st, 0.5); } else giveBall(handlerOf(nt)); later(500, () => formation()); }, "pass");
+  }
+  // Ballon libre : passe imprécise / déviée (`passLoose`), receveur qui ne
+  // contrôle pas (`fumble`), receveur parti ailleurs (`missedMove`). Le
+  // ballon reste DANS le terrain, le défenseur désigné par le moteur le
+  // ramasse (un coéquipier du receveur tente aussi sa chance, en vain).
+  function looseTurnover(kind, nt, passer, recv, rec) {
+    setPhase("LIVE", kind === "fumble" ? "ballon mal contrôlé" : kind === "missedMove" ? "receveur parti" : "passe imprécise");
+    const from = passer ? { x: passer.x, y: passer.y } : { x: ball.x, y: ball.y };
+    const to0 = recv ? { x: recv.x, y: recv.y } : { x: from.x + (nt === 0 ? 8 : -8), y: from.y + rnd(-5, 5) };
+    let land;
+    if (kind === "missedMove" && recv) {
+      // Le receveur coupe ailleurs ; la passe part vers l'endroit où il était.
+      busy(recv, 1300); moveTo(recv, recv.x + rnd(-1, 1) * 7, Math.max(4, Math.min(46, recv.y + (recv.y < 25 ? 7 : -7))), 2.2);
+      land = inCourt(to0);
+    } else if (kind === "fumble" && recv) {
+      land = inCourt({ x: to0.x + rnd(-2, 2), y: to0.y + rnd(-2, 2) });
+    } else {
+      // Passe imprécise : trop courte et à côté de la ligne de passe.
+      const dx = to0.x - from.x, dy = to0.y - from.y, d = Math.hypot(dx, dy) || 1;
+      const off = rnd(3.5, 6) * (Math.random() < 0.5 ? -1 : 1);
+      land = inCourt({ x: from.x + dx * 0.7 - dy / d * off, y: from.y + dy * 0.7 + dx / d * off });
+    }
+    const picker = rec && rec.team === nt ? rec : handlerOf(nt);
+    ball.holder = null;
+    const flightMs = kind === "fumble" ? 380 : 440;
+    // Rebond amorti, orienté vers l'intérieur du terrain : le ballon libre
+    // reste en jeu (une vraie sortie est l'affaire de `passOut`).
+    const looseState = () => {
+      const cx = 47 - land.x, cy = 25 - land.y, n = Math.hypot(cx, cy) || 1;
+      return { x: land.x, y: land.y, z: 0.3, vz: 7, bounce: 0.45, vx: cx / n * rnd(1.5, 3), vy: cy / n * rnd(1.5, 3) };
+    };
+    const grab = () => {
+      const st0 = looseState();
+      ball.loose = { ...st0 };
+      const sim = { ...st0 }; for (let t = 0; t < 650; t += 20) looseStep(sim, 0.02);
+      const catchAt = inCourt(sim);
+      if (picker) { busy(picker, 1600); moveTo(picker, catchAt.x, catchAt.y, 2.6); }
+      if (recv && kind !== "missedMove") { busy(recv, 900); moveTo(recv, lerp(recv.x, catchAt.x, 0.6), lerp(recv.y, catchAt.y, 0.6), 1.5); }
+      // Ramassé quand le défenseur ARRIVE au ballon (au plus 1,6 s) — jamais à distance.
+      const t0 = performance.now();
+      const tryPick = () => {
+        if (ball.holder || !picker) return;
+        const near = Math.hypot(picker.x - ball.x, picker.y - ball.y) < 2.4;
+        if (near || performance.now() - t0 > 1600) {
+          startPossession(nt);
+          if (!near) { flyTo(picker, 220, 1, () => { giveBall(picker); formation(); }); return; }
+          if (giveBall(picker)) flash(picker, "RÉCUP", "good"); else giveBall(handlerOf(nt));
+          formation();
+          return;
+        }
+        later(80, tryPick);
+      };
+      later(250, tryPick);
+    };
+    fly(land, flightMs, kind === "fumble" ? 2 : 2.5, () => {
+      if (kind === "fumble" && recv) jump(recv, 0.4);
+      grab();
+    }, "pass");
+  }
+  // Ballon SORTI (2026-10-09) : il file hors du terrain par la ligne de
+  // touche la plus proche, le jeu s'arrête aussitôt (plus aucune action
+  // planifiée, chacun freine sur place), puis remise en jeu en touche à
+  // l'endroit de la sortie par l'équipe `nt` (celle qui n'a PAS touché le
+  // ballon en dernier, décidée par le moteur : possessionAfter).
+  function ballOut(nt, from, opts = {}) {
+    setPhase("DEAD_BALL", opts.why || "sortie");
+    plan = null;
+    const src = from && Number.isFinite(from.x) && Number.isFinite(from.y) ? from : { x: ball.x, y: ball.y };
+    // Point de sortie : celui de la trajectoire (passe trop longue), sinon la
+    // ligne la plus proche du joueur — ligne de FOND près des paniers.
+    let exit = opts.exit;
+    if (!exit) {
+      const nearBase = src.x < 9 || src.x > 85;
+      exit = nearBase ? { x: src.x < 47 ? -2.2 : 96.2, y: Math.max(3, Math.min(47, src.y + rnd(-3, 3))) }
+        : { x: Math.max(6, Math.min(88, src.x + rnd(-3, 3))), y: src.y < 25 ? -2.2 : 52.2 };
+    }
+    const edge = exit.x < 0 || exit.x > 94 ? "baseline" : "sideline";
+    fly(exit, opts.flightMs || 520, 2, null, "", true);
+    freezePlayers(1000);
+    scene(3800);
+    diag("ball-out", { team: nt, exit: [+exit.x.toFixed(1), +exit.y.toFixed(1)], edge, lastTouch: opts.lastTouch || null, tov: opts.kind || null });
+    // Point de remise en jeu : sur la ligne, à l'endroit de la sortie.
+    const at = edge === "baseline" ? { x: exit.x < 47 ? 0 : 94, y: exit.y } : { x: exit.x, y: exit.y < 25 ? 0 : 50 };
+    later(950 + (opts.flightMs ? opts.flightMs - 520 : 0), () => sidelineInbound(nt, at, { ...opts, edge }));
+  }
+
 
   // ---------- possession à venir (state.nextAction) ----------
   // Calée sur le temps réel : la remontée de balle occupe le premier tiers,
@@ -1166,7 +1443,11 @@ export function createCourt2D(host, opts = {}) {
   function buildPlan(na) {
     // Une scène est en cours (remise en jeu, rebond…) : on attend sa fin
     // avant de lancer la possession, sans jamais couper la chorégraphie.
-    const wait = sceneUntil - performance.now();
+    // Ballon mort : la possession suivante ne part qu'après la remise en jeu
+    // (état LIVE). Garde-fou : un arrêt qui s'éternise (> 9 s) est signalé
+    // et levé plutôt que de figer le direct.
+    if (deadBall() && performance.now() - phaseAt > 9000) { anomalies++; diag("anomaly", { what: "dead-ball-stuck", phase, why: phaseWhy }); setPhase("LIVE", "garde-fou"); }
+    const wait = Math.max(sceneUntil - performance.now(), deadBall() ? 250 : 0);
     if (wait > 0) {
       plan = { airAt: na.airAt, fired: false, pending: true };
       later(wait + 50, () => { if (plan && plan.airAt === na.airAt && plan.pending) buildPlan(na); });
@@ -1226,7 +1507,7 @@ export function createCourt2D(host, opts = {}) {
       at(0.97, () => { fly({ x: RIM[offT].x, y: RIM[offT].y }, Math.max(350, total * 0.03), 6); plan.fired = true; firedAt = na.airAt; });
       return;
     }
-    if (kind === "turnover" || kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul") {
+    if (kind === "turnover" || kind === "outOfBounds" || kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul") {
       // Chaîne réelle du moteur (porteur → créateur → joueur qui perd le
       // ballon / qui subit la faute) ; aucune passe inventée. Sur une faute
       // technique ou antisportive, `player` est le FAUTIF (défense) : il ne
@@ -1381,7 +1662,7 @@ export function createCourt2D(host, opts = {}) {
             const to = handlerOf(t) || onCourt(t)[0];
             if (!to) return;
             startPossession(t);
-            flyTo(to, 380, 3, () => { for (const sp of sprites.values()) sp.busy = false; giveBall(to); formation(); });
+            flyTo(to, 380, 3, () => { for (const sp of sprites.values()) sp.busy = false; giveBall(to); setPhase("LIVE", "entre-deux"); formation(); });
           });
         });
         break;
@@ -1411,12 +1692,16 @@ export function createCourt2D(host, opts = {}) {
             moment(typeof e.clock === "number" && e.clock <= 1 ? "buzzer" : /dunk|smash/i.test(String(e.shotType || "")) ? "dunk" : e.zone === "three" ? "trois_points" : "panier", { team: offT });
             later(350, () => { jump(shooter, 0.6); cheer(offT, big); });
             netDrop(rim);
-            // Panier + faute (« and one ») : pas de remise en jeu, les lancers suivent.
-            // Panier + faute (« and one ») : le moteur laisse le ballon à
-            // l'attaque (possessionAfter), les lancers suivent.
+            // Panier validé : ballon mort, score déjà à jour (moteur), le jeu
+            // s'arrête jusqu'à la remise en jeu de l'équipe qui a encaissé
+            // (ligne de fond de CE panier). Panier + faute (« and one ») : le
+            // moteur laisse le ballon à l'attaque (possessionAfter), les
+            // lancers suivent — pas de remise en jeu.
+            setPhase("DEAD_BALL", "panier");
+            plan = null;
             later(900, () => {
               if (after === null ? queue.some(q => q.kind === "foul" || q.kind === "freeThrow") : nextT === offT) return;
-              inbound(nextT, rim);
+              inbound(nextT, rim, "e" + e.id, "panier");
             });
           } else if (blockedShot) {
             // Contre : le ballon part du contre et reste LIBRE ; le rebond
@@ -1429,6 +1714,7 @@ export function createCourt2D(host, opts = {}) {
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5, null, "", true);
           } else if (fouledShot) {
             // Faute sur le tir : pas de rebond, le tireur va aux lancers.
+            setPhase("DEAD_BALL", "faute sur tir");
             fly({ x: rim.x + (rim.x > 47 ? -2 : 2), y: rim.y + 1.5 }, 300, 1.5, () => { if (shooter && shooter.team === nextT) flyTo(shooter, 380, 2, () => giveBall(shooter)); });
           } else {
             // Rebond : le ballon rebondit sur le cercle (ou part du contre)
@@ -1452,7 +1738,7 @@ export function createCourt2D(host, opts = {}) {
               if (rb) { busy(rb, 1000); moveTo(rb, catchAt.x + rnd(-0.6, 0.6), catchAt.y + rnd(-0.6, 0.6), 2.4); }
               fly(drop, 420, 3.5, () => {
                 if (rb) jump(rb, 1);
-                later(700, () => { startPossession(nextT); giveBall(rb); if (rb && isReb) flash(rb, "REB"); formation(); });
+                later(700, () => { startPossession(nextT); giveBall(rb); if (rb && isReb) flash(rb, "REB"); setPhase("LIVE", "rebond"); formation(); });
               }, "", true);
             }, "", true);
           }
@@ -1482,6 +1768,7 @@ export function createCourt2D(host, opts = {}) {
         // série, l'arbitre rend le ballon au tireur, tout le monde reste
         // aligné (un changement peut se glisser entre deux lancers).
         const more = e.of > 1 && e.attempt < e.of;
+        setPhase("DEAD_BALL", "lancers francs");
         const finish = () => {
           rimFx(t, made); if (made) { flash(shooter, "+" + e.made, "good"); netDrop(rim); }
           crowdReact(made ? "score" : "miss", t);
@@ -1497,8 +1784,11 @@ export function createCourt2D(host, opts = {}) {
           }
           later(500, () => {
             for (const sp of sprites.values()) sp.busy = false;
-            if (nextT === t) { startPossession(t); const h = handlerOf(t); if (h) flyTo(h, 420, 2, () => { giveBall(h); formation(); }); return; }
-            if (made) { inbound(nextT, rim); return; }
+            // Lancers d'une faute technique / antisportive : l'équipe qui a
+            // tiré garde le ballon, remise en jeu en touche (pas de rebond).
+            if (nextT === t) { sidelineInbound(t, { x: 47 + (RIM[t].x > 47 ? 1 : -1) * 4, y: 50 }, { key: "e" + e.id, why: "après lancers" }); return; }
+            // Dernier lancer réussi : remise en jeu adverse, ligne de fond.
+            if (made) { inbound(nextT, rim, "e" + e.id, "lancer réussi"); return; }
             // Lancer manqué : le moteur rend le ballon à `nextT` sans désigner
             // de rebondeur ; on prend son joueur le plus grand (créneau 4).
             const rb = onCourt(nextT).sort((a, b) => b.slot - a.slot)[0];
@@ -1506,7 +1796,7 @@ export function createCourt2D(host, opts = {}) {
             const ftFrom = { x: ball.x, y: ball.y }, ftCatch = looseAt(ftFrom, drop, 380, 3, 750);
             fly(drop, 380, 3, () => {
               if (rb) { busy(rb, 700); moveTo(rb, ftCatch.x, ftCatch.y, 2.2); }
-              later(750, () => { startPossession(nextT); giveBall(rb || handlerOf(nextT)); formation(); });
+              later(750, () => { startPossession(nextT); giveBall(rb || handlerOf(nextT)); setPhase("LIVE", "rebond après lancer"); formation(); });
             }, "", true);
           });
         };
@@ -1523,29 +1813,43 @@ export function createCourt2D(host, opts = {}) {
         break;
       }
       case "turnover": {
-        // Le ballon quitte IMMÉDIATEMENT l'équipe qui le perd : vers
-        // l'intercepteur (désigné par le moteur), ou hors du terrain puis
-        // remise en jeu de l'équipe qui le récupère (possessionAfter).
+        // Perte de balle EN SITUATION (moteur, 2026-10-09, `tovKind`) : la
+        // passe ratée a une cause visible, et le ballon ne sort que si la
+        // trajectoire l'emmène réellement hors des lignes.
         const nt = after !== null ? after : 1 - t;
         const stl = spriteOf(a.stealer), st = stl && stl.team === nt ? stl : null;
         const pl = spriteOf(a.player) || spriteOf(ball.holder);
-        startPossession(nt);
+        const kind = e.tovKind || (st ? "strip" : e.deadBall === false ? "passLoose" : "legacyOut");
+        plan = null;
+        diag("turnover", { tov: kind, team: nt, passer: a.player || null, receiver: a.receiver || null, recoverer: a.recoverer || a.stealer || null });
+        if (kind === "intercept" && st) { interceptPass(nt, pl, spriteOf(a.receiver), st); break; }
         if (st) {
+          startPossession(nt);
+          setPhase("LIVE", "interception");
           busy(st, 900);
           if (pl) moveTo(st, pl.x + (st.team === 0 ? -1 : 1), pl.y + 1, 2.4);
           flash(st, "INT", "good");
           moment("interception", { team: nt });
           flyTo(st, 420, 1.5, () => giveBall(st));
           later(900, () => formation());
-        } else {
-          if (pl) flash(pl, "PERTE", "bad");
-          moment("perte", { team: 1 - nt });
-          const src = pl || { x: ball.x, y: ball.y };
-          fly({ x: src.x + rnd(-3, 3), y: src.y < 25 ? -2 : 52 }, 500, 2, () => {
-            const h = handlerOf(nt);
-            later(400, () => { if (h && !ball.holder) flyTo(h, 420, 2, () => { giveBall(h); formation(); }); });
-          }, "", true);
+          break;
         }
+        if (pl) flash(pl, "PERTE", "bad");
+        moment("perte", { team: 1 - nt });
+        if (kind === "passOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "passe trop longue", lastTouch: "attack", kind, exit: overthrowExit(pl, spriteOf(a.receiver)), flightMs: 620 }); break; }
+        if (kind === "legacyOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "sortie", lastTouch: "attack" }); break; }
+        looseTurnover(kind, nt, pl, spriteOf(a.receiver), spriteOf(a.recoverer));
+        break;
+      }
+      case "outOfBounds": {
+        // Ballon dévié en touche par un DÉFENSEUR (moteur, 2026-10-09) :
+        // l'attaque le garde (possessionAfter), remise en jeu en touche, le
+        // chrono des 24 s continue.
+        const offT = after !== null ? after : 1 - t;
+        const d = spriteOf(a.player);
+        if (d) { busy(d, 700); jump(d, 0.4); flash(d, "SORTIE", "bad"); }
+        moment("perte", { team: offT });
+        ballOut(offT, d ? { x: d.x, y: d.y } : null, { key: "e" + e.id, why: "sortie (défense)", lastTouch: "defense", keepClock: true });
         break;
       }
       case "foul": case "unsportsmanlikeFoul": case "technicalFoul": {
@@ -1562,10 +1866,12 @@ export function createCourt2D(host, opts = {}) {
         // faute). Lancers à suivre (bonus, faute sur tir) : rien ici.
         const offT = e.kind === "foul" ? 1 - t : null;
         const ftNext = queue.some(q => q.kind === "freeThrow") || !!(S && S.nextAction && S.nextAction.kind === "freeThrow");
+        setPhase("DEAD_BALL", e.kind === "foul" ? "faute" : "faute technique / antisportive");
+        plan = null;
         if (e.kind === "foul" && e.foulType === "common" && !ftNext && (offT === 0 || offT === 1) && (after === null || after === offT)) {
           scene(3400);
           const spot = v ? { x: v.x, y: v.y } : null;
-          later(800, () => sidelineInbound(offT, spot));
+          later(800, () => sidelineInbound(offT, spot, { key: "e" + e.id, why: "faute", keepClock: true }));
         }
         break;
       }
@@ -1582,6 +1888,7 @@ export function createCourt2D(host, opts = {}) {
         sceneUntil = 0; stopUntil = 0;
         if (e.quarter === 1) {
           // Entrée des joueurs : du banc vers le rond central, l'entre-deux suit.
+          setPhase("PREGAME", "entrée des joueurs");
           scene(2500);
           ball.holder = null; ball.flight = null; ball.x = 47; ball.y = 25;
           for (const sp of sprites.values()) { const dir = sp.team === 0 ? -1 : 1; moveTo(sp, 47 + dir * (8 + sp.slot * 2), 25 + (sp.slot - 2) * 5, 1.3); busy(sp, 2400); }
@@ -1590,7 +1897,8 @@ export function createCourt2D(host, opts = {}) {
         moment("debut_quart", { quarter: e.quarter });
         // Reprise : remise en jeu de l'équipe en possession depuis sa ligne de fond.
         const pt = teamOf(e.possessionTeam) !== null ? e.possessionTeam : teamOf(ownerTeam()) !== null ? ownerTeam() : possession;
-        inbound(pt, RIM[1 - pt]);
+        setPhase("DEAD_BALL", "début de quart");
+        inbound(pt, RIM[1 - pt], "q" + e.quarter, "début de quart");
         break;
       }
       case "quarterEnd": {
@@ -1599,7 +1907,8 @@ export function createCourt2D(host, opts = {}) {
         if (S && S.status !== "final" && !(e.quarter >= 4)) moment(e.quarter === 2 ? "mi_temps" : "fin_quart", { quarter: e.quarter });
         scene(60 * 60 * 1000);
         stopUntil = performance.now() + 60 * 60 * 1000;
-        plan = null;
+        plan = null; heldInbound = null;
+        setPhase("PERIOD_END", "fin du quart " + e.quarter);
         for (const sp of sprites.values()) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1.3); busy(sp, 4000); }
         ball.holder = null; ball.flight = null;
         break;
@@ -1614,6 +1923,8 @@ export function createCourt2D(host, opts = {}) {
         moment("temps_mort", { team: t });
         scene(hold);
         stopUntil = performance.now() + hold;
+        heldInbound = null;
+        setPhase("TIMEOUT", "temps mort");
         // La possession planifiée avant l'arrêt est oubliée : elle sera
         // reconstruite à la reprise (buildPlan attend la fin de scène), et
         // ses étapes déjà posées ne déplacent plus personne.
@@ -1621,7 +1932,14 @@ export function createCourt2D(host, opts = {}) {
         // Chacun rejoint le regroupement autour du coach, devant SON banc, d'un pas rapide.
         for (const t of [0, 1]) onCourt(t).sort((a, b) => a.slot - b.slot).forEach((sp, i) => { const p = huddlePos(t, i, 5, 0); moveTo(sp, p.x, p.y, 1.5); busy(sp, hold - 600); });
         ball.holder = null; ball.flight = null;
-        later(hold - 500, () => { stopUntil = 0; for (const sp of sprites.values()) sp.busy = false; const own = ownerTeam(); if (own !== null) possession = own; giveBall(handlerOf(possession)); formation(); });
+        // Reprise : remise en jeu en touche (côté table, zone arrière) de
+        // l'équipe qui a le ballon — plus de ballon « posé » chez le meneur.
+        later(hold - 500, () => {
+          stopUntil = 0; for (const sp of sprites.values()) sp.busy = false;
+          const own = ownerTeam(); if (own !== null) possession = own;
+          setPhase("DEAD_BALL", "reprise après temps mort");
+          sidelineInbound(possession, { x: 47 + (RIM[possession].x > 47 ? -10 : 10), y: 50 }, { key: "to" + (e.id != null ? e.id : e.airAt), why: "reprise après temps mort", keepClock: true });
+        });
         break;
       }
       default: break;
@@ -1658,8 +1976,10 @@ export function createCourt2D(host, opts = {}) {
   //    au temps réellement écoulé dans la page, une rafale d'événements =
   //    SAUT : recalage sur l'état du moteur (resync), rien n'est rejoué en
   //    accéléré.
-  let gameOn = false, jumps = 0;
+  let gameOn = false, jumps = 0, lastUpdateAt = 0;
   let tl = null;
+  // Événement encore à jouer (arrivé dans cette mise à jour, ou il y a moins de 6 s).
+  const fresh0 = e => !!(e && e.airAt && now() - e.airAt < STALE_EVENT_MS);
   const isGameEvent = e => e && e.kind && e.kind !== "quarterStart" && e.kind !== "quote" && e.kind !== "timeout";
   const evSig = e => (e ? `${e.id}@${e.airAt || 0}:${e.kind}` : "");
   function clearChoreo() {
@@ -1671,9 +1991,19 @@ export function createCourt2D(host, opts = {}) {
     suspended = true;
     clearChoreo();
   }
-  function resync() {
+  // Recalage sur l'état du moteur. `soft` (terrain visible et à jour) : les
+  // joueurs REJOIGNENT leurs places en courant, le ballon est passé au
+  // porteur — jamais de téléportation sous les yeux du spectateur (cause du
+  // « joueur qui se retrouve à l'autre bout du terrain » : un recalage
+  // déclenché pendant qu'on regarde — rafale d'événements, retour de la
+  // carte des tirs, horloge qui saute — replaçait tout le monde d'un coup
+  // sur la formation de la nouvelle possession, souvent dans l'autre
+  // moitié). Recalage instantané seulement quand rien n'était affiché
+  // (onglet masqué, images gelées, vue non rafraîchie).
+  function resync(reason = "?", soft = false) {
     suspended = false;
     resyncCount++;
+    diag("resync", { reason, soft, possession: S && S.possession });
     clearChoreo();
     busyUntil = 0; sceneUntil = 0; firedAt = 0;
     ball.flight = null; ball.z = 0; endTrail();
@@ -1695,24 +2025,31 @@ export function createCourt2D(host, opts = {}) {
     // monde au banc ; sinon jeu en cours ; hors direct : au banc.
     stopUntil = live && st && st.endsAt > tNow ? performance.now() + (st.endsAt - tNow) : live ? 0 : performance.now() + 3600e3;
     const inPlay = live && gameOn && performance.now() >= stopUntil;
+    const prevHolder = ball.holder;
     ball.holder = null;
+    lastInboundKey = null;
+    setPhase(inPlay ? "LIVE" : live && st && st.kind === "timeout" && st.endsAt > tNow ? "TIMEOUT" : live && !gameOn ? "PREGAME" : "PERIOD_END", "recalage");
     if (inPlay) {
       formation();
       // (un joueur tenu par la mise en scène — entrée, regroupement, banc —
       // n'est jamais déplacé d'office : c'est elle qui le guide)
-      for (const sp of sprites.values()) { if (sp.stage) continue; sp.x = sp.tx; sp.y = sp.ty; sp.moving = false; }
+      if (!soft) for (const sp of sprites.values()) { if (sp.stage) continue; sp.x = sp.tx; sp.y = sp.ty; sp.moving = false; }
       const h = handlerOf(possession);
-      if (h) { giveBall(h); ball.x = h.x; ball.y = h.y; }
+      if (h && soft) {
+        // Ballon rendu au porteur par une passe (ou gardé s'il l'avait déjà).
+        if (prevHolder === h.id) giveBall(h);
+        else { ball.flight = null; flyTo(h, 450, 2.2, () => giveBall(h), "pass"); }
+      } else if (h) { giveBall(h); ball.x = h.x; ball.y = h.y; }
       crossed = !!h && inFront(h.team, h.x);
     } else if (live && !gameOn && performance.now() >= stopUntil) {
       // Avant l'entre-deux : alignés autour du rond central, ballon au centre.
-      for (const sp of sprites.values()) { if (sp.stage) continue; const dir = sp.team === 0 ? -1 : 1; sp.x = sp.tx = 47 + dir * (8 + sp.slot * 2); sp.y = sp.ty = 25 + (sp.slot - 2) * 5; sp.moving = false; }
+      for (const sp of sprites.values()) { if (sp.stage) continue; const dir = sp.team === 0 ? -1 : 1; place(sp, 47 + dir * (8 + sp.slot * 2), 25 + (sp.slot - 2) * 5, soft); }
       ball.x = 47; ball.y = 25;
     } else if (live && st && st.kind === "timeout" && st.endsAt > tNow) {
-      for (const t of [0, 1]) onCourt(t).sort((a, b) => a.slot - b.slot).forEach((sp, i) => { if (sp.stage) return; const p = huddlePos(t, i, 5, 0); sp.x = sp.tx = p.x; sp.y = sp.ty = p.y; sp.moving = false; });
+      for (const t of [0, 1]) onCourt(t).sort((a, b) => a.slot - b.slot).forEach((sp, i) => { if (sp.stage) return; const p = huddlePos(t, i, 5, 0); place(sp, p.x, p.y, soft); });
       ball.x = 47; ball.y = 25;
     } else {
-      for (const sp of sprites.values()) { if (sp.stage) continue; const p = parkLine(sp.team, sp.slot); sp.x = sp.tx = p.x; sp.y = sp.ty = p.y; sp.moving = false; }
+      for (const sp of sprites.values()) { if (sp.stage) continue; const p = parkLine(sp.team, sp.slot); place(sp, p.x, p.y, soft); }
       ball.x = 47; ball.y = 25;
     }
     for (const b of benchRefs.values()) { const p = benchTarget(b); b.x = b.tx = p.x; b.y = b.ty = p.y; halt(b); b.tf = ""; }
@@ -1724,14 +2061,19 @@ export function createCourt2D(host, opts = {}) {
     for (const r of refs) { r.x = r.tx; r.y = r.ty; r.ox = 0; r.oy = 0; r.moving = false; }
     ballOff.x = 0; ballOff.y = 0;
     ballFix.x = 0; ballFix.y = 0; ballPrev = null; ball.drib = 0; ball.dribOf = null;
-    for (const sp of sprites.values()) { if (!sp.stage) halt(sp); sp.nextDrift = 0; }
+    if (!soft) for (const sp of sprites.values()) { if (!sp.stage) halt(sp); sp.nextDrift = 0; }
     for (const r of refs) halt(r);
+  }
+  // Recalage d'un joueur : instantané (rien n'était affiché) ou en courant.
+  function place(sp, x, y, soft) {
+    if (soft) { moveTo(sp, x, y, 1.8); return; }
+    sp.x = sp.tx = x; sp.y = sp.ty = y; sp.moving = false;
   }
   let resyncing = false;
   function onVisibility() {
     if (typeof document === "undefined") return;
     if (document.visibilityState === "hidden") { throttled = false; suspend(); }
-    else if (suspended) { throttled = false; resync(); }
+    else if (suspended) { throttled = false; resync("retour sur l'onglet"); }
   }
   if (typeof document !== "undefined") {
     document.addEventListener("visibilitychange", onVisibility);
@@ -1971,6 +2313,17 @@ export function createCourt2D(host, opts = {}) {
     sp.stride = ((sp.stride || 0) + v * dt * 0.55) % 6.2832;
     return Math.sin(sp.stride) * amp * Math.min(1, v / 7);
   }
+  // Coordonnées valides : terrain (0-94 × 0-50) + dégagement, banc et table
+  // compris (le remiseur sort derrière les lignes, les remplaçants vont au banc).
+  const validPos = (x, y) => Number.isFinite(x) && Number.isFinite(y) && x >= -8 && x <= 102 && y >= -6 && y <= 62;
+  function fixPosition(sp) {
+    anomalies++;
+    const bad = { x: sp.x, y: sp.y, tx: sp.tx, ty: sp.ty };
+    const safe = sp.lastGood || slotPos(sp.team, sp.slot || 0, sp.team === possession);
+    if (!validPos(sp.x, sp.y)) { sp.x = safe.x; sp.y = safe.y; sp.vx = sp.vy = 0; }
+    if (!validPos(sp.tx, sp.ty)) { const p = slotPos(sp.team, sp.slot || 0, sp.team === possession); sp.tx = p.x; sp.ty = p.y; }
+    diag("anomaly", { what: "invalid-position", id: sp.id, bad, fixed: { x: sp.x, y: sp.y, tx: sp.tx, ty: sp.ty } });
+  }
   // Position imposée (recalage, entrée, mise en scène) : vitesse remise à zéro.
   const halt = sp => { sp.vx = 0; sp.vy = 0; };
 
@@ -2049,9 +2402,9 @@ export function createCourt2D(host, opts = {}) {
     // économie d'énergie) : la chorégraphie à minuteries n'est plus
     // suivie par le rendu → suspendue jusqu'au retour d'images normales.
     const gap = nowP - last;
-    if (S && !suspended && gap > GAP_RESYNC_MS) resync();
+    if (S && !suspended && gap > GAP_RESYNC_MS) resync("images gelées");
     else if (S && !suspended && gap > THROTTLE_MS) { suspend(); throttled = true; }
-    else if (suspended && throttled && gap < 100 && !(typeof document !== "undefined" && document.hidden)) { throttled = false; resync(); }
+    else if (suspended && throttled && gap < 100 && !(typeof document !== "undefined" && document.hidden)) { throttled = false; resync("images bridées"); }
     const dt = Math.min(0.05, Math.max(0, (nowP - last) / 1000)); last = nowP;
     if (stage) { try { stage.tick(nowP, dt); } catch (e) { /* la mise en scène ne bloque jamais le terrain */ } }
     // Jeu sans ballon (retour utilisateur 2026-10-01 : « les joueurs sont
@@ -2064,7 +2417,7 @@ export function createCourt2D(host, opts = {}) {
     // calée sur la distance (il arrive à peu près quand la cible suivante
     // tombe : mouvement continu plutôt que « sprint, arrêt, sprint »).
     // (jamais pendant un arrêt de jeu : temps mort, fin de quart — chacun reste au banc)
-    if (S && S.status === "live" && gameOn && nowP > sceneUntil && performance.now() >= stopUntil) {
+    if (S && S.status === "live" && gameOn && nowP > sceneUntil && performance.now() >= stopUntil && !deadBall()) {
       const rim = RIM[possession];
       for (const sp of sprites.values()) {
         if (sp.leaving || sp.busy || sp.stage || nowP < (sp.nextDrift || 0)) continue;
@@ -2095,7 +2448,7 @@ export function createCourt2D(host, opts = {}) {
       if (h && h.team === possession) {
         if (!crossed && inFront(h.team, ball.x)) crossed = true;
         const age = (now() - possStart) / 1000;
-        if (!h.busy && !h.stage && nowP > sceneUntil) {
+        if (!h.busy && !h.stage && nowP > sceneUntil && !deadBall()) {
           const d = Math.hypot(h.tx - h.x, h.ty - h.y);
           if (!crossed && age > 5.5 && !inFront(h.team, h.tx)) { moveTo(h, h.team === 0 ? 52 : 42, Math.max(8, Math.min(42, h.y)), 1.8); }
           else if (d < 0.6) { const p = slotPos(h.team, h.slot, true); moveTo(h, frontX(h.team, Math.max(2, Math.min(92, lerp(h.x, p.x, 0.3) + rnd(-4, 4)))), Math.max(3, Math.min(47, lerp(h.y, p.y, 0.3) + rnd(-3, 3))), rnd(0.55, 0.8)); }
@@ -2127,7 +2480,12 @@ export function createCourt2D(host, opts = {}) {
       }
       // Position imposée par la mise en scène (regroupement, banc, entrée).
       if (sp.stage) { sp.tx = sp.stage.x; sp.ty = sp.stage.y; sp.speed = sp.stage.speed; }
+      // Position ou cible invalide (NaN, hors de la salle) : correction
+      // contrôlée et tracée — le joueur repart de sa dernière position
+      // valide (ou de son poste) au lieu d'apparaître n'importe où.
+      if (!validPos(sp.x, sp.y) || !validPos(sp.tx, sp.ty)) fixPosition(sp);
       const v = sp.v = steer(sp, dt);
+      if (validPos(sp.x, sp.y)) sp.lastGood = { x: sp.x, y: sp.y };
       sp.moving = v > 0.3;
       if (sp.moving) animated++;
       const bob = stride(sp, v, dt, 1.2);
@@ -2287,6 +2645,7 @@ export function createCourt2D(host, opts = {}) {
       // Statut précédent gardé à part (la vue peut muter le même objet état).
       if (lastStatus && lastStatus !== "final" && state.status === "final") moment("fin_match");
       lastStatus = state.status;
+      const prevUpdateAt = lastUpdateAt; lastUpdateAt = performance.now();
       S = state;
       if (state.teams && state.teams[0] && state.teams[0].color) colors = [state.teams[0].color, state.teams[1].color];
       drawFloor(state.courtStyle || null, colors[0]);
@@ -2301,10 +2660,17 @@ export function createCourt2D(host, opts = {}) {
         // Horloge de diffusion qui avance (ou recule) plus vite que le temps
         // réellement écoulé dans la page : le temps a été déplacé.
         if (Math.abs((now() - tl.now) - (performance.now() - tl.at)) > 2500) jump = true;
-        if (newEvents.length > 3) jump = true;                                                   // rafale (reconnexion, avance rapide)
+        // Rafale (reconnexion, avance rapide) : beaucoup d'événements, ou
+        // étalés sur plus de 8 s de diffusion. Quelques événements récents
+        // arrivés ensemble (changements au même arrêt, image en retard) se
+        // jouent normalement, à la suite — plus de recalage pour si peu.
+        const air = evAll.filter(e => newEvents.includes(e.id)).map(e => e.airAt).filter(Boolean);
+        if (newEvents.length > 8 || (air.length > 1 && Math.max(...air) - Math.min(...air) > 8000)) jump = true;
       }
       tl = { n: evAll.length, sig: evSig(evAll[evAll.length - 1]), now: now(), at: performance.now() };
       if (jump || !gameOn) gameOn = evAll.some(isGameEvent);
+      // Arrivée en cours de match (le jeu a déjà commencé) : état « en jeu ».
+      if (gameOn && phase === "PREGAME" && state.status === "live" && !evAll.some(e => e.kind === "tipoff" && fresh0(e))) setPhase("LIVE", "match déjà commencé");
       const before = sprites.size;
       syncRefs(state.referees);
       syncRoster();
@@ -2314,7 +2680,7 @@ export function createCourt2D(host, opts = {}) {
       syncTokenStats();
       if (tipId && !pdata.has(tipId)) hideTip();
       syncBoard();
-      const quiet = !suspended && performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight;
+      const quiet = !suspended && performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight && phase === "LIVE";
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
       // désigne qui le récupère — pas de meneur choisi ici.
@@ -2326,7 +2692,7 @@ export function createCourt2D(host, opts = {}) {
       }
       // Reconnexion en cours de match (tout le passé arrive d'un coup) : on
       // ne rejoue que les deux dernières actions, pas six minutes de retard.
-      let fresh = newEvents.length > 3 ? newEvents.slice(-2) : newEvents;
+      let fresh = jump ? newEvents.slice(-2) : newEvents;
       // Première image (arrivée sur la page au coup d'envoi : les premiers
       // événements sont déjà là) : on joue ceux des 6 dernières secondes.
       if (firstUpdate && !fresh.length && state.status === "live") {
@@ -2346,7 +2712,11 @@ export function createCourt2D(host, opts = {}) {
       if (suspended || stale.length || jump) {
         evs.forEach(e => { if (e.kind !== "quote") lastPlayed = e; });
         if (jump) { jumps++; for (let i = evAll.length - 1; i >= 0; i--) if (evAll[i].kind !== "quote") { lastPlayed = evAll[i]; break; } }
-        if (!suspended) resync();
+        // Terrain visible et rafraîchi il y a peu : recalage EN DOUCEUR.
+        const visible = !(typeof document !== "undefined" && document.hidden) && prevUpdateAt > 0 && performance.now() - prevUpdateAt < 2500;
+        // (un saut dans le temps — curseur de rediffusion, reconnexion — est
+        // une coupure voulue : recalage instantané, comme un changement de plan)
+        if (!suspended) resync(jump ? "saut dans le temps" : "événement en retard", visible && !jump);
         if (stage) { try { stage.update(state, []); } catch (e) { /* jamais bloquant */ } }
         return;
       }
@@ -2374,6 +2744,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
+        phase, phaseWhy, anomalies, inbounder, log: diagLog.slice(),
         suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, sideInbounds, inboundHeld: !!heldInbound, ball: [+ball.x.toFixed(2), +ball.y.toFixed(2)], keeper: (k => (k ? [+k.x.toFixed(2), +k.y.toFixed(2)] : null))(refKeeper()),
         staging: stage ? stage.debug() : null };
     },

@@ -87,6 +87,31 @@ export function activeStoppage(pauses, now) {
   if (!p) return null;
   return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs };
 }
+// Temps (ms de diffusion) pendant lequel le chrono reste arrêté après un
+// événement qui arrête le jeu, le temps de la remise en jeu (même durée que
+// la mise en scène du terrain 2D) — règle FIBA : le chrono repart quand le
+// ballon est touché sur le terrain. Panier : le chrono continue, sauf dans
+// les deux dernières minutes du 4e quart et des prolongations.
+export const DEAD_BALL_HOLD_MS = 2600;
+export function deadBallHoldMs(ev) {
+  if (!ev) return 0;
+  const sec = clockSeconds(ev.clock);
+  if (ev.type === "outOfBounds") return DEAD_BALL_HOLD_MS;
+  if (ev.type === "turnover" && ev.tovType !== "steal" && ev.deadBall !== false) return DEAD_BALL_HOLD_MS;   // perte : seulement si le ballon est SORTI
+  if (ev.type === "foul" && ev.inbound) return DEAD_BALL_HOLD_MS;
+  if (ev.type === "freeThrow" && ev.lastMade === true && (ev.of || 1) === (ev.attempt || 1)) return DEAD_BALL_HOLD_MS;
+  if (ev.type === "shot" && ev.made && (ev.quarter || 0) >= 4 && sec <= 120) return DEAD_BALL_HOLD_MS;
+  return 0;
+}
+// Chrono des 24 s au départ de la séquence qui suit `ev` : la défense sort le
+// ballon ou commet une faute simple, l'attaque garde le ballon — le chrono
+// des 24 s CONTINUE (ramené à 14 s s'il en restait moins), il n'est pas
+// remis à 24 (règle FIBA). Sinon : 24.
+export function shotClockBase(ev, sec) {
+  const keep = ev && ((ev.type === "outOfBounds" && ev.lastTouch === "defense") || (ev.type === "foul" && ev.inbound));
+  if (!keep || typeof ev.possStart !== "number") return 24;
+  return Math.max(14, Math.min(24, 24 - Math.max(0, ev.possStart - sec)));
+}
 export function clockSeconds(str) {
   if (typeof str === "number") return str;
   const m = /^(\d+):(\d+)$/.exec(String(str || ""));
@@ -128,7 +153,7 @@ export function createLiveAdapter(opts) {
   const openInterval = (key, id, name) => { const r = rowOf(key, id, name); r.openSince = st.elapsed; st.onCourt[key].add(id); };
 
   function actors(ev) {
-    const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul";
+    const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul" || ev.type === "outOfBounds";   // outOfBounds : ev.team = défense (dernier contact)
     const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : other(ev.team)) : foul ? other(ev.team) : ev.team;
     const defKey = other(offKey);
     return {
@@ -136,16 +161,20 @@ export function createLiveAdapter(opts) {
       defender: pid(defKey, ev.defender, ev.defenderId), blocker: pid(defKey, ev.blocker, ev.blockerId), stealer: pid(defKey, ev.stealer, ev.stealerId),
       player: pid(ev.type === "foul" ? other(ev.team) : ev.team, ev.player, ev.playerId), replacement: pid(ev.team, ev.replacement, ev.replacementId),
       handler: pid(offKey, ev.handler, ev.handlerId), creator: pid(offKey, ev.creator, ev.creatorId),
+      // Perte de balle en situation (2026-10-09) : receveur visé (attaque),
+      // défenseur qui récupère le ballon libre.
+      receiver: pid(offKey, ev.receiver, ev.receiverId), recoverer: pid(defKey, ev.recoverer, ev.recovererId),
     };
   }
   function facts(ev) {
     if (ev.team !== "A" && ev.team !== "B") return {};
-    const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul";
+    const foul = ev.type === "foul" || ev.type === "unsportsmanlikeFoul" || ev.type === "technicalFoul" || ev.type === "outOfBounds";   // outOfBounds : ev.team = défense (dernier contact)
     const offKey = ev.type === "rebound" ? (ev.offensive ? ev.team : other(ev.team)) : foul ? other(ev.team) : ev.team;
     const passes = [];
     for (const id of [pid(offKey, ev.handler, ev.handlerId), pid(offKey, ev.creator, ev.creatorId), pid(offKey, ev.shooter, ev.shooterId)]) if (id && passes[passes.length - 1] !== id) passes.push(id);
     return { passes: passes.length ? passes : undefined, shotType: ev.shotType || undefined, quality: ev.quality || undefined, situation: ev.situation || undefined,
-      possLen: typeof ev.possLen === "number" ? ev.possLen : undefined, spot: ev.spot || undefined, tovType: ev.tovType || undefined, foulType: ev.foulType || undefined };
+      possLen: typeof ev.possLen === "number" ? ev.possLen : undefined, spot: ev.spot || undefined, tovType: ev.tovType || undefined, foulType: ev.foulType || undefined,
+      lastTouch: ev.lastTouch || undefined, inbound: ev.inbound || undefined, tovKind: ev.tovKind || undefined, deadBall: typeof ev.deadBall === "boolean" ? ev.deadBall : undefined };
   }
   function shotOf(ev, t) {
     const zone = ev.zone === "inside" ? "paint" : ev.zone;
@@ -157,7 +186,7 @@ export function createLiveAdapter(opts) {
     if (sIdx === null) return null;
     return { team: sIdx, zone, ...shotPoint(zone, sIdx, Math.round(ev.airAt || st.seq), ev.spot) };
   }
-  const TYPE = { shot: ev => (ev.made ? "made" : "miss"), rebound: () => "miss", freeThrow: () => "ft", foul: () => "foul", technicalFoul: () => "foul", unsportsmanlikeFoul: () => "foul", foulOut: () => "foul", technicalEjection: () => "foul", turnover: () => "turnover", substitution: () => "sub", shortHanded: () => "sub", injury: () => "injury", quarterStart: () => "period", quarterEnd: () => "period" };
+  const TYPE = { shot: ev => (ev.made ? "made" : "miss"), rebound: () => "miss", freeThrow: () => "ft", foul: () => "foul", technicalFoul: () => "foul", unsportsmanlikeFoul: () => "foul", foulOut: () => "foul", technicalEjection: () => "foul", turnover: () => "turnover", outOfBounds: () => "turnover", substitution: () => "sub", shortHanded: () => "sub", injury: () => "injury", quarterStart: () => "period", quarterEnd: () => "period" };
 
   function applyStats(ev) {
     if (ev.fat && typeof ev.fat === "object") Object.assign(st.fat, ev.fat);
@@ -273,10 +302,21 @@ export function createLiveAdapter(opts) {
     let nextDiff = null;
     for (let i = prevIdx + 1; i < evs.length; i++) { if (evs[i].quarter !== prev.quarter) break; if (clockSeconds(evs[i].clock) !== prevSec) { nextDiff = evs[i]; break; } }
     if (!nextDiff) { st.shotClock = null; return; }
-    const frac = Math.min(1, Math.max(0, (now - evs[runStart].airAt) / (nextDiff.airAt - evs[runStart].airAt)));
+    // Ballon mort (sortie, faute, dernier lancer réussi, panier des deux
+    // dernières minutes) : le chrono reste ARRÊTÉ pendant la remise en jeu
+    // (deadBallHoldMs), puis repart jusqu'au prochain événement.
+    // (le ballon mort peut être suivi, au même chrono, de changements ou de
+    // lancers : on regarde toute la séquence au chrono `prevSec`)
+    let stopEv = null;
+    for (let i = runStart; i <= prevIdx; i++) if (deadBallHoldMs(evs[i]) || shotClockBase(evs[i], prevSec) !== 24) stopEv = evs[i];
+    // Le chrono repart au plus tôt `hold` après l'arrêt, et toujours avant
+    // l'action suivante (au moins 40 % de l'intervalle pour s'écouler).
+    const t0 = evs[runStart].airAt, t1 = nextDiff.airAt;
+    const start = stopEv ? Math.min(Math.max(t0, stopEv.airAt + deadBallHoldMs(stopEv)), t0 + (t1 - t0) * 0.6) : t0;
+    const frac = Math.min(1, Math.max(0, (now - start) / Math.max(1, t1 - start)));
     const interp = prevSec - (prevSec - clockSeconds(nextDiff.clock)) * frac;
     st.clock = Math.max(0, Math.round(interp));
-    st.shotClock = Math.max(0, Math.min(24, 24 - Math.max(0, prevSec - interp)));
+    st.shotClock = Math.max(0, Math.min(24, shotClockBase(stopEv, prevSec) - Math.max(0, prevSec - interp)));
     const poss = possessionAt(evs, prevIdx);
     if (poss) st.possession = idx(poss);
   }

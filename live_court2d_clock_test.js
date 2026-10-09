@@ -76,7 +76,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const html = require("./test_game_html.js").readGameHtml();
     const grab = name => { const m = new RegExp(`function ${name}\\([^]*?\\n}\\n`).exec(html); if (!m) fail(`fonction ${name} introuvable`); return m[0]; };
     const ctx = {};
-    const src = `${grab("clockSecondsFromStr")}${grab("secondsToClockStr")}${grab("livePossessionAt")}${grab("updateLiveClockTick")}
+    const src = `${grab("clockSecondsFromStr")}${grab("secondsToClockStr")}${grab("livePossessionAt")}${grab("liveDeadBallHoldMs")}${grab("liveShotClockBase")}${grab("updateLiveClockTick")}
       return { updateLiveClockTick, setTick: (e, p) => { liveTickEvents = e; liveTickPauses = p; } };`;
     const els = { shotClockDisplay: { classList: { add() {}, remove() {}, toggle() {} }, textContent: "" }, clockDisplay: { textContent: "10:00" } };
     let fakeNow = K;

@@ -28,7 +28,17 @@ function fail(msg) { throw new Error("❌ " + msg); }
   const ad = createLiveAdapter({ live, teams: { A: teamData(away), B: teamData(home) }, mine: null, presenter: { name: "Nicolas Cosset", avatar: "" } });
 
   // Diffusion jusqu'à mi-parcours.
-  const now = kickoffAt + Math.round(sched.totalDurationMs * 0.3);
+  // Instant pris en plein jeu (match non seedé : à 30 % pile, on peut tomber
+  // juste après un « Début du quart-temps » ou en fin de quart, où le chrono
+  // des 24 s est volontairement coupé).
+  const inPlay = t => {
+    if (sched.pauses.some(p => t >= p.airAt && t < p.airAt + p.durationMs)) return false;
+    const i = events.findIndex(e => e.airAt > t) - 1;
+    if (i < 0 || events[i].type === "quarterStart") return false;
+    return events.slice(i + 1).some(e => e.quarter === events[i].quarter && e.clock !== events[i].clock);
+  };
+  let now = kickoffAt + Math.round(sched.totalDurationMs * 0.3);
+  while (!inPlay(now)) now += 1000;
   const aired = events.filter(e => e.airAt <= now);
   const timeline = [...aired.map(e => ({ at: e.airAt, ev: e })), ...sched.pauses.filter(p => p.airAt <= now).map(p => ({ at: p.airAt, pause: p }))].sort((a, b) => a.at - b.at);
   for (const it of timeline) { if (it.ev) ad.applyEvent(it.ev); else ad.applyPause(it.pause); }

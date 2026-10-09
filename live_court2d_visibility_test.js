@@ -132,6 +132,9 @@ const made = (team, shooter, assister) => ev({ team, type: "made", kind: "shot",
   await sleep(120);
   if (court.debug().resyncs !== resyncsBefore + 1) fail("un événement très en retard doit déclencher un recalage.");
   if (ptsCount() > pts0) fail("un panier très en retard ne doit pas être animé (« +3 » rejoué).");
+  // Terrain visible : recalage EN DOUCEUR (2026-10-09) — le ballon rejoint le
+  // porteur par une passe, les joueurs courent à leur place (pas de saut).
+  await sleep(700);
   sane("événement en retard"); holderOk("événement en retard");
   ok("Événement très en retard (onglet visible) : recalage sur le moteur, aucune animation rattrapée.");
 

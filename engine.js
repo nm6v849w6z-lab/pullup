@@ -717,6 +717,13 @@ const PHRASES = {
   // jusqu'ici. Formulée SANS dire que l'action s'arrête là (contrairement à
   // missedFoul plus haut) : l'action continue juste après dans le même
   // passage (voir le commentaire dans playPossession sur le rythme).
+  // Ballon sorti en touche, dernier contact d'un DÉFENSEUR (2026-10-09) :
+  // l'attaque garde le ballon, remise en jeu en touche.
+  outOfBoundsDefense: [
+    "{defender} dévie le ballon en touche : remise en jeu pour {team}.",
+    "Ballon sorti, dernier contact {defender} : touche pour {team}.",
+    "{defender} touche le ballon en dernier avant la sortie : remise en jeu pour {team}.",
+  ],
   commonFoul: [
     "Faute de {defender} sur {attacker} en cours d'action.",
     "Contact signalé sur {attacker}, faute de {defender}.",
@@ -726,6 +733,29 @@ const PHRASES = {
     "{defender} contre le tir de {shooter} !",
     "Tir de {shooter} contré par {defender}.",
     "{defender} repousse la tentative de {shooter}.",
+  ],
+  // Pertes de balle en situation (2026-10-09, « les pertes sont trop
+  // souvent un ballon envoyé en touche ») : la passe ratée a désormais une
+  // cause lisible — voir chooseTurnoverSituation.
+  turnoverIntercept: [
+    "{stealer} lit la passe de {ballHandler} vers {receiver} et l'intercepte !",
+    "Passe de {ballHandler} interceptée par {stealer}.",
+  ],
+  turnoverPassOut: [
+    "Passe trop longue de {ballHandler} pour {receiver} : le ballon file en touche.",
+    "{ballHandler} cherche {receiver}, la passe sort des limites.",
+  ],
+  turnoverPassLoose: [
+    "Passe imprécise de {ballHandler}, le ballon traîne et {recoverer} le récupère.",
+    "{ballHandler} rate sa passe vers {receiver} : ballon libre pour {recoverer}.",
+  ],
+  turnoverFumble: [
+    "{receiver} ne contrôle pas la passe de {ballHandler}, {recoverer} récupère le ballon.",
+    "Ballon mal maîtrisé par {receiver}, {recoverer} en profite.",
+  ],
+  turnoverMissedMove: [
+    "{ballHandler} passe là où {receiver} n'est plus : {recoverer} récupère.",
+    "Mauvaise lecture de {ballHandler}, {receiver} était parti, {recoverer} ramasse le ballon.",
   ],
   turnoverSteal: [
     "{stealer} intercepte ! Perte de balle de {ballHandler}.",
@@ -2904,7 +2934,7 @@ function moraleLabel(morale) {
 // après un panier marqué ») : un dernier lancer réussi = panier suivi d'une
 // remise en jeu, un dernier lancer manqué = rebond, ballon vivant. La
 // fenêtre est la faute qui les précède, avant le premier lancer.
-const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout"]);
+const DEAD_BALL_EVENTS = new Set(["foul", "outOfBounds", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout"]);
 
 const MILESTONE_INTERVIEW_TYPES = {
   "debut-saison": { label: "Interview de début de saison" },
@@ -19584,10 +19614,56 @@ function foulProneness(p) {
 }
 
 // Événements de jeu qui portent la possession (voir markPossessionEvents).
-const POSSESSION_PLAY_TYPES = new Set(["shot", "rebound", "turnover", "foul", "freeThrow", "technicalFoul", "unsportsmanlikeFoul"]);
+const POSSESSION_PLAY_TYPES = new Set(["shot", "rebound", "turnover", "outOfBounds", "foul", "freeThrow", "technicalFoul", "unsportsmanlikeFoul"]);
 // Pose `possession` (pendant) et `possessionAfter` (après) sur les
 // événements journalisés depuis `from` pour une possession de `offKey` qui
 // se termine avec le ballon à `nextKey`.
+// Situation d'une perte de balle (2026-10-09). Le moteur décide toujours
+// QU'IL y a perte (tovChance : pression collective contre dribble du
+// porteur, tactiques, sang-froid… — inchangé) et si elle est créditée d'une
+// interception (55 %, inchangé) ; cette fonction dit seulement COMMENT,
+// d'après les joueurs impliqués, pour que le direct montre une action
+// crédible plutôt qu'un ballon toujours envoyé en touche :
+//  - interception : `intercept` (le défenseur lit la ligne de passe :
+//    Anticipation du voleur contre Vision du passeur) ou `strip` (ballon
+//    chipé au porteur) ;
+//  - sinon : `passOut` (passe trop longue, sortie → remise en jeu ; passeur
+//    peu précis), `passLoose` (passe imprécise / déviée, ballon libre
+//    récupéré par la défense ; d'autant plus que la défense presse),
+//    `fumble` (le receveur ne contrôle pas : son Dribble), `missedMove`
+//    (le receveur est parti : Vision du passeur).
+// Aucune statistique ne change (perte au porteur, interception au voleur
+// dans les mêmes proportions qu'avant). Pure : testable (rand injectable).
+function chooseTurnoverSituation(handler, offFive, defFive, steal, stealer, pressure, rand = rand01) {
+  const pick = (arr, w) => { const ws = arr.map(w); const tot = ws.reduce((a, b) => a + Math.max(0, b), 0); let r = rand() * tot; for (let i = 0; i < arr.length; i++) { r -= Math.max(0, ws[i]); if (r <= 0) return arr[i]; } return arr[arr.length - 1]; };
+  const mates = offFive.filter(p => p && p.id !== handler.id);
+  const receiver = mates.length ? pick(mates, () => 1) : null;
+  const pass = handler.eff("pass"), vision = handler.eff("vision");
+  if (steal) {
+    const pIntercept = Math.max(0.2, Math.min(0.8, 0.5 + (stealer.eff("anticipation") - vision) / 120));
+    return { kind: receiver && rand() < pIntercept ? "intercept" : "strip", receiver, recoverer: stealer, deadBall: false };
+  }
+  // Tout est RELATIF au niveau du match : la qualité de l'attaque comparée à
+  // la pression de la défense (même moyenne d'un niveau à l'autre — sinon
+  // les grandes équipes n'auraient que des passes déviées, les petites que
+  // des passes dehors). Pression : moyenne défensive du cinq (voir
+  // playPossession), ramenée à l'échelle d'une caractéristique.
+  const press = Number.isFinite(pressure) ? pressure / 1.15 : null;
+  const ref = press != null ? press : (defFive.reduce((s0, p) => s0 + p.eff("defOutside"), 0) / Math.max(1, defFive.length));
+  const kinds = [
+    { kind: "passOut", w: Math.max(0.25, 0.8 * (1 + (ref - pass) / 60)) },
+    { kind: "passLoose", w: Math.max(0.3, 1.0 * (1 + (ref - pass) / 45)) },
+    { kind: "fumble", w: receiver ? Math.max(0.2, 0.7 * (1 + (ref - receiver.eff("dribble")) / 50)) : 0 },
+    { kind: "missedMove", w: receiver ? Math.max(0.15, 0.6 * (1 + (ref - vision) / 50)) : 0 },
+  ];
+  const kind = pick(kinds, k => k.w).kind;
+  const recoverer = kind === "passOut" ? null : pick(defFive, p => p.eff("anticipation") + p.eff("steal") + p.eff("agility") * 0.5 + 1);
+  return { kind, receiver, recoverer, deadBall: kind === "passOut" };
+}
+
+// Probabilité, par possession assez longue (8 s ou plus restantes), d'un
+// ballon dévié en touche par la défense (l'attaque le garde).
+const OUT_OF_BOUNDS_DEF_CHANCE = 0.04;
 function markPossessionEvents(events, from, offKey, nextKey) {
   let last = -1;
   for (let i = from; i < events.length; i++) if (POSSESSION_PLAY_TYPES.has(events[i].type)) last = i;
@@ -19822,7 +19898,9 @@ class MatchEngine {
       // lancer seul (and-one, technique) : avant lui.
       return { at: i > j ? i : j, locked, after };
     }
-    if (DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal")) return { at: events.length, locked: null };
+    // Perte : ballon mort seulement s'il est sorti (`deadBall`, 2026-10-09 ;
+    // un direct antérieur sans ce champ : toute perte hors interception).
+    if (DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal" && e.deadBall !== false)) return { at: events.length, locked: null };
     return null;
   }
 
@@ -19843,10 +19921,14 @@ class MatchEngine {
     const tail = win.at < events.length ? events.splice(win.at) : null;
     const n0 = events.length;
     this._subLocked = win.locked;
+    // Les changements ne portent pas le contexte de la possession en cours
+    // (porteur, créateur… de l'attaque) : fenêtre ouverte EN COURS de
+    // possession (faute simple, ballon sorti), il n'est pas le leur.
+    const ctxSave = this._possCtx; this._possCtx = null;
     try {
       this.substituteIfNeeded(this.teamA, quarter, clock, events);
       this.substituteIfNeeded(this.teamB, quarter, clock, events);
-    } finally { this._subLocked = null; }
+    } finally { this._subLocked = null; this._possCtx = ctxSave; }
     if (tail) {
       const stop = events[n0 - 1];
       const newer = new Set();
@@ -19865,8 +19947,11 @@ class MatchEngine {
     // Dernier lancer réussi : ballon mort jusqu'à la remise en jeu, nouvelle
     // fenêtre (le tireur peut alors sortir).
     if (win.after) {
-      this.substituteIfNeeded(this.teamA, quarter, clock, events);
-      this.substituteIfNeeded(this.teamB, quarter, clock, events);
+      const ctxSave2 = this._possCtx; this._possCtx = null;
+      try {
+        this.substituteIfNeeded(this.teamA, quarter, clock, events);
+        this.substituteIfNeeded(this.teamB, quarter, clock, events);
+      } finally { this._possCtx = ctxSave2; }
     }
     return win;
   }
@@ -20424,7 +20509,9 @@ class MatchEngine {
       );
       if (rand01() < 0.55) {
         stealer.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: stealer.name, ballHandler: ballHandler.name }), { type: "turnover", tovType: "steal", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, possession: this.teamKey(offTeam) });
+        const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, true, stealer, pressure);
+        const phr = sit.kind === "intercept" ? PHRASES.turnoverIntercept : PHRASES.turnoverSteal;
+        this.log(events, quarter, clock, say(phr, { stealer: stealer.name, ballHandler: ballHandler.name, receiver: sit.receiver ? sit.receiver.name : "" }), { type: "turnover", tovType: "steal", tovKind: sit.kind, team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: stealer.name, stealerId: stealer.id, ...(sit.receiver ? { receiver: sit.receiver.name, receiverId: sit.receiver.id } : null), deadBall: false, possession: this.teamKey(offTeam) });
         // Contre-attaque (retour utilisateur, 2026-09 : "Vitesse/Accélération
         // → contre-attaques") : une interception donne le ballon à l'équipe
         // qui défendait, qui devient offensive à la possession suivante (voir
@@ -20438,7 +20525,10 @@ class MatchEngine {
         // de cette équipe face à une défense pas replacée).
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
       } else {
-        this.log(events, quarter, clock, say(PHRASES.turnoverPlain, { ballHandler: ballHandler.name, team: offTeam.name }), { type: "turnover", tovType: "lost", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null, possession: this.teamKey(offTeam) });
+        const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, false, null, pressure);
+        const phr = { passOut: PHRASES.turnoverPassOut, passLoose: PHRASES.turnoverPassLoose, fumble: PHRASES.turnoverFumble, missedMove: PHRASES.turnoverMissedMove }[sit.kind] || PHRASES.turnoverPlain;
+        this.log(events, quarter, clock, say(phr, { ballHandler: ballHandler.name, team: offTeam.name, receiver: sit.receiver ? sit.receiver.name : "", recoverer: sit.recoverer ? sit.recoverer.name : "" }), { type: "turnover", tovType: "lost", tovKind: sit.kind, team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null,
+          ...(sit.receiver ? { receiver: sit.receiver.name, receiverId: sit.receiver.id } : null), ...(sit.recoverer ? { recoverer: sit.recoverer.name, recovererId: sit.recoverer.id } : null), deadBall: sit.deadBall, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
     }
@@ -20448,7 +20538,10 @@ class MatchEngine {
         ballHandler.stats.tov++;
         ballHandler.consecutiveMisses++;
         g.stats.stl++;
-        this.log(events, quarter, clock, say(PHRASES.turnoverSteal, { stealer: g.name, ballHandler: ballHandler.name }), { type: "turnover", tovType: "steal", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, possession: this.teamKey(offTeam) });
+        // Pari dans les lignes de passe : interception d'une passe.
+        const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, true, g, null, () => 0);
+        const phr = sit.receiver ? PHRASES.turnoverIntercept : PHRASES.turnoverSteal;
+        this.log(events, quarter, clock, say(phr, { stealer: g.name, ballHandler: ballHandler.name, receiver: sit.receiver ? sit.receiver.name : "" }), { type: "turnover", tovType: "steal", tovKind: sit.receiver ? "intercept" : "strip", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, ...(sit.receiver ? { receiver: sit.receiver.name, receiverId: sit.receiver.id } : null), deadBall: false, possession: this.teamKey(offTeam) });
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
         return { possessionOffense: false };
       }
@@ -20551,6 +20644,27 @@ class MatchEngine {
       }
       // Sinon pas de `return` ici — voir le grand commentaire ci-dessus :
       // l'action continue directement vers le tir, dans cette même itération.
+    }
+
+    // Ballon dévié en touche par la DÉFENSE (2026-10-09, « le ballon sort
+    // après avoir été touché par un défenseur ») : arrêt de jeu, l'attaque
+    // GARDE le ballon (dernier contact défensif), remise en jeu en touche à
+    // hauteur de la sortie, puis la possession continue — même mécanique de
+    // temps que la faute simple (instant pris DANS la possession, budget de
+    // temps inchangé). Arrêt = fenêtre de changement immédiate.
+    const ctxOob = this._possCtx;
+    if (ctxOob && ctxOob.possLen >= 8 && rand01() < OUT_OF_BOUNDS_DEF_CHANCE) {
+      const toucher = weightedPick(onCourtDef, p => p.eff("steal") + p.eff("defOutside") * 0.5 + 1);
+      const elapsed = Math.max(2, Math.min(ctxOob.possLen - 4, ctxOob.possLen * (0.25 + rand01() * 0.35)));
+      const oobClock = Math.round((ctxOob.possStart - elapsed) * 10) / 10;
+      const oobIdx = events.length;
+      this.log(events, quarter, oobClock, say(PHRASES.outOfBoundsDefense, { defender: toucher.name, team: offTeam.name }), { type: "outOfBounds", lastTouch: "defense", team: this.teamKey(defTeam), player: toucher.name, playerId: toucher.id, possession: this.teamKey(offTeam), inbound: true });
+      if (this.runSubstitutionWindow(events, oobIdx, quarter, oobClock, false)) {
+        onCourtOff.splice(0, onCourtOff.length, ...offTeam.onCourtPlayers());
+        onCourtDef.splice(0, onCourtDef.length, ...defTeam.onCourtPlayers());
+        if (!onCourtOff.length || !onCourtDef.length) return { possessionOffense: false, scored: false };
+      }
+      this._possCtx = { ...ctxOob, possStart: oobClock, possLen: Math.round((oobClock - clock) * 10) / 10 };
     }
 
     // Choix de la zone : priorités offensives du coach, INFLÉCHIES par les
@@ -21842,7 +21956,7 @@ return {
   SCREEN_DEFENSES, HELP_DEFENSE_LEVELS, WATCH_FOCUS_EFFECTS, MAX_WATCH_ASSIGNMENTS,
   POST_DEFENSES, CLOSEOUT_STYLES, OFF_REBOUND_STYLES, ENDGAME_MANAGEMENT,
   clamp, rand, pick, weightedPick, rand01, mulberry32, newMatchSeed, withSeededRandom,
-  Player, Team, MatchEngine, CONVOCATION_MAX,
+  Player, Team, MatchEngine, chooseTurnoverSituation, CONVOCATION_MAX,
   heightForPosition, generateAttrsForPosition, generateRawYouthAttrs, generateRawAttrsInRange, generatePlayer, generateTeam,
   generateRookiePlayer, generateStartingRoster, FIRST_NAMES, LAST_NAMES,
   NATIONS, NATION_BY_CODE, NAME_POOLS, NAME_POOLS_EXTRA, namePoolOf, nationName, nationalityFromName, generatePlayerIdentity, randomNationality,
