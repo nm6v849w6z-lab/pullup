@@ -73,6 +73,11 @@
     ".nt-hero--stripes{background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 18px,transparent 18px 44px),linear-gradient(100deg,#13306f 0%,#1b2a52 40%,var(--panel) 80%)}",
     ".nt-hero--spotlights{background:radial-gradient(ellipse 40% 90% at 18% -10%,rgba(255,236,190,.28),transparent 70%),radial-gradient(ellipse 40% 90% at 62% -10%,rgba(255,236,190,.18),transparent 70%),linear-gradient(180deg,#0e1424,#151d33 60%,var(--panel))}",
     ".nt-hero--gold{background:linear-gradient(100deg,#6b4a12 0%,#3a2a10 38%,var(--panel) 78%);border-color:rgba(245,161,58,.45)}",
+    // Bannières aux couleurs du drapeau (2026-10-09) : voile sombre par-dessus
+    // pour garder le nom, le texte et le logo lisibles.
+    ".nt-hero--nat-bands{background:linear-gradient(90deg,rgba(8,12,22,.78),rgba(8,12,22,.45) 55%,rgba(8,12,22,.7)),linear-gradient(180deg,var(--nt-c1) 0 33.4%,var(--nt-c2) 33.4% 66.7%,var(--nt-c3) 66.7%)}",
+    ".nt-hero--nat-diagonal{background:linear-gradient(90deg,rgba(8,12,22,.8),rgba(8,12,22,.4) 60%,rgba(8,12,22,.65)),linear-gradient(120deg,var(--nt-c1) 0 42%,var(--nt-c2) 42% 62%,var(--nt-c3) 62%)}",
+    ".nt-hero--nat-sash{background:linear-gradient(115deg,transparent 0 52%,var(--nt-c1) 52% 61%,var(--nt-c2) 61% 70%,var(--nt-c3) 70% 76%,transparent 76%),linear-gradient(100deg,#0f1626 0%,#141d31 50%,var(--panel) 85%)}",
     ".nt-logo{width:96px;height:96px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}.nt-logo svg{width:100%;height:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}",
     ".nt-hero--mini{padding:14px 18px;gap:16px}.nt-hero--mini h1{font-size:22px;margin:2px 0 0}.nt-hero--mini .nt-logo{width:56px;height:56px}.nt-hero--mini .nat-flag{width:72px;height:48px}",
     ".nt-hero-jersey{margin-left:auto;display:flex;gap:10px;align-items:center;flex:0 0 auto}.nt-hero-jersey svg{display:block}",
@@ -724,30 +729,84 @@
     laurel: '<circle cx="50" cy="50" r="30" fill="#1b2a52" stroke="#f5a13a" stroke-width="4"/><path d="M22 78C8 62 8 38 22 22M78 78c14-16 14-40 0-56" fill="none" stroke="#3fae62" stroke-width="6" stroke-linecap="round"/><path d="M16 64l-8-2M13 50H5M16 36l-8 2M84 64l8-2M87 50h8M84 36l8 2" stroke="#3fae62" stroke-width="5" stroke-linecap="round"/>',
     crown: '<circle cx="50" cy="50" r="44" fill="#3a2a10" stroke="#f5c84a" stroke-width="5"/><path d="M24 66 20 34l16 12 14-20 14 20 16-12-4 32Z" fill="#f5c84a"/><rect x="24" y="68" width="52" height="7" rx="2" fill="#f5c84a"/>',
   };
-  // Logo de la sélection : drapeau (par défaut) ou emblème, code du pays
-  // en surimpression (jamais le logo d'un club).
-  function logoSvg(country, id) {
+  // Palettes des drapeaux (assets/flags/palette.json, calculées à partir des
+  // drapeaux du jeu) : écussons, bannières et maillots « nationaux ».
+  var PAL = null, palUid = 0;
+  function palOf(country) { return PAL ? PAL[String(country || "").toLowerCase()] || null : null; }
+  function natPal(country) { var Vv = V(); return Vv && Vv.nationPalette ? Vv.nationPalette(palOf(country)) : { c1: "#1b2a52", c2: "#f5a13a", c3: "#ffffff" }; }
+  try {
+    if (typeof fetch === "function") fetch("assets/flags/palette.json").then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) {
+      PAL = d || {};
+      try { if (ui.teamId) paint(); var o = document.getElementById("ntVisualsOverlay"); if (o && ui.team) o.innerHTML = visualsModalHtml(ui.team); } catch (e) { /* rien */ }
+      try { window.dispatchEvent(new CustomEvent("hm-nat-palette")); } catch (e) { /* rien */ }
+    }).catch(function () { PAL = {}; });
+  } catch (e) { PAL = {}; }
+  function lum(hex) { var n = parseInt(String(hex).slice(1), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
+  // Drapeau du pays dans un logo (au lieu des initiales) : image du jeu,
+  // découpée en rectangle arrondi, liseré blanc.
+  function flagInLogo(country, x, y, w, h) {
+    var id = "ntfl" + (++palUid);
+    return '<defs><clipPath id="' + id + '"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (h * 0.16).toFixed(1) + '"/></clipPath></defs>' +
+      '<image href="' + esc(flagUrl(country)) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" preserveAspectRatio="xMidYMid slice" clip-path="url(#' + id + ')"/>' +
+      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (h * 0.16).toFixed(1) + '" fill="none" stroke="#fff" stroke-width="2.2"/>';
+  }
+  var NAT_SHAPES = {
+    shield: "M50 5 90 18v30c0 26-17 40-40 48C27 88 10 74 10 48V18Z",
+    round: "M50 6A44 44 0 1 1 49.99 6Z",
+    diamond: "M50 4 96 50 50 96 4 50Z",
+    hex: "M50 4 90 27v46L50 96 10 73V27Z",
+    pennant: "M12 8h76v56L50 94 12 64Z",
+  };
+  // Écusson national : forme et motif du catalogue, couleurs du drapeau,
+  // centre = initiales ou drapeau (réglage « Centre du logo »).
+  function natLogoSvg(country, it, center) {
+    var p = natPal(country), d = NAT_SHAPES[it.shape] || NAT_SHAPES.shield, cid = "ntcl" + (++palUid);
+    var c1 = p.c1, c2 = Math.abs(lum(p.c2) - lum(c1)) < 0.12 ? (lum(c1) > 0.5 ? "#111827" : "#ffffff") : p.c2, c3 = p.c3;
+    var motif = "";
+    if (it.motif === "bands") motif = '<g clip-path="url(#' + cid + ')"><rect x="0" y="0" width="34" height="100" fill="' + c1 + '"/><rect x="33" y="0" width="34" height="100" fill="' + c2 + '"/><rect x="66" y="0" width="34" height="100" fill="' + c3 + '"/><rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,.18)"/></g>';
+    else if (it.motif === "chevron") motif = '<g clip-path="url(#' + cid + ')"><path d="M0 62 50 34 100 62v16L50 50 0 78Z" fill="' + c2 + '"/><path d="M0 78 50 50 100 78v8L50 58 0 86Z" fill="' + c3 + '"/></g>';
+    else if (it.motif === "star") motif = '<path d="M50 11l3.6 7.3 8 1.2-5.8 5.6 1.4 8L50 29.3l-7.2 3.8 1.4-8-5.8-5.6 8-1.2Z" fill="' + c2 + '"/>';
+    else if (it.motif === "ring") motif = '<path d="' + d + '" fill="none" stroke="' + c3 + '" stroke-width="2.4" transform="translate(50 50) scale(.8) translate(-50 -50)"/>';
+    var cy = it.shape === "pennant" ? 34 : it.shape === "shield" ? (it.motif === "star" ? 40 : 34) : 36;
+    var mid = center === "flag" ? flagInLogo(country, 28, cy, 44, 30)
+      : '<text x="50" y="' + (cy + 23) + '" text-anchor="middle" font-size="24" font-weight="900" fill="' + (it.motif === "bands" || lum(c1) < 0.55 ? "#fff" : "#111827") + '" font-family="inherit" paint-order="stroke" stroke="rgba(0,0,0,' + (it.motif === "bands" ? ".55" : "0") + ')" stroke-width="3">' + esc(String(country || "").toUpperCase()) + "</text>";
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="' + cid + '"><path d="' + d + '"/></clipPath></defs>' +
+      '<path d="' + d + '" fill="' + c1 + '"/>' + motif +
+      '<path d="' + d + '" fill="none" stroke="' + c2 + '" stroke-width="6" stroke-linejoin="round"/><path d="' + d + '" fill="none" stroke="' + c3 + '" stroke-width="1.6" stroke-linejoin="round"/>' + mid + "</svg>";
+  }
+  // Logo de la sélection : drapeau (par défaut), emblème ou écusson
+  // national ; au centre, le code du pays ou son drapeau (jamais le logo
+  // d'un club).
+  function logoSvg(country, id, center) {
+    var Vv = V(), it = Vv ? Vv.itemOf("logo", id) : null;
+    if (it && it.nation) return natLogoSvg(country, it, center);
     if (!LOGO_PATHS[id]) return null;
-    var code = esc(String(country || "").toUpperCase());
-    var label = id === "ball" ? "" : '<text x="50" y="' + (id === "shield" ? 58 : id === "laurel" ? 57 : id === "crown" ? 90 : 92) + '" text-anchor="middle" font-size="' + (id === "shield" || id === "laurel" ? 22 : 13) + '" font-weight="900" fill="#fff" font-family="inherit">' + code + "</text>";
+    var code = esc(String(country || "").toUpperCase()), low = id === "crown" || id === "star";
+    var label = id === "ball" ? "" : center === "flag"
+      ? (low ? flagInLogo(country, 37, 78, 26, 17) : flagInLogo(country, 30, 37, 40, 27))
+      : '<text x="50" y="' + (id === "shield" ? 58 : id === "laurel" ? 57 : id === "crown" ? 90 : 92) + '" text-anchor="middle" font-size="' + (id === "shield" || id === "laurel" ? 22 : 13) + '" font-weight="900" fill="#fff" font-family="inherit">' + code + "</text>";
     return '<svg viewBox="0 0 100 100" aria-hidden="true">' + LOGO_PATHS[id] + label + "</svg>";
   }
   function heroLogoHtml(tv) {
-    var v = visualsOf(tv), svg = logoSvg(tv.team.country, v.logo);
+    var v = visualsOf(tv), svg = logoSvg(tv.team.country, v.logo, v.center);
     return svg ? '<div class="nt-logo" data-nt-logo="' + esc(v.logo) + '">' + svg + "</div>" : flag(tv.team.country);
   }
   function flagUrl(country) { return "assets/flags/" + String(country || "").toLowerCase() + ".png"; }
+  function natVars(country) { var p = natPal(country); return "--nt-c1:" + p.c1 + ";--nt-c2:" + p.c2 + ";--nt-c3:" + p.c3; }
   function heroAttrs(tv) {
     var b = visualsOf(tv).banner;
     return ' class="nt-hero' + (b && b !== "night" ? " nt-hero--" + esc(b) : "") + '" data-nt-banner="' + esc(b || "night") + '"' +
-      (b === "flag" ? ' style="--nt-flag:url(' + esc(flagUrl(tv.team.country)) + ')"' : "");
+      (b === "flag" ? ' style="--nt-flag:url(' + esc(flagUrl(tv.team.country)) + ')"' : /^nat-/.test(b || "") ? ' style="' + esc(natVars(tv.team.country)) + '"' : "");
   }
   function jerseyItem(id) { var Vv = V(); return Vv ? Vv.itemOf("jersey", id) : null; }
-  function jerseyPreview(id, size) {
-    var it = jerseyItem(id), f = g("jerseySvgHtml");
+  function jerseyPreview(id, size, country) {
+    var it = jerseyItem(id), f = g("jerseySvgHtml"), Vv = V();
     if (!it || !f) return "";
-    var two = [it.color, it.color === "blanc" ? "noir" : "blanc"];
-    try { return f("A", it.color, size || 64, "home", it.pattern, two); } catch (e) { return ""; }
+    var color = it.color, two = [it.color, it.color === "blanc" ? "noir" : "blanc"];
+    // Couleurs du drapeau : même calcul que le serveur (matchDress), donc
+    // l'aperçu est le maillot porté en match.
+    if (it.nation && Vv && Vv.nationJersey) { var nj = Vv.nationJersey(it, palOf(country)); color = nj.color; two = nj.pattern === "uni" ? [nj.color, nj.second] : nj.pair.split("/"); }
+    try { return f("A", color, size || 64, "home", it.pattern, two); } catch (e) { return ""; }
   }
   function courtPreview(id) {
     var Vv = V(), it = Vv ? Vv.itemOf("court", id) : null, f = g("courtPreviewSvg");
@@ -755,7 +814,7 @@
     try { return f(it.wood === "nuit" && !it.paint ? null : { wood: it.wood, paint: it.paint }); } catch (e) { return ""; }
   }
   function bannerPreview(country, id) {
-    return '<div class="nt-hero' + (id !== "night" ? " nt-hero--" + esc(id) : "") + '" style="padding:0;width:100%;height:100%;border-radius:7px' + (id === "flag" ? ";--nt-flag:url(" + esc(flagUrl(country)) + ")" : "") + '"></div>';
+    return '<div class="nt-hero' + (id !== "night" ? " nt-hero--" + esc(id) : "") + '" style="padding:0;width:100%;height:100%;border-radius:7px' + (id === "flag" ? ";--nt-flag:url(" + esc(flagUrl(country)) + ")" : /^nat-/.test(id) ? ";" + esc(natVars(country)) : "") + '"></div>';
   }
   function roleName(r) { return r === "assistant" ? "adjoint" : "sélectionneur"; }
   function messageHtml(tv) {
@@ -786,9 +845,12 @@
     Vv.KINDS.forEach(function (k) {
       var cur = pick[k] || visualsOf(tv)[k];
       h += '<div class="ntv-kind">' + esc(Vv.KIND_LABELS[k]) + '</div><div class="ntv-grid">';
+      var curLogo = pick.logo || visualsOf(tv).logo, curCenter = pick.center || visualsOf(tv).center;
       Vv.CATALOG[k].forEach(function (it) {
         var open = Vv.isUnlocked(it, st);
-        var prev = k === "logo" ? (logoSvg(tv.team.country, it.id) || flag(tv.team.country)) : k === "banner" ? bannerPreview(tv.team.country, it.id) : k === "jersey" ? jerseyPreview(it.id, 46) : courtPreview(it.id);
+        var prev = k === "logo" ? (logoSvg(tv.team.country, it.id, curCenter) || flag(tv.team.country))
+          : k === "center" ? (logoSvg(tv.team.country, curLogo === "flag" || curLogo === "ball" ? "nat-shield" : curLogo, it.id) || flag(tv.team.country))
+          : k === "banner" ? bannerPreview(tv.team.country, it.id) : k === "jersey" ? jerseyPreview(it.id, 46, tv.team.country) : courtPreview(it.id);
         h += '<button type="button" class="ntv-opt' + (cur === it.id ? " on" : "") + '" data-ntv-kind="' + k + '" data-ntv-id="' + esc(it.id) + '"' + (open ? "" : " disabled") + ' aria-pressed="' + (cur === it.id) + '">' +
           (open ? "" : '<span class="ntv-lock" aria-label="Verrouillé">🔒</span>') + '<span class="ntv-prev">' + prev + "</span><span>" + esc(it.label) + "</span>" +
           (open ? "" : '<span class="ntv-need">' + esc(Vv.NEEDS[it.need].label) + "</span>") + "</button>";
@@ -848,7 +910,7 @@
     ensureCss();
     return "<div" + heroAttrs(tv).replace('class="nt-hero', 'class="nt-hero nt-hero--mini') + ">" + heroLogoHtml(tv) +
       '<div class="nt-hero-text"><div class="nt-kicker">Page publique</div><h1>' + teamNameHtml(tv.team) + "</h1></div>" +
-      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 60) + "</div></div>";
+      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 60, tv.team.country) + "</div></div>";
   }
   var showcase = {
     previewHtml: showcasePreviewHtml,
@@ -891,7 +953,7 @@
       // Mode Sélection : sélectionneur et membres de son staff.
       (tv.isCoach || tv.myRole ? ' <button type="button" class="cal-next-btn nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") +
       (extrasOf(tv).canEditVisuals && V() ? ' <button type="button" class="tq-btn" data-nt-visuals>Personnaliser</button>' : "") + "</div>" +
-      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 84) + "</div></div>";
+      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 84, tv.team.country) + "</div></div>";
     // Le mot du staff : en tête de l'Aperçu, identifiable par les visiteurs.
     if (ui.teamTab === "apercu" || !ui.teamTab) h += messageHtml(tv);
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";

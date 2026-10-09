@@ -223,6 +223,7 @@ function buildSide(store, teamId, gid, leagues, world, at, tempIds, matchId) {
   if (dress) {
     shell.jerseyColor = dress.jerseyColor;
     shell.jerseyPattern = dress.jerseyPattern;
+    if (dress.jerseyTwoTone) shell.jerseyTwoTone = dress.jerseyTwoTone;
     shell.courtStyle = dress.court.wood === "nuit" && !dress.court.paint ? null : { wood: dress.court.wood, paint: dress.court.paint };
     shell.premiumUntil = at + 7 * 24 * 3600 * 1000;
   }

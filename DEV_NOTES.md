@@ -59,7 +59,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   renderLiveReplaySeekBar / spectateSeekHolder) est déplacé dans
   `.fs-seek` de live-view.js le temps du plein écran (`adoptSeek` /
   `releaseSeek`, repris au rendu suivant s'il est recréé), ← / → = −30 s /
-  +30 s — test live_replay_fullscreen_test. RESTE : P2, P3. Préexistant (échoue aussi sans ces
+  +30 s — test live_replay_fullscreen_test.
+  P2 (2026-10-09) : (1) personnalisation ouverte aux ADJOINTS —
+  server/nationalExtras.js `canEditVisuals` (coach | assistant), refus 403
+  des autres rôles par l'API ; (2) identité nationale — palettes des
+  drapeaux calculées à partir des PNG du jeu (`tools/build_flag_palettes.js`
+  → assets/flags/palette.json, 93 pays, aucun pays codé à la main) ;
+  national-visuals.js : écussons `nat-*` (formes bouclier, médaillon,
+  losange, hexagone, fanion, chevron, étoilé ; couleurs du drapeau), réglage
+  `center` (initiales | drapeau, aussi pour les anciens logos), bannières
+  `nat-bands/diagonal/sash` (voile sombre = texte lisible), maillots
+  `nat-uni/bandes/split` (`nationJersey` : couleur de jeu la plus proche par
+  teinte + paire exacte « #hex/#hex » → `jerseyTwoTone` du match, même calcul
+  serveur `matchDress` / aperçu client) ; anciens choix inchangés (centre =
+  initiales par défaut). Rendu : national.js `natLogoSvg`, `flagInLogo`,
+  `natVars`. Test server/national_identity_test ; (3) Centre médical NT —
+  assets/national-medical.js (chargé à la demande, rubrique « Centre
+  médical », droit tacticsView), styles du Centre médical du club
+  (HM_MEDICAL_UI.css/FATIGUE/riskHtml exportés), données coachPlayer
+  uniquement, disponibilité vs prochain match, rechargement chaque minute —
+  test national_medical_test. Préexistants (échouent aussi sans ces
+  changements) : server/national_matches_test (« chaque match a un direct »).
+  RESTE : P3. Préexistant (échoue aussi sans ces
   changements) : cup_ordres_planning_test.
 
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.

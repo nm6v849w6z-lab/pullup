@@ -45,7 +45,7 @@ const me = (key, leagueId, idx) => ({ key, ref: { leagueId, idx }, pseudo: key, 
   check(!X.setMessage(st, me("COACH", "L1", 2), { teamId: "fr-A", text: "x".repeat(X.MESSAGE_MAX + 1) }, now).ok, `message : limite de ${X.MESSAGE_MAX} caractères`);
   const pub = X.publicExtras(st, "fr-A", null, now);
   check(pub.message.text === "Mot de l'adjoint" && !pub.canEditMessage && !pub.canEditVisuals, "visiteur : voit le message, aucun bouton de modification");
-  check(X.publicExtras(st, "fr-A", me("ADJ", "L1", 5), now).canEditMessage && !X.publicExtras(st, "fr-A", me("ADJ", "L1", 5), now).canEditVisuals, "adjoint : message oui, personnalisation non");
+  check(X.publicExtras(st, "fr-A", me("ADJ", "L1", 5), now).canEditMessage && X.publicExtras(st, "fr-A", me("ADJ", "L1", 5), now).canEditVisuals, "adjoint : message et personnalisation (2026-10-09)");
   check(X.setMessage(st, me("COACH", "L1", 2), { teamId: "fr-A", text: "   " }, now).ok && st.teams["fr-A"].message === null && X.publicExtras(st, "fr-A", null, now).message === null, "message : suppression (texte vide)");
   check(X.setMessage(st, me("U21C", "L3", 0), { teamId: "fr-U21", text: "Les Espoirs" }, now).ok, "message : fonctionne aussi pour une sélection U21");
 }
@@ -53,7 +53,13 @@ const me = (key, leagueId, idx) => ({ key, ref: { leagueId, idx }, pseudo: key, 
 // --- Personnalisation ---
 {
   const st = makeStore();
-  check(!X.setVisuals(st, me("ADJ", "L1", 5), { teamId: "fr-A", visuals: { logo: "shield" } }, now).ok, "visuels : adjoint refusé");
+  // 2026-10-09 : les adjoints personnalisent aussi ; les autres rôles et les
+  // visiteurs restent refusés (contrôle serveur, pas seulement l'interface).
+  { const s2 = makeStore(); check(X.setVisuals(s2, me("ADJ", "L1", 5), { teamId: "fr-A", visuals: { logo: "shield" } }, now).ok && s2.teams["fr-A"].visuals.logo === "shield", "visuels : adjoint autorisé (enregistré)"); }
+  { const r = X.setVisuals(st, me("HELP", "L2", 1), { teamId: "fr-A", visuals: { logo: "shield" } }, now); check(!r.ok && r.status === 403, "visuels : personne aidante refusée (403)"); }
+  check(!X.setVisuals(st, me("INV", "L2", 3), { teamId: "fr-A", visuals: { logo: "shield" } }, now).ok, "visuels : adjoint seulement invité refusé");
+  check(!X.setVisuals(st, me("U21C", "L3", 0), { teamId: "fr-A", visuals: { logo: "shield" } }, now).ok, "visuels : sélectionneur d'une AUTRE sélection refusé");
+  check(!X.setVisuals(st, null, { teamId: "fr-A", visuals: { logo: "shield" } }, now).ok, "visuels : visiteur refusé");
   check(X.publicExtras(st, "fr-A", null, now).visuals.logo === "flag", "visuels : défaut = drapeau, nuit bleue");
   const ok = X.setVisuals(st, me("COACH", "L1", 2), { teamId: "fr-A", visuals: { logo: "shield", banner: "flag", jersey: "rouge", court: "erable" } }, now);
   check(ok.ok && ok.visuals.logo === "shield" && ok.visuals.banner === "flag" && ok.visuals.jersey === "rouge" && ok.visuals.court === "erable", "visuels : sélectionneur, éléments libres enregistrés");

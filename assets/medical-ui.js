@@ -307,5 +307,7 @@
       });
     }
   }
-  window.HM_MEDICAL_UI = { render: render, setFilter: function (k) { state.filter = k; }, riskFor: riskFor };
+  window.HM_MEDICAL_UI = { render: render, setFilter: function (k) { state.filter = k; }, riskFor: riskFor,
+    // Réutilisés par le Centre médical du mode Sélection (assets/national-medical.js).
+    css: ensureCss, FATIGUE: FATIGUE, RISK_TIERS: RISK_TIERS, segsHtml: segsHtml, riskHtml: riskHtml, icon: icon, P: P };
 })();

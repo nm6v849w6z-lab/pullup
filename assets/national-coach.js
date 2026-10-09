@@ -977,7 +977,7 @@
     ["#", "Joueurs"],
     ["joueurs", "Liste des joueurs", "view"], ["suivis", "Joueurs suivis", "watch"], ["preselection", "Présélection", "preselectView"], ["convocations", "Convoqués", "convocView"],
     ["#", "Sélection"],
-    ["tactique", "Tactique", "tacticsView"], ["vestiaire", "Vestiaire", "tacticsView"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
+    ["tactique", "Tactique", "tacticsView"], ["vestiaire", "Vestiaire", "tacticsView"], ["medical", "Centre médical", "tacticsView"], ["calendrier", "Calendrier", "calendar"], ["qualifications", "Qualifications", "calendar"], ["competition", "Compétitions", "calendar"],
     ["amicaux", "Matchs amicaux", "friendlies"], ["analyse", "Analyse des adversaires", "analysis"], ["stats", "Statistiques", "stats"],
     ["#", "Suivi"],
     ["notifications", "Notifications", "feed"], ["staff", "Staff", "staffView"], ["mandat", "Mandat", "mandate"], ["palmares", "Palmarès", "calendar"],
@@ -1166,6 +1166,31 @@
     return n[1];
   }
   function firstNav() { var n = NAV.filter(function (x) { return x[0] !== "#" && navAllowed(x); })[0]; return n ? n[0] : "dashboard"; }
+  // Centre médical (2026-10-09) : assets/national-medical.js, chargé à la
+  // demande ; données du vivier (fatigue, blessures) rafraîchies chaque
+  // minute tant que la rubrique est affichée.
+  var MED_SRC = "assets/national-medical.js?v=20261009-1", medLoading = null, medTimer = 0;
+  function medicalHtml(v) {
+    if (!window.HM_NATIONAL_MEDICAL) {
+      if (!medLoading) {
+        medLoading = new Promise(function (res) { var sc = document.createElement("script"); sc.src = MED_SRC; sc.onload = sc.onerror = function () { res(); }; document.head.appendChild(sc); })
+          .then(function () { if (ui.mode && ui.nav === "medical") paint(); });
+        window.__lastNcMedical = medLoading;
+      }
+      return '<p class="training-empty">Chargement du centre médical…</p>';
+    }
+    if (!medTimer) medTimer = setInterval(function () {
+      if (!ui.mode || ui.nav !== "medical") { clearInterval(medTimer); medTimer = 0; return; }
+      if (document.hidden || ui.busy) return;
+      load().then(function () { if (ui.mode && ui.nav === "medical") paint(); });
+    }, 60000);
+    var n = tqNext(v);
+    return window.HM_NATIONAL_MEDICAL.html({
+      view: v, convRefs: convRefs(curGathering()),
+      next: n ? { at: n.at, label: teamLab(v.team.id) + " – " + teamLab(n.opponent) } : null,
+      profile: function (x) { return profileBtn(x, x.name, true); }, pos: posShort,
+    });
+  }
   function titleHtml(nav) {
     var cur = NAV.filter(function (n) { return n[0] === nav; })[0];
     var lab = cur ? navLabel(cur) : "";
@@ -1185,6 +1210,7 @@
     if (nav === "convocations") return titleHtml(nav) + err + convocationsHtml(v);
     if (nav === "tactique") return err + tactiqueHtml(v);
     if (nav === "vestiaire") return titleHtml(nav) + err + '<div id="ncVestiaire"><p class="vs-empty">Chargement du vestiaire…</p></div>';
+    if (nav === "medical") return titleHtml(nav) + err + medicalHtml(v);
     if (nav === "amicaux") return titleHtml(nav) + err + amicauxHtml(v);
     if (nav === "staff") return titleHtml(nav) + err + staffHtml(v);
     if (nav === "analyse") return titleHtml(nav) + err + analyseHtml(v);
@@ -1247,7 +1273,7 @@
       (x.canEditVisuals ? '<button type="button" class="tq-btn" data-nt-visuals>Personnaliser</button> ' : "") +
       '<button type="button" class="tq-btn" data-nc-public>Voir la page publique</button></span></div>' +
       S.previewHtml(tv) + S.messageHtml(tv, onShowcaseUpdate) +
-      (x.canEditVisuals ? "" : '<p class="nc-small">Seul le sélectionneur peut personnaliser le logo, la bannière, le maillot et le terrain.</p>') + "</div>";
+      (x.canEditVisuals ? "" : '<p class="nc-small">Seuls le sélectionneur et ses adjoints peuvent personnaliser le logo, la bannière, le maillot et le terrain.</p>') + "</div>";
   }
   function onShowcaseUpdate(tv, err) {
     if (tv) ui.tv = tv;
@@ -1500,6 +1526,7 @@
     if (!b) return;
     var d = b.dataset;
     if (b.closest && b.closest("#ncShowcase") && onShowcaseClick(b)) return;
+    if (d.ncMedTab && window.HM_NATIONAL_MEDICAL) { window.HM_NATIONAL_MEDICAL.setTab(d.ncMedTab); paint(); return; }
     if (d.ncSort) {
       var c = columns().filter(function (x) { return x.key === d.ncSort; })[0];
       ui.sort = ui.sort.key === d.ncSort ? { key: d.ncSort, dir: -ui.sort.dir } : { key: d.ncSort, dir: (c && c.dir) || -1 };

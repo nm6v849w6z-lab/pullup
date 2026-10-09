@@ -12,6 +12,13 @@
 // Tout est stocké sur store.teams (la sélection), donc survit aux changements
 // de sélectionneur et de saison ; purement visuel, aucun effet sportif.
 const Visuals = require("../assets/national-visuals.js");
+// Palettes des drapeaux (assets/flags/palette.json, tools/build_flag_palettes.js) :
+// maillots « nationaux » des matchs. Lues une fois.
+let flagPalettes = null;
+function paletteOf(country) {
+  if (!flagPalettes) { try { flagPalettes = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "assets", "flags", "palette.json"), "utf8")); } catch (e) { flagPalettes = {}; } }
+  return flagPalettes[String(country || "").toLowerCase()] || null;
+}
 
 const MESSAGE_MAX = 500;
 const NT = () => require("./nationalTeams.js");
@@ -25,7 +32,10 @@ function roleOf(store, me, teamId) {
   return a ? a.role : null;
 }
 function canEditMessage(role) { return role === "coach" || role === "assistant"; }
-function canEditVisuals(role) { return role === "coach"; }
+// Personnalisation (logo, bannière, maillot, terrain) : sélectionneur ET
+// adjoints (demande du 2026-10-09 ; mêmes droits que le message de la
+// page). Contrôlé ici, côté serveur : l'API refuse les autres rôles.
+function canEditVisuals(role) { return role === "coach" || role === "assistant"; }
 
 // Texte brut : retours à la ligne gardés (2 au plus d'affilée), caractères
 // de contrôle retirés ; jamais de HTML (échappé à l'affichage).
@@ -77,7 +87,7 @@ function setVisuals(store, me, body, now) {
   const team = store.teams[body && body.teamId];
   if (!team) return fail("Sélection inconnue.", 404);
   if (!me) return fail("Réservé aux managers.", 403);
-  if (!canEditVisuals(roleOf(store, me, team.id))) return fail("Seul le sélectionneur peut personnaliser la sélection.", 403);
+  if (!canEditVisuals(roleOf(store, me, team.id))) return fail("Seuls le sélectionneur et ses adjoints peuvent personnaliser la sélection.", 403);
   const want = (body && body.visuals) || {};
   const stats = visualStats(store, team.id, now);
   const next = { ...(team.visuals || {}) };
@@ -100,6 +110,11 @@ function matchDress(store, teamId, now) {
   if (!team || !team.visuals) return null;
   const v = Visuals.resolve(team.visuals, visualStats(store, teamId, now));
   const j = Visuals.itemOf("jersey", v.jersey), c = Visuals.itemOf("court", v.court);
+  // Maillot aux couleurs du drapeau : couleurs de maillot les plus proches.
+  if (j.nation) {
+    const nj = Visuals.nationJersey(j, paletteOf(team.country || String(teamId).split("-")[0]));
+    return { jerseyColor: nj.color, jerseyPattern: nj.pattern, jerseyTwoTone: nj.pair, court: { wood: c.wood, paint: c.paint } };
+  }
   return { jerseyColor: j.color, jerseyPattern: j.pattern, court: { wood: c.wood, paint: c.paint } };
 }
 
@@ -145,4 +160,4 @@ function playerSelection(store, id, name, nat) {
   return { ok: true, teams, caps: cap ? cap.n : 0 };
 }
 
-module.exports = { MESSAGE_MAX, cleanMessage, publicExtras, setMessage, setVisuals, matchDress, rolesOf, playerSelection, visualStats };
+module.exports = { paletteOf, MESSAGE_MAX, cleanMessage, publicExtras, setMessage, setVisuals, matchDress, rolesOf, playerSelection, visualStats };
