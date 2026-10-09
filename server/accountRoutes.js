@@ -36,6 +36,7 @@
 const crypto = require("crypto");
 const store = require("./store.js");
 const Accounts = require("./accounts.js");
+const MarketPresets = require("./marketPresets.js");
 const World = require("./world.js");
 const Referrals = require("./referrals.js");
 const GeoIp = require("./geoip.js");
@@ -453,6 +454,26 @@ function createAccountRouter({ sendJson, readJsonBody, getManagerToken, originFo
         if (!account) { sendJson(res, 200, { ok: true, lang, persisted: false }); return; }
         if (account.lang !== lang) { account.lang = lang; await Accounts.saveAccounts(data, accountsPath); }
         sendJson(res, 200, { ok: true, lang, persisted: true });
+      });
+      return true;
+    }
+
+    // Configurations de recherche du marché (2026-10-09, server/marketPresets.js) :
+    // GET → { presets, persisted } ; POST { action: save|update|rename|delete, … }.
+    // Sans compte : persisted:false (le navigateur garde alors ses
+    // configurations localement).
+    if (p === "/api/account/market-presets" && (req.method === "GET" || req.method === "POST")) {
+      const token = getManagerToken(req);
+      if (!token) { sendJson(res, 401, { ok: false, code: "login-required" }); return true; }
+      const b = req.method === "POST" ? await body(req, res) : {}; if (!b) return true;
+      await withAccounts(async data => {
+        const account = Accounts.findByManagerToken(data, token);
+        if (!account) { sendJson(res, 200, { ok: true, presets: [], persisted: false }); return; }
+        if (req.method === "GET") { sendJson(res, 200, { ok: true, presets: MarketPresets.list(account), persisted: true }); return; }
+        const out = MarketPresets.apply(account, b, Date.now());
+        if (!out.ok) { sendJson(res, out.status || 400, { ok: false, code: out.code, error: out.error }); return; }
+        await Accounts.saveAccounts(data, accountsPath);
+        sendJson(res, 200, { ok: true, presets: out.presets, persisted: true });
       });
       return true;
     }
