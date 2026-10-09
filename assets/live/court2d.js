@@ -39,6 +39,7 @@ const OX = SIDE, OY = TOP;                                // origine du terrain
 const PLANNED_KINDS = new Set(["shot", "rebound", "freeThrow", "turnover", "foul", "unsportsmanlikeFoul", "technicalFoul"]);
 const VW = 940 + SIDE * 2, VH = TOP + 500 + BOT;
 const SHOT_CLOCK = 24;
+const FLAG_W = 34, FLAG_H = 40;                            // drapeau des tribunes (mât compris), unités de l'arène
 
 // Postes du moteur → créneau de formation (attaque / défense).
 const SLOT = { M: 0, AS: 1, A: 2, AF: 3, P: 4 };
@@ -153,6 +154,14 @@ export function createCourt2D(host, opts = {}) {
   const crowdL = document.createElement("div");
   crowdL.className = "c2d-crowd";
   under.appendChild(crowdL);
+  // Drapeaux des tribunes (2026-10-09) : jamais tout à fait immobiles
+  // (flottement léger permanent), agités sur les grands moments. Chaque
+  // tissu est un petit élément HTML animé par transformation CSS (composé
+  // par la carte graphique, aucun coût par image pour le processeur).
+  const flagsL = document.createElement("div");
+  flagsL.className = "c2d-flags";
+  under.appendChild(flagsL);
+  const flags = [];   // { el, x, y, side } (x, y : arène, pied du mât)
   // Bancs (remplaçants) et coachs : calque à part, repeint seulement quand
   // un remplaçant change (énergie, faute, changement) ou qu'un coach bouge.
   const benchSvg = el("svg", { viewBox: `0 0 ${VW} ${VH}`, class: "c2d-benchsvg", focusable: "false" }, under);
@@ -166,6 +175,7 @@ export function createCourt2D(host, opts = {}) {
     const w = host.clientWidth || 0;
     viewBox = w && w < 640 ? `${OX - 70} 0 ${940 + 140} ${OY + 616}` : `0 0 ${VW} ${VH}`;
     for (const s of [svg, bgSvg, benchSvg, ...crowdL.children]) if (s.getAttribute("viewBox") !== viewBox) s.setAttribute("viewBox", viewBox);
+    placeFlags();
     placeUnder();
   };
   // Le décor suit exactement la boîte du terrain animé (plein écran,
@@ -182,6 +192,15 @@ export function createCourt2D(host, opts = {}) {
   // Calque canvas des shows (showfx.js, 2026-10-09) : créé à la demande de
   // la mise en scène, posé exactement sur le terrain animé, retiré après.
   let showCv = null;
+  // Drapeaux : position en % de la boîte (suit le rognage téléphone).
+  function placeFlags() {
+    const [vx, vy, vw, vh] = viewBox.split(/\s+/).map(Number);
+    for (const f of flags) {
+      const st = f.el.style;
+      st.left = ((f.x - vx) / vw * 100).toFixed(3) + "%"; st.top = ((f.y - FLAG_H - vy) / vh * 100).toFixed(3) + "%";
+      st.width = (FLAG_W / vw * 100).toFixed(3) + "%"; st.height = (FLAG_H / vh * 100).toFixed(3) + "%";
+    }
+  }
   fitView();
   let ro = null;
   try { if (typeof ResizeObserver === "function") { ro = new ResizeObserver(fitView); ro.observe(host); ro.observe(svg); } } catch (e) { /* rien */ }
@@ -405,6 +424,7 @@ export function createCourt2D(host, opts = {}) {
       for (const [col, d] of b.heads) el("path", { d, fill: col }, g);
     }
     crowdL.setAttribute("data-fans", String(fanCount));
+    buildFlags(home, awayColor, rnd01, fill);
     // Les tribunes se fondent dans le noir vers l'extérieur.
     const fade = el("radialGradient", { id: uid + "-af", cx: "50%", cy: "47%", r: "62%" }, defs);
     el("stop", { offset: ".62", "stop-color": "#000", "stop-opacity": "0" }, fade);
@@ -480,6 +500,48 @@ export function createCourt2D(host, opts = {}) {
     el("stop", { offset: "1", "stop-color": "#ffe9c4", "stop-opacity": "0" }, spill);
     el("ellipse", { cx: "470", cy: "250", rx: "640", ry: "420", fill: `url(#${uid}-spl)` }, arenaG);
   }
+  // Drapeaux : surtout ceux du club qui reçoit, quelques-uns des visiteurs
+  // (dans leur coin) ; jamais devant le tableau d'affichage. Tissu à deux
+  // bandes (couleur du club + liseré clair), mât fin ; durée et phase du
+  // flottement propres à chaque drapeau (jamais à l'unisson).
+  function buildFlags(home, awayColor, rnd01, fill) {
+    flagsL.innerHTML = ""; flags.length = 0;
+    const away = awayColor || "#3B8FE0";
+    const spots = [];
+    // Haut (évite le tableau : x terrain 330–610), bas, côtés.
+    for (const x of [-70, 40, 150, 250, 690, 790, 900, 1000]) spots.push([x, -50]);
+    for (const x of [-40, 90, 230, 380, 560, 710, 850, 980]) spots.push([x, 672]);
+    for (const y of [40, 230, 430]) { spots.push([-80, y]); spots.push([996, y]); }
+    spots.forEach(([x, y]) => {
+      if (rnd01() > fill + 0.15) return;                       // tribunes clairsemées : moins de drapeaux
+      const side = (x > 940 && y < 300) || (y > 600 && x > 900) ? "a" : "h";   // un coin des visiteurs
+      const col = side === "a" ? away : home;
+      const light = mix(col, "#ffffff", 0.82);
+      const ax = x + OX + (rnd01() - 0.5) * 14, ay = y + OY + (rnd01() - 0.5) * 6;
+      const f = document.createElement("div");
+      f.className = "c2d-flag s-" + side;
+      const d1 = (1.4 + rnd01() * 1.1).toFixed(2), d2 = (0.55 + rnd01() * 0.35).toFixed(2), dl = (-rnd01() * 3).toFixed(2);
+      f.style.setProperty("--fd", d1 + "s"); f.style.setProperty("--fw", d2 + "s"); f.style.setProperty("--fdl", dl + "s");
+      f.innerHTML = `<svg class="pole" viewBox="0 0 ${FLAG_W} ${FLAG_H}" preserveAspectRatio="none" aria-hidden="true"><path d="M2.2 1.5V${FLAG_H}" stroke="#c9ccd3" stroke-width="1.6" stroke-linecap="round"/><circle cx="2.2" cy="1.6" r="1.4" fill="#e8e2d0"/></svg>` +
+        `<div class="cloth"><svg viewBox="0 0 30 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H30V18H0Z" fill="${col}"/><path d="M0 7H30V11H0Z" fill="${light}"/><path d="M0 0H30" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/><path d="M0 18H30" stroke="rgba(0,0,0,.3)" stroke-width="1.4"/></svg></div>`;
+      flagsL.appendChild(f);
+      flags.push({ el: f, x: ax, y: ay, side });
+    });
+    flagsL.setAttribute("data-flags", String(flags.length));
+    placeFlags();
+  }
+  // Grand moment : les drapeaux du camp concerné s'agitent fort (classe
+  // posée le temps du moment) ; « show » (entrée, shows) : agitation moyenne.
+  let flagTimer = 0;
+  function flagsWave(side, level, ms) {
+    if (reducedMotion) return;
+    flagsL.classList.remove("wave-h", "wave-a", "wave-all", "lvl-1", "lvl-2");
+    void flagsL.offsetWidth;
+    flagsL.classList.add(side === "all" ? "wave-all" : "wave-" + side, "lvl-" + level);
+    clearTimeout(flagTimer);
+    flagTimer = setTimeout(() => flagsL.classList.remove("wave-h", "wave-a", "wave-all", "lvl-1", "lvl-2"), ms);
+  }
+
   // Ambiance lumineuse : « show » (entrée des joueurs, shows des temps
   // morts) = salle tamisée + projecteurs mobiles ; flash sur un gros panier.
   const ambG = el("g", { class: "c2d-amb", opacity: "0" }, svg);
@@ -495,6 +557,7 @@ export function createCourt2D(host, opts = {}) {
     ambMode = mode;
     ambG.setAttribute("opacity", mode === "show" ? "1" : "0");
     svg.classList.toggle("c2d-show", mode === "show");
+    flagsL.classList.toggle("is-show", mode === "show");
   }
   const flashR = el("rect", { x: OX, y: OY, width: "940", height: "500", fill: "#fffbe8", opacity: "0", class: "c2d-flash", "pointer-events": "none" }, svg);
   function bigFlash() {
@@ -531,6 +594,7 @@ export function createCourt2D(host, opts = {}) {
       if (typeof sh.el.animate === "function") { try { if (sh.anim) sh.anim.cancel(); const an = sh.anim = sh.el.animate(kf, { duration: ms, iterations: it, easing: "ease-out" }); an.onfinish = () => { if (sh.anim === an) sh.anim = null; }; } catch (e) { /* rien */ } }
       sh.el.classList.toggle("arms-up", arms);
     }
+    if (kind === "score") flagsWave(fan, big ? 2 : 1, big ? 3400 : 1800);
     clearTimeout(reactTimer);
     reactTimer = setTimeout(() => { crowdL.className = "c2d-crowd"; fanSheets.forEach(sh => sh.el.classList.remove("arms-up")); }, big ? 2600 : 1700);
   }
@@ -2176,6 +2240,8 @@ export function createCourt2D(host, opts = {}) {
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de
     // la possession, cible courante — aucun usage dans le jeu.
     test: {
+      // Réaction du public (drapeaux compris) : captures et tests.
+      react(kind, team, big) { crowdReact(kind, team, !!big); },
       setHolderPosition(x, y) { const h = sprites.get(ball.holder); if (h) { h.x = h.tx = x; h.y = h.ty = y; h.busy = false; crossed = false; } },
       resetPossessionClock(offsetMs) { possStart = now() + offsetMs; sceneUntil = 0; },
       holderTarget() { const h = sprites.get(ball.holder); return h ? { x: h.tx, y: h.ty } : null; },
@@ -2193,7 +2259,7 @@ export function createCourt2D(host, opts = {}) {
       ball() { const m = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(ballG.getAttribute("transform") || ""); return { x: ball.x, y: ball.y, z: ball.z, shown: m ? { x: +m[1] / PX, y: +m[2] / PX } : null, holder: ball.holder, flight: !!ball.flight, loose: !!ball.loose }; },
       advance(ms) { const t = last + ms; frame(t); return t; },
     },
-    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility); clearTimeout(reactTimer); host.innerHTML = ""; host.classList.remove("c2d"); },
+    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility); clearTimeout(reactTimer); clearTimeout(flagTimer); host.innerHTML = ""; host.classList.remove("c2d"); },
   };
   // Diagnostic activé : accès depuis la console (window.__hmCourt2d.debug().perf).
   if (perfBox && typeof window !== "undefined") window.__hmCourt2d = api;

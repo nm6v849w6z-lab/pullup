@@ -20,6 +20,20 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
+  `court2d.js` : calque `.c2d-flags` (dans `under`, au-dessus du public),
+  `buildFlags` (appelé par `drawArena`) — ~20 drapeaux (club qui reçoit,
+  un coin des visiteurs, moins si tribunes clairsemées), jamais devant le
+  tableau ni sur le parquet ; position en % de la viewBox (`placeFlags`,
+  suit le rognage téléphone). Tissu HTML animé par CSS (`c2d-flutter`,
+  durée / phase propres à chaque drapeau) : flottement léger PERMANENT ;
+  `flagsWave(side, niveau, ms)` depuis `crowdReact` : panier = agitation
+  moyenne des drapeaux du camp qui marque, grand moment (3 pts, dunk,
+  contre, buzzer) = forte (`c2d-flag-wave-big`, 3,4 s) ; shows / entrée
+  (`ambience("show")`) = agitation moyenne. Mouvement réduit : immobiles.
+  Test : `live_court2d_flags_test.js` (captures si `FLAGS_SHOTS=dossier`),
+  hook `court.test.react(kind, team, big)`.
+
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : visuels des shows repris de la
   maquette « Shows Live 2D »** (artifact CwXapZZvuernfxLUvwjC8w : pompom
   girls au centre, mascotte A dunk au trampoline / B tour d'honneur, canon

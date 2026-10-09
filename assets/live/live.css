@@ -454,6 +454,22 @@ html[data-theme="light"] .hm-live .tac-speed i{background:rgba(20,32,51,.15)}
 .c2d-svg .c2d-p{pointer-events:auto}
 .c2d-benchsvg .c2d-sub{pointer-events:auto}
 .c2d-crowd{position:absolute;inset:0}
+/* Drapeaux des tribunes (2026-10-09) : flottement léger permanent (jamais
+   immobiles), agitation forte sur les grands moments (wave-h / wave-a,
+   lvl-2 = 3 points, dunk, contre, buzzer), moyenne pendant les shows. */
+.c2d-flags{position:absolute;inset:0;pointer-events:none}
+.c2d-flag{position:absolute;transform-origin:6% 100%;will-change:transform}
+.c2d-flag>.pole{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.c2d-flag>.cloth{position:absolute;left:6.5%;top:2%;width:88%;height:45%;transform-origin:0 50%;will-change:transform;animation:c2d-flutter var(--fd,1.8s) ease-in-out var(--fdl,0s) infinite alternate}
+.c2d-flag>.cloth>svg{display:block;width:100%;height:100%;border-radius:0 2px 2px 0;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+@keyframes c2d-flutter{0%{transform:skewY(-4deg) scaleX(.93)}50%{transform:skewY(2deg) scaleX(1)}100%{transform:skewY(5deg) scaleX(.95)}}
+@keyframes c2d-flutter-fast{0%{transform:skewY(-12deg) scaleX(.82)}50%{transform:skewY(8deg) scaleX(1.02)}100%{transform:skewY(14deg) scaleX(.86)}}
+@keyframes c2d-flag-wave{0%{transform:rotate(-14deg)}100%{transform:rotate(16deg)}}
+@keyframes c2d-flag-wave-big{0%{transform:rotate(-26deg) translateY(-3%)}100%{transform:rotate(28deg) translateY(1%)}}
+.c2d-flags.is-show .c2d-flag,.c2d-flags.wave-all.lvl-1 .c2d-flag,.c2d-flags.wave-h.lvl-1 .c2d-flag.s-h,.c2d-flags.wave-a.lvl-1 .c2d-flag.s-a{animation:c2d-flag-wave calc(var(--fw,.7s) * 1.4) ease-in-out var(--fdl,0s) infinite alternate}
+.c2d-flags.wave-all.lvl-2 .c2d-flag,.c2d-flags.wave-h.lvl-2 .c2d-flag.s-h,.c2d-flags.wave-a.lvl-2 .c2d-flag.s-a{animation:c2d-flag-wave-big var(--fw,.7s) ease-in-out var(--fdl,0s) infinite alternate}
+.c2d-flags.is-show .cloth,.c2d-flags.wave-all .cloth,.c2d-flags.wave-h .s-h .cloth,.c2d-flags.wave-a .s-a .cloth{animation:c2d-flutter-fast calc(var(--fw,.7s) * .6) ease-in-out var(--fdl,0s) infinite alternate}
+@media (prefers-reduced-motion:reduce){.c2d-flag,.c2d-flag>.cloth{animation:none!important}}
 /* Public : balancement léger piloté par court2d.js (5 mises à jour par
    seconde, pas d'animation continue) ; feuilles mobiles sur leur calque. */
 .c2d-fans.m-ba,.c2d-fans.m-bb,.c2d-fans.m-sh{will-change:transform}
