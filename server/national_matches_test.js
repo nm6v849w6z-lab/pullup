@@ -83,7 +83,11 @@ ok("fenêtre : convocation figée 3 jours avant, matchs joués au coup d'envoi (
 // 2 bis) Direct (2026-10-06) : diffusion du moteur des clubs calée sur le
 // coup d'envoi, rangée à part ; score et résultat cachés jusqu'à la fin.
 const w1 = compA.matches.filter(m => m.w === 1);
-assert.ok(w1.every(m => typeof m.liveUntil === "number" && m.liveUntil > m.at + 3600e3), "chaque match a un direct (plus d'une heure)");
+// Durée : 40 min de chrono (1 s de jeu = 1 s), plus les pauses (2 + 10 + 2
+// min) et les arrêts — entre ~54 et ~65 min selon le match. L'ancien seuil
+// « plus d'une heure » tombait au milieu de cette plage : test instable
+// (2026-10-09), aucun lien avec le direct lui-même.
+assert.ok(w1.every(m => typeof m.liveUntil === "number" && m.liveUntil > m.at + 40 * 60e3 + 14 * 60e3), "chaque match a un direct (chrono complet et pauses)");
 const lives = M.takePendingLive(st);
 assert.strictEqual(lives.length, w1.length, "un direct par match, en attente d'enregistrement");
 assert.strictEqual(M.takePendingLive(st).length, 0, "vidé à la lecture");

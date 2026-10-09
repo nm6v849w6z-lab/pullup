@@ -391,7 +391,22 @@
     var o = oppSide(tv, m), cc = o.id.split("-")[0];
     var played = m.status === "played";
     return (o.home ? "" : "@ ") + flag(cc) + " " + esc(teamLabelOf(o.id)) +
-      (played ? ' <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '"><b class="' + (o.pf > o.pa ? "nt-win" : "nt-loss") + '">' + (o.pf > o.pa ? "V " : "D ") + esc(o.pf) + "-" + esc(o.pa) + "</b></button>" : liveBtnHtml(m));
+      (played ? ' <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '"><b class="' + (o.pf > o.pa ? "nt-win" : "nt-loss") + '">' + (o.pf > o.pa ? "V " : "D ") + esc(o.pf) + "-" + esc(o.pa) + "</b></button>" : liveBtnHtml(m) + coachOrdersHtml(tv, m));
+  }
+  // Mode Sélection ouvert sur CETTE sélection (2026-10-09, « impossible de
+  // donner ses ordres depuis le calendrier ») : bouton « Donnez / Modifier
+  // vos ordres » d'un match à venir (assets/national-coach.js:
+  // calendarOrdersHtml, qui ne le rend que pour les matchs à venir de la
+  // sélection gérée). Pages publiques : rien.
+  function coachOrdersHtml(tv, m) {
+    var C = window.HM_NATIONAL_COACH;
+    if (!C || typeof C.calendarOrdersHtml !== "function" || !tv || !tv.team || ui.coachOpen !== tv.team.id) return "";
+    return C.calendarOrdersHtml(m);
+  }
+  // Ligne du calendrier cliquable en entier quand le match a un bouton d'ordres.
+  function ordersRowAttr(html) {
+    var m = /data-nc-orders="([^"]*)"/.exec(html || "");
+    return m ? ' class="nc-orders-row" data-nc-orders="' + m[1] + '"' : "";
   }
   // Direct d'un match international (même écran que les clubs, voir
   // openNationalLive) : « Voir le direct » pendant la diffusion, « Suivre le
@@ -614,12 +629,14 @@
         // fenêtre sans match de qualification n'est pas un match (un amical
         // programmé ce jour-là a sa propre ligne).
         if (!wm) return;
-        h += '<tr><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">' + (wm || tv.qualif ? "Qualifications" : "Fenêtre " + esc(c.n)) + "</span></td><td>" + (wm ? matchLine(tv, wm) : tv.qualif ? '<span class="nt-small">Exempt</span>' : flag(tv.team.country) + " " + teamNameHtml(tv.team) + ' <span class="nt-small">– adversaire à déterminer</span>') + "</td></tr>";
+        var line = matchLine(tv, wm);
+        h += "<tr" + ordersRowAttr(line) + '><td class="nt-small">' + esc(shortDate(c.at)) + '</td><td><span class="nt-tag2">' + (wm || tv.qualif ? "Qualifications" : "Fenêtre " + esc(c.n)) + "</span></td><td>" + line + "</td></tr>";
       }
     });
     // Matchs amicaux internationaux programmés et joués (dimanche 20:00).
     (tv.friendlies || []).filter(function (f) { return f.season === tv.season; }).forEach(function (f) {
-      h += '<tr><td class="nt-small">' + esc(shortDate(f.at)) + '</td><td><span class="nt-tag2">Amical</span></td><td>' + matchLine(tv, { id: f.id, at: f.at, home: f.home, away: f.away, status: f.status, scoreHome: f.scoreHome, scoreAway: f.scoreAway }) + "</td></tr>";
+      var fl = matchLine(tv, { id: f.id, at: f.at, home: f.home, away: f.away, status: f.status, scoreHome: f.scoreHome, scoreAway: f.scoreAway });
+      h += "<tr" + ordersRowAttr(fl) + '><td class="nt-small">' + esc(shortDate(f.at)) + '</td><td><span class="nt-tag2">Amical</span></td><td>' + fl + "</td></tr>";
     });
     return h + "</tbody></table></div>";
   }
@@ -664,12 +681,12 @@
     });
     return h + "</tbody></table></div>";
   }
-  function koLine(m) {
+  function koLine(m, tv) {
     var played = m.status === "played";
     var side = function (id, pts, win) { return '<span class="nt-ko-team' + (played && win ? " is-win" : "") + '">' + flag(id.split("-")[0]) + " " + esc(teamLabelOf(id)) + (played ? " <b>" + esc(pts) + "</b>" : "") + "</span>"; };
     var hw = played && m.scoreHome > m.scoreAway;
     return '<div class="nt-ko">' + side(m.home, m.scoreHome, hw) + side(m.away, m.scoreAway, played && !hw) +
-      '<span class="nt-small">' + esc(when(m.at)) + (played ? ' · <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '">Feuille de match</button>' : liveBtnHtml(m)) + "</span></div>";
+      '<span class="nt-small">' + esc(when(m.at)) + (played ? ' · <button type="button" class="nt-link" data-nt-match="' + esc(m.id) + '">Feuille de match</button>' : liveBtnHtml(m) + coachOrdersHtml(tv, m)) + "</span></div>";
   }
   function teamFinalsHtml(tv) {
     var f = tv.finals;
@@ -684,7 +701,7 @@
       ["qf", "sf", "third", "final"].forEach(function (st) {
         var ms = t.matches.filter(function (m) { return m.stage === st; });
         if (!ms.length) return;
-        h += '<div class="nt-small" style="margin:14px 0 6px;font-weight:700">' + esc(STAGE_LABELS[st]) + '</div><div class="nt-card">' + ms.map(koLine).join("") + "</div>";
+        h += '<div class="nt-small" style="margin:14px 0 6px;font-weight:700">' + esc(STAGE_LABELS[st]) + '</div><div class="nt-card">' + ms.map(function (m) { return koLine(m, tv); }).join("") + "</div>";
       });
       if (t.ranking) h += '<p class="nt-small">Classement final : ' + t.ranking.map(function (id, i) { return (i + 1) + ". " + esc(teamLabelOf(id)); }).join(" · ") + "</p>";
     });

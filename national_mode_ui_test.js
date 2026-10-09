@@ -61,7 +61,10 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
   }
   assert(/France A/.test(doc.getElementById("ncTopTitle").textContent), "barre du haut : la sélection");
   const content = () => doc.getElementById("nationalContent");
-  assert(/Prochain match/.test(content().textContent) && !/Budget|Donnez vos ordres/.test(content().textContent), "tableau de bord de la sélection, rien du club");
+  // Rien du club (budget, boutons d'ordres du club `data-order-target`) ;
+  // la carte « Ordres du prochain match » de la sélection (2026-10-09)
+  // ouvre la Tactique de la sélection (data-nc-orders).
+  assert(/Prochain match/.test(content().textContent) && !/Budget/.test(content().textContent) && !content().querySelector("[data-order-target]"), "tableau de bord de la sélection, rien du club");
   for (const nav of ["joueurs", "suivis", "preselection", "convocations", "tactique", "calendrier", "amicaux", "analyse", "staff", "notifications", "mandat"]) {
     doc.querySelector(`#ncSidebar [data-nc-nav="${nav}"]`).click();
     await wait(() => doc.querySelector(`.nc-side-link.on[data-nc-nav="${nav}"]`), "rubrique " + nav);

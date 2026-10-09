@@ -20,6 +20,36 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Mode Sélection : « Donner / Modifier vos
+  ordres » depuis le calendrier, la barre du haut et le tableau de bord**.
+  Causes : (1) le calendrier du mode (calendrier public des sélections,
+  `assets/national.js:teamCalendrierHtml`) n'avait AUCUNE action sur un
+  match à venir ; (2) sur téléphone, `button.topbar-cta` est masqué (règle
+  mobile) et rien ne remplaçait le bouton du haut ; (3) `tqNext` prenait le
+  1er match de la liste, même déjà commencé mais pas encore joué (bouton
+  bloqué sur « Ordres verrouillés »), et un clic sur un match verrouillé ne
+  faisait rien ; (4) `post()` renvoyait un succès quand une requête était
+  déjà en cours → « Ordres enregistrés » affiché sans rien enregistrer, et
+  modifications effacées.
+  - Un seul chemin : `openOrders(id)` (assets/national-coach.js, exporté
+    `HM_NATIONAL_COACH.openOrders`) → page Tactique sur CE match → `tqSave`
+    → `/api/national/coach/tactics` (matchId) → `m.plans[id]`, lu par
+    `NationalMatches.buildSide`. Match verrouillé : même écran en lecture
+    seule ; match qui n'est plus à venir : message ; aucun match : tactique
+    par défaut + message.
+  - Calendrier / phase finale du mode : bouton par match à venir
+    (`calendarOrdersHtml`, `data-nc-orders`), ligne entière cliquable ;
+    rien sur les pages publiques (`HM_NATIONAL.state.coachOpen`).
+  - Tableau de bord : carte « Ordres du prochain match » (visible sur
+    téléphone). `post()` résout à true/false ; confirmation seulement
+    après un succès.
+  - Test : national_orders_entry_ui_test.js (échoue sur l'ancien code).
+    national_mode_ui_test : « rien du club » = pas de `data-order-target`.
+    server/national_matches_test : seuil du direct corrigé (> 54 min ; le
+    seuil d'une heure tombait au milieu des durées réelles, test instable).
+  - Rappel : 2 matchs d'une même sélection à moins de 3 jours sont refusés,
+    même par l'admin avec `force` (nationalFriendlies.busyReason).
+
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : arrêts de jeu, pertes de balle,
   maillots, bruitages**.
   - **États du terrain** (`assets/live/court2d.js`, `setPhase`) : PREGAME,

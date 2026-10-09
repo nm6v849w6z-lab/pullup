@@ -440,8 +440,21 @@
     ui.tqMatch = open ? String(open.id) : list[0] ? String(list[0].id) : TQ_DEFAULT;
     return ui.tqMatch;
   }
-  // Prochain match (bouton de la barre du haut).
-  function tqNext(v) { return tqUpcoming(v)[0] || null; }
+  // Prochain match (bouton de la barre du haut, carte du tableau de bord) :
+  // le premier dont le coup d'envoi n'est pas passé. Avant (2026-10-09), le
+  // premier de la liste, même un match déjà commencé que le passage du
+  // monde n'avait pas encore joué : bouton bloqué sur « Ordres verrouillés »
+  // alors que les matchs suivants étaient à préparer.
+  function tqNext(v) {
+    var list = tqUpcoming(v), now = Date.now();
+    return list.filter(function (x) { return x.at > now; })[0] || null;
+  }
+  // Libellé et état du bouton d'ordres d'un match à venir (barre du haut,
+  // calendrier, tableau de bord) : mêmes règles partout.
+  function tqBtnLabel(e) {
+    if (!can("tactics")) return "Voir la tactique";
+    return tqLocked(e) ? "Ordres verrouillés" : e.hasPlan ? "Modifier vos ordres" : "Donnez vos ordres";
+  }
   // Joueur du match pour le moteur des Ordres, depuis sa fiche du vivier.
   // Objet Player du jeu (méthodes overall…, sans le constructeur qui tire
   // une nouvelle identité au hasard).
@@ -677,8 +690,12 @@
     var body = { orders: tqSnap(tq.proxy) };
     if (tq.key !== TQ_DEFAULT) body.matchId = tq.key;
     var k0 = tq.key;
-    return post("/api/national/coach/tactics", body, k0 === TQ_DEFAULT ? "Tactique par défaut enregistrée." : "Ordres enregistrés.").then(function () {
-      if (ui.error) return;
+    return post("/api/national/coach/tactics", body, k0 === TQ_DEFAULT ? "Tactique par défaut enregistrée." : "Ordres enregistrés.").then(function (ok) {
+      // Refus ou envoi impossible (BUG 2026-10-09 : un second clic pendant
+      // l'envoi affichait « Ordres enregistrés » sans rien enregistrer et
+      // effaçait les modifications) : ordres en cours gardés, pas de
+      // confirmation.
+      if (!ok || ui.error) { if (ui.tq) { ui.tq.feedback = ""; tqPaintStatus(); } return; }
       // Ordres relus depuis la réponse du serveur (vue à jour).
       ui.tq = null; ui.tqMatch = k0;
       paint();
@@ -700,20 +717,45 @@
       btn.addEventListener("click", openNextOrders);
     }
     var locked = tqLocked(nx);
-    btn.textContent = t(locked ? "Ordres verrouillés" : nx.hasPlan ? "Modifier vos ordres" : "Donnez vos ordres");
+    btn.textContent = t(tqBtnLabel(nx));
     btn.classList.toggle("topbar-cta-validated", !!nx.hasPlan && !locked);
     btn.disabled = locked;
     btn.classList.toggle("is-locked", locked);
     btn.title = locked ? t("Coup d'envoi dans moins de 5 minutes : les ordres ne sont plus modifiables.") : teamLab(nx.opponent) + " · " + when(nx.at, true);
   }
-  function openNextOrders() {
-    var n = tqNext(ui.view);
-    if (!n || tqLocked(n)) return;
-    if (ui.tq && ui.tq.dirty && String(n.id) !== ui.tq.key && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) return;
-    ui.nav = "tactique"; ui.tqMatch = String(n.id); ui.error = "";
-    if (ui.tq && ui.tq.key !== ui.tqMatch) ui.tq = null;
+  function openNextOrders() { openOrders(null); }
+  // Ouvre la Tactique sur les ordres d'UN match (bouton du haut, ligne du
+  // calendrier, carte du tableau de bord) : un seul chemin, le même écran
+  // et la même sauvegarde (tqSave → /api/national/coach/tactics, matchId).
+  //  - match à venir : ses ordres enregistrés (m.plans[id]) sont rechargés,
+  //    sinon la tactique par défaut ;
+  //  - match verrouillé (T − 5 min) : même écran en lecture seule ;
+  //  - match qui n'est plus à venir (joué, en cours, annulé) : message, rien
+  //    n'est ouvert ;
+  //  - aucun match (id absent) : le prochain, sinon la tactique par défaut.
+  function openOrders(id) {
+    var v = ui.view;
+    if (!v || !ui.mode) return false;
+    var e = id != null && id !== "" ? tqEntry(v, id) : tqNext(v);
+    if (id != null && id !== "" && !e) { toast("Ce match n'est plus à venir : ses ordres ne sont plus modifiables."); return false; }
+    var k = e ? String(e.id) : TQ_DEFAULT;
+    if (ui.tq && ui.tq.dirty && ui.tq.key !== k && !window.confirm(t("Abandonner les modifications non enregistrées ?"))) return false;
+    if (!e) toast("Aucun match à venir : vous préparez la tactique par défaut.");
+    ui.nav = "tactique"; ui.tqMatch = k; ui.error = "";
+    if (ui.tq && ui.tq.key !== k) ui.tq = null;
     showModePage(); paint();
     try { var sc = document.querySelector(".content-scroll"); if (sc) sc.scrollTop = 0; } catch (err) { /* rien */ }
+    return true;
+  }
+  // Bouton d'ordres d'un match du calendrier (et des listes de matchs des
+  // pages du mode) : seulement pour un match À VENIR de la sélection gérée,
+  // visible des rôles qui voient la tactique.
+  function calendarOrdersHtml(m) {
+    var v = ui.view;
+    if (!ui.mode || !v || !m || !(can("tactics") || can("tacticsView"))) return "";
+    var e = tqEntry(v, m.id);
+    if (!e) return "";
+    return ' <button type="button" class="tq-btn nc-cal-orders' + (e.hasPlan && !tqLocked(e) ? " is-done" : "") + (tqLocked(e) ? " is-locked" : "") + '" data-nc-orders="' + esc(e.id) + '">' + esc(t(tqBtnLabel(e))) + "</button>";
   }
 
   // --- Amicaux internationaux ------------------------------------------------
@@ -985,6 +1027,14 @@
   function navAllowed(n) { return !n[2] || can(n[2]); }
   var MODE_CSS = [
     "body.nc-mode #sidebar > :not(.sidebar-brand):not(#ncSidebar){display:none!important}",
+    // Ordres d'un match depuis le calendrier et le tableau de bord (2026-10-09).
+    "body.nc-mode tr.nc-orders-row{cursor:pointer}body.nc-mode tr.nc-orders-row:hover td{background:rgba(255,255,255,.03)}",
+    ".nc-cal-orders{margin-left:8px}.nc-cal-orders.is-done{border-color:var(--ok);color:var(--ok)}.nc-cal-orders.is-locked{opacity:.6}",
+    ".nc-orders-row-in{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}.nc-orders-txt{flex:1 1 220px;min-width:0;line-height:1.5}.nc-orders-cta{background:var(--amber);color:var(--amber-ink);border:none;font:inherit;font-weight:800;font-size:13px;padding:11px 20px;border-radius:999px;cursor:pointer;white-space:nowrap}",
+    // Téléphone : bouton pleine largeur sous le match ; calendrier sans
+    // largeur minimale (le bouton d'ordres restait hors de l'écran, à droite).
+    "@media (max-width: 768px), (max-height: 520px) and (pointer: coarse){.nc-orders-cta{flex:1 1 100%;width:100%}body.nc-mode .nt-table:has(.nc-orders-row){min-width:0}body.nc-mode .nt-table:has(.nc-orders-row) td{padding:9px 8px}.nc-cal-orders{display:block;margin:8px 0 0}}",
+    ".nc-orders-cta.is-done{background:var(--ok);border-color:var(--ok);color:#fff}.nc-orders-cta:disabled{opacity:.5;cursor:default}",
     "body.nc-mode .topbar-right > :not(#topbarOnline):not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
     "body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
@@ -1250,6 +1300,13 @@
     if (can("friendlies") && v.friendlies) h += kpi("Matchs amicaux", v.friendlies.scheduled.length + " programmé" + (v.friendlies.scheduled.length > 1 ? "s" : ""), v.friendlies.received.length ? v.friendlies.received.length + " demande" + (v.friendlies.received.length > 1 ? "s" : "") + " à traiter" : "", "amicaux");
     h += kpi("Dernier résultat", last ? esc(teamLab(last.home)) + " " + esc(last.scoreHome) + " – " + esc(last.scoreAway) + " " + esc(teamLab(last.away)) : "–", last ? esc(when(last.at)) : "Aucun match joué", "calendrier");
     h += "</div>";
+    // Ordres du prochain match (2026-10-09) : le bouton de la barre du
+    // haut est masqué sur téléphone (règle mobile, .topbar-cta) ; cette
+    // carte le remplace partout, même action (openOrders).
+    var ox = can("tactics") ? tqNext(v) : null;
+    if (ox) h += '<div class="nc-card nc-orders-card" style="margin-top:16px"><div class="nc-orders-row-in"><div class="nc-orders-txt"><div class="cal-card-kicker">' + esc(t("Ordres du prochain match")) + "</div>" +
+      flag(String(ox.opponent).split("-")[0]) + " " + esc(teamLab(ox.opponent)) + ' <span class="nc-club">· ' + esc(ox.comp) + " · " + esc(when(ox.at, true)) + " · " + esc(t(tqLocked(ox) ? "Ordres verrouillés" : ox.hasPlan ? "Ordres validés" : "Ordres pas encore validés")) + "</span></div>" +
+      '<button type="button" class="nc-orders-cta' + (ox.hasPlan && !tqLocked(ox) ? " is-done" : "") + '" data-nc-orders="' + esc(ox.id) + '"' + (tqLocked(ox) ? " disabled" : "") + ">" + esc(t(tqBtnLabel(ox))) + "</button></div></div>";
     // Prochain match en direct ou imminent : bouton du direct (écran des clubs).
     var nxLive = nx ? liveBtn(nx) : "";
     if (nxLive) h += '<div class="nc-card" style="margin-top:16px"><div class="nc-sec"><span class="lp-card-title">' + (nx.status === "live" ? "Match en cours" : "Coup d'envoi imminent") + "</span></div>" +
@@ -1380,11 +1437,13 @@
 
   // --- Actions ------------------------------------------------------------------
   function post(path, body, okMsg) {
-    if (ui.busy) return Promise.resolve();
+    // Résout à true si le serveur a accepté, false sinon (refus, réseau, ou
+    // requête déjà en cours : rien n'est envoyé).
+    if (ui.busy) return Promise.resolve(false);
     ui.busy = true;
     body.teamId = body.teamId || ui.teamId;
     if (ui.opp) body.opp = ui.opp;
-    var p = api(path, body).then(function (d) { if (d.team) setView(d); ui.error = ""; if (okMsg) toast(okMsg); }).catch(function (e) { ui.error = e.message; }).then(function () { ui.busy = false; paint(); });
+    var p = api(path, body).then(function (d) { if (d.team) setView(d); ui.error = ""; if (okMsg) toast(okMsg); return true; }).catch(function (e) { ui.error = e.message; return false; }).then(function (ok) { ui.busy = false; paint(); return ok; });
     window.__lastNationalCoach = p;
     return p;
   }
@@ -1663,9 +1722,11 @@
   }
   function onModeClick(e) {
     if (!ui.mode) return;
-    var b = e.target.closest ? e.target.closest("[data-nc-nav],[data-nc-match],[data-nt-match],[data-nt-live],[data-nc-exit]") : null;
+    var b = e.target.closest ? e.target.closest("[data-nc-nav],[data-nc-match],[data-nt-match],[data-nt-live],[data-nc-exit],[data-nc-orders]") : null;
     if (!b) return;
     e.stopPropagation(); e.preventDefault();
+    // Ordres d'un match (calendrier, tableau de bord).
+    if (b.dataset.ncOrders !== undefined) { openOrders(b.dataset.ncOrders || null); return; }
     // Direct d'un match international (même écran que les clubs).
     if (b.dataset.ntLive) { window.__lastNationalLive = window.HM_NATIONAL.openLive(b.dataset.ntLive); return; }
     if (b.dataset.ncExit) { exitMode(); return; }
@@ -1787,7 +1848,7 @@
   })(0);
   window.HM_NATIONAL_COACH = {
     enterMode: function (id) { bind(); return enterMode(id); }, exitMode: exitMode, boot: function () { return bootMode(); },
-    dashButtonHtml: dashButtonHtml, state: ui, msgActionHtml: msgActionHtml, navKey: navKey, restoreNav: restoreNav, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
+    dashButtonHtml: dashButtonHtml, state: ui, openOrders: function (id) { return openOrders(id); }, calendarOrdersHtml: calendarOrdersHtml, msgActionHtml: msgActionHtml, navKey: navKey, restoreNav: restoreNav, pdpActionsHtml: pdpActionsHtml, pdpNotesHtml: pdpNotesHtml,
     // Ancien point d'entrée (« Gérer la sélection ») : ouvre le mode.
     open: function (id) { bind(); return enterMode(id); },
   };
