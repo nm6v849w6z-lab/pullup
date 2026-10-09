@@ -13038,7 +13038,7 @@ function moraleLabel(morale) {
 // grand commentaire de MILESTONE_INTERVIEW_TYPES/MVP_ATTR_BONUS côté moteur
 // pour le détail : mêmes valeurs, mêmes clés, ne JAMAIS laisser diverger
 // d'un côté à l'autre.
-const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "freeThrow"]);
+const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout"]);
 const MILESTONE_INTERVIEW_TYPES = {
   "debut-saison": { label: "Interview de début de saison" },
   "mi-saison": { label: "Interview de mi-saison" },
@@ -27413,23 +27413,28 @@ class MatchEngine {
     return weightedPick(pool, p => Math.pow(p.eff(defKey) + 15, 1.6));
   }
 
+  // Fenêtre de changement (voir engine.js, substitutionWindow) : -1 = fin de
+  // possession sur un arrêt ; n > 0 = faute suivie de lancers francs, les
+  // changements passent avant le 1er lancer (index n), tireurs protégés.
   isDeadBall(events, from) {
-    for (let i = events.length - 1; i >= Math.max(0, from); i--) {
-      const e = events[i];
-      if (!e || e.type === "substitution") continue;
-      return DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal");
+    let i = events.length - 1;
+    while (i >= from && events[i].type === "substitution") i--;
+    const e = events[i];
+    if (!e || i < from) return 0;
+    if (e.type === "freeThrow") {
+      let j = i;
+      while (j - 1 >= from && events[j - 1].type === "freeThrow") j--;
+      const s = events[j - 1];
+      if (j - 1 < from || !(DEAD_BALL_EVENTS.has(s.type) || s.foulType)) return 0;
+      this._subLocked = new Set(events.slice(j).map(x => x.shooter));
+      return j;
     }
-    return false;
+    return DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal") ? -1 : 0;
   }
   substituteIfNeeded(team, quarter, clock, events) {
-    // NOTE (calibrage 2026-09) : l'ancienne version faisait `p.onCourt = false` dès
-    // l'exclusion pour fautes, PUIS testait `if (!p.onCourt) continue;` juste après —
-    // ce qui sautait systématiquement le remplacement. Un joueur exclu pour 5 fautes
-    // n'était donc jamais remplacé et son équipe finissait le match à 4 contre 5.
-    // Corrigé : on détermine d'abord si le joueur DOIT sortir (fauté out / blessé) ou
-    // DEVRAIT sortir (fatigue / entre dans les problèmes de fautes), puis on ne touche
-    // à onCourt qu'une fois qu'on sait si un remplaçant est disponible.
+    // Voir engine.js (exclusion pour fautes, tireurs de lancers protégés).
     for (const p of team.onCourtPlayers()) {
+      if (this._subLocked && this._subLocked.has(p.name) && !p.injured && p.fouls < 5) continue;
       if (!p.onCourt) continue; // déjà sorti plus tôt dans cette même passe
 
       if (p.fouls >= 5 && !p.disqualified) {
@@ -28366,11 +28371,15 @@ class MatchEngine {
         this.applyFatigue(this.teamA, this.teamA.rhythm, possessionLength, q, clock, events);
         this.applyFatigue(this.teamB, this.teamB.rhythm, possessionLength, q, clock, events);
 
-        // Changements seulement sur un arrêt de jeu (voir engine.js, isDeadBall).
-        if (this.isDeadBall(events, possFirstEvent)) {
+        // Changements seulement sur un arrêt de jeu (voir engine.js, substitutionWindow).
+        const win = this.isDeadBall(events, possFirstEvent);
+        if (win) {
+          const tail = win > 0 ? events.splice(win) : [];
           this.substituteIfNeeded(this.teamA, q, clock, events);
           this.substituteIfNeeded(this.teamB, q, clock, events);
+          events.push(...tail);
         }
+        this._subLocked = null;
 
         if (!result.possessionOffense) {
           possessionTeam = possessionTeam === "A" ? "B" : "A";

@@ -2893,9 +2893,13 @@ function moraleLabel(morale) {
 // derniers) : uniquement des ÉTIQUETTES d'affichage ici, la mécanique elle-
 // même (tons/citations/deltas) est dans MILESTONE_INTERVIEW_TONES/
 // MILESTONE_INTERVIEW_QUOTES juste en dessous.
-// Événements qui arrêtent le jeu (voir MatchEngine.isDeadBall) : seuls
-// moments où un changement de joueur est possible.
-const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout", "freeThrow"]);
+// Événements qui arrêtent le jeu (voir MatchEngine.substitutionWindow) :
+// seuls moments où un changement de joueur est possible. Les lancers francs
+// n'en font PLUS partie (retour utilisateur 2026-10-09 : « des changements
+// après un panier marqué ») : un dernier lancer réussi = panier suivi d'une
+// remise en jeu, un dernier lancer manqué = rebond, ballon vivant. La
+// fenêtre est la faute qui les précède, avant le premier lancer.
+const DEAD_BALL_EVENTS = new Set(["foul", "technicalFoul", "unsportsmanlikeFoul", "foulOut", "technicalEjection", "injury", "timeout"]);
 
 const MILESTONE_INTERVIEW_TYPES = {
   "debut-saison": { label: "Interview de début de saison" },
@@ -19765,21 +19769,78 @@ class MatchEngine {
     return weightedPick(pool, p => Math.pow(p.eff(defKey) + 15, 1.6));
   }
 
-  // Arrêt de jeu pendant la possession qui vient d'être jouée (événements
-  // depuis `from`) : faute (personnelle, technique, antisportive), exclusion,
-  // blessure, ballon perdu hors interception (sortie, marcher, 24 s…),
-  // temps mort. Un panier, un rebond ou une interception laissent le ballon
-  // vivant : aucun changement.
+  // Fenêtre de changement ouverte par la possession qui vient d'être jouée
+  // (événements depuis `from`), ou null si le ballon est resté vivant.
+  // Règles (retour utilisateur 2026-10-09) :
+  //  - JAMAIS sur un panier (tir réussi), un tir manqué, un rebond, une
+  //    interception, une transition ni la remise en jeu qui suit un panier ;
+  //  - oui sur une faute (personnelle, technique, antisportive), une
+  //    exclusion, une blessure, un ballon perdu hors interception (sortie,
+  //    marcher, 24 s…), un temps mort ; les pauses entre périodes sont
+  //    gérées par simulate (quarterStart) ;
+  //  - lancers francs : la fenêtre est la FAUTE qui les a provoqués, AVANT le
+  //    premier lancer (`at` = index du premier lancer), et les tireurs
+  //    restent sur le terrain pour les tirer (`locked`). Après le dernier
+  //    lancer, rien : réussi = panier + remise en jeu, manqué = rebond.
   // La possession doit SE TERMINER sur l'arrêt (dernier événement) : une
   // faute en cours de possession suivie d'une remise en jeu et d'un panier
   // ou d'un rebond n'est plus un arrêt au moment du changement.
-  isDeadBall(events, from) {
-    for (let i = events.length - 1; i >= Math.max(0, from); i--) {
-      const e = events[i];
-      if (!e || e.type === "substitution") continue;
-      return DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal");
+  substitutionWindow(events, from) {
+    const lo = Math.max(0, from);
+    let i = events.length - 1;
+    while (i >= lo && events[i] && (events[i].type === "substitution" || events[i].type === "shortHanded")) i--;
+    if (i < lo || !events[i]) return null;
+    const e = events[i];
+    if (e.type === "freeThrow") {
+      let j = i;
+      while (j - 1 >= lo && events[j - 1] && events[j - 1].type === "freeThrow") j--;
+      const stop = events[j - 1];
+      if (j - 1 < lo || !stop || !(DEAD_BALL_EVENTS.has(stop.type) || stop.foulType)) return null;
+      const locked = new Set();
+      for (let k = j; k <= i; k++) if (events[k].shooterId != null) locked.add(events[k].shooterId);
+      return { at: j, locked };
     }
-    return false;
+    if (DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal")) return { at: events.length, locked: null };
+    return null;
+  }
+
+  // Compatibilité : vrai si la possession ouvre une fenêtre de changement.
+  isDeadBall(events, from) { return !!this.substitutionWindow(events, from); }
+
+  // Exécution des changements DEMANDÉS (fatigue, fautes, temps de jeu cible,
+  // blessure, exclusion — réévalués par substituteIfNeeded) quand une
+  // fenêtre réglementaire s'ouvre. Pas de fenêtre : la demande reste en
+  // attente (la condition persiste) jusqu'au prochain arrêt. Les changements
+  // d'une fenêtre de lancers francs sont insérés AVANT les lancers, à
+  // l'instant de la faute (score de la faute, énergie la plus récente) : le
+  // direct et le terrain 2D les montrent pendant l'arrêt, pas après le panier.
+  // Retourne la fenêtre utilisée (ou null).
+  runSubstitutionWindow(events, from, quarter, clock, force) {
+    const win = this.substitutionWindow(events, from) || (force ? { at: events.length, locked: null } : null);
+    if (!win) return null;
+    const tail = win.at < events.length ? events.splice(win.at) : null;
+    const n0 = events.length;
+    this._subLocked = win.locked;
+    try {
+      this.substituteIfNeeded(this.teamA, quarter, clock, events);
+      this.substituteIfNeeded(this.teamB, quarter, clock, events);
+    } finally { this._subLocked = null; }
+    if (tail) {
+      const stop = events[n0 - 1];
+      const newer = new Set();
+      for (let k = n0; k < events.length; k++) {
+        const ev = events[k];
+        if (stop && stop.score) ev.score = { ...stop.score };
+        if (ev.fat) for (const id of Object.keys(ev.fat)) newer.add(id);
+      }
+      for (const ev of tail) {
+        if (!ev.fat || !newer.size) continue;
+        for (const id of newer) delete ev.fat[id];
+        if (!Object.keys(ev.fat).length) delete ev.fat;
+      }
+      events.push(...tail);
+    }
+    return win;
   }
 
   substituteIfNeeded(team, quarter, clock, events) {
@@ -19793,6 +19854,9 @@ class MatchEngine {
     const blowoutRest = this.restStartersInBlowout(team, quarter);
     for (const p of team.onCourtPlayers()) {
       if (!p.onCourt) continue; // déjà sorti plus tôt dans cette même passe
+      // Tireur de lancers francs à venir (voir runSubstitutionWindow) : il
+      // reste pour ses lancers, sauf sortie obligatoire.
+      if (this._subLocked && this._subLocked.has(p.id) && !p.injured && !p.disqualified && p.fouls < 5) continue;
 
       // Retour du titulaire après le relais court de son remplaçant (voir
       // Player.returnStarterId/stintEndAt) : sans ça, un titulaire sorti pour
@@ -21511,11 +21575,10 @@ class MatchEngine {
         // sorti / violation, blessure, exclusion. Ballon vivant (panier en
         // jeu, rebond, interception) : le changement voulu par le coach
         // (fatigue, fautes, temps de jeu cible) attend le prochain arrêt —
-        // substituteIfNeeded le réévalue alors.
-        if (timeoutCalled || this.isDeadBall(events, possFirstEvent)) {
-          this.substituteIfNeeded(this.teamA, q, clock, events);
-          this.substituteIfNeeded(this.teamB, q, clock, events);
-        }
+        // substituteIfNeeded le réévalue alors. Lancers francs : changements
+        // à la faute, avant le premier lancer, jamais après le dernier
+        // (2026-10-09, voir substitutionWindow).
+        this.runSubstitutionWindow(events, possFirstEvent, q, clock, timeoutCalled);
         // Possession du ballon pour le direct (audit possession live,
         // 2026-10-07) : SOURCE DE VÉRITÉ unique côté client. `possession` =
         // équipe qui a le ballon PENDANT l'action (complété sur les fautes

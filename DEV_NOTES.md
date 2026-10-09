@@ -346,14 +346,27 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   dunk / buzzer (agitation plus forte, plus longue) ; arbitre de ligne de
   fond DERRIÈRE la ligne (REF_BEHIND 2,5 pieds, `bl`, borné après
   l'anti-chevauchement), en coordonnées terrain donc indépendant du zoom.
-  CHANGEMENTS SUR ARRÊT DE JEU (2026-10-08) : engine.js `isDeadBall` (la
-  possession doit SE TERMINER sur faute / lancers / ballon perdu hors
-  interception / temps mort / blessure / exclusion) + pause entre deux
-  quarts ; sinon le changement voulu (fatigue, fautes, minutes cibles)
-  attend le prochain arrêt. Même règle dans le moteur miroir de
-  moteurbasket3.html. ~34 changements / match (35,8 avant). Test :
-  engine_dead_ball_subs_test.js. Pas de changement manuel en direct dans le
-  jeu (les ordres sont fixés avant le match).
+  CHANGEMENTS : FENÊTRES RÉGLEMENTAIRES (2026-10-08, revu 2026-10-09) :
+  engine.js `substitutionWindow` / `runSubstitutionWindow` (appelés après
+  chaque possession ; `isDeadBall` n'est plus qu'un alias). Fenêtre = la
+  possession SE TERMINE sur faute / ballon perdu hors interception / temps
+  mort / blessure / exclusion, + pause entre deux périodes (quarterStart).
+  JAMAIS après un panier, un tir manqué, un rebond, une interception ni la
+  remise en jeu qui suit un panier. Bug du 2026-10-09 (« changements après
+  un panier marqué ») : `freeThrow` comptait comme arrêt, donc ~18
+  changements / match tombaient APRÈS un dernier lancer réussi (= panier +
+  remise en jeu). Désormais : fenêtre = la FAUTE, changements insérés AVANT
+  le premier lancer (score de la faute, énergie la plus récente), tireurs
+  protégés (`_subLocked`, ils sortent à la fenêtre suivante). Demande vs
+  exécution : la demande (fatigue, fautes, minutes cibles, blessure,
+  exclusion) est une condition réévaluée par substituteIfNeeded ; elle
+  n'est EXÉCUTÉE qu'à une fenêtre, sinon elle attend. Moteur miroir de
+  moteurbasket3.html aligné (tireur protégé par nom, ses événements n'ont
+  pas d'id). ~36 changements / match. Test : engine_dead_ball_subs_test.js
+  (5 scénarios + 30 matchs simulés). Pas de changement manuel en direct
+  dans le jeu (les ordres sont fixés avant le match). Règle FIBA « équipe
+  qui encaisse un panier dans les 2 dernières minutes » volontairement NON
+  appliquée (consigne : jamais de changement sur un panier).
   ONGLET MASQUÉ / REPRISE (2026-10-08) : court2d.js `suspend` / `resync`.
   Cause : rAF s'arrête onglet masqué mais update() et la chorégraphie à
   minuteries (`later`) continuent (bridées, par paquets) → vols jamais
