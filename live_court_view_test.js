@@ -173,8 +173,11 @@ if (doc.getElementById("clockDisplay").textContent !== "10:00" || !shotBadge.cla
   throw new Error(`❌ Entre le marqueur de quart-temps et l'entre-deux, le chrono doit rester à 10:00 sans 24 s — obtenu "${doc.getElementById("clockDisplay").textContent}".`);
 }
 console.log("✅ Avant l'entre-deux (marqueur de quart-temps seul) : chrono figé à 10:00, pas de 24 s.");
-// 10 % du chemin entre l'entre-deux et le prochain chrono différent.
-clock.now = tipoffEvent.airAt + (nextDiffAfterTipoff.airAt - tipoffEvent.airAt) * 0.1;
+// 10 % du chemin entre l'entre-deux et le prochain chrono différent, mais au
+// moins 1,5 s après l'entre-deux (et jamais au-delà de la moitié) : une
+// action très rapide (faute au bout de 2 s, 2026-10-09) laisserait sinon le
+// chrono des 24 s afficher encore « 24 » (arrondi au supérieur), à raison.
+{ const gap = nextDiffAfterTipoff.airAt - tipoffEvent.airAt; clock.now = tipoffEvent.airAt + Math.min(gap * 0.5, Math.max(gap * 0.1, 1500)); }
 dom.window.eval("updateLiveClockTick()");
 const clockJustAfterTipoff = doc.getElementById("clockDisplay").textContent;
 if (clockStrToSeconds(clockJustAfterTipoff) >= 600) {

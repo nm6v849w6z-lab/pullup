@@ -20488,13 +20488,34 @@ class MatchEngine {
     // 0.125 → 0.117 le 2026-10-04 (réduction modérée du volume de fautes,
     // retour « trop de joueurs exclus pour 5 fautes »).
     const nonShootingFoulChance = 0.117;
-    if (rand01() < nonShootingFoulChance) {
+    // Possession trop courte (< 6 s, fin de quart-temps) pour une faute,
+    // une remise en jeu PUIS une action : pas de faute simple hors bonus.
+    const roomForInbound = !this._possCtx || this._possCtx.possLen >= 6 || this.teamFoulsThisQuarter(defTeam) >= TEAM_FOUL_BONUS_AT;
+    if (rand01() < nonShootingFoulChance && roomForInbound) {
       const foulTarget = weightedPick(onCourtOff, p => p.eff("dribble") + p.eff("pass") + 1);
       const commonFoulDefender = weightedPick(onCourtDef, p => foulProneness(p));
       commonFoulDefender.stats.pf++; commonFoulDefender.fouls++;
-      this.log(events, quarter, clock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", foulType: "common", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, player: foulTarget.name, playerId: foulTarget.id, possession: this.teamKey(offTeam) });
-      this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
-      this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, clock, events);
+      // Instant de la faute (retour utilisateur 2026-10-09 : faute puis tir
+      // d'un autre joueur « au même chrono », sans arrêt ni remise en jeu) :
+      // une faute simple survient EN COURS de possession (30 à 60 % de sa
+      // durée), le jeu s'arrête, remise en jeu, et la fin de l'action (tir,
+      // perte…) vient plus tard, au chrono de fin de possession `clock`.
+      // Bonus : la possession se termine sur la faute (lancers), donc à
+      // `clock`. Le budget de temps de la possession est inchangé (rythme et
+      // volume de tirs identiques, voir le commentaire ci-dessus).
+      const ctx0 = this._possCtx;
+      const inBonus = this.teamFoulsThisQuarter(defTeam) >= TEAM_FOUL_BONUS_AT;
+      let foulClock = clock;
+      if (!inBonus && ctx0 && ctx0.possLen >= 6) {
+        const elapsed = Math.max(2, Math.min(ctx0.possLen - 3, ctx0.possLen * (0.3 + rand01() * 0.3)));
+        foulClock = Math.round((ctx0.possStart - elapsed) * 10) / 10;
+      }
+      this.log(events, quarter, foulClock, say(PHRASES.commonFoul, { defender: commonFoulDefender.name, attacker: foulTarget.name }), { type: "foul", foulType: "common", team: this.teamKey(defTeam), defender: commonFoulDefender.name, defenderId: commonFoulDefender.id, player: foulTarget.name, playerId: foulTarget.id, possession: this.teamKey(offTeam), ...(inBonus ? null : { inbound: true }) });
+      this.maybeEjectForComposure(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, foulClock, events);
+      this.maybeCommitUnsportsmanlikeFoul(commonFoulDefender, defTeam, offTeam, foulTarget, quarter, foulClock, events);
+      // Après la remise en jeu, la suite de l'action est une nouvelle phase
+      // de jeu : elle part de l'instant de la faute (direct 2D, 24 s).
+      if (foulClock !== clock && ctx0) this._possCtx = { ...ctx0, possStart: foulClock, possLen: Math.round((foulClock - clock) * 10) / 10 };
       // Bonus (audit moteur 2026-09-29) : la page du direct affichait déjà
       // « Fautes 5 · bonus » dès la 5e faute d'équipe du quart-temps, mais le
       // moteur n'en tirait aucune conséquence — les lancers francs venaient
@@ -20503,7 +20524,7 @@ class MatchEngine {
       // faute hors tir donne 2 lancers francs et la possession se termine
       // (c'est l'équivalent d'un tir, comme la faute intentionnelle plus
       // haut) ; avant, l'action continue simplement (remise en jeu).
-      if (this.teamFoulsThisQuarter(defTeam) >= TEAM_FOUL_BONUS_AT) {
+      if (inBonus) {
         this.freeThrows(foulTarget, 2, events, quarter, clock, offTeam);
         return { possessionOffense: false, scored: true, bonusFreeThrows: true };
       }

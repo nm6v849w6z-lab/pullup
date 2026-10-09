@@ -1131,6 +1131,32 @@ export function createCourt2D(host, opts = {}) {
     later(2200, () => { if (stopped()) return; pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
   }
 
+  // Remise en jeu en TOUCHE après une faute simple sans lancers francs
+  // (2026-10-09) : le jeu s'arrête, un joueur de l'équipe fautée sort sur la
+  // ligne de touche à hauteur de la faute et passe au meneur ; l'action
+  // suivante du moteur (tir, perte…) ne part qu'ensuite (scène).
+  let sideInbounds = 0;
+  function sidelineInbound(nt, at) {
+    if (inLongStop()) return;
+    sideInbounds++;
+    startPossession(nt); scene(2600);
+    const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
+    const pg = team[0], inb = team[2] || team[team.length - 1];
+    if (!pg) return;
+    const top = at ? at.y < 25 : ball.y < 25;
+    const x = Math.max(12, Math.min(82, at ? at.x : ball.x));
+    const dir = RIM[nt].x > 47 ? 1 : -1;
+    for (const sp of sprites.values()) sp.busy = false;
+    ball.flight = null; ball.loose = null;
+    if (inb && inb !== pg) { busy(inb, 2600); moveTo(inb, x, top ? -2.4 : 52.4, 2.2); }
+    busy(pg, 2600); moveTo(pg, x + dir * 5, top ? 9 : 41, 2);
+    for (const sp of onCourt(nt)) if (sp !== pg && sp !== inb) { busy(sp, 1400); moveTo(sp, Math.max(4, Math.min(90, sp.x + dir * 4)), sp.y, 1.4); }
+    const stopped = () => performance.now() < stopUntil;
+    later(700, () => { if (stopped()) return; const src = (inb && inb !== pg) ? inb : pg; flyTo(src, 320, 1, () => giveBall(src)); });
+    later(1700, () => { if (stopped()) return; if (inb && inb !== pg && ball.holder === inb.id) pass(inb, pg); });
+    later(2400, () => { if (stopped()) return; pg.busy = false; if (inb) inb.busy = false; if (!ball.holder) giveBall(pg); formation(); });
+  }
+
   // ---------- possession à venir (state.nextAction) ----------
   // Calée sur le temps réel : la remontée de balle occupe le premier tiers,
   // les passes le deuxième, le tireur rejoint son endroit et tire pour que
@@ -1531,6 +1557,16 @@ export function createCourt2D(host, opts = {}) {
         flash(d, e.kind === "technicalFoul" ? "TECHNIQUE" : e.kind === "unsportsmanlikeFoul" ? "ANTISPORTIVE" : "FAUTE", "bad");
         moment(e.kind === "technicalFoul" ? "faute_technique" : e.kind === "unsportsmanlikeFoul" ? "antisportive" : "faute", { team: t });
         if (d) { d.ring.setAttribute("opacity", "1"); later(1500, () => d.ring.setAttribute("opacity", "0")); }
+        // Faute simple sans lancers francs : arrêt, puis remise en jeu en
+        // touche par l'équipe fautée (jamais de jeu qui continue sous la
+        // faute). Lancers à suivre (bonus, faute sur tir) : rien ici.
+        const offT = e.kind === "foul" ? 1 - t : null;
+        const ftNext = queue.some(q => q.kind === "freeThrow") || !!(S && S.nextAction && S.nextAction.kind === "freeThrow");
+        if (e.kind === "foul" && e.foulType === "common" && !ftNext && (offT === 0 || offT === 1) && (after === null || after === offT)) {
+          scene(3400);
+          const spot = v ? { x: v.x, y: v.y } : null;
+          later(800, () => sidelineInbound(offT, spot));
+        }
         break;
       }
       case "foulOut": case "technicalEjection": case "injury": { flash(spriteOf(a.player), e.kind === "injury" ? "BLESSÉ" : "EXCLU", "bad"); moment(e.kind === "injury" ? "blessure" : "exclusion", { team: t }); break; }
@@ -2338,7 +2374,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
-        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, inboundHeld: !!heldInbound, ball: [+ball.x.toFixed(2), +ball.y.toFixed(2)], keeper: (k => (k ? [+k.x.toFixed(2), +k.y.toFixed(2)] : null))(refKeeper()),
+        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, sideInbounds, inboundHeld: !!heldInbound, ball: [+ball.x.toFixed(2), +ball.y.toFixed(2)], keeper: (k => (k ? [+k.x.toFixed(2), +k.y.toFixed(2)] : null))(refKeeper()),
         staging: stage ? stage.debug() : null };
     },
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de

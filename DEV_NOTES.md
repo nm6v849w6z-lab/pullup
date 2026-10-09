@@ -126,6 +126,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   match_share_ui_test.js. Choix produit à confirmer : un lien de DIRECT
   (créé sans Premium) reste lisible en rediffusion après le match.
 
+- **🟢 LIVRÉ (2026-10-09) — Faute simple : arrêt + remise en jeu, tir
+  attribué au bon joueur dans le direct**. Retour : « faute sur Greco » puis
+  « +3 Kyle Murphy » au même chrono. Cause : la faute simple sans lancers
+  était journalisée au chrono de FIN de possession, avec le tir d'un autre
+  joueur juste derrière ; le terrain 2D ne jouait que le contact (pas
+  d'arrêt, ballon resté au joueur fautif), puis le tir de Murphy partait
+  de ses mains. Le moteur, lui, créditait bien le tireur (vérifié).
+  Correctif moteur (`playPossession`, faute simple) : la faute survient à
+  30-60 % de la possession (chrono antérieur, `inbound: true`), la suite
+  de l'action repart de l'instant de la faute (`_possCtx`), budget de temps
+  inchangé ; pas de faute simple hors bonus si la possession dure < 6 s.
+  Terrain 2D (`court2d.js`) : faute simple sans lancers à suivre → arrêt,
+  remise en jeu en TOUCHE par l'équipe fautée (`sidelineInbound`), puis
+  l'action suivante. Tests : engine_event_consistency_test.js (2 / 3 / 1
+  point(s) au tireur et à lui seul, score et feuille = somme des
+  événements, faute → action suivante plus tard), scénario ajouté à
+  live_court2d_sub_inbound_test.js ; live_court_view_test rendu robuste.
+
 - **🟢 LIVRÉ (2026-10-09) — Drapeaux des tribunes « dans le vide » (plein
   écran, écran large)**. Cause : `placeFlags` posait les drapeaux en % de
   la BOÎTE du terrain, alors que le dessin y est centré (« meet ») avec des

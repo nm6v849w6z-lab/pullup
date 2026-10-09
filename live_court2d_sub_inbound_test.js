@@ -107,6 +107,41 @@ async function scenario(withSub) {
     if (court.debug().inbounds !== 1) fail("après le 2e lancer réussi, remise en jeu de l'adversaire.");
     ok("Deux lancers : le tireur garde le ballon sur la ligne, changement entre les deux lancers, remise en jeu après le dernier.");
   }
+  // Faute simple sans lancers (2026-10-09) : arrêt, remise en jeu en TOUCHE
+  // par l'équipe fautée (un joueur hors du terrain, sur la ligne de côté),
+  // puis le ballon au meneur — jamais le jeu qui continue sous la faute.
+  {
+    const host = window.document.createElement("div");
+    window.document.body.appendChild(host);
+    const S = { status: "live", quarter: 2, clock: 400, possession: 0,
+      teams: [mkTeam("Gotham", 10), mkTeam("Rennes", 10)], shots: [], referees: [0, 1, 2].map(i => ({ id: "ref" + i })),
+      events: [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: Date.now() - 120000, text: "" }] };
+    const court = window.createCourt2D(host, { colors: ["#F26B1D", "#3B8FE0"], raster: false });
+    court.update(S, []);
+    await sleep(600);
+    S.events.push({ id: 1, team: 1, type: "foul", kind: "foul", foulType: "common", quarter: 2, clock: 395, possessionAfter: 0, airAt: Date.now(), text: "Faute sur Gotham Joueur3.", actors: { defender: "Rennes:1", player: "Gotham:3" } });
+    S.nextAction = { kind: "shot", team: 0, zone: "three", airAt: Date.now() + 9000, shot: { x: 70, y: 10 }, actors: { shooter: "Gotham:4" } };
+    court.update(S, [1]);
+    let outY = false;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 3500) {
+      await sleep(60);
+      const ys = [...host.querySelectorAll(".c2d-p.t0")].map(g => /translate\(([\d.-]+) ([\d.-]+)/.exec(g.getAttribute("transform"))).filter(Boolean).map(m => +m[2] / 10);
+      if (ys.some(y => y < -1 || y > 51)) outY = true;
+    }
+    const d = court.debug();
+    if (d.sideInbounds !== 1) fail(`faute simple : une remise en jeu en touche attendue (${d.sideInbounds}).`);
+    if (!outY) fail("faute simple : le remiseur sort sur la ligne de touche.");
+    if (!d.holder || !String(d.holder).startsWith("Gotham:")) fail(`faute simple : l'équipe fautée récupère le ballon (porteur ${d.holder}).`);
+    ok(`Faute simple : arrêt, remise en jeu en touche par l'équipe fautée, ballon au meneur (${d.holder}) avant l'action suivante.`);
+    // Faute avec lancers à suivre (bonus) : pas de remise en jeu en touche.
+    S.events.push({ id: 2, team: 1, type: "foul", kind: "foul", foulType: "common", quarter: 2, clock: 380, possessionAfter: 0, airAt: Date.now(), text: "Faute (bonus).", actors: { defender: "Rennes:2", player: "Gotham:1" } });
+    S.nextAction = { kind: "freeThrow", team: 0, airAt: Date.now() + 2200, actors: { shooter: "Gotham:1" } };
+    court.update(S, [2]);
+    await sleep(1500);
+    if (court.debug().sideInbounds !== 1) fail("faute suivie de lancers francs : pas de remise en jeu en touche.");
+    ok("Faute suivie de lancers francs (bonus) : pas de remise en jeu, les lancers suivent.");
+  }
   console.log("\n🏁 live_court2d_sub_inbound_test.js : changement avant la remise en jeu.");
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
