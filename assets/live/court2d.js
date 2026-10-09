@@ -203,7 +203,18 @@ export function createCourt2D(host, opts = {}) {
   }
   fitView();
   let ro = null;
-  try { if (typeof ResizeObserver === "function") { ro = new ResizeObserver(fitView); ro.observe(host); ro.observe(svg); } } catch (e) { /* rien */ }
+  // Recadrage à l'image suivante (2026-10-09) : fitView change la taille du
+  // terrain observé ; appelé DANS le callback, il relançait l'observateur
+  // dans la même image (« ResizeObserver loop completed with undelivered
+  // notifications », pris pour une erreur fatale par le jeu — retour de la
+  // carte des tirs en plein écran sur téléphone).
+  let fitRaf = 0;
+  const fitSoon = () => {
+    if (fitRaf) return;
+    const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : f => setTimeout(f, 16);
+    fitRaf = raf(() => { fitRaf = 0; if (!destroyed) fitView(); });
+  };
+  try { if (typeof ResizeObserver === "function") { ro = new ResizeObserver(fitSoon); ro.observe(host); ro.observe(svg); } } catch (e) { /* rien */ }
   const uid = "c2d" + Math.random().toString(36).slice(2, 7);
 
   // --- fond : public, parquet ---

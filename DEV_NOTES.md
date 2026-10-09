@@ -126,6 +126,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   match_share_ui_test.js. Choix produit à confirmer : un lien de DIRECT
   (créé sans Premium) reste lisible en rediffusion après le match.
 
+- **🟢 LIVRÉ (2026-10-09) — Écran « Une erreur est survenue » au retour
+  de la carte des tirs (plein écran, téléphone)**. Cause : `court2d.js`
+  recadrait le terrain (viewBox téléphone) DANS le callback de son
+  ResizeObserver → l'observateur se relançait dans la même image →
+  « ResizeObserver loop completed with undelivered notifications »
+  (avertissement bénin du navigateur) attrapé par le gestionnaire d'erreurs
+  global du jeu comme une erreur fatale. Correctif : recadrage à l'image
+  suivante (`fitSoon`, requestAnimationFrame, un seul en attente) ; et
+  `isForeignScriptError` (moteurbasket3.html) ignore « ResizeObserver
+  loop… ». Reproduit dans Chromium 390×844 (4 erreurs sur 4 retours avant,
+  0 après).
+
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
   `court2d.js` : calque `.c2d-flags` (dans `under`, au-dessus du public),
   `buildFlags` (appelé par `drawArena`) — ~20 drapeaux (club qui reçoit,
