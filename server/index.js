@@ -1934,13 +1934,24 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             out.eligible = pool.eligible;
           }
         }
+        // Amical international programmé par l'admin (essais) : body {
+        // action: "friendly", home: "fr-A", away: "de-A", count?, date?,
+        // time?, force? } — voir nationalFriendlies.adminSchedule. Saison et
+        // calendrier : ceux du championnat historique (comme les fenêtres).
+        else if (body && body.action === "friendly") {
+          const world = await World.loadWorld(multiSavePath, now);
+          const entry = world && (world.leagues.find(e => e.id === store.HISTORIC_LEAGUE_ID) || world.leagues[0]);
+          const lg = entry ? await World.loadLeague(world, entry.id, multiSavePath) : null;
+          if (!lg) { sendJson(res, 404, { ok: false, error: "Aucune ligue partagée." }); return; }
+          out = require("./nationalFriendlies.js").adminSchedule(natStore, body, now, { season: lg.seasonNumber || 1, calendarStartAt: lg.calendarStartAt });
+        }
         else if (body && body.action === "config" && body.config && typeof body.config === "object") {
           const allowed = Object.keys(NationalTeams.DEFAULT_CONFIG);
           const patch = {};
           Object.keys(body.config).forEach(k => { if (allowed.includes(k)) patch[k] = body.config[k]; });
           natStore.config = { ...(natStore.config || {}), ...patch };
           out = { ok: true, config: NationalTeams.configOf(natStore) };
-        } else out = { ok: false, error: "action : dismiss | cancel-election | config | appoint." };
+        } else out = { ok: false, error: "action : dismiss | cancel-election | config | appoint | friendly." };
         if (!out.ok) { sendJson(res, out.status || 400, out); return; }
         await NationalTeams.saveStore(natStore, multiSavePath);
         sendJson(res, 200, out);

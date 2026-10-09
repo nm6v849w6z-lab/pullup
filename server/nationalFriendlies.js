@@ -188,6 +188,66 @@ function cancel(store, me, body, now) {
   return { ok: true, friendly: f };
 }
 
+// --- Administration (essais) -----------------------------------------------
+// Programme directement un ou plusieurs amicaux ACCEPTÉS entre deux
+// sélections (même catégorie), sans passer par les sélectionneurs :
+// body { home: "fr-A", away: "de-A", count?: 1..3, date?: "AAAA-MM-JJ",
+// time?: "20:00", force?: true }.
+//  - sans `date` : les `count` prochains dimanches de fenêtre internationale
+//    libres pour les deux (mêmes règles que les sélectionneurs) ;
+//  - `date` : ce dimanche de fenêtre ; avec `force: true`, n'importe quel
+//    jour et heure (heure de Paris), au moins 10 minutes plus tard — seule
+//    règle gardée : aucune des deux sélections ne joue à moins de 3 jours.
+// Le plafond de 3 amicaux par saison ne s'applique pas ici.
+function adminSchedule(store, body, now, ctx) {
+  const cfg = NT().configOf(store);
+  if (!cfg.matchesLive) return fail("Les matchs internationaux ne sont pas en service (config matchesLive).");
+  const home = store.teams[body && body.home], away = store.teams[body && body.away];
+  if (!home || !away || home.id === away.id) return fail("Sélections inconnues : home et away, par exemple \"fr-A\" et \"de-A\".");
+  if (home.cat !== away.cat) return fail("Un amical se joue entre sélections de la même catégorie (A contre A, U21 contre U21).");
+  const season = ctx.season, count = Math.max(1, Math.min(3, Number(body.count) || 1));
+  let dates = [];
+  if (body.date) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(body.date));
+    const t = /^(\d{1,2}):(\d{2})$/.exec(String(body.time || "20:00"));
+    if (!m || !t) return fail("date : \"AAAA-MM-JJ\", time : \"HH:MM\" (heure de Paris).");
+    const at = require("./calendar.js").parisEpochForLocalTime(+m[1], +m[2], +m[3], +t[1], +t[2]);
+    if (!Number.isFinite(at)) return fail("Date invalide.");
+    if (body.force) {
+      if (at < now + 10 * 60 * 1000) return fail("Date trop proche (au moins 10 minutes plus tard).");
+      if (busyReason(store, home.id, season, at)) return fail(`${NT().teamLabel(home.id)} joue déjà un match international à moins de 3 jours.`);
+      if (busyReason(store, away.id, season, at)) return fail(`${NT().teamLabel(away.id)} joue déjà un match international à moins de 3 jours.`);
+    } else {
+      const err = slotError(store, home.id, away.id, season, at, ctx.calendarStartAt, now);
+      if (err) return fail(err + " (ajoutez \"force\": true pour un autre jour)");
+    }
+    dates = [at];
+  } else {
+    for (const d of candidateDays(store, season, ctx.calendarStartAt)) {
+      if (dates.length >= count) break;
+      const others = dates.map(at => ({ at }));
+      if (others.some(o => Math.abs(o.at - d.at) < LIMITS.minGapDays * DAY)) continue;
+      if (!slotError(store, home.id, away.id, season, d.at, ctx.calendarStartAt, now)) {
+        dates.push(d.at);
+        // Réservé tout de suite (le suivant tient compte de celui-ci).
+        listOf(store).push({ id: "tmp", season, home: home.id, away: away.id, at: d.at, status: "accepted" });
+      }
+    }
+    store.intlFriendlies = listOf(store).filter(f => f.id !== "tmp");
+    if (!dates.length) return fail("Aucune date libre pour ces deux sélections dans les fenêtres internationales de la saison (ou trop proches du gel des convocations). Utilisez date + force.");
+  }
+  const made = dates.map(at => {
+    const f = {
+      id: `f${(store.seq = (store.seq || 1) + 1)}`, season, cat: home.cat, home: home.id, away: away.id,
+      from: home.id, to: away.id, at, status: "accepted", createdAt: now, respondedAt: now, auto: true, admin: true,
+    };
+    listOf(store).push(f);
+    [home.id, away.id].forEach(id => feedTo(store, id, { key: `fr_admin_${f.id}_${id}`, at: now, title: `Amical programmé : ${NT().teamLabel(home.id)} – ${NT().teamLabel(away.id)}`, text: `${whenText(at)}. Les convocations se font dans la rubrique Convoqués.` }));
+    return { id: f.id, at, when: whenText(at), home: home.id, away: away.id };
+  });
+  return { ok: true, friendlies: made };
+}
+
 // --- Passage du rattrapage du monde ---------------------------------------
 function step(store, leagues, world, now, season, calendarStartAt) {
   const cfg = NT().configOf(store);
@@ -269,4 +329,4 @@ function publicListOf(store, teamId, now) {
   return listOf(store).filter(f => involves(f, teamId) && (f.status === "accepted" || f.status === "played")).sort((a, b) => a.at - b.at).map(f => publicFriendly(store, f, teamId, now));
 }
 
-module.exports = { LIMITS, LABEL, request, respond, cancel, step, viewFor, datesFor, candidateDays, slotError, publicFriendly, publicListOf, matchTimesOf };
+module.exports = { LIMITS, LABEL, adminSchedule, request, respond, cancel, step, viewFor, datesFor, candidateDays, slotError, publicFriendly, publicListOf, matchTimesOf };
