@@ -41,11 +41,22 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   `national.js:homeTeamId` (mandat → rôle de staff → pays du championnat),
   bouton « Mode Sélection » sur la carte « Mon mandat ». Animation 5
   (ballon après panier) : `court2d.js:netDrop` (2-3 rebonds, restitution
-  0,5), test dans live_court2d_ball_bench_test. RESTE : BUG 3 TC/GEN dans
-  national-coach.js (genOf/genHtml, lignes listées par l'audit : listes,
-  suivis, convoqués, remplacement, staff, recherche), BUG 5 compte à
-  rebours figé (`calendarNextMatchCardHtml` / `teamCalendarNextCardHtml` :
-  `formatDuration` figé dans le HTML, aucun minuteur), BUG 4, P1-P3.
+  0,5), test dans live_court2d_ball_bench_test. BUG 3 TC/GEN :
+  national-coach.js `rateOf/rateLab/genHtml` (réglage du compte, TC =
+  `ratingTcOf` = playerTotalCaracs(ATTRS) comme l'Effectif), événement
+  `hm-rating-mode` (setRatingDisplayMode) → redessin du mode ; aussi le
+  « + Ajouter » du Temps de jeu (club et NT). BUG 5 : comptes à rebours
+  `[data-countdown-to]` des cartes « Prochain match » remis à jour par UN
+  minuteur (`hmTickCountdowns`, onglet visible) — test
+  friendly_countdown_test (hypothèse : le « temps figé » = ce compte à
+  rebours ; les amicaux de club n'ont pas de direct). BUG 4 : cartes du
+  terrain des Ordres (CSS partagé club/NT) — la liste des remplaçants ne
+  rétrécit plus sous les messages (`.cp-bench{flex:1 0 auto}`), messages
+  sur une ligne avec texte au survol — test nt_tactics_layout_test.
+  ⚠️ moteurbasket3.html ≈ 3 998 400 octets : plus de place, le code des
+  lots suivants va dans des fichiers assets/ séparés. RESTE : P1 plein
+  écran de la rediffusion, P2, P3. Préexistant (échoue aussi sans ces
+  changements) : cup_ordres_planning_test.
 
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
   `court2d.js` : calque `.c2d-flags` (dans `under`, au-dessus du public),

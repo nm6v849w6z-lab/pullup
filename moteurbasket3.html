@@ -656,7 +656,11 @@
     height:640px; align-self:start; grid-template-rows:repeat(3, minmax(0, 1fr));
   }
   .compo-court > .cp-card{align-self:start; max-height:100%; min-height:0; overflow-y:auto; scrollbar-width:thin;}
-  .compo-court > .cp-card > .cp-bench{flex:1 1 auto; min-height:0;}
+  /* Messages (hors poste, plus fort…) : jamais au détriment des remplaçants
+     (BUG 2026-10-09) — la liste garde sa place, les messages tiennent sur
+     une ligne (texte complet au survol) et la carte défile au besoin. */
+  .compo-court > .cp-card > .cp-bench{flex:1 0 auto; min-height:min-content;}
+  .compo-court > .cp-card .cp-warn{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;}
   .compo-court-lines{position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--compo-court-line); stroke-width:1.5; vector-effect:non-scaling-stroke; pointer-events:none;}
   .compo-court-lines .compo-paint{fill:var(--compo-paint);}
 
@@ -9071,8 +9075,8 @@
 <script src="assets/club-staging-ui.js" defer></script>
 <script src="assets/medical-ui.js" defer></script>
 <script src="assets/national-visuals.js" defer></script>
-<script src="assets/national.js?v=20261009-1" defer></script>
-<script src="assets/national-coach.js?v=20261009-1" defer></script>
+<script src="assets/national.js?v=20261009-2" defer></script>
+<script src="assets/national-coach.js?v=20261009-2" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
 <script>
 /* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
@@ -32308,6 +32312,32 @@ function formatDuration(ms) {
   return `${seconds} s`;
 }
 
+// Comptes à rebours vivants (BUG 2026-10-09 : « dans l'onglet Match
+// amical, le temps ne descend pas, les secondes restent figées jusqu'à ce
+// que je rafraîchisse ») : la durée était écrite UNE fois dans le HTML de la
+// carte « Prochain match » (amical, championnat, coupe). Tout élément
+// [data-countdown-to="<horodatage>"] est désormais remis à jour chaque
+// seconde par UN seul minuteur partagé (jamais un par carte), seulement
+// quand l'onglet est visible ; aucune requête : l'heure du coup d'envoi est
+// celle du serveur, déjà dans la carte. À zéro, la page se redessine au
+// prochain rafraîchissement habituel (passage en « En direct »).
+let hmCountdownTimer = 0;
+function hmTickCountdowns() {
+  if (typeof document === "undefined" || document.hidden) return;
+  const now = Date.now();
+  document.querySelectorAll("[data-countdown-to]").forEach(el => {
+    const at = Number(el.dataset.countdownTo);
+    if (!Number.isFinite(at)) return;
+    const txt = formatDuration(at - now);
+    if (el.textContent !== txt) el.textContent = txt;
+  });
+}
+function hmStartCountdowns() {
+  if (hmCountdownTimer || typeof setInterval !== "function") return;
+  hmCountdownTimer = setInterval(hmTickCountdowns, 1000);
+}
+hmStartCountdowns();
+
 function formatDateTimeFr(ts) {
   return new Date(ts).toLocaleString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
@@ -35606,7 +35636,10 @@ function ratingDisplayMode() {
 }
 function setRatingDisplayMode(mode, persist = true) {
   const m = mode === "tc" ? "tc" : "gen";
+  const was = ratingDisplayMode();
   try { localStorage.setItem(RATING_MODE_KEY, m); } catch (e) { /* navigation privée */ }
+  // Écrans hors du rendu du club (mode Sélection) : se redessinent.
+  if (was !== m) { try { window.dispatchEvent(new CustomEvent("hm-rating-mode", { detail: m })); } catch (e) { /* rien */ } }
   if (persist && typeof managerToken !== "undefined" && managerToken && typeof fetchApi === "function") {
     window.__lastRatingModeSave = fetchApi("/api/account/rating-mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: m }) }).catch(() => null);
   }
@@ -35614,6 +35647,9 @@ function setRatingDisplayMode(mode, persist = true) {
 function playerTotalCaracs(player, keys) {
   return keys.reduce((sum, k) => sum + (Number(player.attrs && player.attrs[k]) || 0), 0);
 }
+// TC d'un joueur (même calcul que l'Effectif) : utilisé aussi par le mode
+// Sélection (assets/national-coach.js), qui n'a pas accès à ATTRS.
+function ratingTcOf(player) { return playerTotalCaracs(player, ATTRS); }
 
 // « International » sur la fiche joueur (demande du 2026-10-07) : sélection
 // ACTUELLE (A ou U21) d'après GET /api/national/player (dernière liste de
@@ -37687,7 +37723,7 @@ function teamCalendarNextCardHtml(teamIdx, row) {
   const kicker = row.competition === "cup" ? `Prochain match · Coupe · ${row.label}` : `Prochain match · ${row.label}`;
   const when = row.scheduledAt != null ? `${formatCalendarDayFr(row.scheduledAt)} · ${formatCalendarTimeFr(row.scheduledAt)}` : row.label;
   const countdown = row.scheduledAt != null && row.scheduledAt > Date.now()
-    ? `<div class="cal-next-count">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div><div class="cal-next-count-sub">avant le coup d'envoi</div>`
+    ? `<div class="cal-next-count" data-countdown-to="${row.scheduledAt}">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div><div class="cal-next-count-sub">avant le coup d'envoi</div>`
     : "";
   const action = row.vsMe
     ? `<button type="button" class="cal-next-btn"${orderTargetAttr(orderTargetFor(row.orderCompetition, row.orderRound))}>Préparer ce match</button>`
@@ -43312,7 +43348,7 @@ function renderLineupEditor(team, container, opts = {}) {
 
     if (warns.length) {
       const w = el("div", "cp-warns");
-      warns.forEach(x => w.appendChild(el("span", "cp-warn" + (x.kind === "danger" ? " danger" : "") + (x.multi ? " multi" : ""), x.text)));
+      warns.forEach(x => { const s = w.appendChild(el("span", "cp-warn" + (x.kind === "danger" ? " danger" : "") + (x.multi ? " multi" : ""), x.text)); s.title = x.text; });
       cp.appendChild(w);
     }
     court.appendChild(cp);
@@ -43738,7 +43774,7 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
           const o = document.createElement("option");
           o.value = x.id;
           const isReserve = !(team.lineup.backupPositions[x.id] || []).length;
-          o.textContent = `${x.name} (${POS_SHORT[x.position]}, ${playerBestRating(x)})${isReserve ? " · sans rôle" : ""}`;
+          o.textContent = `${x.name} (${POS_SHORT[x.position]}, ${ratingDisplayMode() === "tc" ? "TC " + playerTotalCaracs(x, ATTRS) : playerBestRating(x)})${isReserve ? " · sans rôle" : ""}`;
           add.appendChild(o);
         });
         add.addEventListener("change", () => {
@@ -52917,7 +52953,7 @@ function calendarNextMatchCardHtml(row) {
   if (row.isLive) {
     countdown = `<div class="cal-next-count is-live">En direct</div>`;
   } else if (row.scheduledAt != null && row.scheduledAt > Date.now()) {
-    countdown = `<div class="cal-next-count">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div>` +
+    countdown = `<div class="cal-next-count" data-countdown-to="${row.scheduledAt}">${escapeHtml(formatDuration(row.scheduledAt - Date.now()))}</div>` +
       `<div class="cal-next-count-sub">avant le coup d'envoi</div>`;
   }
   // Bouton principal : classe DISTINCTE de .calendar-order-btn (réservée aux

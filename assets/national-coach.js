@@ -134,8 +134,23 @@
   function tier(v) { var f = g("attrColorTier"); return f ? f(v) : ""; }
   function attrVal(x, k) { return k === "physicalAvg" ? x.physAvg : k === "mentalAvg" ? x.mentAvg : (x.attrs ? x.attrs[k] : null); }
   function genOf(x) { return x.gen != null ? x.gen : x.ovr; }
-  // GEN comme l'Effectif du Club : attr-cell par palier (td.eff-td-rating).
-  function genHtml(x) { var v = genOf(x); return v == null ? "–" : '<span class="attr-cell eff-attr ' + tier(v) + '"><span class="attr-val">' + esc(Math.round(v)) + "</span></span>"; }
+  // Réglage GEN / TC du compte (Paramètres > Affichage), comme l'Effectif du
+  // Club (BUG 2026-10-09 : le mode Sélection affichait toujours GEN). TC =
+  // total des caractéristiques (ratingTcOf, même calcul que le club) ; sans
+  // caractéristiques visibles (rôle qui ne les voit pas) : « – ».
+  function tcMode() { var f = g("ratingDisplayMode"); return !!f && f() === "tc"; }
+  function rateLab() { return tcMode() ? "TC" : "GEN"; }
+  function rateOf(x) {
+    if (!x) return null;
+    if (!tcMode()) return genOf(x);
+    var f = g("ratingTcOf");
+    return x.attrs && f ? f(x) : null;
+  }
+  function rateTxt(x) { var v = rateOf(x); return v == null ? "–" : String(Math.round(v)); }
+  function rateSort(x) { var v = rateOf(x); return v == null ? -1 : v; }
+  // Note comme l'Effectif du Club : attr-cell par palier (td.eff-td-rating) ;
+  // la couleur suit le GEN, le nombre suit le réglage (comme le club).
+  function genHtml(x) { var v = rateOf(x), c = genOf(x); return v == null ? "–" : '<span class="attr-cell eff-attr ' + tier(c) + '"><span class="attr-val">' + esc(Math.round(v)) + "</span></span>"; }
   function can(perm) { return !!(ui.view && (ui.view.perms || []).indexOf(perm) >= 0); }
   function ensureCss() {
     if (document.getElementById("ncCss")) return;
@@ -211,7 +226,7 @@
       { key: "age", label: "Âge", dir: 1, sort: function (x) { return x.age; } },
       { key: "position", label: "Poste", dir: 1, sort: function (x) { return POS.indexOf(x.position); } },
       { key: "height", label: "Taille", title: "Taille (cm)", sort: function (x) { return x.height || 0; } },
-      { key: "gen", label: "GEN", title: "Note du meilleur poste", sort: genOf },
+      { key: "gen", label: rateLab(), title: tcMode() ? "Total des caractéristiques" : "Note du meilleur poste", sort: rateSort },
     ];
     // Caractéristiques uniquement : onglet « Statistiques » et « Forme
     // récente » retirés (demande utilisateur du 2026-10-06).
@@ -228,7 +243,7 @@
     return list.slice().sort(function (a, b) {
       var va = c.sort(a), vb = c.sort(b);
       if (va < vb) return -dir; if (va > vb) return dir;
-      return genOf(b) - genOf(a);
+      return rateSort(b) - rateSort(a);
     });
   }
   function headCell(c) {
@@ -322,7 +337,7 @@
   function suivisHtml(v) {
     var pm = poolByKey(), list = v.followed || [], own = can("assigned");
     var rows = list.map(function (e) { return { e: e, x: pm[key(e.ref)] || null }; })
-      .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? genOf(b.x) : 0) - (a.x ? genOf(a.x) : 0); });
+      .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? rateSort(b.x) : 0) - (a.x ? rateSort(a.x) : 0); });
     var who = function (e) {
       if (!e.by.length) return '<span class="nc-club">Staff</span>';
       return '<span class="nc-chips" style="justify-content:flex-start">' + e.by.map(function (b) {
@@ -332,7 +347,7 @@
     var h = '<div class="nc-card"><div class="nc-sec"><span class="lp-card-title">' + (own ? "Joueurs que vous suivez" : "Joueurs suivis par le staff") + '</span><span class="nc-club">' + list.length + "</span></div>";
     if (!rows.length) h += '<p class="nc-club">' + (own ? "Vous ne suivez aucun joueur pour l'instant : les joueurs qui vous sont attribués apparaîtront ici." : "Aucun joueur suivi : attribuez des joueurs aux scouts (page Staff ou fiche du joueur).") + "</p>";
     else {
-      h += '<div class="nc-scroll"><table class="nc-table nc-followed"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th>' + (own ? "" : '<th class="l">Suivi par</th>') + (can("preselect") ? "<th></th>" : "") + "</tr></thead><tbody>" + rows.map(function (r) {
+      h += '<div class="nc-scroll"><table class="nc-table nc-followed"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>' + rateLab() + '</th><th>État</th>' + (own ? "" : '<th class="l">Suivi par</th>') + (can("preselect") ? "<th></th>" : "") + "</tr></thead><tbody>" + rows.map(function (r) {
         var x = r.x, e = r.e;
         return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + (x ? profileBtn(x, x.name, true) : "<b>" + esc(e.ref.n) + "</b>") + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : '<div class="nc-club">Plus sélectionnable</div>') + "</td>" +
           "<td>" + (x ? esc(x.age) : "–") + '</td><td class="eff-td-rating">' + (x ? genHtml(x) : "–") + "</td><td>" + (x ? (x.injuryUntil ? statusTag("injured", x) : '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>') : "–") + "</td>" +
@@ -346,11 +361,11 @@
   function replaceHtml(v, cur) {
     var conv = convRefs(cur), pm = poolByKey();
     var cands = ((v.pool && v.pool.players) || []).filter(function (x) { return !inList(conv, x) && !x.injuryUntil; });
-    cands.sort(function (a, b) { return (inList(v.preselection, b) - inList(v.preselection, a)) || genOf(b) - genOf(a); });
+    cands.sort(function (a, b) { return (inList(v.preselection, b) - inList(v.preselection, a)) || rateSort(b) - rateSort(a); });
     var out = pm[ui.replaceOut];
     return '<div class="nc-next" style="margin-top:10px"><b>Remplacer ' + esc(ui.replaceOut.split("|").slice(1).join("|")) + "</b>" + (out ? " (" + esc(posShort(out.position)) + ")" : "") +
       '<div class="nc-row" style="margin-top:8px"><select id="ncReplaceIn" class="nc-in" style="flex:1">' +
-      cands.slice(0, 80).map(function (x) { return '<option value="' + esc(key(x)) + '">' + esc(x.name + " · " + posShort(x.position) + " · GEN " + genOf(x) + (inList(v.preselection, x) ? " · présélection" : "")) + "</option>"; }).join("") +
+      cands.slice(0, 80).map(function (x) { return '<option value="' + esc(key(x)) + '">' + esc(x.name + " · " + posShort(x.position) + " · " + rateLab() + " " + rateTxt(x) + (inList(v.preselection, x) ? " · présélection" : "")) + "</option>"; }).join("") +
       '</select><button type="button" class="tq-btn" data-nc-replace-go="1">Valider</button><button type="button" class="nc-ic" data-nc-replace-cancel="1" title="Annuler">' + icon("cross") + "</button></div></div>";
   }
   function convocationsHtml(v) {
@@ -370,11 +385,11 @@
     h += '<div class="nc-next"><b>' + esc(compLabel(cur)) + '</b><br><span class="nc-club">' + (cur.frozen ? icon("lock") + " Liste figée" : "Liste modifiable jusqu'au " + esc(when(cur.freezeAt, true))) + "</span></div>";
     // Convoqués : infos joueur et disponibilité.
     var rows = cur.players.map(function (c) { return { c: c, x: pm[key(c.ref)] || null }; })
-      .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? genOf(b.x) : 0) - (a.x ? genOf(a.x) : 0); });
+      .sort(function (a, b) { return (a.x ? POS.indexOf(a.x.position) : 9) - (b.x ? POS.indexOf(b.x.position) : 9) || (b.x ? rateSort(b.x) : 0) - (a.x ? rateSort(a.x) : 0); });
     h += '<div class="nc-two"><div class="nc-card"><div class="nc-sec"><span class="lp-card-title">Convoqués</span><span class="nc-club">' + cur.players.length + " / " + v.limits.convocation + "</span></div>";
     if (!rows.length) h += '<p class="nc-club">Aucun joueur convoqué pour l\'instant.</p>';
     else {
-      h += '<div class="nc-scroll"><table class="nc-table"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>GEN</th><th>État</th><th>Disponibilité</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
+      h += '<div class="nc-scroll"><table class="nc-table"><thead><tr><th>Poste</th><th class="l">Joueur</th><th>Âge</th><th>' + rateLab() + '</th><th>État</th><th>Disponibilité</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
         var x = r.x, c = r.c;
         return "<tr><td>" + (x ? posBadge(x.position) : "–") + '</td><td class="l">' + profileBtn(x, c.ref.n, true) + (x ? '<div class="nc-club">' + esc(x.club.name) + "</div>" : "") + "</td><td>" + (x ? esc(x.age) : "–") + '</td><td class="eff-td-rating">' + (x ? genHtml(x) : "–") + "</td>" +
           "<td>" + (x && !x.injuryUntil ? '<span class="nc-bar"><i style="width:' + Math.max(4, x.condition || 0) + "%;background:" + condColor(x.condition || 0) + '"></i></span>' : "–") + "</td><td>" + statusTag(c.status, x) + "</td><td style=\"white-space:nowrap\">" +
@@ -388,11 +403,11 @@
     // Préparer le groupe : présélection à convoquer.
     h += '<div class="nc-card">';
     if (can("preselectView")) {
-      var pre = refsToPlayers(v.preselection).filter(function (x) { return !inList(conv, x); }).sort(function (a, b) { return POS.indexOf(a.position) - POS.indexOf(b.position) || genOf(b) - genOf(a); });
+      var pre = refsToPlayers(v.preselection).filter(function (x) { return !inList(conv, x); }).sort(function (a, b) { return POS.indexOf(a.position) - POS.indexOf(b.position) || rateSort(b) - rateSort(a); });
       h += '<div class="nc-sec"><span class="cal-card-kicker">Présélection non convoquée</span><span class="nc-club">' + pre.length + "</span></div>";
       if (!pre.length) h += '<p class="nc-club">' + (v.preselection.length ? "Toute la présélection est convoquée." : "Présélection vide.") + "</p>";
       pre.forEach(function (x) {
-        h += '<div class="nc-slot">' + posBadge(x.position) + '<span class="nc-grow">' + profileBtn(x, x.name) + ' <span class="nc-club">· GEN ' + esc(genOf(x)) + " · " + esc(x.club.name) + "</span></span>" + (x.injuryUntil ? statusTag("injured", x) : "") +
+        h += '<div class="nc-slot">' + posBadge(x.position) + '<span class="nc-grow">' + profileBtn(x, x.name) +  ' <span class="nc-club">· ' + rateLab() + " " + esc(rateTxt(x)) + " · " + esc(x.club.name) + "</span></span>" + (x.injuryUntil ? statusTag("injured", x) : "") +
           (edit ? '<button type="button" class="nc-ic" data-nc-conv="1" data-nc-p="' + esc(x.p) + '" data-nc-n="' + esc(x.n) + '" title="Convoquer"' + (conv.length >= v.limits.convocation ? " disabled" : "") + ">" + icon("plus") + "</button>" : "") + "</div>";
       });
     }
@@ -771,11 +786,11 @@
     if (can("assign") && s.status === "active" && mine.length < max) {
       var taken = {}; mine.forEach(function (r) { taken[key(r)] = 1; });
       var opts = ((v.pool && v.pool.players) || []).filter(function (x) { return !taken[key(x)]; }).slice()
-        .sort(function (a, b) { return (inList(v.watchlist, b) - inList(v.watchlist, a)) || (genOf(b) - genOf(a)); });
+        .sort(function (a, b) { return (inList(v.watchlist, b) - inList(v.watchlist, a)) || (rateSort(b) - rateSort(a)); });
       // Recherche (nom, club, poste) qui filtre la liste en direct.
       h += '<div class="nc-row" style="margin-top:8px;flex-wrap:wrap;gap:8px"><input type="search" class="nc-in" data-nc-assign-q="' + esc(s.mid) + '" placeholder="Rechercher un joueur, un club, un poste" style="max-width:260px">' +
         '<select class="nc-in" id="ncAssignSel-' + esc(s.mid) + '" style="max-width:320px">' +
-        opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '" data-q="' + esc((x.name + " " + ((x.club && x.club.name) || "") + " " + (x.position || "")).toLowerCase()) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + genOf(x)) + "</option>"; }).join("") +
+        opts.map(function (x) { return '<option value="' + esc(x.p + "|" + x.n) + '" data-q="' + esc((x.name + " " + ((x.club && x.club.name) || "") + " " + (x.position || "")).toLowerCase()) + '">' + esc((inList(v.watchlist, x) ? "★ " : "") + x.name + " · " + (x.position || "") + " · " + rateLab() + " " + rateTxt(x)) + "</option>"; }).join("") +
         '</select><button type="button" class="tq-btn" data-nc-assign-add="' + esc(s.mid) + '">Attribuer</button></div>';
     }
     return h + "</div>";
@@ -1052,7 +1067,7 @@
     var pl = ((v.pool && v.pool.players) || []).filter(function (x) { return normQ(x.name).indexOf(q) >= 0 || normQ(x.club && x.club.name).indexOf(q) >= 0; });
     var h = '<div class="topbar-search-group-label">' + esc(t("Joueurs")) + (pl.length ? " (" + pl.length + ")" : "") + "</div>";
     h += pl.length ? pl.slice(0, 8).map(function (x) {
-      return '<button type="button" class="topbar-search-result" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '"><span class="tsr-name"> ' + esc(x.name) + '</span><span class="tsr-meta">' + esc((x.position || "") + " · " + ((x.club && x.club.name) || "") + " · " + genOf(x)) + "</span></button>";
+      return '<button type="button" class="topbar-search-result" data-nc-profile="' + esc(x.club.leagueId + "|" + x.club.idx + "|" + x.p) + '"><span class="tsr-name"> ' + esc(x.name) + '</span><span class="tsr-meta">' + esc((x.position || "") + " · " + ((x.club && x.club.name) || "") + " · " + rateLab() + " " + rateTxt(x)) + "</span></button>";
     }).join("") + (pl.length > 8 ? '<div class="topbar-search-more">+ ' + (pl.length - 8) + " " + esc(t("autre(s), affinez la recherche")) + "</div>" : "")
       : '<div class="topbar-search-empty">' + esc(t("Aucun joueur ne correspond.")) + "</div>";
     // Managers : même recherche que le mode Club (moteurbasket3.html:topbarManagerSearchHtml).
@@ -1701,6 +1716,8 @@
     if (!holder || holder.__ncBound) return;
     holder.__ncBound = true;
     holder.addEventListener("click", onModeClick, true);
+    // Réglage GEN / TC changé (Paramètres) : le mode se redessine.
+    window.addEventListener("hm-rating-mode", function () { if (ui.mode && ui.view) paint(); });
     // Menu latéral du mode (hors de #nationalContent) et bouton d'entrée du
     // tableau de bord / de la page Sélections.
     document.addEventListener("click", function (e) {

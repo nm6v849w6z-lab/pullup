@@ -81,6 +81,40 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     if (!server2.length) ok(/Aucun joueur/.test(doc.getElementById("nationalContent").textContent), "plus aucun convoqué : la Tactique l'indique");
   } else console.log("ℹ️  aucun rassemblement ouvert dans ce monde de test : convocation non rejouée.");
 
+  // ---------- BUG 3 : réglage TC / GEN respecté dans le mode Sélection ----------
+  {
+    const heads = () => [...doc.querySelectorAll("#nationalContent th")].map(th => th.textContent.trim());
+    const tcOf = p => win.eval("ATTRS").reduce((s, k) => s + (Number(p.attrs && p.attrs[k]) || 0), 0);
+    win.setRatingDisplayMode("tc", false);
+    doc.querySelector('#ncSidebar [data-nc-nav="joueurs"]').click();
+    await wait(() => heads().includes("TC"), "Liste des joueurs en TC");
+    ok(heads().includes("TC") && !heads().includes("GEN"), "réglage TC : la Liste des joueurs affiche « TC » (plus « GEN »)");
+    const rows = [...doc.querySelectorAll("#nationalContent tbody tr.eff-row")];
+    const pool = st.view.pool.players;
+    let checked = 0;
+    for (const tr of rows.slice(0, 5)) {
+      const name = tr.querySelector("[data-nc-profile]") ? tr.querySelector("[data-nc-profile]").textContent.trim() : "";
+      const p = pool.find(x => x.name === name);
+      if (!p || !p.attrs) continue;
+      const shown = Number(tr.querySelector(".eff-td-rating").textContent.trim());
+      if (shown !== tcOf(p)) throw new Error(`❌ ${name} : TC affiché ${shown}, attendu ${tcOf(p)}`);
+      checked++;
+    }
+    ok(checked > 0, `TC = total des caractéristiques, même calcul que l'Effectif du club (${checked} joueurs vérifiés)`);
+    for (const nav of ["suivis", "convocations"]) {
+      doc.querySelector(`#ncSidebar [data-nc-nav="${nav}"]`).click();
+      await wait(() => doc.querySelector(`.nc-side-link.on[data-nc-nav="${nav}"]`), nav);
+      const txt = doc.getElementById("nationalContent").textContent;
+      ok(!/\bGEN\b/.test(txt), `réglage TC : « ${nav} » n'affiche plus GEN`);
+    }
+    // Changement de réglage pendant le mode : redessin immédiat.
+    doc.querySelector('#ncSidebar [data-nc-nav="joueurs"]').click();
+    await wait(() => heads().includes("TC"), "joueurs en TC");
+    win.setRatingDisplayMode("gen", false);
+    await wait(() => heads().includes("GEN"), "retour en GEN sans navigation");
+    ok(heads().includes("GEN") && !heads().includes("TC"), "réglage GEN : retour immédiat (sans rechargement ni navigation)");
+  }
+
   dom.window.close(); server.close();
   console.log("\n🏁 national_nt_p0_test.js : bugs P0 du mode Sélection corrigés.");
   process.exit(0);
