@@ -1040,8 +1040,27 @@ export function createCourt2D(host, opts = {}) {
 
   // Remise en jeu après panier : le pivot derrière la ligne de fond, le
   // meneur vient chercher le ballon, puis tout le monde remonte.
+  // Changements à venir sur le même arrêt de jeu (dernier lancer franc
+  // réussi, ballon sorti…) : ils se font AVANT la remise en jeu (retour
+  // utilisateur 2026-10-09) — la remise en jeu attend le dernier changement
+  // (relâchée par playEvent « substitution », filet de sécurité 6 s).
+  let heldInbound = null, inboundCount = 0;
+  const subsPending = () => queue.some(q => q.kind === "substitution" || q.kind === "shortHanded")
+    || !!(S && S.nextAction && (S.nextAction.kind === "substitution" || S.nextAction.kind === "shortHanded") && S.nextAction.airAt - now() < 1500);
+  function releaseInbound(force) {
+    if (!heldInbound || (!force && subsPending())) return;
+    const h = heldInbound; heldInbound = null;
+    inbound(h.nt, h.rim);
+  }
   function inbound(nt, rim) {
     if (performance.now() < stopUntil) return;   // temps mort / fin de quart déjà sifflé : pas de remise en jeu
+    if (subsPending()) {
+      const h = heldInbound = { nt, rim };
+      scene(6000);   // ni possession planifiée ni « remise en ordre » pendant l'attente
+      later(6000, () => { if (heldInbound === h) releaseInbound(true); });
+      return;
+    }
+    inboundCount++;
     startPossession(nt); scene(2400);
     const dir = rim.x > 47 ? 1 : -1;
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
@@ -1460,6 +1479,7 @@ export function createCourt2D(host, opts = {}) {
         const p = spriteOf(a.player); if (p) flash(p, "SORT");
         if (e.kind === "substitution") moment("changement", { team: t });
         later(1600, () => { const r = spriteOf(a.replacement); if (r) flash(r, "ENTRE", "good"); });
+        if (heldInbound) later(250, () => releaseInbound(false));
         break;
       }
       case "quarterStart": {
@@ -1547,7 +1567,7 @@ export function createCourt2D(host, opts = {}) {
   const evSig = e => (e ? `${e.id}@${e.airAt || 0}:${e.kind}` : "");
   function clearChoreo() {
     timers.forEach(clearTimeout); timers.clear();
-    drainTimer = 0; queue.length = 0; plan = null;
+    drainTimer = 0; queue.length = 0; plan = null; heldInbound = null;
   }
   function suspend() {
     if (suspended) return;
@@ -2246,7 +2266,7 @@ export function createCourt2D(host, opts = {}) {
       const h = ball.holder ? sprites.get(ball.holder) : null;
       return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
-        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps,
+        suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, inboundHeld: !!heldInbound,
         staging: stage ? stage.debug() : null };
     },
     // Crochets de test (live_court2d_test.js) : position du porteur, âge de

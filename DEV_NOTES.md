@@ -346,27 +346,37 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   dunk / buzzer (agitation plus forte, plus longue) ; arbitre de ligne de
   fond DERRIÈRE la ligne (REF_BEHIND 2,5 pieds, `bl`, borné après
   l'anti-chevauchement), en coordonnées terrain donc indépendant du zoom.
-  CHANGEMENTS : FENÊTRES RÉGLEMENTAIRES (2026-10-08, revu 2026-10-09) :
+  CHANGEMENTS : FENÊTRES RÉGLEMENTAIRES (2026-10-08, revu 2× le 2026-10-09) :
   engine.js `substitutionWindow` / `runSubstitutionWindow` (appelés après
   chaque possession ; `isDeadBall` n'est plus qu'un alias). Fenêtre = la
   possession SE TERMINE sur faute / ballon perdu hors interception / temps
   mort / blessure / exclusion, + pause entre deux périodes (quarterStart).
-  JAMAIS après un panier, un tir manqué, un rebond, une interception ni la
-  remise en jeu qui suit un panier. Bug du 2026-10-09 (« changements après
-  un panier marqué ») : `freeThrow` comptait comme arrêt, donc ~18
-  changements / match tombaient APRÈS un dernier lancer réussi (= panier +
-  remise en jeu). Désormais : fenêtre = la FAUTE, changements insérés AVANT
-  le premier lancer (score de la faute, énergie la plus récente), tireurs
-  protégés (`_subLocked`, ils sortent à la fenêtre suivante). Demande vs
-  exécution : la demande (fatigue, fautes, minutes cibles, blessure,
-  exclusion) est une condition réévaluée par substituteIfNeeded ; elle
-  n'est EXÉCUTÉE qu'à une fenêtre, sinon elle attend. Moteur miroir de
-  moteurbasket3.html aligné (tireur protégé par nom, ses événements n'ont
-  pas d'id). ~36 changements / match. Test : engine_dead_ball_subs_test.js
-  (5 scénarios + 30 matchs simulés). Pas de changement manuel en direct
-  dans le jeu (les ordres sont fixés avant le match). Règle FIBA « équipe
-  qui encaisse un panier dans les 2 dernières minutes » volontairement NON
-  appliquée (consigne : jamais de changement sur un panier).
+  Lancers francs : la FAUTE ouvre la fenêtre, changements insérés AVANT le
+  premier lancer (score de la faute, énergie la plus récente), tireurs
+  protégés (`_subLocked`) ; puis, si le DERNIER lancer est réussi
+  (`lastMade` sur l'événement freeThrow) ou si ce sont des lancers de faute
+  technique / antisportive, seconde fenêtre APRÈS le lancer, avant la
+  remise en jeu (le tireur peut sortir). Dernier lancer manqué = rebond,
+  ballon vivant : rien. JAMAIS après un panier en jeu, un tir manqué, un
+  rebond, une interception ni pendant la remise en jeu. Le moteur ne
+  journalise qu'UN événement par série de lancers : pas de changement
+  « entre deux lancers » (permis par la règle, mais il faudrait découper
+  l'événement freeThrow — adaptateur, feuille, terrain).
+  Demande vs exécution : la demande (fatigue, fautes, minutes cibles,
+  blessure, exclusion) est une condition réévaluée par substituteIfNeeded ;
+  elle n'est EXÉCUTÉE qu'à une fenêtre, sinon elle attend.
+  Terrain 2D (court2d.js `inbound` / `heldInbound`) : une remise en jeu
+  attend les changements en file ou annoncés (nextAction) — changement
+  PUIS remise en jeu ; filet de sécurité 6 s ; debug() `inbounds` /
+  `inboundHeld`. Test : live_court2d_sub_inbound_test.js.
+  Moteur miroir de moteurbasket3.html (simulation hors direct) : fenêtre à
+  la faute avant les lancers seulement (tireur protégé par nom, ses
+  événements n'ont pas d'id) ; pas de fenêtre après le dernier lancer
+  (fichier plein, ~146 octets libres). ~35 changements / match. Test :
+  engine_dead_ball_subs_test.js (scénarios 1-5 + 4b + 30 matchs). Pas de
+  changement manuel en direct (ordres fixés avant le match). Règle FIBA
+  « panier encaissé dans les 2 dernières minutes » NON appliquée (consigne :
+  jamais de changement sur un panier en jeu).
   ONGLET MASQUÉ / REPRISE (2026-10-08) : court2d.js `suspend` / `resync`.
   Cause : rAF s'arrête onglet masqué mais update() et la chorégraphie à
   minuteries (`later`) continuent (bridées, par paquets) → vols jamais

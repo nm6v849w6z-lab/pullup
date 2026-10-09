@@ -19778,10 +19778,13 @@ class MatchEngine {
   //    exclusion, une blessure, un ballon perdu hors interception (sortie,
   //    marcher, 24 s…), un temps mort ; les pauses entre périodes sont
   //    gérées par simulate (quarterStart) ;
-  //  - lancers francs : la fenêtre est la FAUTE qui les a provoqués, AVANT le
-  //    premier lancer (`at` = index du premier lancer), et les tireurs
-  //    restent sur le terrain pour les tirer (`locked`). Après le dernier
-  //    lancer, rien : réussi = panier + remise en jeu, manqué = rebond.
+  //  - lancers francs : la FAUTE qui les a provoqués ouvre la fenêtre, AVANT
+  //    le premier lancer (`at` = index du premier lancer), les tireurs
+  //    restant sur le terrain pour les tirer (`locked`). Dernier lancer
+  //    RÉUSSI (ou lancers d'une faute technique / antisportive) : le ballon
+  //    est mort, seconde fenêtre APRÈS le lancer et AVANT la remise en jeu
+  //    (`after`, retour utilisateur 2026-10-09). Dernier lancer manqué :
+  //    rebond, ballon vivant, rien.
   // La possession doit SE TERMINER sur l'arrêt (dernier événement) : une
   // faute en cours de possession suivie d'une remise en jeu et d'un panier
   // ou d'un rebond n'est plus un arrêt au moment du changement.
@@ -19798,7 +19801,8 @@ class MatchEngine {
       if (j - 1 < lo || !stop || !(DEAD_BALL_EVENTS.has(stop.type) || stop.foulType)) return null;
       const locked = new Set();
       for (let k = j; k <= i; k++) if (events[k].shooterId != null) locked.add(events[k].shooterId);
-      return { at: j, locked };
+      const after = e.lastMade === true || stop.type === "technicalFoul" || stop.type === "unsportsmanlikeFoul";
+      return { at: j, locked, after };
     }
     if (DEAD_BALL_EVENTS.has(e.type) || (e.type === "turnover" && e.tovType !== "steal")) return { at: events.length, locked: null };
     return null;
@@ -19839,6 +19843,12 @@ class MatchEngine {
         if (!Object.keys(ev.fat).length) delete ev.fat;
       }
       events.push(...tail);
+    }
+    // Dernier lancer réussi : ballon mort jusqu'à la remise en jeu, nouvelle
+    // fenêtre (le tireur peut alors sortir).
+    if (win.after) {
+      this.substituteIfNeeded(this.teamA, quarter, clock, events);
+      this.substituteIfNeeded(this.teamB, quarter, clock, events);
     }
     return win;
   }
@@ -20066,11 +20076,12 @@ class MatchEngine {
     // (au lieu de 0.50 + 0.42 × attr) — un lanceur à 30 passe de 63 % à
     // 69 %, un lanceur à 100 reste à 93 %.
     const ftPct = clamp(0.58 + (shooter.eff("freeThrow") / 100) * 0.35 + (shooter.eff("focus") - 50) * 0.0006, 0.55, 0.93);
-    let made = 0;
+    let made = 0, lastMade = false;
     for (let i = 0; i < n; i++) {
       shooter.stats.fta++;
+      lastMade = false;
       if (rand01() < ftPct) {
-        made++; shooter.stats.ftm++; shooter.stats.pts++;
+        made++; lastMade = true; shooter.stats.ftm++; shooter.stats.pts++;
         // Origine des points (voir emptyStats) : lancers obtenus sur une
         // seconde chance ou une contre-attaque.
         if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
@@ -20082,7 +20093,7 @@ class MatchEngine {
     // ni dans le fil du direct ni dans la feuille de match en direct, qui se
     // reconstruit événement par événement — la feuille finale, elle, les
     // comptait, d'où un écart de tentatives entre les deux).
-    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made, attempts: n, possession: this.teamKey(team) });
+    this.log(events, quarter, clock, say(PHRASES.freeThrows, { shooter: shooter.name, made, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made, attempts: n, lastMade, possession: this.teamKey(team) });
     return made;
   }
 
