@@ -61,7 +61,9 @@ function fail(msg) { throw new Error("❌ " + msg); }
     const dom = new JSDOM(`<!doctype html><div id="root"></div>`, { pretendToBeVisual: true, runScripts: "outside-only" });
     const { window } = dom;
     const html = require("fs").readFileSync(path.join(__dirname, "moteurbasket3.html"), "utf-8");
-    if (!/court2d: !!\(teamA && typeof teamA\.hasBetaFeature === "function" && teamA\.hasBetaFeature\("live2d"\)\)/.test(html)) fail("l'adaptateur doit passer court2d = teamA.hasBetaFeature('live2d') à createLiveView.");
+    // Sortie de bêta (2026-10-09) : hmLive2dOn() = drapeau global live2d
+    // (« all » par défaut), la bêta par club reste valable en « whitelist ».
+    if (!/court2d: hmLive2dOn\(\)/.test(html) || !/function hmLive2dOn\(\) \{[^]*?teamA\.hasBetaFeature\("live2d"\)[^]*?f\.mode === "all" \|\| \(f\.mode !== "off" && beta\)/.test(html)) fail("l'adaptateur doit passer court2d = hmLive2dOn() (drapeau global + bêta par club) à createLiveView.");
     const view = require("fs").readFileSync(path.join(__dirname, "assets/live/live-view.js"), "utf-8");
     if (!/const court2dAllowed = opts\.court2d !== false;/.test(view) || !/view: court2dAllowed \? "2d" : "chart"/.test(view)) fail("live-view doit ouvrir sur la carte des tirs quand opts.court2d === false.");
     if (!/seg\.toggleAttribute\("hidden", !court2dAllowed\)/.test(view)) fail("le sélecteur Terrain / Carte des tirs doit être masqué hors bêta.");

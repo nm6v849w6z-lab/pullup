@@ -9051,8 +9051,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-21">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-21">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261008-22">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261008-22">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -9071,8 +9071,8 @@
 <script src="assets/club-staging-ui.js" defer></script>
 <script src="assets/medical-ui.js" defer></script>
 <script src="assets/national-visuals.js" defer></script>
-<script src="assets/national.js" defer></script>
-<script src="assets/national-coach.js" defer></script>
+<script src="assets/national.js?v=20261009-1" defer></script>
+<script src="assets/national-coach.js?v=20261009-1" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
 <script>
 /* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
@@ -44950,8 +44950,8 @@ async function spectateMountLiveView(state) {
   try {
     // Mise en scène (bêta liveShows du club du spectateur) : coachs et shows,
     // sans l'entrée des joueurs (composition inconnue avant le match).
-    const spectStaging = teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d") ? hmLiveStagingFor(homeObj, awayObj, { intro: false, round: live.privateLeague ? live.privateLeague.round : live.round }) : null;
-    view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, staging: spectStaging, court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")) });
+    const spectStaging = hmLive2dOn() ? hmLiveStagingFor(homeObj, awayObj, { intro: false, round: live.privateLeague ? live.privateLeague.round : live.round }) : null;
+    view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, staging: spectStaging, court2d: hmLive2dOn() });
   } catch (e) { return false; }
   state.rich = { adapter, view, applied: 0 };
   const box = root.closest(".spectate-box");
@@ -45162,7 +45162,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261008-21";
+const HM_LIVE_ASSET_VERSION = "20261008-22";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45295,7 +45295,7 @@ function hmLiveReset(liveMatch) {
       if (!mod) { hmLiveShowUnavailable(root); return; }
       try {
         // Mise en scène (bêta liveShows) : seulement avec le terrain animé.
-        const court2dOn = !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d"));
+        const court2dOn = hmLive2dOn();
         const homeObj = liveMatch.isHome ? teamA : teamB, awayObj = liveMatch.isHome ? teamB : teamA;
         state.staging = court2dOn ? hmLiveStagingFor(homeObj, awayObj, { round: liveMatch.round }) : null;
         state.view = mod.createLiveView(root, {
@@ -45305,7 +45305,7 @@ function hmLiveReset(liveMatch) {
           halftimeShowSeen: hoopShowHalftimeSeen,
           // Terrain animé (court2d) : bêta par club tant qu'il n'est pas
           // ouvert à tous (2026-10-07, POST /api/admin/beta-feature live2d).
-          court2d: !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d")),
+          court2d: hmLive2dOn(),
         });
         hmLiveRender();
       } catch (e) {
@@ -45662,6 +45662,15 @@ function hmLoadFeatures() {
       .catch(() => null);
   }
   return hmFeaturesPromise;
+}
+// Terrain animé du direct (2026-10-09 : sortie de bêta, pour tout le
+// monde) : drapeau global live2d (server/featureFlags.js) ; la bêta par club
+// reste valable si le drapeau est repassé en « whitelist ».
+function hmLive2dOn() {
+  const f = HM_FEATURES && HM_FEATURES.live2d;
+  const beta = !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d"));
+  if (!f) return beta;
+  return f.mode === "all" || (f.mode !== "off" && beta);
 }
 function hmLiveShowsFlags() {
   const f = HM_FEATURES && HM_FEATURES.liveShows;

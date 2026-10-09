@@ -10,12 +10,22 @@
 //   - "off"       : coupé pour tous.
 // Sous-drapeaux : coach, playerIntro, shows (chaque brique séparément) et
 // ads (pub interstitielle des non-premium pendant les shows).
+//
+// live2d (2026-10-09, sortie de bêta) : terrain animé du direct. "all" =
+// tout le monde (défaut), "whitelist" = seulement les clubs qui ont la bêta
+// par club (Team.betaFeatures "live2d"), "off" = coupé pour tous.
+// Sortie de bêta du 2026-10-09 : un réglage enregistré AVANT (sans `v`)
+// ne garde pas son mode « whitelist » — tout le monde passe en "all" ; un
+// réglage posé ensuite par l'API admin (v = 2) est respecté tel quel.
 "use strict";
 
 const NAME = "featureflags";   // store : minuscules seulement
+const VERSION = 2;
 const DEFAULTS = Object.freeze({
+  v: VERSION,
+  live2d: { mode: "all" },
   liveShows: {
-    mode: "whitelist",
+    mode: "all",
     clubs: ["Gotham Knights", "BC Dia"],
     coach: true,
     playerIntro: true,
@@ -32,9 +42,12 @@ function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
 function normalize(raw) {
   const out = clone(DEFAULTS);
+  const current = !!(raw && typeof raw === "object" && raw.v >= VERSION);
+  const l2 = raw && typeof raw === "object" && raw.live2d && typeof raw.live2d === "object" ? raw.live2d : null;
+  if (l2 && current && MODES.includes(l2.mode)) out.live2d.mode = l2.mode;
   const ls = raw && typeof raw === "object" && raw.liveShows && typeof raw.liveShows === "object" ? raw.liveShows : null;
   if (ls) {
-    if (MODES.includes(ls.mode)) out.liveShows.mode = ls.mode;
+    if (MODES.includes(ls.mode) && (current || ls.mode === "off")) out.liveShows.mode = ls.mode;
     if (Array.isArray(ls.clubs)) out.liveShows.clubs = ls.clubs.filter(c => typeof c === "string" && c.trim()).map(c => c.trim()).slice(0, 200);
     for (const k of ["coach", "playerIntro", "shows"]) if (typeof ls[k] === "boolean") out.liveShows[k] = ls[k];
     if (ls.ads && typeof ls.ads === "object") {
@@ -52,11 +65,10 @@ function normalize(raw) {
 function merge(current, patch) {
   const cur = normalize(current);
   const p = patch && typeof patch === "object" ? patch : {};
-  if (p.liveShows && typeof p.liveShows === "object") {
-    const next = { ...cur.liveShows, ...p.liveShows, ads: { ...cur.liveShows.ads, ...(p.liveShows.ads || {}) } };
-    return normalize({ liveShows: next });
-  }
-  return cur;
+  const next = { v: VERSION, live2d: { ...cur.live2d }, liveShows: cur.liveShows };
+  if (p.live2d && typeof p.live2d === "object") next.live2d = { ...cur.live2d, ...p.live2d };
+  if (p.liveShows && typeof p.liveShows === "object") next.liveShows = { ...cur.liveShows, ...p.liveShows, ads: { ...cur.liveShows.ads, ...(p.liveShows.ads || {}) } };
+  return normalize(next);
 }
 
 let cache = null, cacheAt = 0;

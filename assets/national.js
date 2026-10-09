@@ -222,7 +222,7 @@
         var t = teamById(m.teamId) || { countryName: "", cat: "" };
         h += '<div class="nt-card is-mine"><div class="nt-row">' + flag(t.country) + "<b>Sélectionneur · " + teamNameHtml(t) + "</b></div>" +
           '<p class="nt-small">Mandat de la saison ' + esc(m.fromSeason) + " à la saison " + esc(m.toSeason) + " · élu avec " + esc(m.votes || 0) + " voix</p>" +
-          '<div class="nt-row"><button type="button" class="tq-btn" data-nt-resign="' + esc(m.teamId) + '">Démissionner</button></div></div>';
+          '<div class="nt-row"><button type="button" class="cal-next-btn nt-btn" data-nc-enter="' + esc(m.teamId) + '">Mode Sélection</button><button type="button" class="tq-btn" data-nt-resign="' + esc(m.teamId) + '">Démissionner</button></div></div>';
       });
       h += "</div>";
     }
@@ -982,6 +982,26 @@
   function loadElection(id) {
     return api("/api/national/election?id=" + encodeURIComponent(id)).then(function (d) { ui.election = d.election; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
   }
+  // Sélection ouverte par défaut (BUG 2026-10-09 : « le sélectionneur de
+  // l'Allemagne voit encore le mode de la France, lien vide ») : d'abord la
+  // sélection dont on est sélectionneur (mandat en cours), sinon celle où
+  // l'on a un rôle de staff, sinon la sélection A du pays du championnat du
+  // club. Avant : toujours le pays du championnat (souvent « fr »), donc la
+  // page d'une autre nation, sans bouton « Mode Sélection ».
+  function myNationalTeamId() {
+    var me = ui.overview && ui.overview.me;
+    if (!me) return null;
+    var m = (me.myMandates || []).filter(function (x) { return !x.endedAt && x.teamId; })[0];
+    if (m) return m.teamId;
+    var s = (me.staffRoles || []).filter(function (x) { return x.teamId; })[0];
+    return s ? s.teamId : null;
+  }
+  function homeTeamId() {
+    var mine = myNationalTeamId();
+    if (mine) return mine;
+    var c = homeCountry();
+    return c ? c + "-A" : null;
+  }
   // Pays de la sélection « maison » : celui du championnat du club.
   function homeCountry() {
     var c = myCountry();
@@ -994,17 +1014,20 @@
   function render(opts) {
     ensureCss();
     ui.electionId = null; ui.election = null; ui.formOpen = false;
-    var home = !(opts && opts.overview) && homeCountry();
+    var wantTeam = !(opts && opts.overview);
+    // Vue d'ensemble déjà connue : la sélection « maison » tout de suite.
+    var home = wantTeam && ui.overview && homeTeamId();
     if (home) {
-      var p0 = Promise.all([openTeam(home + "-A"), loadOverview()]).then(paint);
+      var p0 = Promise.all([openTeam(home), loadOverview()]).then(paint);
       window.__lastNational = p0;
       return p0;
     }
     ui.teamId = null; ui.team = null;
     paint();
+    // Sinon : vue d'ensemble d'abord (mandats et rôles), puis la sélection.
     var p = loadOverview().then(function () {
-      var c = !(opts && opts.overview) && homeCountry();
-      if (c) return openTeam(c + "-A");
+      var id = wantTeam && homeTeamId();
+      if (id) return openTeam(id);
       paint();
     });
     window.__lastNational = p;

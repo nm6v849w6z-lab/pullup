@@ -119,6 +119,37 @@ const mkTeam = (key, n) => ({ name: key, short: key.slice(0, 3).toUpperCase(), s
   if (d.holder !== reb) fail(`le rebondeur du moteur prend le ballon à la fin (porteur ${d.holder}).`);
   ok(`Tir raté : ballon libre ${free.length} images, ${rises} rebond(s) (sommets ${peaks.slice(0, 3).map(p => p.toFixed(2)).join(" > ")}), ${v.toFixed(1)} pieds/s au contact, ${moved.toFixed(1)} pieds parcourus au sol, pris par le rebondeur.`);
 
+  // ---------- 4 bis. Ballon après un panier (2026-10-09) ----------
+  // Il sort du filet, fait 2 ou 3 petits rebonds décroissants en glissant
+  // vers le terrain, puis s'immobilise ; la remise en jeu le reprend sans
+  // rebond parasite. 2 points, 3 points, lancer franc.
+  for (const [label, o] of [["2 points", { kind: "shot", made: 2, zone: "mid", shot: { x: 78, y: 20 } }], ["3 points", { kind: "shot", made: 3, zone: "three", shot: { x: 66, y: 25 } }], ["lancer franc", { kind: "freeThrow", made: 1, attempt: 1, of: 1 }]]) {
+    S.possession = 0;
+    court.test.give("Gotham:0"); await sleep(300);
+    const tr = []; let on = true;
+    const lp = t => { if (!on) return; tr.push({ t, ...court.test.ball() }); window.requestAnimationFrame(lp); };
+    window.requestAnimationFrame(lp);
+    const e2 = ev({ team: 0, type: "score", ...o, possessionTeam: 0, possessionAfter: 1, actors: { shooter: "Gotham:1" } });
+    court.update(S, [e2.id]);
+    await sleep(500);
+    S.possession = 1; court.update(S, []);   // le moteur : ballon à l'adversaire après le panier
+    await sleep(3700);
+    on = false;
+    const fr = tr.filter(p => p.loose);
+    const pk = []; for (let k = 1; k < fr.length - 1; k++) if (fr[k].z > 0.05 && fr[k].z >= fr[k - 1].z && fr[k].z >= fr[k + 1].z) pk.push(fr[k].z);
+    if (pk.length < 2 || pk.length > 3) fail(`${label} : 2 ou 3 petits rebonds attendus après le panier, obtenu ${pk.length} (${pk.map(p => p.toFixed(2))}).`);
+    if (!pk.every((p, k) => k === 0 || p < pk[k - 1])) fail(`${label} : rebonds de plus en plus bas (${pk.map(p => p.toFixed(2))}).`);
+    if (pk[0] > 3) fail(`${label} : rebonds discrets (premier sommet ${pk[0].toFixed(2)}).`);
+    const mv = Math.hypot(fr[fr.length - 1].x - fr[0].x, fr[fr.length - 1].y - fr[0].y);
+    if (mv < 0.5 || mv > 6) fail(`${label} : le ballon glisse un peu sous le panier (${mv.toFixed(2)} pied).`);
+    // Arrêt : immobile avant d'être repris, ou repris par un joueur (porteur).
+    const lastFree = fr[fr.length - 1], afterFree = tr.slice(tr.indexOf(lastFree) + 1);
+    if (afterFree.some(p => p.loose)) fail(`${label} : pas de nouveau rebond après l'arrêt.`);
+    if (afterFree.some((p, k) => k > 0 && !p.flight && !p.holder && p.z > 0.05)) fail(`${label} : aucun rebond parasite à la reprise.`);
+    if (court.debug().holder == null && !tr[tr.length - 1].flight) fail(`${label} : la remise en jeu reprend le ballon ${JSON.stringify(tr[tr.length - 1])} ${JSON.stringify(Object.keys(court.debug()))}.`);
+    ok(`Panier (${label}) : ${pk.length} rebonds décroissants (${pk.map(p => p.toFixed(2)).join(" > ")}), ${mv.toFixed(1)} pied parcouru, repris à la remise en jeu.`);
+  }
+
   // ---------- 5. Temps mort : remplaçants autour du coach ----------
   const t0 = Date.now();
   S.stoppage = { kind: "timeout", team: 0, quarter: 2, startAt: t0, endsAt: t0 + 12000 };

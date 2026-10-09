@@ -896,7 +896,7 @@ export function createCourt2D(host, opts = {}) {
   function looseStep(st, dt) {
     if (st.vz > 0 || st.z > 0) {
       st.vz -= LOOSE.g * dt; st.z += st.vz * dt;
-      if (st.z <= 0) { st.z = 0; st.vz = -st.vz * LOOSE.bounce; if (st.vz < LOOSE.minBounce) st.vz = 0; }
+      if (st.z <= 0) { st.z = 0; st.vz = -st.vz * (st.bounce || LOOSE.bounce); if (st.vz < LOOSE.minBounce) st.vz = 0; }
     }
     if (st.z <= 0) {   // au sol : frottement (roule)
       const v = Math.hypot(st.vx, st.vy);
@@ -904,6 +904,18 @@ export function createCourt2D(host, opts = {}) {
     }
     st.x += st.vx * dt; st.y += st.vy * dt;
     st.x = Math.max(-6, Math.min(100, st.x)); st.y = Math.max(-4, Math.min(56, st.y));
+  }
+  // Panier marqué (2026-10-09, « le ballon tombe puis s'arrête net ») : il
+  // sort du filet, touche le sol et fait deux ou trois petits rebonds de
+  // plus en plus bas (restitution 0,5) en glissant un peu vers le terrain,
+  // puis s'immobilise — ballon libre ordinaire : le premier joueur qui le
+  // prend (remise en jeu, possession) l'arrête net, sans rebond parasite.
+  // Purement visuel : rien ne dépend de sa position.
+  function netDrop(rim) {
+    const dir = rim.x > 47 ? -1 : 1;   // vers l'intérieur du terrain
+    ball.holder = null; ball.flight = null; ball.drib = 0;
+    ball.x = rim.x + dir * 0.8; ball.y = rim.y + 0.4; ball.z = 0;
+    ball.loose = { x: ball.x, y: ball.y, z: 0, vz: reducedMotion ? 0 : 20, bounce: 0.5, vx: dir * rnd(2.6, 4.2), vy: rnd(-1.4, 1.4) };
   }
   // Où sera le ballon `ms` après avoir touché le sol en `to` (vol `land` from → to).
   function looseAt(from, to, flightMs, h, ms) {
@@ -1306,7 +1318,7 @@ export function createCourt2D(host, opts = {}) {
             if (big) bigFlash();
             moment(typeof e.clock === "number" && e.clock <= 1 ? "buzzer" : /dunk|smash/i.test(String(e.shotType || "")) ? "dunk" : e.zone === "three" ? "trois_points" : "panier", { team: offT });
             later(350, () => { jump(shooter, 0.6); cheer(offT, big); });
-            ball.x = rim.x + (rim.x > 47 ? -1.5 : 1.5); ball.y = rim.y + 1; ball.holder = null; ball.flight = null;
+            netDrop(rim);
             // Panier + faute (« and one ») : pas de remise en jeu, les lancers suivent.
             // Panier + faute (« and one ») : le moteur laisse le ballon à
             // l'attaque (possessionAfter), les lancers suivent.
@@ -1375,7 +1387,7 @@ export function createCourt2D(host, opts = {}) {
         // technique / antisportive au milieu d'une action).
         const nextT = after !== null ? after : 1 - t;
         const finish = () => {
-          rimFx(t, made); if (made) flash(shooter, "+" + e.made, "good");
+          rimFx(t, made); if (made) { flash(shooter, "+" + e.made, "good"); netDrop(rim); }
           crowdReact(made ? "score" : "miss", t);
           moment(made ? "lancer_reussi" : "lancer_rate", { team: t });
           scene(1500);

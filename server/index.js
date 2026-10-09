@@ -1700,6 +1700,7 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         let body;
         try { body = await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
         if (!body || typeof body !== "object") { sendJson(res, 400, { ok: false, error: "Corps JSON attendu." }); return; }
+        if (body.live2d && body.live2d.mode != null && !FeatureFlags.MODES.includes(body.live2d.mode)) { sendJson(res, 400, { ok: false, error: `'live2d.mode' doit être l'un de : ${FeatureFlags.MODES.join(", ")}.` }); return; }
         if (body.liveShows && body.liveShows.mode != null && !FeatureFlags.MODES.includes(body.liveShows.mode)) { sendJson(res, 400, { ok: false, error: `'liveShows.mode' doit être l'un de : ${FeatureFlags.MODES.join(", ")}.` }); return; }
         const flags = await FeatureFlags.update(store, multiSavePath, body);
         sendJson(res, 200, { ok: true, ...flags });

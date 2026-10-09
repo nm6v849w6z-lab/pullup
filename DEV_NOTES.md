@@ -20,6 +20,33 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-09) — Direct 2D pour tout le monde (sortie de bêta)**.
+  `server/featureFlags.js` : nouveau drapeau `live2d` (`all` par défaut,
+  `whitelist` = bêta par club, `off`), `liveShows` passe en `all` ; version
+  `v: 2` — un réglage enregistré avant (sans `v`) ne garde pas son
+  « whitelist » (sortie de bêta appliquée), un « off » reste respecté.
+  Retour arrière SANS redéploiement : `POST /api/admin/feature-flags`
+  `{ live2d: { mode: "whitelist" } }` (et/ou `liveShows`). Client :
+  `hmLive2dOn()` (moteurbasket3.html, près de `hmLiveShowsFlags`) remplace
+  les tests `hasBetaFeature("live2d")`. ⚠️ Avec `liveShows.ads.enabled`, les
+  non-Premium voient désormais la pub interstitielle pendant les shows
+  (≤ 3 par match). Tests : live_shows_access_test, admin_beta_feature_test.
+- **🔵 EN COURS (2026-10-09) — Lot « NT / tactiques / live » (prompt
+  utilisateur en 12 points, P0 → P3)**. Fait et testé
+  (`national_nt_p0_test.js`) :
+  BUG 1 convocation → Tactique : `national-coach.js:setView` (toute vue
+  renvoyée par une action) reconstruit `ui.tq` si l'effectif du match
+  affiché a changé, garde les modifs non enregistrées, ajoute les nouveaux
+  convoqués à la feuille (≤ 12). BUG 2 nation du sélectionneur :
+  `national.js:homeTeamId` (mandat → rôle de staff → pays du championnat),
+  bouton « Mode Sélection » sur la carte « Mon mandat ». Animation 5
+  (ballon après panier) : `court2d.js:netDrop` (2-3 rebonds, restitution
+  0,5), test dans live_court2d_ball_bench_test. RESTE : BUG 3 TC/GEN dans
+  national-coach.js (genOf/genHtml, lignes listées par l'audit : listes,
+  suivis, convoqués, remplacement, staff, recherche), BUG 5 compte à
+  rebours figé (`calendarNextMatchCardHtml` / `teamCalendarNextCardHtml` :
+  `formatDuration` figé dans le HTML, aucun minuteur), BUG 4, P1-P3.
+
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
   `court2d.js` : calque `.c2d-flags` (dans `under`, au-dessus du public),
   `buildFlags` (appelé par `drawArena`) — ~20 drapeaux (club qui reçoit,

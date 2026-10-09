@@ -29,11 +29,21 @@ function fail(msg) { throw new Error("❌ " + msg); }
 
     // --- Drapeaux globaux ---
     const f0 = await (await api("api/features")).json();
-    if (!f0.ok || f0.liveShows.mode !== "whitelist" || !["Gotham Knights", "BC Dia"].every(c => f0.liveShows.clubs.includes(c))) fail(`défaut : bêta pour Gotham Knights et BC Dia, obtenu ${JSON.stringify(f0.liveShows)}.`);
+    // Sortie de bêta (2026-10-09) : direct 2D et mise en scène pour tout le monde.
+    if (!f0.ok || f0.liveShows.mode !== "all" || !f0.live2d || f0.live2d.mode !== "all") fail(`défaut : direct 2D et mise en scène pour tout le monde, obtenu ${JSON.stringify({ live2d: f0.live2d, liveShows: f0.liveShows })}.`);
+    // Un réglage « whitelist » enregistré avant la sortie de bêta (sans version) ne bloque pas la sortie.
+    if (FeatureFlags.normalize({ liveShows: { mode: "whitelist", clubs: ["BC Dia"] } }).liveShows.mode !== "all") fail("ancien réglage « whitelist » : sortie de bêta appliquée.");
+    if (FeatureFlags.normalize({ liveShows: { mode: "off" } }).liveShows.mode !== "off") fail("un « off » enregistré reste respecté.");
     if (!(f0.liveShows.coach && f0.liveShows.playerIntro && f0.liveShows.shows)) fail("sous-drapeaux coach / playerIntro / shows actifs par défaut.");
     process.env.BASKET_ADMIN_TOKEN = "secret-flags";
     if ((await api("api/admin/feature-flags", { liveShows: { mode: "all" } }, { "X-Admin-Token": "faux" })).status !== 403) fail("route admin protégée (403).");
     if ((await api("api/admin/feature-flags", { liveShows: { mode: "partout" } }, { "X-Admin-Token": "secret-flags" })).status !== 400) fail("mode inconnu → 400.");
+    if ((await api("api/admin/feature-flags", { live2d: { mode: "partout" } }, { "X-Admin-Token": "secret-flags" })).status !== 400) fail("live2d : mode inconnu → 400.");
+    const fl = await (await api("api/admin/feature-flags", { live2d: { mode: "whitelist" } }, { "X-Admin-Token": "secret-flags" })).json();
+    FeatureFlags._resetCacheForTests();
+    const flr = await (await api("api/features")).json();
+    if (fl.live2d.mode !== "whitelist" || flr.live2d.mode !== "whitelist") fail("live2d : retour en arrière possible sans redéploiement (whitelist persisté).");
+    await api("api/admin/feature-flags", { live2d: { mode: "all" } }, { "X-Admin-Token": "secret-flags" });
     const f1 = await (await api("api/admin/feature-flags", { liveShows: { clubs: ["Testeur BC"], shows: false } }, { "X-Admin-Token": "secret-flags" })).json();
     if (!f1.liveShows) fail("réponse admin : " + JSON.stringify(f1));
     if (!f1.ok || f1.liveShows.clubs.join() !== "Testeur BC" || f1.liveShows.shows !== false || f1.liveShows.coach !== true) fail(`correctif partiel attendu, obtenu ${JSON.stringify(f1.liveShows)}.`);
@@ -43,7 +53,7 @@ function fail(msg) { throw new Error("❌ " + msg); }
     await api("api/admin/feature-flags", { liveShows: { shows: true, mode: "whitelist" } }, { "X-Admin-Token": "secret-flags" });
     const bf = await api("api/admin/beta-feature", { teamName: "Autre Club", feature: "liveShows", enabled: true }, { "X-Admin-Token": "secret-flags" });
     if (bf.status !== 200) fail("la bêta par club accepte « liveShows ».");
-    console.log("✅ Drapeaux : défaut (2 clubs), route admin (403/400/200), correctif partiel persisté, bêta par club liveShows.");
+    console.log("✅ Drapeaux : défaut tout le monde (direct 2D + mise en scène), retour en arrière possible, route admin (403/400/200), correctif partiel persisté, bêta par club liveShows.");
 
     // --- Coach : ouvert à tous, persisté ---
     const coachLook = { skin: 3, face: 2, eyes: 1, hairStyle: "slick", hairColor: 2, beard: "short", outfit: "tracksuit", accessory: "glasses" };

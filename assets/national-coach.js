@@ -450,15 +450,49 @@
     o.lineup.convoked = px.convokedIds();
     return o;
   }
+  // Joueurs de la feuille d'un match (ou des ordres par défaut) dans une vue.
+  function tqRosterIds(v, k) {
+    var e = k === TQ_DEFAULT ? null : tqEntry(v, k), r = e ? e.players : v && v.tacticsPlayers;
+    return (r || []).map(function (x) { return String(x.nid); });
+  }
+  // Nouvelle vue du serveur (BUG 2026-10-09 : « après une convocation,
+  // l'effectif des Tactiques ne se met à jour qu'en rechargeant la page ») :
+  // ui.tq (équipe des Ordres construite une fois) était réutilisé tel quel
+  // tant que le match affiché ne changeait pas. Toute action qui renvoie la
+  // vue passe par ici : si l'effectif du match affiché a changé
+  // (convocation, remplacement, présélection, attribution…), l'équipe des
+  // Ordres est reconstruite depuis la nouvelle vue — en gardant les
+  // modifications en cours non enregistrées — et les nouveaux convoqués
+  // entrent sur la feuille de match s'il reste de la place (12).
+  function setView(d) {
+    var old = ui.view, tq = ui.tq;
+    ui.view = d;
+    if (!tq || !old) return;
+    var k = tq.key;
+    if (k !== TQ_DEFAULT && !tqEntry(d, k)) { ui.tq = null; return; }
+    var before = tqRosterIds(old, k), after = tqRosterIds(d, k);
+    if (before.join(",") === after.join(",")) return;
+    var keep = tq.dirty ? tqSnap(tq.proxy) : null;
+    var next = tqMake(d, k, keep);
+    var L = next.proxy.lineup || {};
+    if (Array.isArray(L.convoked)) after.forEach(function (id) {
+      if (before.indexOf(id) >= 0) return;
+      var p = next.proxy.players.filter(function (x) { return String(x.id) === id; })[0];
+      if (p && L.convoked.indexOf(p.id) < 0 && L.convoked.length < 12) L.convoked.push(p.id);
+    });
+    if (keep) next.saved = tq.saved;
+    next.dirty = JSON.stringify(tqSnap(next.proxy)) !== next.saved;
+    ui.tq = next;
+  }
   function tqBuild(v, k) {
     ui.tq = tqMake(v, k);
     return ui.tq;
   }
   // Équipe de la sélection (joueurs de la feuille, ordres, cinq) sans
   // toucher à l'état de l'écran Tactique : sert aussi au Vestiaire.
-  function tqMake(v, k) {
+  function tqMake(v, k, ordersOverride) {
     var e = k === TQ_DEFAULT ? null : tqEntry(v, k);
-    var orders = (e && v.plans && v.plans[e.id]) || v.tactics;
+    var orders = ordersOverride || (e && v.plans && v.plans[e.id]) || v.tactics;
     var roster = e ? e.players : v.tacticsPlayers;
     var pm = poolByKey(), fiches = {};
     var players = roster.map(function (x) { fiches[x.nid] = pm[key(x.ref)] || null; return tqPlayer(x, fiches[x.nid]); });
@@ -1067,12 +1101,14 @@
     return !!(gg && Date.now() >= gg.freezeAt && Date.now() < gg.endAt + DAY);
   }
   function load() {
-    var a = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId) + (ui.opp ? "&opp=" + encodeURIComponent(ui.opp) : "")).then(function (d) { ui.view = d; ui.error = ""; }).catch(function (e) { ui.error = e.message; });
+    var a = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId) + (ui.opp ? "&opp=" + encodeURIComponent(ui.opp) : "")).then(function (d) { setView(d); ui.error = ""; }).catch(function (e) { ui.error = e.message; });
     // Page de la sélection aussi (calendrier, qualifications, phase finale).
     var b = api("/api/national/team?id=" + encodeURIComponent(ui.teamId)).then(function (d) { ui.tv = d; }).catch(function () { /* rubriques sans données */ });
     return Promise.all([a, b]);
   }
   function enterMode(teamId) {
+    // Jamais de mode sans sélection (lien vide) : rien à ouvrir.
+    if (!teamId || !/^[a-z]{2}-(A|U21)$/.test(String(teamId))) return Promise.resolve();
     ensureCss(); ensureModeCss();
     ui.mode = teamId; ui.teamId = teamId; ui.nav = "dashboard"; ui.tv = null; ui.match = null; ui.view = null; ui.gid = null; ui.tq = null; ui.tqMatch = null; ui.replaceOut = null; ui.opp = null; ui.error = "";
     ui.ana = null; ui.anaSelf = false; ui.anaTeam = null;
@@ -1307,7 +1343,7 @@
     ui.busy = true;
     body.teamId = body.teamId || ui.teamId;
     if (ui.opp) body.opp = ui.opp;
-    var p = api(path, body).then(function (d) { if (d.team) ui.view = d; ui.error = ""; if (okMsg) toast(okMsg); }).catch(function (e) { ui.error = e.message; }).then(function () { ui.busy = false; paint(); });
+    var p = api(path, body).then(function (d) { if (d.team) setView(d); ui.error = ""; if (okMsg) toast(okMsg); }).catch(function (e) { ui.error = e.message; }).then(function () { ui.busy = false; paint(); });
     window.__lastNationalCoach = p;
     return p;
   }
@@ -1360,7 +1396,7 @@
     var player = { id: Number(d.ncP), name: d.ncN };
     var p = api("/api/national/coach/list", { teamId: ui.teamId, list: d.ncPdpList, on: d.ncOn === "1", player: { p: player.id, n: player.name } })
       .then(function (data) {
-        if (data.team) ui.view = data;
+        if (data.team) setView(data);
         toast(d.ncPdpList === "preselection" ? (d.ncOn === "1" ? "Ajouté à la présélection." : "Retiré de la présélection.") : (d.ncOn === "1" ? "Ajouté aux joueurs suivis." : "Retiré des joueurs suivis."));
       })
       .catch(function (e) { toast(e.message); })
@@ -1406,7 +1442,7 @@
     ui.busy = true; b.disabled = true;
     var player = { id: Number(d.ncP), name: d.ncN };
     var p = api("/api/national/coach/note", body)
-      .then(function (data) { if (data.team) ui.view = data; toast(d.ncNoteDel ? "Note supprimée." : "Note ajoutée."); })
+      .then(function (data) { if (data.team) setView(data); toast(d.ncNoteDel ? "Note supprimée." : "Note ajoutée."); })
       .catch(function (e) { toast(e.message); })
       .then(function () {
         ui.busy = false;
@@ -1425,7 +1461,7 @@
     var player = { id: Number(d.ncP), name: d.ncN };
     var p = api("/api/national/coach/staff/assign", { teamId: ui.teamId, mid: mid, on: d.ncOn === "1", player: { p: player.id, n: player.name } })
       .then(function (data) {
-        if (data.team) ui.view = data;
+        if (data.team) setView(data);
         toast(d.ncOn === "1" ? "Joueur attribué et présélectionné." : "Attribution retirée.");
       })
       .catch(function (e) { toast(e.message); })
@@ -1551,7 +1587,7 @@
       if (el.value === "__self") { ui.anaSelf = true; paint(); return; }
       ui.anaSelf = false;
       ui.opp = el.value || null;
-      var p = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId) + (ui.opp ? "&opp=" + encodeURIComponent(ui.opp) : "")).then(function (d) { ui.view = d; }).catch(function (err) { ui.error = err.message; }).then(paint);
+      var p = api("/api/national/coach?id=" + encodeURIComponent(ui.teamId) + (ui.opp ? "&opp=" + encodeURIComponent(ui.opp) : "")).then(function (d) { setView(d); }).catch(function (err) { ui.error = err.message; }).then(paint);
       window.__lastNationalCoach = p;
       return;
     }
