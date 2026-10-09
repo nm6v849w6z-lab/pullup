@@ -9055,8 +9055,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261009-23">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261009-23">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261009-24">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261009-24">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -45199,7 +45199,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261009-23";
+const HM_LIVE_ASSET_VERSION = "20261009-24";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -45342,7 +45342,7 @@ function hmLiveReset(liveMatch) {
           halftimeShowSeen: hoopShowHalftimeSeen,
           // Terrain animé (court2d) : bêta par club tant qu'il n'est pas
           // ouvert à tous (2026-10-07, POST /api/admin/beta-feature live2d).
-          court2d: hmLive2dOn(),
+          court2d: hmLive2dOn(), trophyFor: hmLiveTrophy,
         });
         hmLiveRender();
       } catch (e) {
@@ -45703,6 +45703,20 @@ function hmLoadFeatures() {
 // Terrain animé du direct (2026-10-09 : sortie de bêta, pour tout le
 // monde) : drapeau global live2d (server/featureFlags.js) ; la bêta par club
 // reste valable si le drapeau est repassé en « whitelist ».
+// Trophé décidé par CE match (moments forts, assets/live/highlights.js) :
+// finale/Supercoupe de coupe ; finale des play-offs (2e victoire de la série).
+function hmLiveTrophy(S) {
+  const c = typeof currentMatch !== "undefined" ? currentMatch : null, m = S.teams.findIndex(t => t.mine);
+  if (!c || m < 0) return null;
+  const w = S.teams[m].score > S.teams[1 - m].score ? myTeamIndex : c.opponent;
+  if (c.seriesId === "final") {
+    const s = league.playoffs && league.playoffs.finalSeries, h = c.isHome ? myTeamIndex : c.opponent, sh = S.teams[c.isHome ? m : 1 - m].score, sa = S.teams[c.isHome ? 1 - m : m].score;
+    const prev = s ? (s.games || []).filter(g => !(g.home === h && g.scoreHome === sh && g.scoreAway === sa)).filter(g => (g.scoreHome > g.scoreAway ? g.home : g.away) === w).length : 0;
+    return prev >= 1 ? { kind: "title", label: "Champion · Finale des play-offs", key: "po" } : null;
+  }
+  const l = c.competition === "cup" ? cupStageLabelForRoundIndex(c.round) : "";
+  return l === "Finale" || l === "Supercoupe" ? { kind: "cup", label: l === "Finale" ? "Coupe" : l, key: "cup" + c.round } : null;
+}
 function hmLive2dOn() {
   const f = HM_FEATURES && HM_FEATURES.live2d;
   const beta = !!(teamA && typeof teamA.hasBetaFeature === "function" && teamA.hasBetaFeature("live2d"));

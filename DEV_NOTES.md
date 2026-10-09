@@ -80,7 +80,24 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
   uniquement, disponibilité vs prochain match, rechargement chaque minute —
   test national_medical_test. Préexistants (échouent aussi sans ces
   changements) : server/national_matches_test (« chaque match a un direct »).
-  RESTE : P3. Préexistant (échoue aussi sans ces
+  P3 (2026-10-09) : (4) MARCHÉ — configurations de recherche :
+  server/marketPresets.js (format versionné v1, champs absents = défaut,
+  inconnus ignorés, 20 max, noms uniques insensibles à la casse, 409 sans
+  overwrite) + route compte GET/POST /api/account/market-presets
+  (persisted:false sans compte → localStorage « hm-market-presets ») ;
+  client assets/market-presets.js (barre « Mes recherches », bottom sheets,
+  enveloppe renderMarketListings sans le modifier ; caractéristiques
+  absentes de MK_GROUPS écartées au chargement) — tests
+  server/market_presets_test, market_presets_ui_test. (5) MOMENTS FORTS
+  du direct : assets/live/highlights.js (3 POINTS, ON FIRE = 6 paniers
+  d'affilée et ≥ 14 pts — calibré sur 40 matchs ≈ 1,7/match —, titre,
+  coupe ; clés jamais rejouées, `prime` au premier affichage et sur saut
+  dans le temps, calque pointer-events:none, mouvement réduit) ; trophée :
+  moteurbasket3 `hmLiveTrophy` (finale/Supercoupe de coupe, finale des
+  play-offs = 2e victoire de la série) + finale des tournois NT via
+  S.meta — test live_highlights_test. ⚠️ moteurbasket3.html ≈ 3 999 600
+  octets (limite 4 000 000) : plus RIEN à y ajouter sans en retirer.
+  RESTE : partage de match / rediffusion. Préexistant (échoue aussi sans ces
   changements) : cup_ordres_planning_test.
 
 - **🟢 LIVRÉ (2026-10-09) — Live 2D : drapeaux dans les gradins**.
