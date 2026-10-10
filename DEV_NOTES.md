@@ -20,6 +20,52 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟡 EN COURS DE LIVRAISON (2026-10-10) — Mission live + sélections
+  (13 points)**. Branche `claude/kind-shannon-8nx9sq`.
+  - Chrono 24 s éteint quand il reste < 24 s au quart (`HM_RULES.shotClockOn`,
+    adaptateur + miroir club) ; chrono du quart monotone pendant faute →
+    lancers (`HM_RULES.clockBetween`, arrêts `stopHoldMs`). Tests :
+    `live_shot_clock_end_test.js`, `live_court2d_clock_test.js`.
+  - Décomptes pause / mi-temps / temps mort depuis `S.stoppage.remaining`,
+    un seul buzzer. Test : `live_stoppage_countdown_test.js`,
+    `live_buzzer_audio_test.js`.
+  - Icône Marché « Joueurs » = débardeur (`MK_MODE_ICONS.players`,
+    `market_tank_icon_test.js`).
+  - « +2 » : calque `ptsG` à part, une fois par panier (id d'événement) ;
+    « AND ONE » seulement sur le lancer franc additionnel RÉUSSI
+    (`live_court2d_points_andone_test.js`).
+  - Son : UN AudioContext partagé `assets/audio/audio-core.js`
+    (`window.HMAudio`), jamais recréé hors geste, bouton « touchez pour
+    réactiver » (`live_audio_lifecycle_test.js`, autoplay iPhone émulé).
+  - Enchères : `transferMinIncrement` (20 % ≤ 250 k$, +50 k$ jusqu'à 1 M$,
+    5 % au-delà arrondi au millier supérieur), identique engine.js /
+    client, validé par le serveur (`bid_increment_test.js`).
+  - Tunnels des vestiaires (court2d `TUNNELS`, staging, showfx `accessFrom`)
+    : joueurs, coachs, pompom girls, mascotte (un tour puis attente),
+    lanceurs (tournée déterministe) (`live_tunnel_access_test.js`,
+    `live_shows_canvas_test.js`).
+  - Ballon vivant toujours dans les lignes, aucune passe de jeu ballon mort
+    (`live_court2d_bounds_test.js`). Le moteur n'a PAS de modèle spatial des
+    sorties : garde-fou côté rendu seulement.
+  - Mode Sélection : confirmation Convoquer / Retirer (modale, un seul
+    envoi, erreur explicite) ; serveur `{add}` / `{remove}` unitaires,
+    retrait = retiré des ordres, annulation si l'enregistrement échoue
+    (`national_convocation_confirm_test.js`).
+  - Direct national dans une vraie page `#ntLiveSection` (onglet `ntlive`,
+    bandeau `#topbarNtLiveStrip`, retour navigateur), plus de fenêtre ;
+    `ntLiveState` indépendant de `spectateState` ; un seul direct audible
+    (`national_live_tab_test.js`, Chromium).
+  - Personnalisation Premium complète des sélections : `store.teams[id].look`
+    (stock national, jamais le club), POST `/api/national/look` (rôle
+    sélectionneur / adjoint + club Premium ; null = retour au catalogue
+    sans Premium), appliquée par `matchDress` → équipe du match ; direct :
+    parquet (avant ignoré pour `intl`) et logos (importé, sinon écusson
+    du catalogue via `intl.logos`). Tests : `server/national_premium_look_test.js`,
+    `national_premium_look_ui_test.js`, `national_premium_live_test.js`.
+  - Reste à vérifier sur téléphone réel : son après changement d'onglet
+    (iPhone, bouton silencieux non géré : `navigator.audioSession` non
+    réglé) ; rendu des tunnels.
+
 - **🟢 LIVRÉ (2026-10-10) — Pertes de balle d'ÉQUIPE (violations)**.
   Test : `team_turnovers_test.js`.
   - Toute violation (8 s, 24 s, airball à la sirène repris par l'attaque,
@@ -1702,6 +1748,9 @@ points réellement ouverts.
 - **lineup_minutes_test.js** : échec ponctuel constaté le 2026-09-28
   ("Arrière : titulaire trop loin de sa cible"), repassé 3/3 ensuite —
   aléatoire du moteur, flaky.
+- Échouent sous charge (4 tests en parallèle) mais passent seuls, 2026-10-10 :
+  achievements_test.js, contracts_test.js, engine_seed_timeouts_test.js,
+  server/national_finals_test.js.
 - Également flaky en sandbox : mobile_viewport_meta_test.js (fetch failed) ;
   server/inactive_manager_test.js (ECONNRESET sous charge, passe seul).
 
