@@ -283,7 +283,7 @@ export function createSfx(opts = {}) {
     final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
     off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
   };
-  const amb = { mode: "off", bed: null, boo: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
+  const amb = { mode: "off", bed: null, boo: null, chant: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
   let noiseBuf = null;
   function crowdNoise() {
     // Bruit « rose » de 4 s, généré UNE fois et réutilisé partout.
@@ -323,8 +323,15 @@ export function createSfx(opts = {}) {
     });
     return layer;
   }
+  // Chant « DE-FENSE » enregistré (clé `amb_chant`, boucle de plusieurs
+  // cycles) : une couche en boucle qui monte en défense et s'éteint dès le
+  // changement de possession ; sans fichier, chants synthétisés (chantOnce).
+  const CHANT_GAIN = 0.75;
+  const hasFile = key => !!(manifest.files && manifest.files[key]);
   function ensureLayers() {
+    if (!amb.chant && amb.bed && hasFile("amb_chant")) amb.chant = loopLayer("amb_chant", () => {});
     if (amb.bed || !audio()) return;
+    if (hasFile("amb_chant")) amb.chant = loopLayer("amb_chant", () => {});
     // Fond : brouhaha (passe-bande large) qui « respire » (deux LFO lents).
     amb.bed = loopLayer("amb_bed", (src, g, layer) => {
       const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1000; bp.Q.value = 0.55;
@@ -419,7 +426,7 @@ export function createSfx(opts = {}) {
   function scheduleLoops() {
     clearAmbTimers();
     const m = AMB_MIX[amb.mode] || AMB_MIX.off;
-    if (m.chant) { const loop = () => { chantOnce(); amb.chantTimer = setTimeout(loop, 2600 + Math.random() * 900); }; amb.chantTimer = setTimeout(loop, 700); }
+    if (m.chant && !amb.chant) { const loop = () => { chantOnce(); amb.chantTimer = setTimeout(loop, 2600 + Math.random() * 900); }; amb.chantTimer = setTimeout(loop, 700); }
     if (m.claps) { const loop = () => { clapsOnce(); amb.clapTimer = setTimeout(loop, 5200 + Math.random() * 3500); }; amb.clapTimer = setTimeout(loop, 1800 + Math.random() * 1500); }
     if (amb.mode === "ftAway") { const loop = () => { whistleOnce(); amb.whistleTimer = setTimeout(loop, 1400 + Math.random() * 1200); }; amb.whistleTimer = setTimeout(loop, 300); }
   }
@@ -434,6 +441,10 @@ export function createSfx(opts = {}) {
     const tc = mode === "ftHome" ? 0.35 : 0.9;
     if (amb.bed) { T(amb.bed.gain.gain, m.bed, tc); if (amb.bed.filter) T(amb.bed.filter.frequency, m.tone, 1.2); }
     if (amb.boo) T(amb.boo.gain.gain, m.boo, m.boo ? 0.5 : 0.8);
+    if (amb.chant) {
+      T(amb.chant.gain.gain, m.chant ? CHANT_GAIN : 0, m.chant ? 0.45 : 0.3);
+      if (m.chant) { amb.log.push({ kind: "chant", file: true, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
+    }
     scheduleLoops();
     return true;
   }

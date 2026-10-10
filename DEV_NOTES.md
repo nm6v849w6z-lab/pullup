@@ -174,7 +174,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     variantes (liste dans le manifeste, `pick` sans répétition) +
     `amb_cheer_big` (intensité ≥ 1,3 : 3 pts, panier décisif), Freesound
     678544 (CC0) ; fichier lancé 0,13 s après l'événement, gain 0,85 × intensité
-    ± 8 %. Test : `live_ambience_files_test.js`. Boucles de
+    ± 8 %. Chant `amb_chant` = boucle enregistrée (6 cycles « DE-FENSE »,
+    2 variantes de hauteur) montée en défense (gain 0,75), coupée en
+    attaque, remplace les chants synthétisés ; fichier fourni SANS licence
+    vérifiée (décision du propriétaire, voir AUDIO_LICENSES.md) — à
+    remplacer à terme. Test : `live_ambience_files_test.js`. Boucles de
     fichiers : départ à un point aléatoire, `trimLoop` ignore le silence
     d'encodeur MP3 aux bords.
   - **Lancers francs réglementaires (2026-10-10)** : `ftAlignment` /
@@ -194,7 +198,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-4`.
+    trois. Assets du direct en `?v=20261010-5`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

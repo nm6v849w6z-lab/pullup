@@ -31,7 +31,7 @@ le direct : elle se coupe sans couper les bruitages.
 |--------------|-----------------------------------------------------------|---------------------------------------------------|
 | `amb_bed`    | fond de public permanent (bouclé, volume selon l'humeur)  | **fourni** : `amb_bed.mp3` (voir AUDIO_LICENSES.md) |
 | `amb_boo`    | huées sur un lancer franc adverse (bouclé)                | huées 8–15 s, bouclables                          |
-| `amb_chant`  | « DE-FENSE ! » quand l'équipe à domicile défend           | une prise de 2–3 s (« de-fense » + 2 frappes)     |
+| `amb_chant`  | « DE-FENSE ! » quand l'équipe à domicile défend           | **fourni** : boucle `amb_chant_1..2.mp3` (montée en défense ; licence : voir AUDIO_LICENSES.md) |
 | `amb_cheer`  | clameur après un panier à domicile / tir adverse manqué   | **fourni** : 3 variantes `amb_cheer_1..3.mp3` (tirées au hasard) + `amb_cheer_big.mp3` (3 pts, panier décisif) |
 | `amb_groan`  | déception (panier adverse, tir domicile manqué)           | « ohhh » 1–2 s                                    |
 | `amb_applause` | applaudissements (lancer réussi, temps mort, fin de quart) | applaudissements 2–3 s                      |

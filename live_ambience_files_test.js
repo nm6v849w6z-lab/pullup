@@ -46,6 +46,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   assert.ok(started.some(s => s.name === "amb_bed.mp3" && s.loop), "fond amb_bed.mp3 lancé en boucle");
   ok("Fond de public : amb_bed.mp3 bouclé dès que l'ambiance démarre.");
 
+  // Défense : le chant enregistré (amb_chant, une variante) tourne en boucle ;
+  // pas de chant synthétisé en plus ; attaque : il s'éteint (log du mode).
+  sfx.updateAmbience({ ...base, possession: 1 });
+  await sleep(50);
+  const chantSrc = started.filter(s => /^amb_chant_\d\.mp3$/.test(s.name));
+  assert.strictEqual(chantSrc.length, 1, "chant enregistré lancé une fois : " + JSON.stringify(started));
+  assert.ok(chantSrc[0].loop, "chant en boucle");
+  await sleep(1200);
+  assert.ok(sfx.debug().ambLog.filter(x => x.kind === "chant").every(x => x.file), "aucun chant synthétisé quand le fichier existe");
+  sfx.updateAmbience({ ...base, possession: 0 });
+  sfx.updateAmbience({ ...base, possession: 1 });
+  await sleep(50);
+  assert.strictEqual(started.filter(s => /^amb_chant_/.test(s.name)).length, 1, "retour en défense : même boucle remontée, pas relancée");
+  ok(`Défense : chant enregistré (${chantSrc[0].name}) en boucle, monté en défense et coupé en attaque, jamais relancé ; plus de chant synthétisé.`);
+
   const cheers = () => started.filter(s => /^amb_cheer/.test(s.name)).map(s => s.name);
   let id = 100;
   for (let i = 0; i < 12; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(5); }

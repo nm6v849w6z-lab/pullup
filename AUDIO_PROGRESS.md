@@ -11,14 +11,18 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] D. Clameur après un panier à domicile → `amb_cheer_1..3.mp3` + `amb_cheer_big.mp3`
   (Freesound 678544, mglennsound, CC0) — 2026-10-10. Joue aussi, plus bas, sur un
   tir ou lancer adverse manqué et une interception à domicile.
+- [x] C. Chant « Defense! Defense! » → `amb_chant_1..2.mp3` (fichier fourni, match Miami
+  Heat 2022, **sans licence vérifiée**, utilisé sur décision du propriétaire — à remplacer
+  par un chant sous licence à terme) — 2026-10-10
 
 
 ## Pistes refusées
+- Chant défensif : LS 11537 (CC-BY), craigsmith 438396 (CC0), johnnyguitar01 424793
+  (CC0) refusés à l'écoute (2026-10-10)
 - Freesound 412160 « Fans at Basketball Game » (phillyfan972) : speaker,
   creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
-- [ ] C. Chant « Defense! Defense! » → `amb_chant` (actuellement synthétisé)
 - [ ] D/E. Déception (panier adverse, tir ou lancer manqué à domicile) → `amb_groan`
 - [ ] A/E. Applaudissements (lancer réussi, temps mort, fin de quart) → `amb_applause`
 - [ ] E. Huées sur lancer franc adverse (boucle) → `amb_boo`
