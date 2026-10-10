@@ -127,7 +127,7 @@ export function createSfx(opts = {}) {
   const buffers = new Map();
   const ready = (typeof fetch === "function"
     ? fetch(`${base}/manifest.json`, { cache: "no-cache" }).then(r => (r.ok ? r.json() : { files: {} })).catch(() => ({ files: {} }))
-    : Promise.resolve({ files: {} })).then(m => { manifest = m && m.files ? m : { files: {} }; if (prefs.level > 0) preload(); return manifest; });
+    : Promise.resolve({ files: {} })).then(m => { manifest = m && m.files ? m : { files: {} }; if (prefs.level > 0 || prefs.amb > 0) preload(); return manifest; });
 
   function audio() {
     if (ctx) return ctx;
@@ -150,8 +150,18 @@ export function createSfx(opts = {}) {
   // Contexte mis en pause par le navigateur (créé avant un geste, onglet
   // revenu, « interrupted » sur iPhone) : relancé au prochain geste.
   function unlock() { const c = audio(); if (c && c.state !== "running" && c.state !== "closed") { try { const q = c.resume(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
-  function load(key) {
-    const file = manifest.files && manifest.files[key];
+  // Variantes : une clé du manifeste peut lister plusieurs fichiers ; on en
+  // tire un au hasard, jamais deux fois de suite le même.
+  const lastPick = {};
+  function pick(key) {
+    const f = manifest.files && manifest.files[key];
+    if (!Array.isArray(f)) return f || null;
+    if (!f.length) return null;
+    let i; do { i = Math.floor(Math.random() * f.length); } while (f.length > 1 && i === lastPick[key]);
+    lastPick[key] = i;
+    return f[i];
+  }
+  function load(key, file = pick(key)) {
     if (!file) return Promise.resolve(null);
     const url = `${base}/${file}?v=${encodeURIComponent(manifest.version || 1)}`;
     if (buffers.has(url)) return buffers.get(url);
@@ -163,7 +173,12 @@ export function createSfx(opts = {}) {
     buffers.set(url, pr);
     return pr;
   }
-  function preload() { for (const k of Object.keys(manifest.files || {})) load(k); }
+  function preload() {
+    for (const [k, v] of Object.entries(manifest.files || {})) {
+      if (!(k.startsWith("amb_") ? prefs.amb > 0 : prefs.level > 0)) continue;
+      for (const f of [].concat(v)) load(k, f);
+    }
+  }
 
   // ---------- synthèse (aucun fichier fourni) ----------
   const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
@@ -444,10 +459,15 @@ export function createSfx(opts = {}) {
     const c = audio(); if (!c) return;
     unlock();
     ensureLayers();
-    load("amb_" + r.kind).then(buf => {
+    // Grand moment (3 points, panier décisif) : version longue « _big » si
+    // fournie ; sinon une des variantes (jamais deux fois la même de suite).
+    const big = (r.intensity || 1) >= 1.3 && manifest.files && manifest.files["amb_" + r.kind + "_big"];
+    load(big ? "amb_" + r.kind + "_big" : "amb_" + r.kind).then(buf => {
       try {
         const t = ctx.currentTime + 0.02, k = Math.min(1.8, r.intensity || 1);
-        if (buf) { const src = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = Math.min(1, 0.6 * k); src.buffer = buf; src.connect(g); g.connect(ambDuck); src.start(t); return; }
+        // Fichier : léger temps de réaction du public (≈ 0,15 s), volume
+        // selon l'intensité avec une petite variation.
+        if (buf) { const src = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = Math.min(1.3, 0.85 * k * (0.92 + Math.random() * 0.16)); src.buffer = buf; src.connect(g); g.connect(ambDuck); src.start(t + 0.13); return; }
         const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
         src.buffer = crowdNoise(); bp.type = "bandpass";
         if (r.kind === "cheer") {          // clameur qui monte puis retombe (+ « woo » aigu)

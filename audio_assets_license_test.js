@@ -8,12 +8,16 @@ const man = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8"))
 const reg = fs.readFileSync(path.join(__dirname, "AUDIO_LICENSES.md"), "utf8");
 const fail = m => { console.error("❌ " + m); process.exit(1); };
 if (!Number.isInteger(man.version) || !man.files || typeof man.files !== "object") fail("manifest.json : { version, files } attendu");
-for (const [key, file] of Object.entries(man.files)) {
+const entries = Object.entries(man.files).flatMap(([key, v]) => {
+  if (Array.isArray(v) && !v.length) fail(`${key} : liste de variantes vide`);
+  return [].concat(v).map(file => [key, file]);
+});
+for (const [key, file] of entries) {
   if (!/^[a-z_]+$/.test(key) || !/^[a-z0-9_]+\.(mp3|ogg|m4a|wav)$/.test(file)) fail(`nom invalide : ${key} → ${file}`);
   const p = path.join(dir, file);
   if (!fs.existsSync(p) || fs.statSync(p).size < 1000) fail(`fichier manquant ou vide : ${file}`);
   if (fs.statSync(p).size > 3e6) fail(`fichier trop lourd pour le direct (> 3 Mo) : ${file}`);
-  const sec = reg.split(/^## /m).find(s => s.startsWith(file));
+  const sec = reg.split(/^## /m).find(s => s.split("\n")[0].split(/[ ,·]+/).includes(file));
   if (!sec) fail(`${file} absent de AUDIO_LICENSES.md`);
   for (const f of ["Source", "Licence", "Conditions", "Vérifiée le", "Attribution requise", "Modifications"]) if (!new RegExp("\\| " + f + " \\|").test(sec)) fail(`${file} : champ « ${f} » manquant dans AUDIO_LICENSES.md`);
   console.log(`✅ ${key} → ${file} (${(fs.statSync(p).size / 1e6).toFixed(2)} Mo), licence enregistrée`);

@@ -170,7 +170,11 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     `AUDIO_LICENSES.md`, suivi `AUDIO_PROGRESS.md`, test
     `audio_assets_license_test.js`. `amb_bed.mp3` = Freesound 635492 (kyles,
     CC0), extrait propre 0–64 s, boucle 61 s, −23 dBFS (1re piste 412160
-    refusée : speaker, creux, applaudissements). Boucles de
+    refusée : speaker, creux, applaudissements). Clameur `amb_cheer` = 3
+    variantes (liste dans le manifeste, `pick` sans répétition) +
+    `amb_cheer_big` (intensité ≥ 1,3 : 3 pts, panier décisif), Freesound
+    678544 (CC0) ; fichier lancé 0,13 s après l'événement, gain 0,85 × intensité
+    ± 8 %. Test : `live_ambience_files_test.js`. Boucles de
     fichiers : départ à un point aléatoire, `trimLoop` ignore le silence
     d'encodeur MP3 aux bords.
   - **Lancers francs réglementaires (2026-10-10)** : `ftAlignment` /
@@ -190,7 +194,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-3`.
+    trois. Assets du direct en `?v=20261010-4`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

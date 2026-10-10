@@ -1,6 +1,8 @@
 {
-  "version": 4,
+  "version": 5,
   "files": {
-    "amb_bed": "amb_bed.mp3"
+    "amb_bed": "amb_bed.mp3",
+    "amb_cheer": ["amb_cheer_1.mp3", "amb_cheer_2.mp3", "amb_cheer_3.mp3"],
+    "amb_cheer_big": "amb_cheer_big.mp3"
   }
 }
