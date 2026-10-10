@@ -54,11 +54,13 @@ if (na.actors) for (const id of Object.values(na.actors)) if (id && !ids.has(id)
 const raw = hm.match.events.find(e => e.airAt === na.airAt);
 if (!raw || raw.type !== na.kind) fail("nextAction doit correspondre au prochain événement de la timeline.");
 if (na.shot) {
-  // Même endroit que celui qui sera journalisé à l'arrivée de l'événement (graine = airAt).
+  // Même endroit que celui qui sera journalisé à l'arrivée de l'événement
+  // (graine = identité de l'événement, mission live 2026-10-10 : jamais
+  // l'heure de diffusion, décalée en rediffusion).
   const zone = raw.zone === "inside" ? "paint" : raw.zone;
   const t = na.kind === "rebound" ? (raw.offensive ? na.team : 1 - na.team) : na.team;
-  const p = w.eval("hmLiveShotSpot")(zone, t, Math.round(raw.airAt), raw.spot);
-  if (Math.abs(p.x - na.shot.x) > 1e-9 || Math.abs(p.y - na.shot.y) > 1e-9) fail("l'endroit du tir de nextAction doit être celui qui sera journalisé (graine airAt).");
+  const p = w.eval("hmLiveShotSpot")(zone, t, w.eval("hmLiveEventSeed")(raw), raw.spot);
+  if (Math.abs(p.x - na.shot.x) > 1e-9 || Math.abs(p.y - na.shot.y) > 1e-9) fail("l'endroit du tir de nextAction doit être celui qui sera journalisé (graine de l'événement).");
 }
 console.log(`✅ nextAction = ${na.kind} à +${Math.round((na.airAt - clock.now) / 1000)} s, sans résultat, acteurs valides.`);
 
@@ -73,7 +75,9 @@ for (const e of shots) {
   if (!["three", "jumper", "layup", "fastbreak", "post", "floater"].includes(e.shotType)) fail(`type de tir inattendu : ${e.shotType}.`);
   if (!["ouvert", "contesté", "très contesté"].includes(e.quality)) fail(`qualité inattendue : ${e.quality}.`);
   if (!(e.possLen > 0 && e.possLen <= 24.5)) fail(`durée de possession invalide : ${e.possLen}.`);
-  if (!e.actors.defender) fail("le défenseur du tir doit être identifié.");
+  // (un tir contré porte son contreur ; depuis la mission live 2026-10-10 il
+  // n'hérite plus du « défenseur » du contexte, lu comme une faute sur tir)
+  if (!e.actors.defender && !e.actors.blocker) fail("le défenseur du tir doit être identifié.");
 }
 const chainLens = shots.map(e => e.passes.length);
 // Le moteur désigne toujours un créateur distinct du tireur : 2 joueurs
