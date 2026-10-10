@@ -1065,6 +1065,9 @@ export function createCourt2D(host, opts = {}) {
   // `maxMs` : durée maximale du vol (la passe doit arriver avant le tir).
   function pass(from, to, lob = false, maxMs = Infinity) {
     if (!to || ball.holder === to.id || (ball.flight && ball.flight.target === to.id)) return;
+    // Ballon mort (sortie, faute, coup de sifflet) : aucune passe de jeu avant
+    // la remise en jeu réglementaire (seul le remiseur passe, voir runInbound).
+    if (phase === "DEAD_BALL" && !(from && inbounder && from.id === inbounder)) { diag("blocked", { what: "pass-dead-ball", from: from ? from.id : null, to: to.id, why: phaseWhy }); deadPassBlocked++; return; }
     if (ball.flight && from && ball.flight.target === from.id) { const d = ball.flight.done; ball.flight.done = () => { if (d) d(); pass(from, to, lob, maxMs); }; return; }
     const src = ball.holder ? spriteOf(ball.holder) : null;
     if (src && src.team !== to.team) return;
@@ -1118,6 +1121,38 @@ export function createCourt2D(host, opts = {}) {
   }
   // Le joueur est-il HORS du terrain (derrière une ligne) ? Lignes : x 0–94, y 0–50.
   const outside = (x, y) => x < 0 || x > 94 || y < 0 || y > 50;
+  // Ballon VIVANT (mission live 2026-10-10, « un joueur fait une passe alors
+  // qu'il est en touche ») : règle FIBA, toucher la ligne = être dehors ; le
+  // moteur n'a sifflé AUCUNE sortie → le porteur, le ballon libre et le
+  // receveur d'une passe restent DANS le terrain (au moins IN_MARGIN des
+  // lignes : le jeton ne mord jamais la ligne). Une vraie sortie de balle
+  // vient toujours d'un événement du moteur (outOfBounds / perte ballon
+  // dehors → ballOut : sifflet, arrêt, remise en jeu) — le rendu n'en crée
+  // jamais et ne laisse jamais jouer un ballon dehors.
+  const IN_MARGIN = 0.9;
+  const inPlay = (x, y) => x > IN_MARGIN && x < 94 - IN_MARGIN && y > IN_MARGIN && y < 50 - IN_MARGIN;
+  const clampIn = v => ({ x: Math.min(94 - IN_MARGIN, Math.max(IN_MARGIN, v.x)), y: Math.min(50 - IN_MARGIN, Math.max(IN_MARGIN, v.y)) });
+  let oobFixes = 0, deadPassBlocked = 0;
+  function keepInPlay() {
+    if (phase !== "LIVE" || inbounder || !gameOn) return;
+    // Porteur : jamais au-delà d'une ligne (ni sa cible).
+    const h = ball.holder ? sprites.get(ball.holder) : null;
+    if (h && !inPlay(h.x, h.y)) { const c = clampIn(h); h.x = c.x; h.y = c.y; h.vx = h.vy = 0; oobFixes++; }
+    if (h && !inPlay(h.tx, h.ty)) { const c = clampIn({ x: h.tx, y: h.ty }); h.tx = c.x; h.ty = c.y; }
+    // Ballon libre (rebond, ballon perdu) : il rebondit sur la limite au lieu
+    // de sortir — personne ne le ramasse derrière une ligne.
+    const L = ball.loose;
+    if (L && !ball.holder && !inPlay(L.x, L.y)) {
+      const c = clampIn(L);
+      if (c.x !== L.x) L.vx = -L.vx * 0.4;
+      if (c.y !== L.y) L.vy = -L.vy * 0.4;
+      L.x = c.x; L.y = c.y; oobFixes++;
+    }
+    // Passe / ballon qui retombe : point d'arrivée dans le terrain ; receveur aussi.
+    const f = ball.flight;
+    if (f && (f.kind === "pass" || f.land) && f.to && !inPlay(f.to.x, f.to.y)) { const c = clampIn(f.to); f.to = c; oobFixes++; }
+    if (f && f.kind === "pass" && f.target) { const r = sprites.get(f.target); if (r && !inPlay(r.tx, r.ty)) { const c = clampIn({ x: r.tx, y: r.ty }); r.tx = c.x; r.ty = c.y; } }
+  }
   function say(text) { caption.innerHTML = text; caption.classList.add("show"); }
   // « +1 / +2 / +3 » (retour utilisateur 2026-10-08) : élément à part, attaché
   // au jeton, qui apparaît vite, reste ~2 s puis s'efface et est SUPPRIMÉ ;
@@ -1296,6 +1331,14 @@ export function createCourt2D(host, opts = {}) {
     later(7000, () => { if (!stopped() && inbounder && inb && inbounder === inb.id && deadBall()) { anomalies++; diag("anomaly", { what: "inbound-watchdog", id: inb.id }); completeInbound(nt, pg, inb, why, keepClock, 3); } });
   }
   function completeInbound(nt, pg, inb, why, keepClock, tries = 0) {
+    // Receveur DANS le terrain (jamais le remiseur lui-même, jamais un joueur
+    // derrière une ligne) : sinon, le coéquipier le plus proche en jeu.
+    if (!pg || pg === inb || !inPlay(pg.x, pg.y)) {
+      const mates = [...sprites.values()].filter(sp => sp.team === nt && sp !== inb && !sp.leaving && inPlay(sp.x, sp.y));
+      const from = inb || pg || { x: ball.x, y: ball.y };
+      const alt = mates.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
+      if (alt) pg = alt;
+    }
     if (inb && ball.holder === inb.id && pg && pg !== inb && tries < 3) {
       pass(inb, pg);
       later(650, () => { if (performance.now() >= stopUntil) completeInbound(nt, pg, inb, why, keepClock, tries + 1); });
@@ -2848,6 +2891,7 @@ export function createCourt2D(host, opts = {}) {
       const has = ball.holder === id;
       if (has !== sp.hasBall) { sp.hasBall = has; sp.g.classList.toggle("has-ball", has); sp.carrier.setAttribute("opacity", has ? "1" : "0"); }
     }
+    keepInPlay();
     for (const f of floats) placeFloat(f);
     if (trail && trail.flight !== ball.flight) endTrail();
     if (ball.flight) {
@@ -3116,7 +3160,7 @@ export function createCourt2D(host, opts = {}) {
       if (state.status === "pregame" || state.status === "final" || state.status === "halftime") {
         for (const sp of sprites.values()) { if (!sp.leaving) { const p = parkLine(sp.team, sp.slot); moveTo(sp, p.x, p.y, 1); } }
         ball.holder = null;
-        clockTxt.textContent = "24";
+        clockTxt.textContent = "";   // chrono des 24 s éteint hors du jeu (jamais un « 24 » par défaut)
       }
     },
     // État du ballon pour les tests (audit possession 2026-10-07).
@@ -3124,9 +3168,9 @@ export function createCourt2D(host, opts = {}) {
     perfReset() { perf.n = 0; perf.i = 0; perf.prev = 0; perf.spikes = 0; perf.longFrames = 0; perf.maxIv = 0; perf.maxWork = 0; perf.frames = 0; },
     debug() {
       const h = ball.holder ? sprites.get(ball.holder) : null;
-      return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to } : null,
+      return { holder: ball.holder, holderTeam: h ? h.team : null, inFlight: !!ball.flight, flightTarget: ball.flight ? ball.flight.target : null, flight: ball.flight ? { t: ball.flight.t, ms: ball.flight.ms, to: ball.flight.to, from: ball.flight.from, kind: ball.flight.kind } : null,
         scenePossession: possession, owner: ownerTeam(), refusals: audit.refusals, corrections: audit.corrections, releases: audit.releases,
-        phase, phaseWhy, anomalies, inbounder, log: diagLog.slice(),
+        phase, phaseWhy, anomalies, inbounder, log: diagLog.slice(), oobFixes, deadPassBlocked,
         suspended, resyncs: resyncCount, pendingTimers: timers.size, queued: queue.length, perf: perfReport(), gameOn, jumps, inbounds: inboundCount, sideInbounds, inboundHeld: !!heldInbound, ball: [+ball.x.toFixed(2), +ball.y.toFixed(2)], keeper: (k => (k ? [+k.x.toFixed(2), +k.y.toFixed(2)] : null))(refKeeper()),
         staging: stage ? stage.debug() : null };
     },
