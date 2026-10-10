@@ -61,6 +61,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   assert.strictEqual(started.filter(s => /^amb_chant_/.test(s.name)).length, 1, "retour en défense : même boucle remontée, pas relancée");
   ok(`Défense : chant enregistré (${chantSrc[0].name}) en boucle, monté en défense et coupé en attaque, jamais relancé ; plus de chant synthétisé.`);
 
+  // Lancer franc adverse : la boucle de huées enregistrée monte (créée une
+  // fois, jamais relancée) ; pas de sifflets synthétisés en plus.
+  const boos = () => started.filter(s => s.name === "amb_boo.mp3");
+  sfx.updateAmbience({ ...base, possession: 1, nextAction: { kind: "freeThrow", team: 1, airAt: t + 3000 } });
+  await sleep(50);
+  assert.strictEqual(sfx.ambMode, "ftAway");
+  assert.ok(boos().length === 1 && boos()[0].loop, "huées enregistrées en boucle : " + JSON.stringify(started.map(s => s.name)));
+  sfx.updateAmbience({ ...base, possession: 0 });
+  sfx.updateAmbience({ ...base, possession: 1, nextAction: { kind: "freeThrow", team: 1, airAt: t + 3000 } });
+  await sleep(50);
+  assert.strictEqual(boos().length, 1, "huées remontées, pas relancées");
+  sfx.updateAmbience({ ...base, possession: 0 });
+  ok("Lancer franc adverse : huées enregistrées (amb_boo.mp3) en boucle, remontées sans relance ; plus de sifflets synthétisés.");
+
   const cheers = () => started.filter(s => /^amb_cheer/.test(s.name)).map(s => s.name);
   let id = 100;
   for (let i = 0; i < 12; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(5); }

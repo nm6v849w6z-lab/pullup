@@ -276,7 +276,7 @@ export function createSfx(opts = {}) {
     offense: { bed: 0.62, tone: 1250, boo: 0, chant: false, claps: true },
     defense: { bed: 0.5, tone: 1050, boo: 0, chant: true, claps: false },
     ftHome: { bed: 0.13, tone: 700, boo: 0, chant: false, claps: false },
-    ftAway: { bed: 0.32, tone: 900, boo: 0.55, chant: false, claps: false },
+    ftAway: { bed: 0.32, tone: 900, boo: 1.0, chant: false, claps: false },
     break: { bed: 0.5, tone: 950, boo: 0, chant: false, claps: false },
     pregame: { bed: 0.48, tone: 950, boo: 0, chant: false, claps: false },
     neutral: { bed: 0.55, tone: 1000, boo: 0, chant: false, claps: false },
@@ -428,7 +428,8 @@ export function createSfx(opts = {}) {
     const m = AMB_MIX[amb.mode] || AMB_MIX.off;
     if (m.chant && !amb.chant) { const loop = () => { chantOnce(); amb.chantTimer = setTimeout(loop, 2600 + Math.random() * 900); }; amb.chantTimer = setTimeout(loop, 700); }
     if (m.claps) { const loop = () => { clapsOnce(); amb.clapTimer = setTimeout(loop, 5200 + Math.random() * 3500); }; amb.clapTimer = setTimeout(loop, 1800 + Math.random() * 1500); }
-    if (amb.mode === "ftAway") { const loop = () => { whistleOnce(); amb.whistleTimer = setTimeout(loop, 1400 + Math.random() * 1200); }; amb.whistleTimer = setTimeout(loop, 300); }
+    // Fichier de huées fourni : ses sifflets suffisent (pas de sifflets synthétisés).
+    if (amb.mode === "ftAway" && !hasFile("amb_boo")) { const loop = () => { whistleOnce(); amb.whistleTimer = setTimeout(loop, 1400 + Math.random() * 1200); }; amb.whistleTimer = setTimeout(loop, 300); }
   }
   function setMode(mode) {
     if (mode === amb.mode) return false;

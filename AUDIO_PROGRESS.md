@@ -20,6 +20,8 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] A/E. Applaudissements → `amb_applause_1..4.mp3` + `amb_applause_big.mp3` (Freesound
   706732, Rogers Arena, CC0) — 2026-10-10 : lancer franc réussi à domicile, temps mort,
   fin de quart-temps (version longue)
+- [x] E. Huées sur lancer franc adverse → `amb_boo.mp3` (Freesound 678537, mglennsound, CC0,
+  fichier original fourni ; 8 couches empilées pour une plus grande salle) — 2026-10-10
 
 
 ## Pistes refusées
@@ -31,7 +33,6 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
   creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
-- [ ] E. Huées sur lancer franc adverse (boucle) → `amb_boo`
 - [ ] B. Applaudissements rythmiques / « Let's go » en attaque
 - [ ] A. Variantes de fond : salle calme, salle en ébullition
 

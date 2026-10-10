@@ -101,3 +101,19 @@ figure ici).
 | Attribution requise | Non communiquée |
 | Modifications | entree-joueurs : réencodée MP3 192 kb/s (volume d'origine) ; mascotte-1..3 : volume aligné à ≈ −16,5 LUFS (loudnorm, crête −1,5 dBTP), MP3 192 kb/s |
 | Restrictions | À confirmer par le propriétaire (droits sur les musiques) |
+
+## amb_boo.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_boo.mp3` (clé `amb_boo`, boucle montée pendant les lancers francs adverses) |
+| Ressource originale | « AF Crowd Boo Hiss LOOP 2.wav » (Freesound n° 678537), « originally recorded for a basketball game » ; fichier original WAV 24 bits / 48 kHz téléchargé par le propriétaire du jeu |
+| Auteur | mglennsound |
+| Source | https://freesound.org/people/mglennsound/sounds/678537/ |
+| Licence | Creative Commons 0 (CC0 1.0, dédicace au domaine public) — même auteur et même série que `amb_cheer` (678544, CC0 vérifié) ; licence CC0 contrôlée par le propriétaire lors du téléchargement |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 |
+| Attribution requise | Non (crédit facultatif : « mglennsound / Freesound ») |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Modifications | « Salle plus grande » : 8 couches empilées (décalages aléatoires, hauteur ×0,92 à ×1,08, panoramique, filtrage des aigus pour les couches lointaines, micro-retards) ; extrait 6–30 s du mélange bouclé avec fondu enchaîné de 1,5 s (boucle de 24 s) ; −20 dBFS RMS ; MP3 112 kb/s stéréo 44,1 kHz (0,34 Mo) |
+| Restrictions | Aucune connue (huées et sifflets de foule, pas de parole identifiable) |
