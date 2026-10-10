@@ -90,6 +90,8 @@ const server = http.createServer((req, res) => {
       }
       return { show: d.show, variant: d.variant, renderer: d.renderer, frame: d.frame, ink, boardInk, cls: cv ? cv.className : null, opacity: cv ? cv.style.opacity : null };
     }, [stoppage, tMs, quarter]);
+    // Personnage visible : hors des toits des tunnels (coins du bas, repère de la maquette).
+    const visible = c => !(c.y > 1158 && (c.x < 260 || c.x > 1740));
     const snap = async name => { if (shots) await page.locator("#host").screenshot({ path: path.join(shots, name) }); };
 
     // --- Temps mort : pompom girls ---
@@ -129,10 +131,18 @@ const server = http.createServer((req, res) => {
     if (!m || !(m.h > 20)) fail("la mascotte doit être en l'air (trampoline → dunk) " + JSON.stringify(r.frame));
     await snap("show-mascotte-A.png");
     ok("Fin Q1 (journée paire) : mascotte, dunk au trampoline.");
-    // Tour terminé : plus de mascotte (jamais de second tour).
-    r = await at(Q1, 400 + 40000, 1);
-    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc")) fail("mascotte A : un seul passage, plus rien après " + JSON.stringify(r.frame));
-    ok("Mascotte A : un seul passage, pas de boucle.");
+    // Mission live 2026-10-10 : entrée par le tunnel de droite (hors du
+    // parquet au début), routine UNE fois, puis la mascotte ATTEND en saluant
+    // (immobile) et ne repart par le tunnel qu'à la fin de la pause.
+    r = await at(Q1, 400 + 300, 1);
+    const m0 = r.frame && r.frame.chars.find(c => c.kind === "masc");
+    if (m0 && !(m0.x > 1700 && m0.y > 1000)) fail("mascotte A : au début, elle sort du tunnel de droite (coin bas droit) " + JSON.stringify(r.frame));
+    const wait = [];
+    for (const sec of [40, 70, 100]) { r = await at(Q1, 400 + sec * 1000, 1); const mm = r.frame && r.frame.chars.filter(c => c.kind === "masc"); if (!mm || mm.length !== 1) fail(`mascotte A à ${sec} s : présente une seule fois (attente) ` + JSON.stringify(r.frame)); wait.push(mm[0]); }
+    if (wait.some(w => Math.hypot(w.x - wait[0].x, w.y - wait[0].y) > 2 || w.h > 0)) fail("mascotte A : après son passage, elle attend sur place (pas de second tour) " + JSON.stringify(wait));
+    r = await at(Q1, 118600, 1);
+    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc" && visible(c))) fail("mascotte A : repartie par le tunnel à la fin de la pause " + JSON.stringify(r.frame));
+    ok("Mascotte A : sort du tunnel, un seul dunk, attend la fin de la pause en saluant, repart par le tunnel.");
     await at(null, 125000);
 
     // --- Fin Q1 : mascotte B (journée impaire) ---
@@ -145,35 +155,45 @@ const server = http.createServer((req, res) => {
     if (r.boardInk) fail("tour d'honneur : la mascotte passe derrière le tableau d'affichage.");
     await snap("show-mascotte-B.png");
     ok("Fin Q1 (journée impaire) : mascotte, tour d'honneur et check des fans, sous le tableau.");
-    r = await at(Q1, 400 + 75000, 1);
-    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc")) fail("mascotte B : un seul tour, plus rien après " + JSON.stringify(r.frame));
-    ok("Mascotte B : un seul tour sur la pause, pas de boucle.");
+    // Un seul tour (vitesse calée sur la pause), puis attente, puis sortie.
+    const lap = [];
+    for (let sec = 2; sec <= 116; sec += 2) { r = await at(Q1, 400 + sec * 1000, 1); const mm = r.frame && r.frame.chars.find(c => c.kind === "masc"); lap.push(mm ? [Math.round(mm.x), Math.round(mm.y)] : null); }
+    const topPasses = lap.reduce((n, p, i) => n + (p && p[1] < 200 && !(lap[i - 1] && lap[i - 1][1] < 200) ? 1 : 0), 0);
+    if (topPasses !== 1) fail("mascotte B : un seul passage le long de la tribune du haut (un tour) " + JSON.stringify(lap));
+    const last = lap.slice(-10);
+    if (!last.every(p => p && Math.hypot(p[0] - last[0][0], p[1] - last[0][1]) < 2)) fail("mascotte B : tour fini, elle attend sur place la fin de la pause " + JSON.stringify(last));
+    r = await at(Q1, 118600, 1);
+    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc" && visible(c))) fail("mascotte B : repartie par un tunnel à la fin " + JSON.stringify(r.frame));
+    ok("Mascotte B : un seul tour, vitesse adaptée à la pause, attente, sortie par le tunnel.");
     await at(null, 125000);
 
-    // --- Fin Q3 : canon rotatif ---
-    r = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 4600, 3);
-    // Mission live 2026-10-10 : la configuration des lanceurs tourne à chaque
-    // salve (centre, coins, chariot) — jamais depuis la table de marque.
-    if (r.show !== "tshirt" || !["A", "B", "C"].includes(r.variant)) fail("fin Q3 : lanceurs de t-shirts attendus " + JSON.stringify(r));
-    if (r.frame.chars.filter(c => c.kind === "staff").length !== 2 || !(r.frame.shirts > 0)) fail("2 membres du staff et des t-shirts en l'air attendus " + JSON.stringify(r.frame));
+    // --- Fin Q3 : lanceurs de t-shirts « en tournée » (mission live 2026-10-10) ---
+    const Q3 = { kind: "quarter-break", quarter: 3, ms: 120000 };
     const tableZone = c => c.x > 820 && c.x < 1180 && c.y > 1000;
-    if (r.frame.chars.some(tableZone)) fail("aucun lanceur à la table de marque " + JSON.stringify(r.frame));
+    const onFloor = c => c.x > 193 && c.x < 1808 && c.y > 120 && c.y < 975;
+    r = await at(Q3, 400 + 300, 3);
+    if (r.show !== "tshirt" || r.variant !== "T") fail("fin Q3 : lanceurs de t-shirts (tournée) attendus " + JSON.stringify(r));
+    if ((r.frame ? r.frame.chars : []).some(c => c.kind === "staff" && onFloor(c))) fail("au début, le staff sort des tunnels, il n'apparaît pas sur le parquet " + JSON.stringify(r.frame));
+    const plan = r.frame.spots, shotsPlan = r.frame.shots;
+    if (!plan || plan.length !== 2 || plan.some(p => new Set(p.map(x => x.join())).size < 3)) fail("chaque lanceur tire depuis au moins 3 emplacements différents " + JSON.stringify(plan));
+    const targets = new Set(shotsPlan.flat().map(x => x.T.join()));
+    if (targets.size < 6) fail("cibles variées dans les tribunes attendues " + JSON.stringify(shotsPlan));
+    let flying = 0;
+    for (let sec = 4; sec <= 110; sec += 6) {
+      r = await at(Q3, 400 + sec * 1000, 3);
+      const st = (r.frame ? r.frame.chars : []).filter(c => c.kind === "staff");
+      if (st.some(tableZone)) fail(`à ${sec} s : aucun lanceur à la table de marque ` + JSON.stringify(r.frame));
+      flying += r.frame ? r.frame.shirts : 0;
+    }
+    if (!flying) fail("des t-shirts en l'air pendant la tournée");
     await snap("show-canon.png");
-    const seen = new Set([r.variant]);
-    for (const k of [1, 2]) {
-      const r2 = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 4600 + k * 12000, 3);
-      seen.add(r2.variant);
-      if (r2.frame && r2.frame.chars.some(tableZone)) fail("salve " + k + " : aucun lanceur à la table de marque " + JSON.stringify(r2.frame));
-    }
-    if (seen.size !== 3) fail("trois salves : trois configurations différentes attendues, vu " + [...seen].join(","));
-    // Entrée réelle (test 27) : au début d'une salve, le staff arrive encore
-    // du bord (hors du parquet), il ne surgit pas au milieu du terrain.
-    for (const k of [0, 1, 2]) {
-      const r0 = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 300 + k * 12000, 3);
-      const onFloor = (r0.frame ? r0.frame.chars : []).filter(c => c.kind === "staff" && c.x > 193 && c.x < 1808 && c.y > 120 && c.y < 975);
-      if (onFloor.length) fail(`salve ${k} : le staff doit entrer depuis le bord, pas apparaître sur le parquet ` + JSON.stringify(r0.frame));
-    }
-    ok("Fin Q3 : t-shirts lancés vers les tribunes, configuration différente à chaque salve, jamais depuis la table.");
+    // Reproductible : même arrêt → même tournée (relecture, rechargement).
+    r = await at(Q3, 400 + 30000, 3);
+    if (JSON.stringify(r.frame.spots) !== JSON.stringify(plan) || JSON.stringify(r.frame.shots) !== JSON.stringify(shotsPlan)) fail("tournée non reproductible pour le même arrêt");
+    // Fin : tout le monde est rentré avant la reprise (jamais de retard).
+    r = await at(Q3, 118600, 3);
+    if (r.frame && r.frame.chars.some(c => c.kind === "staff" && visible(c))) fail("fin de la pause : lanceurs rentrés au tunnel " + JSON.stringify(r.frame));
+    ok(`Fin Q3 : lanceurs sortis des tunnels, ${plan.map(p => p.length).join(" + ")} emplacements, ${targets.size} cibles différentes, reproductible, rentrés avant la reprise.`);
     // Saut dans le temps au-delà de l'arrêt : coupure propre.
     r = await at(null, 600000);
     if (r.cls) fail("saut après l'arrêt : canvas retiré.");

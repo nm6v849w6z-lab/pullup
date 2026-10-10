@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-21";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-21";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-22";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN, accessFrom } from "./showfx.js?v=20261010-22";
 
 // Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
 // même scène, chacun à sa place habituelle — à la mi-temps, et un temps
@@ -46,11 +46,15 @@ export function mascotVariant(cfg, state) {
 export const INTRO_MS = 30000;      // entrée des joueurs (avant-match et reprise)
 const EDGE_MS = 1100;               // entrée / sortie des animateurs
 const COACH_Y = 55;                 // debout devant son banc (arène 2026-10-08 : bancs hors du terrain)
-// Tunnels des vestiaires (mission live 2026-10-10 : « les joueurs
-// apparaissent depuis la table de marque ») : un par équipe, dans les coins
-// du bas, HORS du terrain — chacun entre par son côté (son banc).
-const TUNNELS = [{ x: 2, y: 54 }, { x: 92, y: 54 }];
-const tunnelOf = team => TUNNELS[team === 1 ? 1 : 0];
+// Tunnels des vestiaires (mission live 2026-10-10) : deux VRAIS accès
+// dessinés dans l'arène par court2d.js (api.tunnelRoute : intérieur caché
+// sous le toit → embouchure → dégagement), un par équipe, du côté de son
+// banc. Repli (tests sans court2d) : mêmes valeurs.
+const ROUTE_DEFAULT = t => (t === 1 ? { inside: { x: 96, y: 70 }, mouth: { x: 96, y: 59.8 }, apron: { x: 92.4, y: 55.5 } } : { inside: { x: -2, y: 70 }, mouth: { x: -2, y: 59.8 }, apron: { x: 1.6, y: 55.5 } });
+// Temps pour sortir du tunnel jusqu'au dégagement (≈ 15 pieds), puis le
+// trajet continue vers la destination : jamais de traversée des tribunes,
+// des bancs ni de la table.
+const TUNNEL_WALK_MS = 1700;
 
 // Petit générateur pseudo-aléatoire stable (graine = début de l'arrêt) :
 // même show pour tous les spectateurs d'un même arrêt.
@@ -92,6 +96,12 @@ export const CHOREOS = [
 
 export function createStaging(api, getCfg) {
   const { el, PX } = api;
+  const routeOf = (team, i = 0) => { const r = api.tunnelRoute ? api.tunnelRoute(team, i) : ROUTE_DEFAULT(team); if (!api.tunnelRoute) r.inside = { x: r.inside.x, y: r.inside.y + i * 3.6 }; return r; };
+  const tunnelOf = (team, i = 0) => routeOf(team, i).inside;
+  // Cible sur le parcours du tunnel : `since` ms après le départ de
+  // l'intérieur, d'abord le dégagement, puis `dest` ; à l'envers pour rentrer.
+  const outOfTunnel = (team, since, dest) => (since < TUNNEL_WALK_MS ? routeOf(team).apron : dest);
+  const intoTunnel = (team, since, i = 0) => (since < TUNNEL_WALK_MS + 400 ? routeOf(team).apron : routeOf(team, i).inside);
   let cfg = null, S = null;
   let destroyed = false;
   const coaches = [null, null];
@@ -170,22 +180,23 @@ export function createStaging(api, getCfg) {
   function introTargets(sp, t, i) {
     const team = sp.team, dir = team === 0 ? -1 : 1;
     const line = { x: 47 + dir * (6 + i * 5.5), y: 25 };
-    if (t < 4800) {
-      const start = 300 + (team === 1 ? 0 : 2200) + i * 380;
-      if (t < start) { const tn = tunnelOf(team); return { x: tn.x, y: tn.y, speed: 2, snap: true, hidden: true }; }
-      return { ...line, speed: 1.5 };
-    }
-    if (t < 21000) {
+    // Dans le tunnel (caché sous son toit) jusqu'à son tour, puis sortie en
+    // file : dégagement devant le coin du terrain (TUNNEL_WALK_MS), puis la
+    // destination du moment (ligne, présentation, entre-deux).
+    const start = 300 + (team === 1 ? 0 : 2200) + i * 380;
+    if (t < start) { const tn = tunnelOf(team, i); return { x: tn.x, y: tn.y, speed: 2, snap: true }; }
+    let dest;
+    if (t < 4800) dest = { ...line, speed: 1.5 };
+    else if (t < 21000) {
       // Présentation : extérieur (équipe 1) de 5 s à 13 s, domicile de 13 s à 21 s.
       const base = team === 1 ? 5000 : 13000;
       const on = t >= base + i * 1600 && t < base + (i + 1) * 1600;
-      return on ? { x: line.x, y: line.y - 4, speed: 1.4, present: true } : { ...line, speed: 1.2 };
-    }
-    if (t < 24000) return { ...line, speed: 1.2 };
-    // Entre-deux : les pivots au centre, les autres autour du rond.
-    if (i === 4) return { x: 47 + dir * 1.4, y: 25, speed: 1.4 };
-    const ys = [14.5, 21, 29, 35.5];
-    return { x: 47 + dir * 8, y: ys[i], speed: 1.4 };
+      dest = on ? { x: line.x, y: line.y - 4, speed: 1.4, present: true } : { ...line, speed: 1.2 };
+    } else if (t < 24000) dest = { ...line, speed: 1.2 };
+    else if (i === 4) dest = { x: 47 + dir * 1.4, y: 25, speed: 1.4 };   // entre-deux : pivots au centre
+    else { const ys = [14.5, 21, 29, 35.5]; dest = { x: 47 + dir * 8, y: ys[i], speed: 1.4 }; }
+    if (t - start < TUNNEL_WALK_MS) { const a = routeOf(team).apron; return { x: a.x, y: a.y, speed: 1.5 }; }
+    return dest;
   }
   function showIntroCard(sp) {
     if (introCard && introCard.id === sp.id) return;
@@ -230,9 +241,13 @@ export function createStaging(api, getCfg) {
     // endroit, parfois depuis la table de marque ») : la configuration
     // (centre / coins / chariot) tourne à chaque salve, déterminée par le
     // début de l'arrêt — mêmes positions pour tous les spectateurs.
-    const TEE_ORDER = ["A", "B", "C"], teeSeed = Math.floor(st.startAt / 1000);
-    const teeVariant = n => TEE_ORDER[(teeSeed + n) % 3];
-    const variant = fx === "pom" || fx === "both" ? "A" : fx === "tee" ? teeVariant(0) : mascotVariant(cfg, S);
+    // Lanceurs de t-shirts « en tournée » (showfx.js:sceneTeeTour, mission
+    // live 2026-10-10) : entrée par les tunnels, plusieurs emplacements de
+    // tir, cibles variées — graine = début de l'arrêt (mêmes pour tous).
+    const teeSeed = Math.floor(st.startAt / 1000);
+    const variant = fx === "pom" || fx === "both" ? "A" : fx === "tee" ? "T" : mascotVariant(cfg, S);
+    // Accès des vestiaires dans le repère de la maquette (mêmes tunnels que le terrain).
+    const access = accessFrom(api.TUNNEL, api.TUNNELS);
     const mvariant = fx === "both" ? mascotVariant(cfg, S) : null;
     const mcfg = cfg.mascot || null;
     const fxr = createShowFx(showColors(colors[0], colors[1], cfg.homeShort, mcfg && mcfg.number != null ? mcfg.number : 8));
@@ -256,32 +271,31 @@ export function createStaging(api, getCfg) {
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
       const el0 = now - st.startAt - LEAD;
       if (el0 < 0) return;
-      // Fondu d'entrée et de sortie (le show finit avec l'arrêt, jamais après).
-      cv.style.opacity = String(Math.max(0, Math.min(1, el0 / 400, (st.endsAt - now) / 900)).toFixed(3));
+      // Plus de fondu d'entrée (mission live 2026-10-10 : « ils apparaissent
+      // comme téléportés ») : les personnages ENTRENT par les tunnels et en
+      // ressortent avant la fin de l'arrêt ; le show s'arrête à endsAt.
+      if (cv.style.opacity !== "1") cv.style.opacity = "1";
       // Écran ← arène (viewBox, « meet ») ← maquette (parquet ↔ terrain 940 × 500).
       const [vx, vy, vw, vh] = o.vb;
       const sc = Math.min(cw / vw, ch / vh), ox = (cw - vw * sc) / 2 - vx * sc, oy = (ch - vh * sc) / 2 - vy * sc;
       const [dx, dy, dw, dh] = DESIGN.court, kx = (940 / dw) * sc, ky = (500 / dh) * sc;
       ctx.setTransform(kx, 0, 0, ky, ox + sc * api.OX - dx * kx, oy + sc * api.OY - dy * ky);
       // Le tableau d'affichage reste au-dessus des personnages.
-      ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.clip("evenodd");
+      // … et les toits des tunnels aussi : ce qui est encore dans un tunnel est caché.
+      ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.rect(...access.L.roof); ctx.rect(...access.R.roof); ctx.clip("evenodd");
       // Pompom girls : un seul show sur tout le temps mort (entrée, danse,
       // sortie juste avant la reprise). Mascotte (mission live 2026-10-10,
       // « la mascotte tourne en boucle ») : UN SEUL tour, à une vitesse
       // calculée sur la durée de l'arrêt (mascotLap), puis plus rien.
       // T-shirts : salves successives, configuration différente à chaque salve.
       const total = (st.endsAt - st.startAt - LEAD - 1000) / 1000;
-      const salvo = fx === "tee" ? Math.floor(el0 / cycle) : 0;
-      const v = fx === "tee" ? teeVariant(salvo) : variant;
+      const v = variant;
       const key = fx === "pom" || fx === "both" ? "pom" : fx === "tee" ? "teeC" : fx + v;
-      let t;
-      if (api.reduced) t = STILL[key];
-      else if (fx === "pom" || fx === "both") t = el0 / 1000;
-      else if (fx === "masc") { t = mascotLap(v, el0 / 1000, total); if (t === null) { ctx.restore(); frame = null; return; } }
-      else t = (el0 % cycle) / 1000;
-      const t2 = api.reduced ? STILL["masc" + (mvariant || "A")] : mascotLap(mvariant || "A", Math.max(0, el0 - 2500) / 1000, total - 2.5);   // mascotte : entre après les danseuses
-      if (fx === "tee") { cv.setAttribute("data-variant", v); this.variant = v; }
-      try { frame = fxr.draw(ctx, { show: fx, variant: v, mvariant, t, t2: t2 === null ? 999 : t2, q: kx, order: ci || 0, total, hype: hypeOf(S) }); } catch (e) { frame = null; }
+      // Temps RÉEL depuis le début du show : chaque scène gère elle-même
+      // entrée (tunnel), action, attente et sortie (tunnel) sur `total`.
+      const t = api.reduced ? STILL[key] : el0 / 1000;
+      const t2 = api.reduced ? STILL["masc" + (mvariant || "A")] : (el0 - 2500) / 1000;   // mascotte : entre après les danseuses
+      try { frame = fxr.draw(ctx, { show: fx, variant: v, mvariant, t, t2, total2: total - 2.5, q: kx, order: ci || 0, total, seed: teeSeed, access, hype: hypeOf(S) }); } catch (e) { frame = null; }
       ctx.restore();
     }, frame: () => frame, destroy() { api.dropOverlay(); } };
   }
@@ -307,7 +321,7 @@ export function createStaging(api, getCfg) {
       for (let i = 0; i < n; i++) {
         const d = el("g", { class: "stg-dancer" + (i % 2 ? " alt" : "") }, g);
         d.innerHTML = pompomGirl({ primary: colors[0], secondary: colors[1], short: cfg.homeShort || "", skin: ["#f0cbae", "#d9a47c", "#a0663f", "#e6b894"][i % 4], hair: ["#5a3a22", "#1b120c", "#b5532e", "#d8b56e"][(i * 3) % 4] });
-        dancers.push({ g: d, side: i % 2 ? 100 : -6 });
+        dancers.push({ g: d, from: routeOf(i % 2 ? 1 : 0).mouth });   // entrée / sortie par un tunnel
       }
       const STEP = 6200, MOVE = 1200;
       return { name, key: st.startAt, g, choreo: ci, render(now) {
@@ -318,10 +332,9 @@ export function createStaging(api, getCfg) {
         const kin = ease(enterK(now)), kout = ease(exitK(now));
         dancers.forEach((d, i) => {
           const p = { x: lerp(a(i, n).x, b(i, n).x, k), y: lerp(a(i, n).y, b(i, n).y, k) };
-          const x = lerp(lerp(d.side, p.x, kin), d.side, kout), y = p.y;
+          const x = lerp(lerp(d.from.x, p.x, kin), d.from.x, kout), y = lerp(lerp(d.from.y, p.y, kin), d.from.y, kout);
           d.g.setAttribute("transform", `translate(${(x * PX).toFixed(1)} ${(y * PX).toFixed(1)})`);
         });
-        g.setAttribute("opacity", String(Math.min(kin, 1 - kout * 0.999).toFixed(2)));
       }, destroy() { g.remove(); } };
     }
     if (name === "mascot") {
@@ -344,14 +357,13 @@ export function createStaging(api, getCfg) {
         else if (t < 6200) { const k = (t - 5000) / 1200; x = lerp(miss ? 83 : 87.4, 84, k); y = lerp(25, 30, k); sc = lerp(miss ? 1.2 : 1.65, 1, ease(k)); rot = miss ? lerp(-40, 0, k) : 0; cls = ""; }
         else if (t < 9000) { const k = (t - 6200) / 2800; x = 84; y = 30; cls = miss ? "sad" : "celebrate-" + celebration; if (celebration === "salto" && !miss) { rot = clamp01(k * 1.6) * 360; y = 30 - Math.sin(clamp01(k * 1.6) * Math.PI) * 3; } }
         else { const k = ease((t - 9000) / 3000); x = lerp(84, 62, k); y = lerp(30, 40, k); }
-        const kin = enterK(now), kout = exitK(now);
-        if (kin < 1) { x = lerp(50, x, kin); y = lerp(50, y, kin); }
-        if (kout > 0) { x = lerp(x, 100, kout); }
+        const kin = enterK(now), kout = exitK(now), mo = routeOf(1).mouth;
+        if (kin < 1) { x = lerp(mo.x, x, kin); y = lerp(mo.y, y, kin); }
+        if (kout > 0) { x = lerp(x, mo.x, kout); y = lerp(y, mo.y, kout); }
         m.setAttribute("transform", `translate(${(x * PX).toFixed(1)} ${(y * PX).toFixed(1)}) scale(${sc.toFixed(3)}) rotate(${rot.toFixed(1)} 0 -22)`);
         const dunkOn = !api.reduced && t >= 4400 && t < 5200 && !miss;
         flash.setAttribute("opacity", dunkOn ? "1" : "0");
         body.setAttribute("class", "stg-mascot-in" + (cls ? " is-" + cls : ""));
-        g.setAttribute("opacity", String(Math.min(1, kin * 2).toFixed(2)));
       }, destroy() { g.remove(); } };
     }
     if (name === "tshirt") {
@@ -367,7 +379,8 @@ export function createStaging(api, getCfg) {
       return { name, key: st.startAt, g, render(now) {
         const el0 = Math.max(0, now - t0);
         const kin = enterK(now), kout = exitK(now);
-        g.setAttribute("opacity", String(Math.min(kin, 1 - kout * 0.999).toFixed(2)));
+        // Lanceurs : arrivent de leur tunnel et y retournent (plus de fondu).
+        ls.forEach((l, i) => { const mo = routeOf(i).mouth, p = spots[i], k = Math.min(kin, 1 - kout); l.setAttribute("transform", `translate(${(lerp(mo.x, p.x, k) * PX).toFixed(1)} ${(lerp(mo.y, p.y, k) * PX).toFixed(1)}) scale(${p.dir} 1)`); });
         if (api.reduced) return;
         pool.forEach((s, i) => {
           // Tir n° (i + 6·k) : lanceur alterné, cible tirée au hasard (stable).
@@ -458,12 +471,9 @@ export function createStaging(api, getCfg) {
     if ((show.name === "pompom" || show.name === "gala") && left <= 2600 && left > 900) cue(k + ":fin-choreo", "applause", 0.5);
     const mascA = (show.name === "mascot" && show.variant === "A") || (show.name === "gala" && show.mvariant === "A");
     if (mascA) {
-      const m = show.name === "gala" ? el - 2500 : el;
-      // Un seul dunk (tour unique, voir mascotLap) : la clameur suit le temps
-      // de scène réel (dunk à 4,4–5,2 s de scène).
-      const avail = (ph.st.endsAt - ph.st.startAt - 1400) / 1000 - (show.name === "gala" ? 2.5 : 0);
-      const ts = m >= 0 ? mascotLap("A", m / 1000, avail) : null;
-      if (ts !== null && ts >= 4.4 && ts < 5.6 && left > 1500) cue(k + ":dunk", "cheer", 0.45);
+      // Un seul dunk : la clameur part quand la mascotte est en l'air (image du show).
+      const f = show.frame ? show.frame() : null;
+      if (f && f.chars && f.chars.some(c => c.kind === "masc" && c.h > 30) && left > 1500) cue(k + ":dunk", "cheer", 0.45);
     }
     if (show.name === "tshirt" && left > 1500) { const n = Math.floor(el / 5400); if (el - n * 5400 < 800) cue(k + ":tee:" + n, "cheer", 0.35); }
     if ((show.name === "mascot" || show.name === "tshirt") && left <= 2600 && left > 900) cue(k + ":fin", "applause", 0.4);
@@ -500,8 +510,14 @@ export function createStaging(api, getCfg) {
         const bx = api.BENCH[c.t].x;
         let vis = true;
         if (ph.kind === "intro") {
-          if (ph.t < 19000) { const tn = tunnelOf(c.t); c.tx = tn.x; c.ty = tn.y; vis = false; if (late || changed) { c.x = c.tx; c.y = c.ty; } }
-          else { c.tx = bx; c.ty = COACH_Y; }
+          // Le coach sort du tunnel de son équipe (caché sous le toit avant).
+          if (ph.t < 19000) { const tn = tunnelOf(c.t, 5); c.tx = tn.x; c.ty = tn.y; if (late || changed) { c.x = c.tx; c.y = c.ty; } }
+          else { const p = outOfTunnel(c.t, ph.t - 19000, { x: bx, y: COACH_Y }); c.tx = p.x; c.ty = p.y; }
+        } else if (ph.kind === "halftime" && cfg.playerIntro) {
+          // Mi-temps : retour aux vestiaires par le tunnel.
+          const p = intoTunnel(c.t, now - ph.st.startAt, 5); c.tx = p.x; c.ty = p.y;
+        } else if (ph.kind === "return" && cfg.playerIntro) {
+          const p = outOfTunnel(c.t, ph.t, { x: bx, y: COACH_Y }); c.tx = p.x; c.ty = p.y;
         } else if (ph.kind === "timeout" || ph.kind === "quarter-break" || ph.kind === "halftime" || ph.kind === "return") {
           c.tx = bx; c.ty = COACH_Y;
           if (ph.kind === "timeout") coachAnim(c, "instruct", 400);
@@ -519,7 +535,7 @@ export function createStaging(api, getCfg) {
         if (late) { c.x = c.tx; c.y = c.ty; }
         const d = Math.hypot(c.tx - c.x, c.ty - c.y);
         const moving = d > 0.05;
-        if (moving) { const k = Math.min(1, (ph.kind === "intro" ? 9 : 3) * (1 / 60) / d); c.x += (c.tx - c.x) * k; c.y += (c.ty - c.y) * k; }
+        if (moving) { const k = Math.min(1, (ph.kind === "intro" || ph.kind === "halftime" || ph.kind === "return" ? 9 : 3) * (1 / 60) / d); c.x += (c.tx - c.x) * k; c.y += (c.ty - c.y) * k; }
         const bob = moving && !api.reduced ? Math.sin(nowP / 110) * 0.8 : 0;
         c.g.setAttribute("transform", `translate(${(c.x * PX).toFixed(1)} ${(c.y * PX + bob).toFixed(1)})`);
         c.g.setAttribute("opacity", vis ? "1" : "0");
@@ -535,14 +551,26 @@ export function createStaging(api, getCfg) {
         for (const t of [1, 0]) byTeam(t).forEach((sp, i) => {
           const tg = introTargets(sp, ph.t, i);
           hold(sp, tg.x, tg.y, tg.speed, late || !!tg.snap);
-          sp.g.setAttribute("opacity", tg.hidden ? "0" : "1");
+          sp.g.setAttribute("opacity", "1");
           if (tg.present) presented = sp;
         });
         if (presented) showIntroCard(presented); else hideIntroCard();
+      } else if (ph.kind === "halftime" && cfg.playerIntro) {
+        // Mi-temps : les deux équipes rentrent aux vestiaires par LEUR tunnel
+        // (dégagement, puis l'intérieur, caché sous le toit) — plus personne
+        // ne reste planté au bord du terrain ni ne disparaît sur place.
+        const since = now - ph.st.startAt;
+        for (const t of [0, 1]) byTeam(t).forEach((sp, i) => {
+          const p = intoTunnel(t, since - i * 250, i);
+          hold(sp, p.x, p.y, 1.3, late);
+        });
       } else if (ph.kind === "return") {
-        // Reprise de la 2e mi-temps : les deux équipes reviennent ensemble.
-        for (const t of [0, 1]) byTeam(t).forEach(sp => {
-          const p = api.slotPos(sp.team, sp.slot, sp.team === api.possession());
+        // Reprise de la 2e mi-temps : les deux équipes ressortent de leur
+        // tunnel ensemble, puis gagnent leur place.
+        for (const t of [0, 1]) byTeam(t).forEach((sp, i) => {
+          const dest = api.slotPos(sp.team, sp.slot, sp.team === api.possession());
+          const p = cfg.playerIntro ? outOfTunnel(t, ph.t - i * 300, dest) : dest;
+          if (cfg.playerIntro && ph.t < i * 300) { const tn = tunnelOf(t, i); hold(sp, tn.x, tn.y, 1.4, late || changed); return; }
           hold(sp, p.x, p.y, ph.t < 8000 ? 1.1 : 1.4, late);
         });
       } else if (ph.kind === "timeout" || ph.kind === "quarter-break") {

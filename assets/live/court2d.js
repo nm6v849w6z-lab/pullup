@@ -114,6 +114,28 @@ function huddlePos(team, i, n, ring) {
 }
 // Table de marque : où vont les arbitres pendant les arrêts.
 const TABLE = { x: 47, y: 52.4 };
+// Accès des vestiaires (mission live 2026-10-10 : « les joueurs, les pompom
+// girls, la mascotte et les lanceurs de t-shirts apparaissent directement
+// sur le terrain, comme s'ils se téléportaient ») : deux VRAIS tunnels
+// (vomitoires) qui traversent les tribunes du bas, aux coins, hors du
+// terrain et à l'écart des bancs (sièges x ≈ 5–33 et 61–89) et de la table.
+// Équipe 0 (domicile) : tunnel de gauche, équipe 1 : tunnel de droite
+// (chacun du côté de son banc). Parcours unique, en pieds :
+//   intérieur (hors de l'écran, sous le toit) → embouchure → dégagement
+//   devant le coin du terrain → destination.
+// Tout ce qui est dans le tunnel au-delà de `roofY` est caché par le toit
+// (court2d : calque `roofG` ; shows : canvas découpé) : on voit les
+// personnages SORTIR du tunnel, jamais apparaître.
+const TUNNEL = { halfW: 2.6, mouthY: 59.8, roofY: 60.8, inY: 70 };
+const TUNNELS = [{ x: -2, apronX: 1.6 }, { x: 96, apronX: 92.4 }];
+const APRON_Y = 55.5;
+// `i` : rang dans la file (on attend l'un derrière l'autre dans le tunnel,
+// jamais côte à côte contre les murs).
+function tunnelRoute(team, i = 0) {
+  const T = TUNNELS[team === 1 ? 1 : 0];
+  return { inside: { x: T.x, y: TUNNEL.inY + Math.max(0, i) * 3.6 }, mouth: { x: T.x, y: TUNNEL.mouthY }, apron: { x: T.apronX, y: APRON_Y } };
+}
+const inTunnel = (x, y) => y >= TUNNEL.mouthY - 1 && y <= TUNNEL.inY + 30 && TUNNELS.some(T => Math.abs(x - T.x) <= TUNNEL.halfW + 1);
 const STOP_Y = 50.7;                                      // officiels debout devant la table
 const STALE_EVENT_MS = 6000;                              // événement plus vieux : recalage, pas d'animation
 const GAP_RESYNC_MS = 1500;                               // trou d'images au-delà duquel on recale
@@ -185,6 +207,7 @@ export function createCourt2D(host, opts = {}) {
   // un remplaçant change (énergie, faute, changement) ou qu'un coach bouge.
   const benchSvg = el("svg", { viewBox: `0 0 ${VW} ${VH}`, class: "c2d-benchsvg", focusable: "false" }, under);
   const benchLayer = el("g", { transform: `translate(${OX} ${OY})` }, benchSvg);
+  const tunnelG = el("g", { class: "c2d-tunnels" }, benchLayer);
   const svg = el("svg", { viewBox: `0 0 ${VW} ${VH}`, class: "c2d-svg", role: "img", "aria-label": "Terrain animé du match" }, host);
   const defs = el("defs", {}, svg);
   // Téléphone (2026-10-08) : si la salle ne tient pas, on rogne les
@@ -542,11 +565,43 @@ export function createCourt2D(host, opts = {}) {
         el("rect", { x: (p.x * PX - 13).toFixed(1), y: (p.y * PX + 14).toFixed(1), width: "26", height: "4", rx: "2", fill: mix(col, "#000000", 0.65) }, arenaG);
       }
     });
+    drawTunnels(home, awayColor);
     // Le terrain déborde de lumière sur le dégagement.
     const spill = el("radialGradient", { id: uid + "-spl", cx: "50%", cy: "50%", r: "50%" }, defs);
     el("stop", { offset: "0", "stop-color": "#ffe9c4", "stop-opacity": ".12" }, spill);
     el("stop", { offset: "1", "stop-color": "#ffe9c4", "stop-opacity": "0" }, spill);
     el("ellipse", { cx: "470", cy: "250", rx: "640", ry: "420", fill: `url(#${uid}-spl)` }, arenaG);
+  }
+  // Tunnels des vestiaires : couloir (sol, murs, tapis aux couleurs de
+  // l'équipe, balisage lumineux) dans le décor des bancs — AU-DESSUS du
+  // public, qu'il traverse — et toit + linteau « VESTIAIRES » dans le calque
+  // du dessus (roofG), qui cache ce qui est encore dans le tunnel.
+  function drawTunnels(home, awayColor) {
+    tunnelG.innerHTML = ""; roofG.innerHTML = "";
+    const bottom = (VH - OY) / PX + 1;
+    const fl = el("linearGradient", { id: uid + "-tun", x1: "0", y1: "0", x2: "0", y2: "1" }, defs);
+    el("stop", { offset: "0", "stop-color": "#242c3c" }, fl); el("stop", { offset: "1", "stop-color": "#07090e" }, fl);
+    const rf = el("linearGradient", { id: uid + "-roof", x1: "0", y1: "0", x2: "0", y2: "1" }, defs);
+    el("stop", { offset: "0", "stop-color": "#1c2433" }, rf); el("stop", { offset: ".25", "stop-color": "#121824" }, rf); el("stop", { offset: "1", "stop-color": "#080a10" }, rf);
+    TUNNELS.forEach((T, t) => {
+      const col = t === 0 ? home : (awayColor || "#3B8FE0");
+      const x0 = (T.x - TUNNEL.halfW) * PX, w = TUNNEL.halfW * 2 * PX, y0 = (TUNNEL.mouthY - 0.6) * PX, h = (bottom - TUNNEL.mouthY + 0.6) * PX;
+      const g = el("g", { class: "c2d-tunnel t" + t, "data-tunnel": String(t) }, tunnelG);
+      el("rect", { x: x0 - 6, y: y0, width: w + 12, height: h, fill: "#05070b" }, g);                       // découpe dans les tribunes
+      el("rect", { x: x0, y: y0, width: w, height: h, fill: `url(#${uid}-tun)` }, g);                       // sol
+      el("rect", { x: x0 + w / 2 - 11, y: y0 + 2, width: "22", height: h, fill: mix(col, "#000000", 0.35), opacity: ".85" }, g);   // tapis
+      for (const dx of [-11, 11]) el("rect", { x: x0 + w / 2 + dx - 0.75, y: y0 + 2, width: "1.5", height: h, fill: "#fff", opacity: ".35" }, g);
+      for (const side of [0, 1]) el("rect", { x: side ? x0 + w - 4 : x0, y: y0, width: "4", height: h, fill: "#2c3546", stroke: "#0a0d14", "stroke-width": "1" }, g);   // murs
+      for (let k = 0; k < 3; k++) for (const side of [0, 1]) el("circle", { cx: side ? x0 + w - 6.5 : x0 + 6.5, cy: y0 + 8 + k * 9, r: "1.6", fill: "#9fc3ff", opacity: String(0.75 - k * 0.2) }, g);   // balisage
+      // Toit (cache l'intérieur) et linteau.
+      const r = el("g", { class: "c2d-tunnel-roof t" + t }, roofG);
+      const ry = TUNNEL.roofY * PX;
+      el("rect", { x: x0 - 7, y: ry, width: w + 14, height: (bottom - TUNNEL.roofY) * PX, fill: `url(#${uid}-roof)` }, r);
+      el("rect", { x: x0 - 9, y: ry - 6, width: w + 18, height: "11", rx: "2.5", fill: "#1b2232", stroke: "#0a0d14", "stroke-width": "1.4" }, r);
+      el("rect", { x: x0 - 9, y: ry - 6, width: w + 18, height: "2.6", rx: "1.3", fill: col, opacity: ".9" }, r);
+      const lab = el("text", { x: x0 + w / 2, y: ry + 3.2, "text-anchor": "middle", class: "c2d-tunnel-lab", "data-no-i18n": "1" }, r);
+      lab.textContent = "VESTIAIRES";
+    });
   }
   // Drapeaux : surtout ceux du club qui reçoit, quelques-uns des visiteurs
   // (dans leur coin) ; jamais devant le tableau d'affichage. Tissu à deux
@@ -558,7 +613,7 @@ export function createCourt2D(host, opts = {}) {
     const spots = [];
     // Haut (évite le tableau : x terrain 330–610), bas, côtés.
     for (const x of [-70, 40, 150, 250, 690, 790, 900, 1000]) spots.push([x, -50]);
-    for (const x of [-40, 90, 230, 380, 560, 710, 850, 980]) spots.push([x, 672]);
+    for (const x of [90, 230, 380, 560, 710, 850]) spots.push([x, 672]);   // (coins du bas : tunnels des vestiaires, pas de drapeau)
     for (const y of [40, 230, 430]) { spots.push([-80, y]); spots.push([996, y]); }
     spots.forEach(([x, y]) => {
       if (rnd01() > fill + 0.15) return;                       // tribunes clairsemées : moins de drapeaux
@@ -709,6 +764,8 @@ export function createCourt2D(host, opts = {}) {
   // tireur (render, chaque image).
   const ptsG = el("g", { class: "c2d-ptsfx" }, layer);
   const frontLayer = el("g", { transform: `translate(${OX} ${OY})`, class: "stg-front" }, svg);
+  // Toits des tunnels des vestiaires : au-dessus de tout (joueurs, animateurs).
+  const roofG = el("g", { transform: `translate(${OX} ${OY})`, class: "c2d-tunnel-roofs" }, svg);
   const caption = document.createElement("div");
   caption.className = "c2d-caption";
   host.appendChild(caption);
@@ -2603,7 +2660,8 @@ export function createCourt2D(host, opts = {}) {
   let ballHidden = false;
   function declutter(dt) {
     const list = [];
-    for (const sp of sprites.values()) if (!sp.leaving) list.push(sp);
+    // (dans un tunnel : file indienne, jamais écartés contre les murs)
+    for (const sp of sprites.values()) { if (sp.leaving) continue; if (inTunnel(sp.x, sp.y) && sp.y > TUNNEL.mouthY) { sp.ox = sp.oy = 0; continue; } list.push(sp); }
     for (const r of refs) list.push(r);
     for (const a of list) { a.fx = 0; a.fy = 0; a.near = 9; a.nearFront = false; }
     // Relaxation en 4 passes (un groupe de 5-6 jetons s'ouvre en éventail).
@@ -2698,7 +2756,7 @@ export function createCourt2D(host, opts = {}) {
   }
   // Coordonnées valides : terrain (0-94 × 0-50) + dégagement, banc et table
   // compris (le remiseur sort derrière les lignes, les remplaçants vont au banc).
-  const validPos = (x, y) => Number.isFinite(x) && Number.isFinite(y) && x >= -8 && x <= 102 && y >= -6 && y <= 62;
+  const validPos = (x, y) => Number.isFinite(x) && Number.isFinite(y) && ((x >= -8 && x <= 102 && y >= -6 && y <= 62) || inTunnel(x, y));
   function fixPosition(sp) {
     anomalies++;
     const bad = { x: sp.x, y: sp.y, tx: sp.tx, ty: sp.ty };
@@ -3007,7 +3065,7 @@ export function createCourt2D(host, opts = {}) {
   // Module chargé à la demande (live-view.js) : objet ou promesse.
   let stage = null, destroyed = false;
   const makeStage = mod => (mod && typeof mod.createStaging === "function" && typeof opts.staging === "function" ? mod.createStaging({
-    el, PX, OX, OY, uid, defs, coachLayer, frontLayer, BENCH, TABLE, RIM,
+    el, PX, OX, OY, uid, defs, coachLayer, frontLayer, BENCH, TABLE, RIM, TUNNEL, TUNNELS, tunnelRoute,
     now, nowP: () => performance.now(), reduced: reducedMotion,
     colors: () => colors,
     sprites: () => sprites.values(),

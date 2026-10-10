@@ -17,7 +17,22 @@ export const DESIGN = { W: 2000, H: 1277, court: [193, 120, 1615, 855], board: [
 // Durée d'une boucle (s) : la scène de la maquette + un temps de respiration.
 export const SHOW_CYCLE = { pom: 20, mascA: 14, mascB: 14, teeC: 12 };
 // Style par variante (choix de la maquette : « auto »).
-export const SHOW_LOOK = { pom: "cartoon", mascA: "cartoon", mascB: "real", teeA: "token", teeB: "token", teeC: "token" };
+export const SHOW_LOOK = { pom: "cartoon", mascA: "cartoon", mascB: "real", teeA: "token", teeB: "token", teeC: "token", teeT: "token" };
+// Accès des vestiaires (mission live 2026-10-10 : « les personnages
+// apparaissent directement sur le terrain ») — mêmes tunnels que le terrain
+// (court2d.js : TUNNEL / TUNNELS, en pieds), convertis dans le repère de la
+// maquette. Chaque personnage ENTRE par un tunnel (intérieur caché sous le
+// toit → embouchure → dégagement) et en RESSORT par un tunnel ; staging.js
+// découpe le canvas sous les toits.
+const FT = (x, y) => [DESIGN.court[0] + x * DESIGN.court[2] / 94, DESIGN.court[1] + y * DESIGN.court[3] / 50];
+export function accessFrom(T, TS) {
+  const tun = T || { mouthY: 59.8, roofY: 60.8, inY: 70, halfW: 2.6 };
+  const ts = TS || [{ x: -2, apronX: 1.6 }, { x: 96, apronX: 92.4 }];
+  const side = k => ({ in: FT(ts[k].x, tun.inY), mouth: FT(ts[k].x, tun.mouthY), apron: FT(ts[k].apronX, 55.5),
+    roof: (() => { const a = FT(ts[k].x - tun.halfW - 0.7, tun.roofY), b = FT(ts[k].x + tun.halfW + 0.7, tun.inY + 4); return [a[0], a[1], b[0] - a[0], b[1] - a[1]]; })() });
+  return { L: side(0), R: side(1) };
+}
+export const ACCESS = accessFrom();
 
 function hexRgb(h) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h || "").trim());
@@ -520,6 +535,10 @@ export function createShowFx(team) {
   // propre à chaque enchaînement (variation de rythme, jamais mécanique).
   const ORDERS = [[B1, B2, B3], [B2, B4, B3], [B5, B1, B4], [B3, B5, B2], [B4, B2, B5], [B1, B5, B3]];
   const TEMPO = [1, 1.06, 0.95, 1.03, 1.08, 0.97];
+  let ACC = ACCESS;
+  // Parcours par un tunnel : intérieur → embouchure → dégagement → points.
+  const via = (sd, ...pts) => [ACC[sd].in, ACC[sd].mouth, ACC[sd].apron, ...pts];
+  const back = (sd, ...pts) => [...pts, ACC[sd].apron, ACC[sd].mouth, ACC[sd].in];
   let seqOrder = 0;
   let pomTotal = 18.6;           // pompom A : fin du show (s), posée par draw
   let hype = 0;                  // 0 à 3 : ferveur du match (staging.js), sauts de la mascotte
@@ -573,7 +592,6 @@ export function createShowFx(team) {
       // temps mort (phrases de 4 mesures : lignes → V → V → lignes, ordre
       // des pas renouvelé à chaque phrase), sortie seulement à la fin
       // (pomTotal = instant où la dernière doit être sortie).
-      const E = [200, 102];
       const rows = [[868, 492], [956, 492], [1044, 492], [1132, 492], [822, 606], [930, 610], [1070, 610], [1178, 606]];
       const vee = [[812, 470], [906, 512], [1094, 512], [1188, 470], [858, 600], [950, 642], [1050, 642], [1142, 600]];
       const D0 = 3.5, PH = 4 * BAR;
@@ -597,9 +615,12 @@ export function createShowFx(team) {
       for (let i = 0; i < 8; i++) {
         const tOut = X0 + 0.1 * (7 - i);
         const last = tOut > D0 ? danceAt(i, tOut - D0) : { x: rows[i][0], y: rows[i][1] };
-        const pin = mkPath([E, [rows[i][0], 100 + 40 * (i % 4)], rows[i]]);
-        const pout = mkPath([[last.x, last.y], [last.x, 140], E]);
-        const c = travelOrDance(i, look, pin, pout, 0.17 * i, tOut, 430, t, (c) => {
+        // Entrée / sortie par le tunnel de leur côté (gauche : les quatre de
+        // gauche), plus jamais depuis un coin des tribunes.
+        const sd = rows[i][0] < 1000 ? 'L' : 'R';
+        const pin = mkPath(via(sd, rows[i]));
+        const pout = mkPath(back(sd, [last.x, last.y]));
+        const c = travelOrDance(i, look, pin, pout, 0.17 * (i % 4), tOut, 560, t, (c) => {
           const td = t - D0;
           if (td < 0) { c.pose = idlePose(t, i); return; }
           const d0 = danceAt(i, td);
@@ -627,9 +648,9 @@ export function createShowFx(team) {
       out.dim = 0.16 * sm((t - 1) / 1.5) * (1 - sm((t - X0 - 1) / 1.5));
       out.spots = [{ x: 510, y: 104, r: 250, i: 0.85 }, { x: 1490, y: 104, r: 250, i: 0.85 }];
       for (let i = 0; i < 8; i++) {
-        const left = i < 4, E = left ? [120, y] : [1880, y];
+        const left = i < 4, sd = left ? 'L' : 'R', ex = left ? 150 : 1850;
         const order = left ? 3 - i : i - 4;
-        const pin = mkPath([E, [xs[i], y]]), pout = mkPath([[xs[i], y], E]);
+        const pin = mkPath(via(sd, [ex, 990], [ex, y], [xs[i], y])), pout = mkPath(back(sd, [xs[i], y], [ex, y], [ex, 990]));
         const c = travelOrDance(i, look, pin, pout, 0.2 * order, X0 + 0.12 * (3 - order), 430, t, (c) => {
           const td = t - D0;
           if (td < 0) { c.pose = idlePose(t, i); return; }
@@ -655,8 +676,8 @@ export function createShowFx(team) {
       for (let i = 0; i < 8; i++) {
         const g = i < 4 ? 0 : 1, j = i % 4;
         const T = [ctrs[g][0] + offs[j][0], ctrs[g][1] + offs[j][1]];
-        const E = g ? [1822, 1090] : [178, 1090];
-        const pin = mkPath([E, [E[0], 990], T]), pout = mkPath([T, [E[0], 990], E]);
+        const sd = g ? 'R' : 'L';
+        const pin = mkPath(via(sd, T)), pout = mkPath(back(sd, T));
         const c = travelOrDance(i, look, pin, pout, 0.2 * j, X0 + 0.12 * (3 - j), 440, t, (c) => {
           const td = t - D0;
           if (td < 0) { c.pose = idlePose(t, i); return; }
@@ -683,37 +704,52 @@ export function createShowFx(team) {
     return Object.assign({ kind: 'masc', look, Hpx: HPX.masc[look], x, y, h: 0, face: 1, seed: 3, pose: P.ready }, extra || {});
   }
 
-  function sceneMasc(variant, look, t) {
+  function sceneMasc(variant, look, t, total) {
+    total = total > 0 ? total : (variant === 'B' ? 14 : 12);
     const out = { chars: [], dim: 0, spots: [], fx: [], floor: [], guides: { paths: [] }, period: 11 };
     if (variant === 'A') {
-      out.period = 10.6;
       const k = HPX.masc[look] / 100, R = RIGM[look];
       const Js = solve(R, P.slam);
       const hand = Js.arms[1].ha;
       const hDunk = 50;
       const gx = 1718 - hand[0] * k, gy = 548 + hDunk - hand[1] * k;
       const tx = gx - 185, ty = gy;
-      const C = [1846, 1088];
-      const p1 = mkPath([C, [1300, gy]]), p2 = mkPath([[1300, gy], [tx - 6, ty]]), p3 = mkPath([[gx, gy], [gx + 30, gy + 60], C]);
+      // Tunnel de droite → panier de droite (routine) → attente → tunnel de
+      // droite. Temps réel `t` : entrée à vitesse de course, routine
+      // d'origine (temps `o`, dunk à 4,4 s), puis la mascotte ATTEND (salut
+      // au public) et ne repart qu'à la fin de la pause (mission live
+      // 2026-10-10) — un seul passage, jamais de boucle.
+      const p1 = mkPath(via('R', [1300, gy])), p2 = mkPath([[1300, gy], [tx - 6, ty]]), p3 = mkPath(back('R', [gx, gy], [gx + 30, gy + 60]));
+      const ENTER = p1.total / 380, S0 = ENTER - 2.0, EXIT = p3.total / 380;
+      const tExit = Math.max(ENTER + 0.5, total - EXIT - 0.2), tEnd = Math.min(7.3 + S0, tExit);
+      const o = t - S0;
+      out.period = total;
       out.guides.paths.push(p1, p2, p3);
-      out.floor.push(['tramp', tx, ty, t > 3.75 && t < 4.1 ? sm((t - 3.75) / 0.12) * (1 - sm((t - 3.95) / 0.15)) : 0]);
+      out.floor.push(['tramp', tx, ty, o > 3.75 && o < 4.1 ? sm((o - 3.75) / 0.12) * (1 - sm((o - 3.95) / 0.15)) : 0]);
       let c = null;
       const ballG = [1718, 548 + 70];
-      if (t < 2.0) { const m = mover(p1, 0, p1.total / 2.0, t); c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 17), face: -1, ball: true }); }
-      else if (t < 3.0) { const u = t - 2.0; const p = mixPose(P.ready, P.point, eo(u / 0.25)); const b = Math.max(0, Math.sin(u * 9)); p.lL[0] += 8 * b; p.lR[0] += 8 * b; p.lL[1] -= 10 * b; p.lR[1] -= 10 * b; c = mascChar(look, 1300, gy, { pose: p, face: 1, ball: true }); }
-      else if (t < 3.78) { const m = mover(p2, 3.0, p2.total / 0.78, t); c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 15, 1.1), face: 1, ball: true }); }
-      else if (t < 4.05) { const u = (t - 3.78) / 0.27; c = mascChar(look, tx, ty - 6, { pose: mixPose(P.ready, P.dip, sm(u * 1.6)), face: 1, ball: true, h: -3 * Math.sin(Math.PI * u) }); }
-      else if (t < 4.85) {
-        const u = (t - 4.05) / 0.8;
+      if (t < ENTER) { const m = mover(p1, 0, p1.total / ENTER, t); c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 17), face: m.dx >= 0 ? 1 : -1, ball: true }); }
+      else if (t >= tExit) { const m = mover(p3, tExit, p3.total / EXIT, t); if (!m.done) c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 17), face: m.dx >= 0 ? 1 : -1 }); }
+      else if (t >= tEnd) {
+        // Attente de la fin de la pause : salut au public, applaudissements.
+        const v = ((t - tEnd) % 2.4) / 2.4, p = mixPose(P.wave, P.clap, sm(Math.abs(Math.sin(v * Math.PI))));
+        if (v < 0.5) p.aR[0] += 12 * Math.sin(v * Math.PI * 8);
+        c = mascChar(look, gx, gy, { pose: p, face: -1 });
+      }
+      else if (o < 3.0) { const u = o - 2.0; const p = mixPose(P.ready, P.point, eo(u / 0.25)); const b = Math.max(0, Math.sin(u * 9)); p.lL[0] += 8 * b; p.lR[0] += 8 * b; p.lL[1] -= 10 * b; p.lR[1] -= 10 * b; c = mascChar(look, 1300, gy, { pose: p, face: 1, ball: true }); }
+      else if (o < 3.78) { const m = mover(p2, 3.0, p2.total / 0.78, o); c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 15, 1.1), face: 1, ball: true }); }
+      else if (o < 4.05) { const u = (o - 3.78) / 0.27; c = mascChar(look, tx, ty - 6, { pose: mixPose(P.ready, P.dip, sm(u * 1.6)), face: 1, ball: true, h: -3 * Math.sin(Math.PI * u) }); }
+      else if (o < 4.85) {
+        const u = (o - 4.05) / 0.8;
         const x = lerp(tx, gx, u), h = hDunk * u + 4 * 85 * u * (1 - u);
         const p = u < 0.5 ? mixPose(P.dip, P.tuck, eo(u / 0.3)) : mixPose(P.tuck, P.slam, eo((u - 0.5) / 0.35));
         c = mascChar(look, x, gy, { pose: p, face: 1, h, ball: true });
-      } else if (t < 5.25) { const u = (t - 4.85) / 0.4; c = mascChar(look, gx, gy, { pose: mixPose(P.slam, P.hang, eo(u / 0.4)), face: 1, h: hDunk - 6 * Math.sin(Math.PI * u) }); }
-      else if (t < 5.55) { const u = (t - 5.25) / 0.3; c = mascChar(look, gx, gy, { pose: mixPose(P.hang, P.land, eo(u)), face: 1, h: hDunk * (1 - u * u) }); }
-      else if (t < 7.3) {
+      } else if (o < 5.25) { const u = (o - 4.85) / 0.4; c = mascChar(look, gx, gy, { pose: mixPose(P.slam, P.hang, eo(u / 0.4)), face: 1, h: hDunk - 6 * Math.sin(Math.PI * u) }); }
+      else if (o < 5.55) { const u = (o - 5.25) / 0.3; c = mascChar(look, gx, gy, { pose: mixPose(P.hang, P.land, eo(u)), face: 1, h: hDunk * (1 - u * u) }); }
+      else if (o < 7.3) {
         // Célébration (2026-10-10) : sauts (plus hauts quand le match est
         // chaud, `hype`), puis danse hype, salut au public et applaudissements.
-        const u = t - 5.55;
+        const u = o - 5.55;
         if (u < 0.88) {
           const ph = Math.floor(u / 0.44), v = (u % 0.44) / 0.44;
           const p = ph % 2 ? mixPose(P.highV, P.jump, eo(v / 0.3)) : mixPose(P.jump, P.highV, eo(v / 0.3));
@@ -726,22 +762,37 @@ export function createShowFx(team) {
           if (v < 0.6) p.aR[0] += 14 * Math.sin(v * Math.PI * 10);
           c = mascChar(look, gx, gy, { pose: p, face: -1 });
         }
-      } else { const m = mover(p3, 7.3, p3.total / 2.3, t); if (!m.done) c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 17), face: m.dx >= 0 ? 1 : -1 }); }
+      }
       if (c) out.chars.push(c);
-      if (t >= 4.85 && t < 9.4) {
-        const u = t - 4.85;
+      if (o >= 4.85 && o < 9.4 && t < tExit) {
+        const u = o - 4.85;
         let z, bx = 1718;
         if (u < 0.32) z = 70 * (1 - (u / 0.32) * (u / 0.32));
         else { const v = u - 0.32; const b1 = 0.38, b2 = 0.26; z = v < b1 ? 26 * Math.sin(Math.PI * v / b1) : v < b1 + b2 ? 9 * Math.sin(Math.PI * (v - b1) / b2) : 0; bx += Math.min(v, 1.2) * 40; }
         out.fx.push(['ball', bx, ballG[1], z]);
         out.fx.push(['rim', 1718, 548, u]);
       }
-      out.fx.push(['burst', 1952, 360, 2.25, 3, 91], ['burst', 1952, 520, 5.6, 4, 92], ['burst', 1950, 760, 5.9, 4, 93], ['burst', 1700, 1243, 6.1, 4, 94], ['burst', 1952, 920, 6.3, 3, 95]);
+      out.fx.push(['burst', 1952, 360, 2.25 + S0, 3, 91], ['burst', 1952, 520, 5.6 + S0, 4, 92], ['burst', 1950, 760, 5.9 + S0, 4, 93], ['burst', 1700, 1243, 6.1 + S0, 4, 94], ['burst', 1952, 920, 6.3 + S0, 3, 95]);
     } else if (variant === 'B') {
-      out.period = 11.8;
+      // Tunnel de droite → UN tour d'honneur (vitesse calée sur la durée de
+      // la pause : il la remplit, sans jamais recommencer) → attente en
+      // saluant le public → sortie par le tunnel de gauche à la fin de la
+      // pause (mission live 2026-10-10).
       const pts = [[1850, 1092], [1850, 142], [150, 142], [150, 1092]];
       const pi = mkPath(pts); out.guides.paths.push(pi);
-      const sp = 340, t0 = 0.2;
+      const pin = mkPath([ACC.R.in, ACC.R.mouth, pts[0]]), pout = mkPath([pts[3], ACC.L.mouth, ACC.L.in]);
+      const ENTER = pin.total / 340, EXIT = pout.total / 340;
+      const lapT = clamp(total - ENTER - EXIT - 2, pi.total / 520, pi.total / 68);
+      const sp = pi.total / lapT, t0 = ENTER;
+      const tExit = Math.max(t0 + lapT, total - EXIT - 0.2);
+      out.period = total;
+      if (t < ENTER) { const e = mover(pin, 0, 340, t); out.chars.push(mascChar(look, e.x, e.y, { pose: runPose(e.d / 17), face: -1 })); }
+      else if (t >= tExit) { const e = mover(pout, tExit, 340, t); if (!e.done) out.chars.push(mascChar(look, e.x, e.y, { pose: runPose(e.d / 17), face: -1 })); }
+      else if (t >= t0 + lapT) {
+        const v = ((t - t0 - lapT) % 2.4) / 2.4, p = mixPose(P.wave, P.clap, sm(Math.abs(Math.sin(v * Math.PI))));
+        if (v < 0.5) p.aR[0] += 12 * Math.sin(v * Math.PI * 8);
+        out.chars.push(mascChar(look, pts[3][0], pts[3][1], { pose: p, face: 1 }));
+      }
       const m = mover(pi, t0, sp, t);
       if (m.moving) {
         let h = 0;
@@ -774,7 +825,7 @@ export function createShowFx(team) {
       }
     } else {
       out.period = 15;
-      const pin = mkPath([[176, 1090], [176, 992], [1000, 604]]), pout = mkPath([[1000, 604], [1824, 992], [1824, 1090]]);
+      const pin = mkPath(via('L', [176, 992], [1000, 604])), pout = mkPath(back('R', [1000, 604], [1824, 992]));
       out.guides.paths.push(pin, pout);
       let c = null; const mi = mover(pin, 0.2, 300, t);
       const tArr = 0.2 + pin.total / 300;
@@ -916,6 +967,104 @@ export function createShowFx(team) {
     return out;
   }
 
+  // Lanceurs de t-shirts « en tournée » (mission live 2026-10-10 : « ils
+  // reviennent toujours au même point ») : chacun entre par le tunnel de son
+  // côté, enchaîne plusieurs emplacements de tir (sur le parquet, jamais à
+  // la table ni aux bancs), tire vers des cibles variées des tribunes
+  // (côté, haut, bas), puis repart par son tunnel avant la fin de la pause.
+  // Emplacements, ordre, cibles et instants de tir : tirés d'une graine
+  // (début de l'arrêt) → identiques pour tous les spectateurs et en rediffusion.
+  const TEE_SPOTS = [[430, 860], [320, 560], [560, 270], [760, 820], [700, 450], [900, 300]];
+  const TEE_TGT = { side: [[42, 300, 30], [50, 520, 30], [46, 790, 30], [44, 960, 30]], top: [[150, 24, 12], [330, 24, 12], [520, 22, 12], [700, 24, 12]], bottom: [[300, 1242, 22], [560, 1244, 22], [820, 1246, 22]] };
+  const WALK = 230, EXITV = 260;
+  const teePlans = new Map();
+  function teeRand(seed) { let a = (seed | 0) || 1; return () => { a = (a + 0x6d2b79f5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+  function teePlan(look, seed, total) {
+    const key = look + "|" + seed + "|" + total.toFixed(1);
+    if (teePlans.has(key)) return teePlans.get(key);
+    const plan = [0, 1].map(who => {
+      const sd = who ? 'R' : 'L', mx = p => (who ? [2000 - p[0], p[1]] : [p[0], p[1]]);
+      const r = teeRand(seed * 31 + who * 977 + 7);
+      const spots = TEE_SPOTS.map(mx);
+      for (let i = spots.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [spots[i], spots[j]] = [spots[j], spots[i]]; }
+      const segs = [], shots = [];
+      let pos = null, tt = 0.3 + who * 0.6, n = 0;
+      for (const sp of spots) {
+        const path = mkPath(pos ? [pos, sp] : via(sd, sp));
+        const walk = path.total / WALK, k = 1 + Math.floor(r() * 2), stand = 0.6 + k * 1.15 + 0.4;
+        const exitLen = mkPath(back(sd, sp)).total / EXITV;
+        if (n > 0 && tt + walk + stand + exitLen > total - 0.4) break;
+        segs.push({ kind: 'walk', path, t0: tt, t1: tt + walk }); tt += walk;
+        segs.push({ kind: 'stand', x: sp[0], y: sp[1], t0: tt, t1: tt + stand });
+        for (let q = 0; q < k; q++) {
+          const pool = r() < 0.45 ? TEE_TGT.side : r() < 0.7 ? TEE_TGT.top : TEE_TGT.bottom;
+          const tg = pool[Math.floor(r() * pool.length)];
+          const T = who ? [2000 - tg[0], tg[1]] : [tg[0], tg[1]];
+          const jit = [(r() - 0.5) * 60, (r() - 0.5) * 30];
+          const Tj = [T[0] + (tg[1] < 100 || tg[1] > 1200 ? jit[0] : 0), T[1] + (tg[1] >= 100 && tg[1] <= 1200 ? jit[1] * 4 : 0)];
+          const tF = tt + 0.75 + q * 1.15;
+          let phi = launchAngle(sp, HPX.staff[look] * 0.55, Tj, tg[2]);
+          const mw = staffMuzzleWorld(look, sp, phi, 0).m;
+          const S = [mw[0], sp[1]], h0 = sp[1] - mw[1];
+          phi = launchAngle(S, h0, Tj, tg[2]);
+          shots.push({ who, tF, T: Tj, hT: tg[2], phi, tr: trajectory(S, h0, Tj, tg[2]), idx: who * 100 + shots.length, at: sp });
+        }
+        tt += stand; pos = sp; n++;
+      }
+      const exitPath = mkPath(back(sd, pos));
+      const tExit = Math.max(tt, total - exitPath.total / EXITV - 0.3);
+      segs.push({ kind: 'stand', x: pos[0], y: pos[1], t0: tt, t1: tExit });
+      segs.push({ kind: 'walk', path: exitPath, t0: tExit, t1: tExit + exitPath.total / EXITV, exit: true });
+      return { who, segs, shots };
+    });
+    teePlans.set(key, plan); if (teePlans.size > 20) teePlans.delete(teePlans.keys().next().value);
+    return plan;
+  }
+  function sceneTeeTour(look, t, total, seed) {
+    total = total > 0 ? total : 30;
+    const plan = teePlan(look, seed || 1, total);
+    const out = { chars: [], dim: 0.1, spots: [], fx: [], floor: [], shirts: [], guides: { paths: [], traj: [] }, period: total, spotsUsed: [] };
+    for (const L of plan) {
+      const seg = L.segs.find(g => t >= g.t0 && t < g.t1) || (t < L.segs[0].t0 ? null : L.segs[L.segs.length - 1]);
+      out.spotsUsed.push(L.segs.filter(g => g.kind === 'stand').map(g => [Math.round(g.x), Math.round(g.y)]));
+      if (!seg || (seg.exit && t >= seg.t1)) continue;
+      const mine = L.shots;
+      let prev = null, next = null;
+      for (const sh of mine) { if (sh.tF <= t - 0.25) prev = sh; else if (!next) next = sh; }
+      if (seg.kind === 'walk') {
+        const m = mover(seg.path, seg.t0, seg.path.total / (seg.t1 - seg.t0), t);
+        const face = m.dx >= 0 ? 1 : -1, restPhi = face > 0 ? -Math.PI * 0.3 : -Math.PI * 0.7;
+        const pose = aimPose(restPhi, face, 0.3), rp = runPose(m.d / 15, 0.7);
+        pose.lL = rp.lL; pose.lR = rp.lR;
+        const mw = staffMuzzleWorld(look, [m.x, m.y], restPhi, 0);
+        out.chars.push(staffChar(look, m.x, m.y, { pose, face: mw.face, aim: mw.aimL, recoil: 0 }));
+      } else {
+        const p0 = prev && prev.at[0] === seg.x && prev.at[1] === seg.y ? prev.phi : (seg.x < 1000 ? -Math.PI * 0.85 : -Math.PI * 0.15);
+        let phi = p0, brace = 0.4;
+        if (next && next.at[0] === seg.x && next.at[1] === seg.y) {
+          const u = sm((t - (next.tF - 0.75)) / 0.5);
+          let d = next.phi - p0; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+          phi = p0 + d * u; brace = 0.4 + 0.6 * sm((t - (next.tF - 0.35)) / 0.25);
+        }
+        const recoil = prev && t - prev.tF < 0.6 ? 7 * Math.exp(-(t - prev.tF) * 10) : 0;
+        const mw = staffMuzzleWorld(look, [seg.x, seg.y], phi, recoil);
+        const pose = aimPose(phi, mw.face, brace);
+        out.chars.push(staffChar(look, seg.x - Math.cos(phi) * recoil * 0.6, seg.y - Math.sin(phi) * recoil * 0.18, { pose, face: mw.face, aim: mw.aimL, recoil }));
+      }
+    }
+    for (const L of plan) for (const sh of L.shots) {
+      const u = (t - sh.tF) / sh.tr.D;
+      out.guides.traj.push(sh.tr);
+      const muz = trajAt(sh.tr, 0);
+      if (t >= sh.tF && t - sh.tF < 0.14) out.fx.push(['flash', muz.sx, muz.sy, (t - sh.tF) / 0.14, 1]);
+      if (t >= sh.tF && t - sh.tF < 0.9) out.fx.push(['smoke', muz.sx, muz.sy, (t - sh.tF) / 0.9, sh.phi, 1]);
+      if (u >= 0 && u <= 1) out.shirts.push({ tr: sh.tr, u, spinDir: Math.cos(sh.phi) >= 0 ? 1 : -1, seed: sh.idx });
+      if (u > 1) out.fx.push(['burst', sh.T[0], sh.T[1] - sh.hT, sh.tF + sh.tr.D, 3, 200 + sh.idx]);
+    }
+    out.plan = plan;
+    return out;
+  }
+
   function drawShirtShadow(s) {
     const p = trajAt(s.tr, s.u);
     shadowEll(p.gx, p.gy, 11 + p.h * 0.05, 5 + p.h * 0.02, 0, 0.42 / (1 + p.h / 70));
@@ -1028,6 +1177,7 @@ export function createShowFx(team) {
   // (total : pompom — durée du show, entrée et sortie comprises, en s)
   function draw(context, opts) {
     ctx = context; setQ(opts.q);
+    if (opts.access) ACC = opts.access;
     const show = opts.show, variant = opts.variant;
     const look = SHOW_LOOK[show === "pom" ? "pom" : show + variant] || "cartoon";
     const t = Math.max(0, opts.t || 0);
@@ -1041,9 +1191,9 @@ export function createShowFx(team) {
       // la même scène — mêmes personnages, chacun à sa place.
       const sp = scenePom('A', SHOW_LOOK.pom, t);
       // (t2 > 900 : tour de la mascotte terminé — plus de mascotte, voir staging.js:mascotLap)
-      const sm2 = opts.t2 > 900 ? { chars: [], dim: 0, spots: [], fx: [], floor: [] } : sceneMasc(opts.mvariant || 'A', SHOW_LOOK['masc' + (opts.mvariant || 'A')] || 'cartoon', Math.max(0, opts.t2 || 0));
+      const sm2 = opts.t2 < 0 ? { chars: [], dim: 0, spots: [], fx: [], floor: [] } : sceneMasc(opts.mvariant || 'A', SHOW_LOOK['masc' + (opts.mvariant || 'A')] || 'cartoon', opts.t2, opts.total2);
       sc = { chars: sp.chars.concat(sm2.chars), dim: Math.max(sp.dim, sm2.dim), spots: sp.spots.concat(sm2.spots), fx: sp.fx.concat(sm2.fx), floor: (sm2.floor || []), guides: sp.guides };
-    } else sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t) : sceneTee(variant, look, t);
+    } else sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t, opts.total) : variant === 'T' ? sceneTeeTour(look, t, opts.total, opts.seed) : sceneTee(variant, look, t);
     drawLighting(sc.dim, sc.spots);
     const env = makeEnv(sc.dim, sc.spots);
     (sc.floor || []).forEach(f => drawFloor(f, t));
@@ -1052,7 +1202,8 @@ export function createShowFx(team) {
     sc.chars.slice().sort((a, b) => a.y - b.y).forEach(c => drawChar(c, t, env));
     sc.fx.forEach(f => drawFx(f, t));
     (sc.shirts || []).forEach(s => drawShirt(s, t));
-    return { chars: sc.chars.map(c => ({ kind: c.kind, x: c.x, y: c.y, h: c.h })), shirts: (sc.shirts || []).length, look };
+    return { chars: sc.chars.map(c => ({ kind: c.kind, x: c.x, y: c.y, h: c.h })), shirts: (sc.shirts || []).length, look,
+      spots: sc.spotsUsed || null, shots: sc.plan ? sc.plan.map(L => L.shots.map(x => ({ tF: +x.tF.toFixed(2), T: x.T.map(Math.round), from: x.at }))) : null };
   }
   return { draw, colors: TC };
 }

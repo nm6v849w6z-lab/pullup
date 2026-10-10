@@ -26,7 +26,7 @@
 
 // Règles de jeu partagées avec le moteur (24/14 s, violations…) : le même
 // fichier que engine.js et moteurbasket3.html (expose globalThis.HM_RULES).
-import "../game-rules.js?v=20261010-21";
+import "../game-rules.js?v=20261010-22";
 const Rules = globalThis.HM_RULES;
 
 const SPOT_GEOM = {

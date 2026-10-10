@@ -771,3 +771,4 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 @keyframes hmSndPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#f5a13a) 30%,transparent)}}
 @media (prefers-reduced-motion:reduce){.hm-live .snd-resume{animation:none}}
 .c2d-clock.off{opacity:.45}
+.c2d-tunnel-lab{fill:#d7deea;font:800 6.4px/1 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.9px}
