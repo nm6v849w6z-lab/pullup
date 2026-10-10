@@ -7994,6 +7994,13 @@
      dans la barre quand on est sur cette page, ça fait doublon » — le
      mini-bandeau du topbar reste sur les autres pages. */
   body.page-live #topbarLiveStrip{display:none !important;} /* classe posée par showPage (plus de body:has, 2026-10-10) */
+  /* Direct d'une sélection nationale dans sa page (mission live 2026-10-10,
+     « un véritable onglet de live, comme le club ») : même vue que le direct
+     suivi, sans cadre de fenêtre ; bandeau du haut masqué sur sa page. */
+  body.page-ntlive #topbarNtLiveStrip{display:none !important;}
+  .nt-live-bar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .spectate-box.nt-live-box{max-width:none; width:auto; max-height:none; overflow:visible;}
+  .spectate-box.nt-live-box.rich [data-sp="root"]{margin:8px 0 12px;}
   /* =====================================================================
      THÈME CLAIR (2026-09-26, retour utilisateur : « travaille sur une
      version claire du jeu », choix dans Paramètres à côté d'« Identité du

@@ -69,7 +69,7 @@
     });
   })();
 </script>
-<link rel="stylesheet" href="assets/game.css?v=d0d2650c63">
+<link rel="stylesheet" href="assets/game.css?v=20261010-nt1">
 <!-- Hoop Shows (émissions avant-match / mi-temps, voir DEV_NOTES.md #11) :
      lecteur et polices livrés par le prestataire, copiés tels quels dans
      assets/hoop-shows/ (voir server/index.js pour le service statique). -->
@@ -128,11 +128,11 @@
 <script src="assets/club-staging-ui.js" defer></script>
 <script src="assets/medical-ui.js?v=20261009-1" defer></script>
 <script src="assets/market-presets.js?v=20261009-1" defer></script>
-<script src="assets/match-share.js?v=20261009-1" defer></script>
+<script src="assets/match-share.js?v=20261010-1" defer></script>
 <script src="assets/live/kits.js?v=20261009-1" defer></script>
 <script src="assets/national-visuals.js?v=20261009-1" defer></script>
 <script src="assets/national.js?v=20261009-4" defer></script>
-<script src="assets/national-coach.js?v=20261010-1" defer></script>
+<script src="assets/national-coach.js?v=20261010-2" defer></script>
 <style>html, body { touch-action: pan-x pan-y; }</style>
 <script>
 /* Pas de zoom sur mobile (retour utilisateur 2026-10-03 : « il ne faut
@@ -322,6 +322,16 @@
           <span class="tls-team" id="tlsNameB">Rennes</span>
           <span class="tls-clock" id="tlsClock">10:00</span>
         </button>
+        <!-- Direct d'une sélection nationale en cours de visionnage : même
+             bandeau que celui du club, rouvre la page #ntLiveSection (voir
+             syncNtLiveStrip). -->
+        <button class="topbar-live-strip topbar-nt-live-strip hidden" id="topbarNtLiveStrip" data-tab="ntlive" title="Voir le direct de la sélection">
+          <span class="tls-dot">🔴</span>
+          <span class="tls-team" id="tlsNtNameA"></span>
+          <span class="tls-score"><span id="tlsNtScoreA">0</span>–<span id="tlsNtScoreB">0</span></span>
+          <span class="tls-team" id="tlsNtNameB"></span>
+          <span class="tls-clock" id="tlsNtClock"></span>
+        </button>
         <!-- Argent disponible (retour utilisateur 2026-09-30), ordinateur
              uniquement (voir .topbar-budget, updateTopbarBudget). -->
         <!-- Managers connectés (retour utilisateur 2026-10-03), voir
@@ -474,6 +484,22 @@
       <div class="actions">
         <button class="secondary" id="closeStandingsBtn">← Retour</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Direct d'une sélection nationale (mission live 2026-10-10 : « un
+       véritable onglet de live, comme le club », plus de fenêtre
+       superposée) : page à part entière (PAGE_IDS, TAB_HANDLERS.ntlive,
+       bandeau #topbarNtLiveStrip), même vue live que le direct suivi.
+       Quitter la page ne coupe pas le match (il continue en silence) ; y
+       revenir reprend la même vue, sans nouvelle simulation. -->
+  <div id="ntLiveSection" class="hidden">
+    <div class="section nt-live-page">
+      <div class="nt-live-bar">
+        <button type="button" class="secondary" id="ntLiveBackBtn">← Retour</button>
+        <button type="button" class="upgrade-confirm-cancel-btn" id="ntLiveCloseBtn">Fermer le direct</button>
+      </div>
+      <div id="ntLiveHost"></div>
     </div>
   </div>
 
@@ -20105,7 +20131,7 @@ function refreshMedicalMarkets() {
 // bien masquée quand on retourne à un écran plus ancien, et vice-versa.
 // ---------------------------------------------------------------------
 const PAGE_IDS = [
-  "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection",
+  "prepSection", "standingsSection", "trainingSection", "seasonEndSection", "liveSection", "ntLiveSection",
   "clubSection", "staffSection", "medicalSection", "tactiquesSection", "academieSection", "economieSection", "sponsorsSection", "salleSection", "calendrierSection", "coupeSection", "lpSection", "amicauxSection", "messagesSection", "histoireSection",
   "effectifSection", "marcheSection", "humeurSection", "placeholderSection", "catchupSection",
   "guideSection", "premiumSection", "planeteSection", "signetsSection", "vestiaireSection", "selectionsSection", "personnalisationSection", "playerDetailSection", "teamDetailSection", "statsHebdoSection", "playerCompareSection",
@@ -20204,6 +20230,7 @@ function showPage(id) {
   // `body:has(#liveSection:not(.hidden))`, qui faisait réévaluer les styles
   // de TOUTE la page à chaque modification du DOM).
   document.body.classList.toggle("page-live", id === "liveSection");
+  document.body.classList.toggle("page-ntlive", id === "ntLiveSection");
   hmLiveSyncAudible();
   Object.entries(PAGE_DISCARD_ON_LEAVE).forEach(([pid, holders]) => {
     if (pid === id) return;
@@ -34924,75 +34951,185 @@ function spectateFeedHtml(airedEvents) {
   }).join("") + `</div>`;
 }
 
-function renderSpectateBoxScoreTab(side) {
-  if (!spectateState) return;
-  spectateState.activeSide = side;
-  document.querySelectorAll("#spectateOverlay .spectate-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.side === side));
-  const holder = document.getElementById("spectateBoxscoreHolder");
+// Hôte d'un direct suivi (mission live 2026-10-10, « le live d'une équipe
+// nationale dans un véritable onglet, comme le club ») : fenêtre
+// #spectateOverlay (autres clubs, ligue privée, rediffusions — inchangé)
+// ou page #ntLiveSection (sélections nationales, `ntLiveState`). Les deux
+// états sont indépendants : ouvrir la fenêtre d'un autre club ne coupe pas
+// le direct national, et inversement. Chaque élément porte data-sp="…" ;
+// dans la fenêtre il garde aussi son id historique (#spectateLiveRoot…).
+let ntLiveState = null;
+function spEl(st, k) { return st && st.host ? st.host.querySelector(`[data-sp="${k}"]`) : null; }
+function spectateAlive(st) { return !!(st && st.host && st.host.isConnected && (st === spectateState || st === ntLiveState)); }
+
+function renderSpectateBoxScoreTab(side, st = spectateState) {
+  if (!st) return;
+  st.activeSide = side;
+  if (st.host) st.host.querySelectorAll(".spectate-bs-tab").forEach(b => b.classList.toggle("active", b.dataset.side === side));
+  const holder = spEl(st, "box");
   if (!holder) return;
-  const rows = Array.from(spectateState.box[side].values()).sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
+  const rows = Array.from(st.box[side].values()).sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
   holder.innerHTML = rows.length
-    ? liveBoxscoreTableHtml(rows, spectateState.box.teamTov ? spectateState.box.teamTov[side] : 0)
+    ? liveBoxscoreTableHtml(rows, st.box.teamTov ? st.box.teamTov[side] : 0)
     : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
 }
 
-function renderSpectateMatch() {
-  if (!spectateState) return;
-  const { live } = spectateState;
+function renderSpectateMatch(st = spectateState) {
+  if (!st) return;
+  const { live } = st;
   const airedEvents = live.forfeit ? [] : live.events.filter(ev => ev.airAt <= Date.now());
-  spectateState.box = computeSpectateBoxScore(airedEvents, spectateState.teamObj, spectateState.opponentObj);
-  const statusHolder = document.getElementById("spectateStatusHolder");
-  const feedHolder = document.getElementById("spectateFeedHolder");
+  st.box = computeSpectateBoxScore(airedEvents, st.teamObj, st.opponentObj);
+  const statusHolder = spEl(st, "status");
+  const feedHolder = spEl(st, "feed");
   if (statusHolder) statusHolder.innerHTML = spectateStatusHtml(live, airedEvents);
   if (feedHolder) feedHolder.innerHTML = spectateFeedHtml(airedEvents);
-  renderSpectateBoxScoreTab(spectateState.activeSide || "A");
+  renderSpectateBoxScoreTab(st.activeSide || "A", st);
+  if (st === ntLiveState) syncNtLiveStrip();
+}
+
+// Libère un direct suivi : minuterie, vue (sons, boucle d'animation).
+function spectateDispose(st) {
+  if (!st) return;
+  st.closed = true;
+  if (st.timer) clearInterval(st.timer);
+  if (st.rich) { try { st.rich.view.destroy(); } catch (e) { /* rien */ } }
+  st.rich = null;
 }
 
 function closeSpectateMatch() {
   const existing = document.getElementById("spectateOverlay");
   if (existing) existing.remove();
-  if (spectateState && spectateState.timer) clearInterval(spectateState.timer);
-  if (spectateState && spectateState.rich) { try { spectateState.rich.view.destroy(); } catch (e) { /* rien */ } }
+  spectateDispose(spectateState);
   spectateState = null;
   hmLiveSyncAudible();
+}
+
+// Fin du direct national (bouton « Fermer le direct », autre match
+// national ouvert) : la page se vide, le bandeau disparaît ; `leave` :
+// retour à la page d'où il avait été ouvert.
+function closeNtLive(leave) {
+  const st = ntLiveState;
+  if (!st) return;
+  spectateDispose(st);
+  ntLiveState = null;
+  const host = document.getElementById("ntLiveHost");
+  if (host) host.innerHTML = "";
+  syncNtLiveStrip();
+  hmLiveSyncAudible();
+  if (leave) ntLiveLeave(st);
+}
+// Quitte la page du direct national sans l'arrêter (« ← Retour ») : page
+// d'où il a été ouvert (page du mode Sélection, page Sélections…).
+function ntLiveLeave(st) {
+  st = st || ntLiveState;
+  const from = st && st.from;
+  const sec = document.getElementById("ntLiveSection");
+  if (sec && sec.classList.contains("hidden")) return;
+  const C = window.HM_NATIONAL_COACH;
+  if (C && C.state && C.state.mode) { showPage("selectionsSection"); setActiveTab(""); return; }
+  if (from && from.tab && TAB_HANDLERS[from.tab]) { TAB_HANDLERS[from.tab](); return; }
+  showPage(from && from.page && from.page !== "ntLiveSection" ? from.page : "clubSection");
+  setActiveTab(from && from.tab || (from && from.page ? "" : "club"));
+}
+// Affiche la page du direct national en cours (bandeau, TAB_HANDLERS.ntlive,
+// retour sur un direct déjà ouvert) — aucune recréation.
+function showNtLivePage() {
+  if (!ntLiveState) { const C = window.HM_NATIONAL_COACH; if (!(C && C.state && C.state.mode) && TAB_HANDLERS.selections) TAB_HANDLERS.selections(); return; }
+  showPage("ntLiveSection");
+  setActiveTab("ntlive");
+  if (ntLiveState.rich) spectateSyncRich(ntLiveState);
+  syncNtLiveStrip();
+}
+// Bandeau du direct national dans la barre du haut (comme #topbarLiveStrip
+// pour le club) : présent tant que le direct est ouvert, masqué sur sa page.
+function syncNtLiveStrip() {
+  const strip = document.getElementById("topbarNtLiveStrip");
+  if (!strip) return;
+  const st = ntLiveState;
+  strip.classList.toggle("hidden", !st);
+  if (!st) return;
+  const live = st.live || {};
+  const aired = live.forfeit ? [] : (live.events || []).filter(ev => ev.airAt <= Date.now());
+  const last = aired[aired.length - 1];
+  const sc = live.forfeit && live.finalScore ? { A: live.finalScore.home, B: live.finalScore.away } : last && last.score ? (live.isHome ? last.score : { A: last.score.B, B: last.score.A }) : { A: 0, B: 0 };
+  const home = live.isHome ? st.teamName : st.opponentName, away = live.isHome ? st.opponentName : st.teamName;
+  const set = (id, v) => { const el = document.getElementById(id); if (el && el.textContent !== String(v)) el.textContent = String(v); };
+  set("tlsNtNameA", home || ""); set("tlsNtNameB", away || "");
+  set("tlsNtScoreA", sc.A); set("tlsNtScoreB", sc.B);
+  set("tlsNtClock", live.forfeit ? "Forfait" : last ? (last.quarter > 4 ? `P${last.quarter - 4} ` : `Q${last.quarter} `) + (last.clock || "") : "");
+}
+
+{
+  const back = document.getElementById("ntLiveBackBtn"), close = document.getElementById("ntLiveCloseBtn");
+  if (back) back.addEventListener("click", () => ntLiveLeave());
+  if (close) close.addEventListener("click", () => closeNtLive(true));
 }
 
 // Un seul direct audible à la fois (mission live 2026-10-10 : « le son
 // continue quand on quitte la page », « deux publics en même temps ») :
 // le direct du club seulement sur sa page et sans direct suivi ouvert par-
-// dessus ; le direct suivi (fenêtre) quand il est ouvert. Hors de la page :
-// ambiance, bruitages et commentaire coupés (le direct continue en silence).
+// dessus ; le direct suivi (fenêtre) quand il est ouvert ; le direct
+// national seulement sur sa page et sans fenêtre par-dessus. Hors de la
+// page : ambiance, bruitages et commentaire coupés (le direct continue en
+// silence).
 function hmLiveSyncAudible() {
-  const liveEl = document.getElementById("liveSection");
-  const liveShown = !!liveEl && !liveEl.classList.contains("hidden");
+  const shown = id => { const el = document.getElementById(id); return !!el && !el.classList.contains("hidden"); };
   const spect = !!(spectateState && document.getElementById("spectateOverlay"));
   const clubView = typeof hmLive !== "undefined" && hmLive && hmLive.view;
-  if (clubView && typeof clubView.setAudible === "function") { try { clubView.setAudible(liveShown && !spect); } catch (e) { /* rien */ } }
+  if (clubView && typeof clubView.setAudible === "function") { try { clubView.setAudible(shown("liveSection") && !spect); } catch (e) { /* rien */ } }
   const sv = spectateState && spectateState.rich && spectateState.rich.view;
   if (sv && typeof sv.setAudible === "function") { try { sv.setAudible(spect); } catch (e) { /* rien */ } }
+  const nv = ntLiveState && ntLiveState.rich && ntLiveState.rich.view;
+  if (nv && typeof nv.setAudible === "function") { try { nv.setAudible(shown("ntLiveSection") && !spect); } catch (e) { /* rien */ } }
 }
 
 // Rafraîchit manuellement le direct suivi (voir le grand commentaire plus
 // haut : décision utilisateur explicite de ne PAS animer le direct d'une
 // autre équipe comme le sien propre) — relance /api/spectate et redessine
 // tout, sans toucher aux setTimeout/timers de son propre direct éventuel.
-async function refreshSpectateMatch() {
-  if (!spectateState) return;
+async function refreshSpectateMatch(st = spectateState) {
+  if (!st) return;
   try {
-    const res = await fetchApi(spectateState.url || `/api/spectate?team=${spectateState.teamIdx}`);
+    const res = await fetchApi(st.url || `/api/spectate?team=${st.teamIdx}`);
     const data = await res.json();
-    if (!res.ok || !data.ok) { closeSpectateMatch(); return; } // le match est probablement terminé entre-temps
-    spectateState.live = data.live;
-    if (spectateState.rich) spectateSyncRich(spectateState);
-    renderSpectateMatch();
+    if (!spectateAlive(st)) return;
+    if (!res.ok || !data.ok) { if (st === ntLiveState) closeNtLive(false); else closeSpectateMatch(); return; } // le match est probablement terminé entre-temps
+    st.live = data.live;
+    if (st.rich) spectateSyncRich(st);
+    renderSpectateMatch(st);
   } catch (e) { /* pas de connexion : on garde le dernier affichage connu */ }
+}
+
+// Contenu d'un direct suivi (fenêtre ou page). `ids` : ids historiques de
+// la fenêtre (#spectateLiveRoot…) ; jamais dans la page (un direct national
+// et une fenêtre peuvent coexister).
+function spectateBodyHtml(data, ids) {
+  const id = k => (ids ? ` id="spectate${k}"` : "");
+  return `<h3>${data.live && data.live.replay ? "▶ Revoir le direct" : "🔴 En direct"} : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
+    (data.live && data.live.privateLeague ? `<p class="sub">Ligue privée · ${escapeHtml(data.live.privateLeague.name)} · Journée ${data.live.privateLeague.round + 1}</p>` : "") +
+    // Match international (route /api/national/live) : compétition.
+    (data.live && data.live.intl ? `<p class="sub">Sélections nationales · ${escapeHtml(data.live.intl.label)}</p>` : "") +
+    `<div${id("SeekHolder")} data-sp="seek"></div>` +
+    `<div${id("LiveRoot")} data-sp="root" style="--topbar-h:0px"></div>` +
+    `<div class="spectate-legacy">` +
+    `<div${id("StatusHolder")} data-sp="status"></div>` +
+    `<div class="boxscore-toggle">` +
+      `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
+      `<button type="button" class="bs-tab spectate-bs-tab" data-side="B">${escapeHtml(data.opponentName)}</button>` +
+    `</div>` +
+    `<div${id("BoxscoreHolder")} data-sp="box"></div>` +
+    `<h4>Derniers événements</h4>` +
+    `<div${id("FeedHolder")} data-sp="feed"></div>` +
+    `</div>`;
 }
 
 // `pre` (facultatif) : réponse déjà chargée et URL de rafraîchissement —
 // direct d'un match de ligue privée entre deux autres membres (voir
-// openPrivateLeagueLive).
+// openPrivateLeagueLive) ; `pre.page` : direct national, dans sa page
+// (#ntLiveSection) au lieu de la fenêtre.
 async function showSpectateMatch(teamIdx, pre) {
-  closeSpectateMatch();
+  const asPage = !!(pre && pre.page);
+  if (asPage) closeNtLive(false); else closeSpectateMatch();
   let res, data;
   if (pre && pre.data) data = pre.data;
   else {
@@ -35005,65 +35142,68 @@ async function showSpectateMatch(teamIdx, pre) {
   const teamObj = league.teams[teamIdx];
   const opponentObj = league.teams[data.live.opponentIdx];
   if (!teamObj || !opponentObj) return;
-  spectateState = {
+  const state = {
     teamIdx, opponentIdx: data.live.opponentIdx, teamName: data.teamName, opponentName: data.opponentName,
     teamObj, opponentObj, live: data.live, activeSide: "A", box: null, url: pre && pre.url || null,
   };
-  const overlay = document.createElement("div");
-  overlay.className = "upgrade-confirm-overlay spectate-overlay";
-  overlay.id = "spectateOverlay";
-  overlay.innerHTML = `<div class="upgrade-confirm-box spectate-box">` +
-    `<h3>${data.live && data.live.replay ? "▶ Revoir le direct" : "🔴 En direct"} : ${escapeHtml(data.teamName)} - ${escapeHtml(data.opponentName)}</h3>` +
-    (data.live && data.live.privateLeague ? `<p class="sub">Ligue privée · ${escapeHtml(data.live.privateLeague.name)} · Journée ${data.live.privateLeague.round + 1}</p>` : "") +
-    // Match international (route /api/national/live) : compétition.
-    (data.live && data.live.intl ? `<p class="sub">Sélections nationales · ${escapeHtml(data.live.intl.label)}</p>` : "") +
-    `<div id="spectateSeekHolder"></div>` +
-    `<div id="spectateLiveRoot" style="--topbar-h:0px"></div>` +
-    `<div class="spectate-legacy">` +
-    `<div id="spectateStatusHolder"></div>` +
-    `<div class="boxscore-toggle">` +
-      `<button type="button" class="bs-tab spectate-bs-tab active" data-side="A">${escapeHtml(data.teamName)}</button>` +
-      `<button type="button" class="bs-tab spectate-bs-tab" data-side="B">${escapeHtml(data.opponentName)}</button>` +
-    `</div>` +
-    `<div id="spectateBoxscoreHolder"></div>` +
-    `<h4>Derniers événements</h4>` +
-    `<div id="spectateFeedHolder"></div>` +
-    `</div>` +
-    `<div class="spectate-actions">` +
-      `<button type="button" id="spectateRefreshBtn">🔄 Actualiser</button>` +
-      `<button type="button" class="upgrade-confirm-cancel-btn" id="spectateCloseBtn">Fermer</button>` +
-    `</div>` +
-    `</div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeSpectateMatch(); });
-  document.getElementById("spectateCloseBtn").addEventListener("click", closeSpectateMatch);
-  document.getElementById("spectateRefreshBtn").addEventListener("click", () => { window.__lastSpectateRefresh = refreshSpectateMatch(); });
-  overlay.querySelectorAll(".spectate-bs-tab").forEach(b => b.addEventListener("click", () => renderSpectateBoxScoreTab(b.dataset.side)));
-  renderSpectateMatch();
+  let host;
+  if (asPage) {
+    const holder = document.getElementById("ntLiveHost");
+    if (!holder) return;
+    // Page d'où le direct est ouvert (← Retour y ramène).
+    const cur = typeof hmNavCurrent === "function" ? hmNavCurrent() : null;
+    state.from = cur && cur.page !== "ntLiveSection" ? { page: cur.page, tab: cur.tab || "" } : null;
+    holder.innerHTML = `<div class="spectate-box nt-live-box">${spectateBodyHtml(data, false)}</div>`;
+    host = holder.firstElementChild;
+    state.host = host;
+    ntLiveState = state;
+    showPage("ntLiveSection");
+    setActiveTab("ntlive");
+  } else {
+    host = document.createElement("div");
+    host.className = "upgrade-confirm-overlay spectate-overlay";
+    host.id = "spectateOverlay";
+    host.innerHTML = `<div class="upgrade-confirm-box spectate-box">` + spectateBodyHtml(data, true) +
+      `<div class="spectate-actions">` +
+        `<button type="button" id="spectateRefreshBtn">🔄 Actualiser</button>` +
+        `<button type="button" class="upgrade-confirm-cancel-btn" id="spectateCloseBtn">Fermer</button>` +
+      `</div>` +
+      `</div>`;
+    state.host = host;
+    spectateState = state;
+    document.body.appendChild(host);
+    host.addEventListener("click", (e) => { if (e.target === host) closeSpectateMatch(); });
+    document.getElementById("spectateCloseBtn").addEventListener("click", closeSpectateMatch);
+    document.getElementById("spectateRefreshBtn").addEventListener("click", () => { window.__lastSpectateRefresh = refreshSpectateMatch(state); });
+  }
+  host.querySelectorAll(".spectate-bs-tab").forEach(b => b.addEventListener("click", () => renderSpectateBoxScoreTab(b.dataset.side, state)));
+  renderSpectateMatch(state);
   // Rediffusion : curseur de temps (voir makeReplaySeekBar).
   if (data.live && data.live.replay && !data.live.forfeit) {
-    const st = spectateState;
-    document.getElementById("spectateSeekHolder").appendChild(makeReplaySeekBar(st.live, t => {
-      shiftReplayTimeline(st.live, t);
-      st.lastAired = -1;
+    spEl(state, "seek").appendChild(makeReplaySeekBar(state.live, t => {
+      shiftReplayTimeline(state.live, t);
+      state.lastAired = -1;
       // (mission live 2026-10-10) la file `items` garde les heures de
       // diffusion d'AVANT le décalage : reconstruite, sinon les statistiques
       // et le fil sautaient au mauvais moment après un déplacement.
-      if (st.rich) { st.rich.adapter.reset(); st.rich.applied = 0; st.rich.items = null; spectateSyncRich(st); }
-      renderSpectateMatch();
+      if (state.rich) { state.rich.adapter.reset(); state.rich.applied = 0; state.rich.items = null; spectateSyncRich(state); }
+      renderSpectateMatch(state);
     }));
   }
   // Le match avance tout seul (tous les événements sont déjà là, chacun
   // avec son heure de diffusion). Vue live complète si les modules
   // chargent (spectateMountLiveView), sinon le rendu texte chaque seconde.
-  const state = spectateState;
+  // Direct national hors de sa page : la minuterie continue (le match
+  // avance, vue muette), comme le direct du club hors de la page Live.
   if (!data.live.forfeit) spectateMountLiveView(state).catch(() => {});
   window.HM_SHARE && HM_SHARE.spectate(state);
+  hmLiveSyncAudible();
   state.timer = setInterval(() => {
-    if (spectateState !== state || !document.getElementById("spectateOverlay")) { clearInterval(state.timer); return; }
+    if (!spectateAlive(state)) { clearInterval(state.timer); return; }
+    if (state === ntLiveState) syncNtLiveStrip();
     if (state.rich) { spectateSyncRich(state); return; }
     const n = state.live.forfeit ? 0 : state.live.events.filter(ev => ev.airAt <= Date.now()).length;
-    if (n !== state.lastAired) { state.lastAired = n; renderSpectateMatch(); }
+    if (n !== state.lastAired) { state.lastAired = n; renderSpectateMatch(state); }
   }, 200);
 }
 
@@ -35089,8 +35229,8 @@ function spectateTeamData(obj, colorIdx, colors, leagueIdx) {
 }
 async function spectateMountLiveView(state) {
   const [mod, adMod] = await Promise.all([hmLiveLoadModule(), hmLiveLoadAdapterModule(), hmLoadFeatures()]);
-  if (!mod || !adMod || spectateState !== state) return false;
-  const root = document.getElementById("spectateLiveRoot");
+  if (!mod || !adMod || !spectateAlive(state) || state.rich) return false;
+  const root = spEl(state, "root");
   if (!root) return false;
   const live = state.live;
   const homeObj = live.isHome ? state.teamObj : state.opponentObj;
@@ -49005,6 +49145,10 @@ async function openPrivateLeagueLive(params, feedbackEl) {
 // sélections sont des invités (installGuestTeams). Terminé : rediffusion.
 async function openNationalLive(params, feedbackEl) {
   const url = `/api/national/live?id=${encodeURIComponent(params.id)}`;
+  // Le même direct est déjà ouvert (page conservée) : on y retourne sans
+  // rien recréer — ni nouvelle requête, ni nouvelle vue, ni nouvelle file
+  // d'événements, ni sons en double.
+  if (ntLiveState && ntLiveState.url === url && ntLiveState.host && ntLiveState.host.isConnected) { closeMatchBoxscore(); showNtLivePage(); return true; }
   let res, data;
   try {
     res = await fetchApi(url);
@@ -49017,7 +49161,7 @@ async function openNationalLive(params, feedbackEl) {
   }
   if (Array.isArray(data.guestTeams) && data.guestTeams.length) installGuestTeams(league, data.guestTeams);
   closeMatchBoxscore();
-  await showSpectateMatch(data.watchIdx, { data, url });
+  await showSpectateMatch(data.watchIdx, { data, url, page: true });
   return true;
 }
 // Feuille de statistiques d'un match international : la même que celle des
@@ -51060,6 +51204,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 const TAB_HANDLERS = {
   live: goToLiveTab,
+  ntlive: () => { showNtLivePage(); },
   guide: () => { renderGuideSection(); showPage("guideSection"); setActiveTab("guide"); },
   premium: () => { renderPremiumSection(); showPage("premiumSection"); setActiveTab("premium"); },
   personnalisation: () => { renderPersonnalisationSection(); showPage("personnalisationSection"); setActiveTab("personnalisation"); },
@@ -52075,7 +52220,7 @@ document.addEventListener("visibilitychange", () => {
 // ---------------------------------------------------------------------
 const NAV_BACK_BTNS = {
   playerDetailSection: "closePlayerDetailBtn", teamDetailSection: "closeTeamDetailBtn",
-  playerCompareSection: "closePlayerCompareBtn", managerProfileSection: "closeManagerProfileBtn", liveSection: "newMatchBtn",
+  playerCompareSection: "closePlayerCompareBtn", managerProfileSection: "closeManagerProfileBtn", liveSection: "newMatchBtn", ntLiveSection: "ntLiveBackBtn",
 };
 const hmNav = { started: false, restoring: false, stack: [], idx: 0 };
 function hmNavCurrent() {

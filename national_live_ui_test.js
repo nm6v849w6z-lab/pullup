@@ -82,12 +82,16 @@ function fixture() {
   const calls = [];
   win.fetchApi = async url => { calls.push(url); return { ok: true, json: async () => JSON.parse(JSON.stringify(fx.live)) }; };
   ov.querySelector("#matchReplayBtn").click();
-  await wait(() => doc.getElementById("spectateOverlay"), "écran du direct");
+  // (2026-10-10) dans sa page #ntLiveSection, comme le direct du club —
+  // plus de fenêtre superposée (voir national_live_tab_test.js).
+  await wait(() => doc.querySelector("#ntLiveHost .spectate-box"), "page du direct");
   assert(calls[0] === "/api/national/live?id=" + encodeURIComponent(fx.m1.id), "route /api/national/live");
-  const sp = doc.getElementById("spectateOverlay");
+  assert(!doc.getElementById("spectateOverlay") && !doc.getElementById("ntLiveSection").classList.contains("hidden"), "direct national : page, pas de fenêtre superposée");
+  const sp = doc.getElementById("ntLiveHost");
   assert(/Sélections nationales/.test(sp.textContent) && sp.textContent.includes(fx.live.teamName), "direct : compétition et sélections");
   assert(win.eval("league.teams[" + fx.live.watchIdx + "].isGuest && league.teams[" + (fx.live.watchIdx + 1) + "].players.length > 0"), "sélections installées comme invités");
-  win.closeSpectateMatch();
+  win.closeNtLive(true);
+  assert(doc.getElementById("ntLiveSection").classList.contains("hidden") && !doc.getElementById("ntLiveHost").firstChild, "« Fermer le direct » : page quittée et vidée");
 
   // 3) Boutons du direct (pages Sélections et mode Sélectionneur).
   const N = win.HM_NATIONAL, now = Date.now();

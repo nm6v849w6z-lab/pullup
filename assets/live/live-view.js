@@ -1213,5 +1213,5 @@ export function createLiveView(root, opts = {}) {
     $("dlg").showModal();
   }
 
-  return { update, destroy, highlights, setAudible, closeLive, get closed() { return closed; }, get audio() { return sfx || null; } };
+  return { update, destroy, highlights, setAudible, closeLive, get closed() { return closed; }, get audible() { return audible; }, get audio() { return sfx || null; } };
 }

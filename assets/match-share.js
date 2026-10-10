@@ -65,7 +65,7 @@
     },
     // Fenêtre spectateur (direct ou rediffusion d'un autre club, sélections).
     spectate(state) {
-      const holder = document.getElementById("spectateSeekHolder");
+      const holder = (state && state.host && state.host.querySelector('[data-sp="seek"]')) || document.getElementById("spectateSeekHolder");
       if (!holder || !state || !state.live || state.live.forfeit || holder.querySelector(".hm-share")) return;
       const url = String(state.url || "");
       if (/private-league/.test(url) || state.live.privateLeague) return;

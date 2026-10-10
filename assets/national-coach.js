@@ -1035,7 +1035,7 @@
     // largeur minimale (le bouton d'ordres restait hors de l'écran, à droite).
     "@media (max-width: 768px), (max-height: 520px) and (pointer: coarse){.nc-orders-cta{flex:1 1 100%;width:100%}body.nc-mode .nt-table:has(.nc-orders-row){min-width:0}body.nc-mode .nt-table:has(.nc-orders-row) td{padding:9px 8px}.nc-cal-orders{display:block;margin:8px 0 0}}",
     ".nc-orders-cta.is-done{background:var(--ok);border-color:var(--ok);color:#fff}.nc-orders-cta:disabled{opacity:.5;cursor:default}",
-    "body.nc-mode .topbar-right > :not(#topbarOnline):not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav){display:none!important}",
+    "body.nc-mode .topbar-right > :not(#topbarOnline):not(#ncNextMeta):not(#ncOrdersBtn):not(#topbarBackBtn):not(#topbarPlayerNav):not(#topbarNtLiveStrip){display:none!important}",
     "body.nc-mode .topbar-left > :not(#ncTopTitle){display:none!important}",
     "body.nc-mode #mTabbar .tab-btn{display:none!important}",
     "body.nc-mode #selectionsSection .section > .page-title{display:none}",
