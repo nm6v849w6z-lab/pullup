@@ -2127,8 +2127,24 @@ function merchandiseWeeklyRevenue(team, divisionLevel) {
 // analyste vidéo, recruteur).
 // ---------------------------------------------------------------------
 const TRANSFER_AUCTION_DURATION_MS = 1 * 24 * 60 * 60 * 1000; // 1 jour réel
+// Surenchère minimale par paliers (2026-10-10, « une hausse de 20 % est
+// beaucoup trop importante pour les grosses sommes : 5 % ») — continue et
+// croissante (relancer plus haut n'abaisse jamais le minimum suivant) :
+//   - jusqu'à 250 000 $ : 20 % de la meilleure offre, au moins 1 000 $
+//     (petites sommes : inchangé) ;
+//   - de 250 000 $ à 1 000 000 $ : palier fixe de 50 000 $ (= 20 % de
+//     250 000 $ = 5 % de 1 000 000 $) ;
+//   - à partir de 1 000 000 $ : 5 %, arrondi au millier de dollars
+//     SUPÉRIEUR (3 600 000 $ → +180 000 $ → relance dès 3 780 000 $).
+// MÊME formule ici et dans engine.js (serveur, qui valide toute enchère :
+// refus « too-low » en dessous) — bid_increment_test.js vérifie la parité.
 const TRANSFER_MIN_INCREMENT_FLAT = 1000;
 const TRANSFER_MIN_INCREMENT_PCT = 0.20;
+const TRANSFER_MIN_INCREMENT_MID_FROM = 250000;
+const TRANSFER_MIN_INCREMENT_MID = 50000;
+const TRANSFER_MIN_INCREMENT_BIG_FROM = 1000000;
+const TRANSFER_MIN_INCREMENT_BIG_PCT = 5;          // en %, calcul entier (pas d'erreur d'arrondi flottant)
+const TRANSFER_MIN_INCREMENT_BIG_ROUND = 1000;
 // Rythme auquel les équipes adverses (CPU) "consultent" le marché — pas à
 // chaque appel de refreshMarket (ça simulerait une agitation irréaliste si
 // l'utilisateur rouvre l'onglet Marché plusieurs fois de suite), mais environ
@@ -2352,7 +2368,10 @@ function estimateMarketValue(player) {
 // valable pour une annonce donnée (le prix de départ si personne n'a encore
 // enchéri, sinon l'enchère actuelle + l'incrément minimum).
 function transferMinIncrement(amount) {
-  return Math.max(TRANSFER_MIN_INCREMENT_FLAT, Math.round(amount * TRANSFER_MIN_INCREMENT_PCT));
+  const a = Math.max(0, Math.round(Number(amount) || 0));
+  if (a >= TRANSFER_MIN_INCREMENT_BIG_FROM) return Math.ceil(a * TRANSFER_MIN_INCREMENT_BIG_PCT / (100 * TRANSFER_MIN_INCREMENT_BIG_ROUND)) * TRANSFER_MIN_INCREMENT_BIG_ROUND;
+  if (a >= TRANSFER_MIN_INCREMENT_MID_FROM) return TRANSFER_MIN_INCREMENT_MID;
+  return Math.max(TRANSFER_MIN_INCREMENT_FLAT, Math.round(a * TRANSFER_MIN_INCREMENT_PCT));
 }
 // Marché mondial : index « enchérisseur d'un autre championnat » dans
 // listing.currentBidderIdx / bids[].bidderIdx (jamais un vrai index de club,
