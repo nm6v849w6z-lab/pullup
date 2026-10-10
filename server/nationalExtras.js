@@ -9,6 +9,14 @@
 //    et staff actif dont la place de club ({leagueId, idx}) est la sienne.
 //  - Sélection actuelle d'un joueur (fiche joueur) : dernière liste de
 //    convoqués FIGÉE de « <nationalité>-A » / « <nationalité>-U21 ».
+//  - Personnalisation Premium (mission 2026-10-10 : « tout ce que permet
+//    le mode Premium du club ») : coupe, couleurs libres, motif et deux tons
+//    du maillot, parquet (bois ou couleur libre, raquette), logo importé ;
+//    store.teams[id].look (à part des choix du catalogue `visuals`, et
+//    JAMAIS sur le club du manager). Modifiable par le sélectionneur et ses
+//    adjoints dont le CLUB est Premium (me.premium, posé par la route) ;
+//    revenir au catalogue reste possible sans Premium. Prioritaire sur le
+//    catalogue pour ce qu'il définit (pages, aperçus, matchs, direct).
 // Tout est stocké sur store.teams (la sélection), donc survit aux changements
 // de sélectionneur et de saison ; purement visuel, aucun effet sportif.
 const Visuals = require("../assets/national-visuals.js");
@@ -21,6 +29,8 @@ function paletteOf(country) {
 }
 
 const MESSAGE_MAX = 500;
+const Engine = () => require("../engine.js");
+const LOGO_RE = /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/;
 const NT = () => require("./nationalTeams.js");
 const NC = () => require("./nationalCoach.js");
 const NM = () => require("./nationalMatches.js");
@@ -63,6 +73,7 @@ function publicExtras(store, teamId, me, now) {
     messageMax: MESSAGE_MAX,
     visuals: Visuals.resolve(team.visuals || null, stats),
     visualStats: stats,
+    look: team.look || null,
     canEditMessage: canEditMessage(role),
     canEditVisuals: canEditVisuals(role),
   };
@@ -103,19 +114,94 @@ function setVisuals(store, me, body, now) {
   return { ok: true, visuals: Visuals.resolve(next, stats) };
 }
 
+// POST /api/national/look { teamId, look: {...} | null } — personnalisation
+// Premium complète (voir l'en-tête). `look` remplace l'ancien en entier
+// (le navigateur envoie le brouillon complet) ; null = retour au catalogue.
+// Mêmes validations que les réglages Premium du club (engine.js).
+function cleanLook(raw) {
+  const E = Engine();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { error: "Personnalisation invalide." };
+  const out = {};
+  const hex = v => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+  if (raw.jerseyShape != null) {
+    if (!E.JERSEY_SHAPES.includes(raw.jerseyShape)) return { error: "Coupe de maillot inconnue." };
+    out.jerseyShape = raw.jerseyShape;
+  }
+  if (raw.jerseyColor != null) {
+    const c = E.normalizeJerseyColor(raw.jerseyColor);
+    if (!c) return { error: "Couleur de maillot invalide." };
+    out.jerseyColor = c;
+  }
+  if (raw.jerseyPattern != null) {
+    if (!E.JERSEY_PATTERNS.includes(raw.jerseyPattern)) return { error: "Motif de maillot inconnu." };
+    out.jerseyPattern = raw.jerseyPattern;
+  }
+  if (raw.jerseyTwoTone != null) {
+    const pr = E.normalizeJerseyPair(raw.jerseyTwoTone);
+    if (!pr) return { error: "Couleurs du motif invalides." };
+    out.jerseyTwoTone = pr;
+  }
+  if (raw.courtStyle !== undefined) {
+    const c = raw.courtStyle;
+    if (c != null && (typeof c !== "object" || (c.wood != null && !E.COURT_WOODS[c.wood] && !hex(c.wood)) || (c.paint != null && c.paint !== "" && !E.JERSEY_COLORS[c.paint] && !hex(c.paint)))) return { error: "Style de parquet invalide." };
+    const n = E.normalizeCourtStyle(c);
+    if (n) out.courtStyle = n;
+  }
+  if (raw.logoDataUrl != null) {
+    if (typeof raw.logoDataUrl !== "string" || !LOGO_RE.test(raw.logoDataUrl)) return { error: "Image de logo invalide (PNG, JPEG ou WebP)." };
+    if (raw.logoDataUrl.length > E.MAX_TEAM_LOGO_DATA_URL_LENGTH) return { error: "Image de logo trop lourde." };
+    out.logoDataUrl = raw.logoDataUrl;
+  }
+  return { look: Object.keys(out).length ? out : null };
+}
+function setLook(store, me, body, now) {
+  const team = store.teams[body && body.teamId];
+  if (!team) return fail("Sélection inconnue.", 404);
+  if (!me) return fail("Réservé aux managers.", 403);
+  if (!canEditVisuals(roleOf(store, me, team.id))) return fail("Seuls le sélectionneur et ses adjoints peuvent personnaliser la sélection.", 403);
+  if (!body || body.look === undefined) return fail("Personnalisation manquante.");
+  // Retour au catalogue : toujours permis (rien de Premium n'est ajouté).
+  if (body.look === null) { team.look = null; team.lookAt = now; return { ok: true, look: null }; }
+  if (!me.premium) return fail("La personnalisation complète de la sélection est réservée aux clubs Premium.", 403);
+  const c = cleanLook(body.look);
+  if (c.error) return fail(c.error);
+  team.look = c.look;
+  team.lookAt = now;
+  team.lookBy = me.pseudo || me.clubName || null;
+  return { ok: true, look: team.look };
+}
+
 // Habillage d'une sélection pour un match (direct, feuille de match) :
 // maillot et terrain choisis (null = rien de personnalisé).
+// Personnalisation Premium (`look`) prioritaire sur le catalogue pour ce
+// qu'elle définit ; `logo` : écusson du catalogue (id, centre) pour le
+// direct ; `logoDataUrl` : logo importé (Premium).
 function matchDress(store, teamId, now) {
   const team = store.teams[teamId];
-  if (!team || !team.visuals) return null;
-  const v = Visuals.resolve(team.visuals, visualStats(store, teamId, now));
+  if (!team || (!team.visuals && !team.look)) return null;
+  const v = Visuals.resolve(team.visuals || null, visualStats(store, teamId, now));
   const j = Visuals.itemOf("jersey", v.jersey), c = Visuals.itemOf("court", v.court);
+  let out;
   // Maillot aux couleurs du drapeau : couleurs de maillot les plus proches.
   if (j.nation) {
     const nj = Visuals.nationJersey(j, paletteOf(team.country || String(teamId).split("-")[0]));
-    return { jerseyColor: nj.color, jerseyPattern: nj.pattern, jerseyTwoTone: nj.pair, court: { wood: c.wood, paint: c.paint } };
+    out = { jerseyColor: nj.color, jerseyPattern: nj.pattern, jerseyTwoTone: nj.pair, court: { wood: c.wood, paint: c.paint } };
+  } else {
+    // Deux tons = ceux de l'aperçu (couleur + blanc, ou noir sur blanc).
+    const E = Engine();
+    out = { jerseyColor: j.color, jerseyPattern: j.pattern, jerseyTwoTone: `${E.jerseyHex(j.color)}/${E.jerseyHex(j.color === "blanc" ? "noir" : "blanc")}`.toLowerCase(), court: { wood: c.wood, paint: c.paint } };
   }
-  return { jerseyColor: j.color, jerseyPattern: j.pattern, court: { wood: c.wood, paint: c.paint } };
+  out.logo = { id: v.logo, center: v.center, country: team.country || String(teamId).split("-")[0] };
+  const L = team.look;
+  if (L) {
+    if (L.jerseyShape) out.jerseyShape = L.jerseyShape;
+    if (L.jerseyColor) out.jerseyColor = L.jerseyColor;
+    if (L.jerseyPattern) out.jerseyPattern = L.jerseyPattern;
+    if (L.jerseyTwoTone) out.jerseyTwoTone = L.jerseyTwoTone;
+    if (L.courtStyle) out.court = { wood: L.courtStyle.wood, paint: L.courtStyle.paint || null };
+    if (L.logoDataUrl) out.logoDataUrl = L.logoDataUrl;
+  }
+  return out;
 }
 
 // GET /api/national/roles?league=&idx= : fonctions nationales EN COURS du
@@ -160,4 +246,4 @@ function playerSelection(store, id, name, nat) {
   return { ok: true, teams, caps: cap ? cap.n : 0 };
 }
 
-module.exports = { paletteOf, MESSAGE_MAX, cleanMessage, publicExtras, setMessage, setVisuals, matchDress, rolesOf, playerSelection, visualStats };
+module.exports = { paletteOf, MESSAGE_MAX, cleanMessage, publicExtras, setMessage, setVisuals, setLook, cleanLook, matchDress, rolesOf, playerSelection, visualStats };

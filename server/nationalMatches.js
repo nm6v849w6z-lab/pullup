@@ -224,9 +224,14 @@ function buildSide(store, teamId, gid, leagues, world, at, tempIds, matchId) {
     shell.jerseyColor = dress.jerseyColor;
     shell.jerseyPattern = dress.jerseyPattern;
     if (dress.jerseyTwoTone) shell.jerseyTwoTone = dress.jerseyTwoTone;
+    if (dress.jerseyShape) shell.jerseyShape = dress.jerseyShape;
     shell.courtStyle = dress.court.wood === "nuit" && !dress.court.paint ? null : { wood: dress.court.wood, paint: dress.court.paint };
-    shell.premiumUntil = at + 7 * 24 * 3600 * 1000;
+    // Personnalisation Premium de la sélection (look) : logo importé.
+    if (dress.logoDataUrl) shell.customLogoDataUrl = dress.logoDataUrl;
+    // Premium le temps du match ET de ses rediffusions (direct rangé à part).
+    shell.premiumUntil = at + 400 * 24 * 3600 * 1000;
   }
+  shell.natLogo = dress ? dress.logo : null;
   // Ids provisoires (uniques sur le match), remis par restoreIds.
   sheet.forEach(x => { const tmp = TEMP_ID_BASE + tempIds.size + 1; tempIds.set(tmp, { player: x.src, id: x.src.id, club: x.club }); x.src.id = tmp; });
   const tmpOf = x => x.src.id;
@@ -316,7 +321,10 @@ function playMatch(store, comp, m, leagues, world, now) {
           id: m.id, at: m.at,
           entry: {
             round: 0, kickoffAt: m.at, homeIdx: LIVE_GUEST_IDX, awayIdx: LIVE_GUEST_IDX + 1, competition: "national",
-            intl: { id: m.id, label: matchLabel(m), home: m.home, away: m.away, homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away) },
+            intl: { id: m.id, label: matchLabel(m), home: m.home, away: m.away, homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away),
+              // Écussons du catalogue (direct : tableau et rond central
+              // quand aucun logo n'a été importé).
+              logos: { home: home.shell.natLogo || null, away: away.shell.natLogo || null } },
             forfeit: false, finalScore: { home: m.scoreHome, away: m.scoreAway },
             quarterScores: m.quarterScores, seed: result.seed, tacticsUsed,
             events: pb.events, pauses: pb.pauses, totalDurationMs: pb.totalDurationMs,

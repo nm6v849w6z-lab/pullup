@@ -3361,6 +3361,9 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
           // adjoints), personnalisation visuelle (sélectionneur).
           "/api/national/message": require("./nationalExtras.js").setMessage,
           "/api/national/visuals": require("./nationalExtras.js").setVisuals,
+          // Personnalisation Premium complète (2026-10-10) : Premium du CLUB
+          // du manager (me.premium, seulement pour cette route).
+          "/api/national/look": require("./nationalExtras.js").setLook,
           "/api/national/candidacy": NationalTeams.runForElection,
           "/api/national/withdraw": NationalTeams.withdrawCandidacy,
           "/api/national/vote": NationalTeams.castVote,
@@ -3371,11 +3374,13 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
         let body;
         try { body = req.__parsedBody !== undefined ? req.__parsedBody : await readJsonBody(req); } catch (e) { sendJson(res, 400, { ok: false, error: e.message }); return; }
         const leaguesForNotify = new Map([[ctx.leagueId, ctx.league]]);
-        const out = fn(natStore, me, body || {}, now, leaguesForNotify);
+        const myClub = ctx.league.teams[ctx.teamIndex];
+        const meFor = me && route.pathname === "/api/national/look" ? { ...me, premium: !!(myClub && typeof myClub.hasActivePremium === "function" && myClub.hasActivePremium(now)) } : me;
+        const out = fn(natStore, meFor, body || {}, now, leaguesForNotify);
         if (!out.ok) { sendJson(res, out.status || 400, { ok: false, error: out.error }); return; }
         try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
         if (route.pathname === "/api/national/resign") await persistContext(ctx);
-        if (route.pathname === "/api/national/message" || route.pathname === "/api/national/visuals") {
+        if (route.pathname === "/api/national/message" || route.pathname === "/api/national/visuals" || route.pathname === "/api/national/look") {
           sendJson(res, 200, { ...out, team: NationalTeams.teamView(natStore, body.teamId, me, season, now, ctx.league.calendarStartAt) });
           return;
         }

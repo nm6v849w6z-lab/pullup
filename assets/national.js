@@ -98,6 +98,19 @@
     ".ntv-prev{width:100%;height:52px;border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}.ntv-prev svg{max-height:52px;max-width:100%}",
     ".ntv-lock{position:absolute;top:6px;right:6px;font-size:11px;z-index:2}",
     ".ntv-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}",
+    // Personnalisation Premium (2026-10-10).
+    ".ntl{margin-top:22px;padding-top:6px;border-top:1px solid var(--line)}",
+    ".ntl-badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(240,162,60,.16);color:var(--amber);font-size:10px;letter-spacing:.06em}",
+    ".ntl-preview{display:grid;grid-template-columns:120px minmax(0,1fr) 96px;gap:12px;align-items:center;margin:10px 0}",
+    ".ntl-court svg{width:100%;height:auto;border-radius:8px;display:block}.ntl-logo{width:96px;height:96px;display:flex;align-items:center;justify-content:center}.ntl-logo img,.ntl-logo svg{max-width:96px;max-height:96px;border-radius:50%}.ntl-logo svg{border-radius:0}",
+    ".ntl-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}.ntl-lbl{font-size:12px;color:var(--ink-dim);font-weight:700;margin:10px 0 4px}.ntl-row .ntl-lbl{margin:0 4px 0 0}",
+    ".ntl-mini{min-height:0;flex-direction:row;padding:6px 10px}.ntl-mini .ntv-prev{width:44px;height:44px}",
+    ".ntl-color{display:inline-flex;align-items:center;gap:6px}.ntl-color input[type=color]{width:38px;height:32px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}.ntl-hex{width:88px;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink)}",
+    ".ntl-sw{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}",
+    ".ntl-wood{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7);background:var(--panel-2);cursor:pointer}.ntl-wood.on{box-shadow:0 0 0 2px var(--amber)}",
+    ".ntl-file{cursor:pointer}.ntl-cta{margin:8px 0}",
+    ".nt-logo--img img{width:100%;height:100%;object-fit:cover;border-radius:50%}",
+    "@media (max-width: 768px), (max-height: 520px) and (pointer: coarse){.ntl-preview{grid-template-columns:80px minmax(0,1fr)}.ntl-logo{display:none}}",
     "@media (max-width:820px){.nt-logo{width:64px;height:64px}.nt-hero-jersey{display:none}.nt-hero{flex-wrap:wrap}}",
     ".nt-hero .nat-flag{width:120px;height:80px;border-radius:10px;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,.2),0 12px 30px -10px #000}",
     ".nt-kicker{font-size:11px;letter-spacing:.1em;color:#b8c6ee;font-weight:700;text-transform:uppercase}",
@@ -805,6 +818,9 @@
     return '<svg viewBox="0 0 100 100" aria-hidden="true">' + LOGO_PATHS[id] + label + "</svg>";
   }
   function heroLogoHtml(tv) {
+    // Logo importé (personnalisation Premium) prioritaire sur l'écusson.
+    var L = extrasOf(tv).look;
+    if (L && L.logoDataUrl) return '<div class="nt-logo nt-logo--img" data-nt-logo="custom"><img src="' + esc(L.logoDataUrl) + '" alt=""></div>';
     var v = visualsOf(tv), svg = logoSvg(tv.team.country, v.logo, v.center);
     return svg ? '<div class="nt-logo" data-nt-logo="' + esc(v.logo) + '">' + svg + "</div>" : flag(tv.team.country);
   }
@@ -825,10 +841,12 @@
     if (it.nation && Vv && Vv.nationJersey) { var nj = Vv.nationJersey(it, palOf(country)); color = nj.color; two = nj.pattern === "uni" ? [nj.color, nj.second] : nj.pair.split("/"); }
     try { return f("A", color, size || 64, "home", it.pattern, two); } catch (e) { return ""; }
   }
-  function courtPreview(id) {
+  // Rond central : logo de la sélection (jamais celui du club du manager).
+  function courtPreview(id, tv) {
     var Vv = V(), it = Vv ? Vv.itemOf("court", id) : null, f = g("courtPreviewSvg");
     if (!it || !f) return "";
-    try { return f(it.wood === "nuit" && !it.paint ? null : { wood: it.wood, paint: it.paint }); } catch (e) { return ""; }
+    var L = tv ? extrasOf(tv).look : null;
+    try { return f(it.wood === "nuit" && !it.paint ? null : { wood: it.wood, paint: it.paint }, tv ? courtLogoMarkup(tv, L && L.logoDataUrl) : undefined); } catch (e) { return ""; }
   }
   function bannerPreview(country, id) {
     return '<div class="nt-hero' + (id !== "night" ? " nt-hero--" + esc(id) : "") + '" style="padding:0;width:100%;height:100%;border-radius:7px' + (id === "flag" ? ";--nt-flag:url(" + esc(flagUrl(country)) + ")" : /^nat-/.test(id) ? ";" + esc(natVars(country)) : "") + '"></div>';
@@ -853,6 +871,153 @@
       '<div class="nt-msg-meta">' + (msg.by ? '<span data-no-i18n>' + esc(msg.by) + "</span>, <span>" + esc(roleName(msg.role)) + "</span> · " : "") + "<span>modifié le " + esc(dayDate(msg.at)) + "</span></div>" +
       (x.canEditMessage ? '<div class="nt-msg-actions"><button type="button" class="tq-btn" data-nt-msg-edit>Modifier le message</button></div>' : "") + "</section>";
   }
+  // --- Personnalisation Premium complète (mission 2026-10-10) ------------
+  // « Tout ce que permet le mode Premium du club » pour la sélection :
+  // coupe, couleurs libres, motifs et deux tons du maillot, parquet (bois ou
+  // couleur libre, raquette), logo importé. Mêmes listes et mêmes aperçus
+  // que la page Personnalisation du club (hmPremiumKit, jerseySvgHtml,
+  // courtPreviewSvg, resizeImageFileToDataUrl) ; enregistré À PART, sur la
+  // sélection (POST /api/national/look, server/nationalExtras.js) — jamais
+  // sur le club. Réservé aux clubs Premium (contrôlé par le serveur).
+  function lookOf(tv) { return extrasOf(tv).look || null; }
+  function kit() { var f = g("hmPremiumKit"); try { return f ? f() : null; } catch (e) { return null; } }
+  function hexOf(c) { var f = g("jerseyHex"); var h = f ? f(c) : null; return h || (/^#[0-9a-f]{6}$/i.test(String(c || "")) ? String(c).toLowerCase() : "#3b6fd6"); }
+  function myPremium() { var f = g("hmMyClubPremium"); return !!(f && f()); }
+  // Maillot affiché : personnalisation Premium, sinon le catalogue.
+  function teamJerseyHtml(tv, size) {
+    var L = lookOf(tv), f = g("jerseySvgHtml");
+    if (L && f && (L.jerseyColor || L.jerseyPattern || L.jerseyShape)) {
+      var c = L.jerseyColor || "bleu", pat = L.jerseyPattern || "uni";
+      var two = L.jerseyTwoTone ? String(L.jerseyTwoTone).split("/") : null;
+      try { return f(L.jerseyShape || "A", c, size, "home", pat, two); } catch (e) { /* repli */ }
+    }
+    return jerseyPreview(visualsOf(tv).jersey, size, tv.team.country);
+  }
+  // Brouillon : la personnalisation enregistrée, sinon les choix du catalogue.
+  function lookDraft(tv) {
+    var L = lookOf(tv) || {}, Vv = V(), v = visualsOf(tv);
+    var j = Vv ? Vv.itemOf("jersey", v.jersey) : null, ct = Vv ? Vv.itemOf("court", v.court) : null;
+    var color = L.jerseyColor || (j && j.color) || "bleu";
+    var two = L.jerseyTwoTone ? String(L.jerseyTwoTone).split("/") : null;
+    return {
+      jerseyShape: L.jerseyShape || "A", jerseyColor: hexOf(color), jerseyPattern: L.jerseyPattern || (j && j.pattern) || "uni",
+      second: two ? two[1] : hexOf(color === "blanc" ? "noir" : "blanc"),
+      courtWood: L.courtStyle ? L.courtStyle.wood : (ct ? ct.wood : "nuit"), courtPaint: L.courtStyle ? (L.courtStyle.paint || "") : (ct && ct.paint ? hexOf(ct.paint) : ""),
+      logoDataUrl: L.logoDataUrl || null,
+    };
+  }
+  function draftLook(d) {
+    var look = { jerseyShape: d.jerseyShape, jerseyColor: d.jerseyColor, jerseyPattern: d.jerseyPattern };
+    if (d.jerseyPattern !== "uni") look.jerseyTwoTone = hexOf(d.jerseyColor) + "/" + hexOf(d.second);
+    look.courtStyle = d.courtWood === "nuit" && !d.courtPaint ? null : { wood: d.courtWood, paint: d.courtPaint || "" };
+    if (d.logoDataUrl) look.logoDataUrl = d.logoDataUrl;
+    return look;
+  }
+  // Rond central de l'aperçu du parquet : logo de la SÉLECTION (importé ou
+  // écusson), jamais celui du club.
+  function courtLogoMarkup(tv, logoUrl) {
+    if (logoUrl) return '<defs><clipPath id="ntlCourtClip"><circle cx="470" cy="250" r="60"/></clipPath></defs><image href="' + esc(logoUrl) + '" x="410" y="190" width="120" height="120" preserveAspectRatio="xMidYMid slice" clip-path="url(#ntlCourtClip)"/>';
+    var v = visualsOf(tv), svg = logoSvg(tv.team.country, v.logo, v.center);
+    return svg ? svg.replace("<svg ", '<svg x="410" y="190" width="120" height="120" ') : "";
+  }
+  function lookSectionHtml(tv) {
+    var K = kit(), saved = lookOf(tv);
+    var h = '<section class="ntl" id="ntLook"><div class="ntv-kind">Personnalisation Premium <span class="ntl-badge">Premium</span></div>';
+    if (!K || !g("jerseySvgHtml")) return h + "</section>";
+    if (!myPremium()) {
+      var pl = g("premiumLinkHtml");
+      return h + '<p class="nt-small">Comme pour votre club : encolure et couleurs libres du maillot, tous les motifs, parquet sur mesure et logo importé.</p><p class="nt-small">Réservé aux clubs Premium.</p>' +
+        (pl ? '<div class="ntl-cta">' + pl("Passer Premium") + "</div>" : "") +
+        (saved ? '<div class="ntv-actions"><button type="button" class="tq-btn" data-ntl-reset>Revenir au catalogue</button></div>' : "") + "</section>";
+    }
+    var d = ui.look || (ui.look = lookDraft(tv)), f = g("jerseySvgHtml"), cp = g("courtPreviewSvg");
+    var two = d.jerseyPattern !== "uni" ? [hexOf(d.jerseyColor), hexOf(d.second)] : null;
+    var jersey = function (shape, pat, size) { try { return f(shape, d.jerseyColor, size, "home", pat, pat !== "uni" ? [hexOf(d.jerseyColor), hexOf(d.second)] : null); } catch (e) { return ""; } };
+    var court = cp ? cp(d.courtWood === "nuit" && !d.courtPaint ? null : { wood: d.courtWood, paint: d.courtPaint || null }, courtLogoMarkup(tv, d.logoDataUrl)) : "";
+    var logo = d.logoDataUrl ? '<img src="' + esc(d.logoDataUrl) + '" alt="">' : (logoSvg(tv.team.country, visualsOf(tv).logo, visualsOf(tv).center) || flag(tv.team.country));
+    h += '<p class="nt-small">Prioritaire sur le catalogue pour la page de la sélection et ses matchs (direct compris). Enregistré pour la sélection seulement : la personnalisation de votre club ne change pas.</p>';
+    h += '<div class="ntl-preview"><div class="ntl-jersey">' + (function () { try { return f(d.jerseyShape, d.jerseyColor, 120, "home", d.jerseyPattern, two); } catch (e) { return ""; } })() + '</div><div class="ntl-court">' + court + '</div><div class="ntl-logo" data-ntl-logo-prev="' + (d.logoDataUrl ? "custom" : "catalog") + '">' + logo + "</div></div>";
+    // Maillot.
+    h += '<div class="ntl-row"><span class="ntl-lbl">Encolure</span>'  + K.JERSEY_SHAPES.map(function (sh) {
+      return '<button type="button" class="ntv-opt ntl-mini' + (d.jerseyShape === sh ? " on" : "") + '" data-ntl-shape="' + sh + '" aria-pressed="' + (d.jerseyShape === sh) + '"><span class="ntv-prev">' + jersey(sh, d.jerseyPattern, 40) + "</span><span>" + (sh === "A" ? "Col rond" : "Col en V") + "</span></button>";
+    }).join("") + "</div>";
+    var colorCtl = function (key, val, label) {
+      return '<label class="ntl-color"><span class="ntl-lbl">' + esc(label) + '</span><input type="color" data-ntl-input="' + key + '" value="' + esc(hexOf(val)) + '"><input type="text" class="ntl-hex" data-ntl-hex="' + key + '" value="' + esc(hexOf(val)) + '" maxlength="7" spellcheck="false" aria-label="' + esc(label) + ' (code hexadécimal)"></label>';
+    };
+    h += '<div class="ntl-row">' + colorCtl("jerseyColor", d.jerseyColor, "Couleur principale") + (d.jerseyPattern !== "uni" ? colorCtl("second", d.second, "Seconde couleur") : "") + "</div>";
+    h += '<div class="ntl-row ntl-swatches">' + K.JERSEY_COLOR_PRESETS.map(function (c) { return '<button type="button" class="ntl-sw" data-ntl-preset="' + esc(c) + '" style="background:' + esc(c) + '" aria-label="Couleur ' + esc(c) + '"></button>'; }).join("") + "</div>";
+    h += '<div class="ntl-lbl">Motif</div><div class="ntv-grid ntl-patterns">' + K.JERSEY_PATTERNS.map(function (pt) {
+      return '<button type="button" class="ntv-opt' + (d.jerseyPattern === pt ? " on" : "") + '" data-ntl-pattern="' + esc(pt) + '" aria-pressed="' + (d.jerseyPattern === pt) + '"><span class="ntv-prev">' + jersey(d.jerseyShape, pt, 40) + "</span><span>" + esc(K.JERSEY_PATTERN_LABELS[pt] || pt) + "</span></button>";
+    }).join("") + "</div>";
+    // Parquet.
+    var woodHex = /^#/.test(d.courtWood) ? d.courtWood : ((K.COURT_WOODS[d.courtWood] || {}).floor || "#c8925a");
+    h += '<div class="ntl-lbl">Parquet</div><div class="ntl-row">' + Object.keys(K.COURT_WOODS).map(function (w) {
+      return '<button type="button" class="ntl-wood' + (d.courtWood === w ? " on" : "") + '" data-ntl-wood="' + esc(w) + '" style="background:' + esc(K.COURT_WOODS[w].floor) + '" aria-pressed="' + (d.courtWood === w) + '">' + esc(K.COURT_WOODS[w].label || w) + "</button>";
+    }).join("") + '<label class="ntl-color"><span class="ntl-lbl">Couleur libre</span><input type="color" data-ntl-input="courtWood" value="' + esc(woodHex) + '"></label></div>';
+    h += '<div class="ntl-row"><span class="ntl-lbl">Raquette</span><button type="button" class="ntl-wood' + (!d.courtPaint ? " on" : "") + '" data-ntl-paint-none>Aucune</button><label class="ntl-color"><input type="color" data-ntl-input="courtPaint" value="' + esc(d.courtPaint || hexOf(d.jerseyColor)) + '" aria-label="Couleur de la raquette"></label></div>';
+    // Logo.
+    h += '<div class="ntl-lbl">Logo</div><div class="ntl-row"><label class="tq-btn ntl-file">Importer une image<input type="file" accept="image/png,image/jpeg,image/webp" data-ntl-logo hidden></label>' +
+      (d.logoDataUrl ? '<button type="button" class="tq-btn" data-ntl-logo-clear>Revenir à l\'écusson</button>' : '<span class="nt-small">Sinon : l\'écusson choisi dans le catalogue.</span>') + "</div>";
+    h += '<p class="nt-err" id="ntlErr"' + (ui.lookErr ? "" : " hidden") + ">" + esc(ui.lookErr || "") + "</p>";
+    h += '<div class="ntv-actions">' + (saved ? '<button type="button" class="tq-btn" data-ntl-reset>Revenir au catalogue</button>' : "") +
+      '<button type="button" class="cal-next-btn nt-btn" data-ntl-save' + (ui.lookBusy ? " disabled" : "") + ">" + (ui.lookBusy ? "Enregistrement…" : "Enregistrer la personnalisation Premium") + "</button></div>";
+    return h + "</section>";
+  }
+  function rerenderVisuals(o) {
+    if (!o || !o.isConnected) return;
+    var box = o.querySelector(".ntv-box"), top = box ? box.scrollTop : 0;
+    o.innerHTML = visualsModalHtml(ui.team);
+    var nb = o.querySelector(".ntv-box"); if (nb) nb.scrollTop = top;
+  }
+  function lookClick(o, t) {
+    var d = ui.look, el;
+    if ((el = t.closest("[data-ntl-reset]"))) { saveLook(o, null); return true; }
+    if ((el = t.closest("[data-ntl-save]"))) { if (d) saveLook(o, draftLook(d)); return true; }
+    if (!d) return false;
+    if ((el = t.closest("[data-ntl-shape]"))) d.jerseyShape = el.dataset.ntlShape;
+    else if ((el = t.closest("[data-ntl-pattern]"))) d.jerseyPattern = el.dataset.ntlPattern;
+    else if ((el = t.closest("[data-ntl-preset]"))) d.jerseyColor = el.dataset.ntlPreset;
+    else if ((el = t.closest("[data-ntl-wood]"))) d.courtWood = el.dataset.ntlWood;
+    else if ((el = t.closest("[data-ntl-paint-none]"))) d.courtPaint = "";
+    else if ((el = t.closest("[data-ntl-logo-clear]"))) d.logoDataUrl = null;
+    else return false;
+    ui.lookErr = ""; rerenderVisuals(o);
+    return true;
+  }
+  function lookChange(o, t) {
+    var d = ui.look;
+    if (!d || !t || !t.dataset) return;
+    if (t.dataset.ntlInput || t.dataset.ntlHex) {
+      var key = t.dataset.ntlInput || t.dataset.ntlHex, v = String(t.value || "").trim().toLowerCase();
+      if (!/^#[0-9a-f]{6}$/.test(v)) { ui.lookErr = "Couleur invalide : code hexadécimal attendu (#RRGGBB)."; rerenderVisuals(o); return; }
+      d[key] = v; ui.lookErr = ""; rerenderVisuals(o);
+      return;
+    }
+    if (t.matches && t.matches("[data-ntl-logo]")) {
+      var file = t.files && t.files[0], rs = g("resizeImageFileToDataUrl"), K = kit();
+      if (!file || !rs) return;
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) { ui.lookErr = "Image refusée : PNG, JPEG ou WebP seulement."; rerenderVisuals(o); return; }
+      var p = rs(file, 256).then(function (url) {
+        if (K && url.length > K.MAX_TEAM_LOGO_DATA_URL_LENGTH) throw new Error("Image trop lourde, même redimensionnée.");
+        d.logoDataUrl = url; ui.lookErr = ""; rerenderVisuals(o);
+      }).catch(function (e) { ui.lookErr = e.message || "Image illisible."; rerenderVisuals(o); });
+      window.__lastNationalLogo = p;
+    }
+  }
+  function saveLook(o, look) {
+    if (ui.lookBusy) return Promise.resolve();
+    ui.lookBusy = true; ui.lookErr = ""; rerenderVisuals(o);
+    var p = api("/api/national/look", { teamId: ui.team.team.id, look: look }).then(function (d) {
+      if (d.team) ui.team = d.team;
+      ui.look = null; ui.lookBusy = false;
+      toast(look ? "Personnalisation Premium enregistrée." : "Retour à la personnalisation du catalogue.");
+      if (ui.onTeamUpdate) ui.onTeamUpdate(ui.team);
+      rerenderVisuals(o);
+    }).catch(function (e) { ui.lookBusy = false; ui.lookErr = e.message || "Enregistrement impossible, réessayez."; rerenderVisuals(o); })
+      .then(function () { try { paint(); } catch (e) { /* rien */ } });
+    window.__lastNational = p;
+    return p;
+  }
   // Fenêtre de personnalisation (sélectionneur) : bottom sheet sur mobile
   // (.upgrade-confirm-overlay, règle UI mobile du projet).
   function closeVisuals() { var o = document.getElementById("ntVisualsOverlay"); if (o) o.remove(); }
@@ -867,7 +1032,7 @@
         var open = Vv.isUnlocked(it, st);
         var prev = k === "logo" ? (logoSvg(tv.team.country, it.id, curCenter) || flag(tv.team.country))
           : k === "center" ? (logoSvg(tv.team.country, curLogo === "flag" || curLogo === "ball" ? "nat-shield" : curLogo, it.id) || flag(tv.team.country))
-          : k === "banner" ? bannerPreview(tv.team.country, it.id) : k === "jersey" ? jerseyPreview(it.id, 46, tv.team.country) : courtPreview(it.id);
+          : k === "banner" ? bannerPreview(tv.team.country, it.id) : k === "jersey" ? jerseyPreview(it.id, 46, tv.team.country) : courtPreview(it.id, tv);
         h += '<button type="button" class="ntv-opt' + (cur === it.id ? " on" : "") + '" data-ntv-kind="' + k + '" data-ntv-id="' + esc(it.id) + '"' + (open ? "" : " disabled") + ' aria-pressed="' + (cur === it.id) + '">' +
           (open ? "" : '<span class="ntv-lock" aria-label="Verrouillé">🔒</span>') + '<span class="ntv-prev">' + prev + "</span><span>" + esc(it.label) + "</span>" +
           (open ? "" : '<span class="ntv-need">' + esc(Vv.NEEDS[it.need].label) + "</span>") + "</button>";
@@ -875,23 +1040,26 @@
       h += "</div>";
     });
     h += '<p class="nt-err" id="ntvErr"' + (ui.visErr ? "" : " hidden") + ">" + esc(ui.visErr || "") + "</p>";
-    return h + '<div class="ntv-actions"><button type="button" class="tq-btn" data-ntv-cancel>Annuler</button><button type="button" class="cal-next-btn nt-btn" data-ntv-save>Enregistrer</button></div></div>';
+    h += '<div class="ntv-actions"><button type="button" class="tq-btn" data-ntv-cancel>Annuler</button><button type="button" class="cal-next-btn nt-btn" data-ntv-save>Enregistrer</button></div>';
+    return h + lookSectionHtml(tv) + "</div>";
   }
   function openVisuals() {
     var tv = ui.team;
     if (!tv || !V() || !extrasOf(tv).canEditVisuals) return;
     closeVisuals();
-    ui.visPick = {}; ui.visErr = "";
+    ui.visPick = {}; ui.visErr = ""; ui.look = null; ui.lookErr = ""; ui.lookBusy = false;
     var o = document.createElement("div");
     o.className = "upgrade-confirm-overlay";
     o.id = "ntVisualsOverlay";
     o.innerHTML = visualsModalHtml(tv);
     o.addEventListener("click", function (e) {
       if (e.target === o || (e.target.closest && e.target.closest("[data-ntv-cancel]"))) { closeVisuals(); return; }
+      if (e.target.closest && lookClick(o, e.target)) return;
       var opt = e.target.closest && e.target.closest("[data-ntv-kind]");
-      if (opt && !opt.disabled) { ui.visPick[opt.dataset.ntvKind] = opt.dataset.ntvId; o.innerHTML = visualsModalHtml(ui.team); return; }
+      if (opt && !opt.disabled) { ui.visPick[opt.dataset.ntvKind] = opt.dataset.ntvId; rerenderVisuals(o); return; }
       if (e.target.closest && e.target.closest("[data-ntv-save]")) saveVisuals(o);
     });
+    o.addEventListener("change", function (e) { lookChange(o, e.target); });
     document.body.appendChild(o);
   }
   function saveVisuals(o) {
@@ -927,7 +1095,7 @@
     ensureCss();
     return "<div" + heroAttrs(tv).replace('class="nt-hero', 'class="nt-hero nt-hero--mini') + ">" + heroLogoHtml(tv) +
       '<div class="nt-hero-text"><div class="nt-kicker">Page publique</div><h1>' + teamNameHtml(tv.team) + "</h1></div>" +
-      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 60, tv.team.country) + "</div></div>";
+      '<div class="nt-hero-jersey" aria-hidden="true">' + teamJerseyHtml(tv, 60) + "</div></div>";
   }
   var showcase = {
     previewHtml: showcasePreviewHtml,
@@ -970,7 +1138,7 @@
       // Mode Sélection : sélectionneur et membres de son staff.
       (tv.isCoach || tv.myRole ? ' <button type="button" class="cal-next-btn nt-btn" data-nc-enter="' + esc(tv.team.id) + '">Mode Sélection</button>' : "") +
       (extrasOf(tv).canEditVisuals && V() ? ' <button type="button" class="tq-btn" data-nt-visuals>Personnaliser</button>' : "") + "</div>" +
-      '<div class="nt-hero-jersey" aria-hidden="true">' + jerseyPreview(visualsOf(tv).jersey, 84, tv.team.country) + "</div></div>";
+      '<div class="nt-hero-jersey" aria-hidden="true">' + teamJerseyHtml(tv, 84) + "</div></div>";
     // Le mot du staff : en tête de l'Aperçu, identifiable par les visiteurs.
     if (ui.teamTab === "apercu" || !ui.teamTab) h += messageHtml(tv);
     if (ui.error) h += '<p class="nt-err">' + esc(ui.error) + "</p>";
