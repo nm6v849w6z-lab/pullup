@@ -67,6 +67,8 @@ function fakeAudio() {
   R({ kind: "shot", team: A, made: false, blocked: true }, {}, { kind: "wow", i: 1.2 }, "contre de l'équipe à domicile : « Ooooh ! »");
   assert.strictEqual(crowdReactionFor({ kind: "shot", team: A, made: false, blocked: true }, base, H).also.kind, "cheer", "… puis grande clameur");
   R({ kind: "injury", team: H }, {}, { kind: "gasp", i: 0.9 }, "blessure : le public retient son souffle");
+  R({ kind: "technicalEjection", team: H }, {}, { kind: "jeer", i: 1.5 }, "expulsion d'un joueur à domicile : forte protestation");
+  R({ kind: "foulOut", team: A }, {}, { kind: "cheer", i: 1 }, "5e faute d'un adversaire : la salle se réjouit");
   R({ kind: "shot", team: H, made: false, blocked: true }, {}, { kind: "groan", i: 0.8 }, "domicile contré : déception");
   R({ kind: "shot", team: H, made: true, zone: "paint", shotType: "fastbreak" }, {}, { kind: "cheer", i: 1.3 }, "contre-attaque au cercle : grand moment");
   R({ kind: "foul", team: H }, {}, { kind: "jeer", i: 1 }, "faute sifflée contre le domicile : protestation");

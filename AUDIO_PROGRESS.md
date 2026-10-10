@@ -59,4 +59,5 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [ ] Présentation des joueurs, entrée des équipes, speaker, mi-temps / reprise
 - [x] Victoire à domicile / défaite au coup de sifflet final (sons existants) — 2026-10-10
 - [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts) : musiques fournies, sons de foule à ajouter
-- [ ] Événements rares : blessure, expulsion, antisportive, remontée, playoffs, titre
+- [x] Blessure (souffle retenu), expulsion et 5e faute, antisportive (protestation) — 2026-10-10
+- [ ] Événements rares : remontée au score, playoffs, titre

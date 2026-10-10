@@ -89,6 +89,9 @@ export function crowdReactionFor(e, S, home = 0) {
   // clameur si l'équipe à domicile contre, déception si elle est contrée.
   // Contre du domicile : « Ooooh ! » d'émerveillement, puis la clameur.
   if (e.kind === "shot" && e.blocked && (t === 0 || t === 1)) return t === home ? { kind: "groan", intensity: 0.8 } : { kind: "wow", intensity: 1.2, also: { kind: "cheer", intensity: 1.35 * (clutch ? 1.2 : 1), delay: 700 } };
+  // Expulsion (technique) ou 5e faute : protestation si c'est un joueur à
+  // domicile, la salle se réjouit si c'est un adversaire.
+  if ((e.kind === "technicalEjection" || e.kind === "foulOut") && (t === 0 || t === 1)) return t === home ? { kind: "jeer", intensity: e.kind === "technicalEjection" ? 1.5 : 1.1 } : { kind: "cheer", intensity: e.kind === "technicalEjection" ? 1.3 : 1.0 };
   // Blessure : le public retient son souffle, inquiet.
   if (e.kind === "injury") return { kind: "gasp", intensity: 0.9 };
   // Faute sifflée CONTRE l'équipe à domicile (fil : équipe = celle qui fait
