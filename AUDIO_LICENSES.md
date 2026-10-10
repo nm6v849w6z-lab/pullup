@@ -86,3 +86,18 @@ figure ici).
 | Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
 | Modifications | Aperçu HQ MP3 (48 s, 48 kHz) ; passages sans son tonal (corne / sono évitées vers 4 s, 13 s, 24,5 s, 41,5 s) : 5–8,5 s, 8,4–11,8 s, 26–29,5 s, 34,3–37,8 s (variantes de 3,5 s) et 26–33 s (version longue de 7 s) ; montée 0,25 s, extinction cos² 1,2 s / 2 s ; −17 dBFS RMS (crête limitée à −1 dBFS) ; MP3 96 kb/s stéréo 44,1 kHz (40–85 Ko) |
 | Restrictions | Aucune connue (applaudissements de foule, pas de parole ni de musique dans les extraits gardés) |
+
+## Musiques des séquences (assets/audio/music/)
+
+| Champ | Valeur |
+|---|---|
+| Fichiers | `entree-joueurs.mp3` (remplacée le 2026-10-10), `mascotte-1.mp3`, `mascotte-2.mp3`, `mascotte-3.mp3` (2026-10-10) ; plus anciennes : `emission.mp3`, `pompom.mp3`, `lanceur-maillot.mp3` |
+| Ressource originale | Fichiers fournis par le propriétaire du jeu (entre_e_des_joueurs.mp3, mascotte1.mp3, mascotte2.flac, mascotte3.ogg, …) |
+| Auteur | Non communiqué |
+| Source | Fichiers transmis par le propriétaire du jeu |
+| Licence | Non vérifiée par Claude — fournis et choisis par le propriétaire du jeu, sous sa responsabilité |
+| Conditions | Non communiquées |
+| Vérifiée le | 2026-10-10 (format, durée, volume uniquement) |
+| Attribution requise | Non communiquée |
+| Modifications | entree-joueurs : réencodée MP3 192 kb/s (volume d'origine) ; mascotte-1..3 : volume aligné à ≈ −16,5 LUFS (loudnorm, crête −1,5 dBTP), MP3 192 kb/s |
+| Restrictions | À confirmer par le propriétaire (droits sur les musiques) |

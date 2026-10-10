@@ -1,7 +1,8 @@
 // =====================================================================
 // Musiques des séquences (2026-10-08) : émissions d'avant-match et de
 // mi-temps (« emission »), entrée des joueurs du direct 2D (« entree »),
-// shows du direct 2D (« pompom », « mascotte », « lanceur », 2026-10-09).
+// shows du direct 2D (« pompom », « mascotte1..3 », « lanceur », 2026-10-09 ;
+// mascotte : trois musiques à tour de rôle, 2026-10-10).
 // Fichiers fournis, utilisés tels quels : assets/audio/music/*.mp3.
 //
 //   HMMusic.play("emission")            // lance (fondu d'entrée), en boucle
@@ -21,7 +22,8 @@
   const script = document.currentScript;
   const BASE = script && script.src ? new URL("music/", script.src).href : "assets/audio/music/";
   const TRACKS = { emission: "emission.mp3", entree: "entree-joueurs.mp3",
-    pompom: "pompom.mp3", mascotte: "mascotte.mp3", lanceur: "lanceur-maillot.mp3" };   // shows du direct 2D
+    pompom: "pompom.mp3", mascotte1: "mascotte-1.mp3", mascotte2: "mascotte-2.mp3", mascotte3: "mascotte-3.mp3", lanceur: "lanceur-maillot.mp3" };   // shows du direct 2D (mascotte : 3 musiques à tour de rôle)
+  const FILES_VERSION = "20261010";   // à changer quand un fichier est remplacé (cache navigateur 24 h)
   const VOLUME = 0.55, FADE_IN = 1500, FADE_OUT = 900, FADE_SWITCH = 400;
   let ctx = null;
   let cur = null;        // { key, el, gain, state: "play" | "out", lease, blocked, ducked }
@@ -60,7 +62,7 @@
   function start(key, opts) {
     const file = TRACKS[key];
     if (!file) return;
-    const el = new Audio(BASE + file);
+    const el = new Audio(BASE + file + "?v=" + FILES_VERSION);
     el.loop = opts.loop !== false; el.preload = "auto";
     const t = { key, el, gain: null, src: null, state: "play", lease: 0, blocked: false, ducked: false, fadeTimer: 0 };
     const c = audioCtx();

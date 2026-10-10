@@ -184,6 +184,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     Applaudissements `amb_applause` = 4 variantes + `amb_applause_big`
     (Freesound 706732, Rogers Arena, CC0) ; fin de quart-temps = intensité
     1,3 → version longue.
+  - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
+    de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
+    « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
+    mascotte) → musique des pompom girls ; ancienne `mascotte.mp3`
+    supprimée. Nouvelle `entree-joueurs.mp3` (fichier fourni, 192 kb/s).
+    `music.js` : URL des fichiers versionnées (`FILES_VERSION`, cache 24 h)
+    — à changer à chaque remplacement de fichier ; `music.js?v=3`.
     Test : `live_ambience_files_test.js`. Boucles de
     fichiers : départ à un point aléatoire, `trimLoop` ignore le silence
     d'encodeur MP3 aux bords.
@@ -204,7 +211,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-7`.
+    trois. Assets du direct en `?v=20261010-8`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

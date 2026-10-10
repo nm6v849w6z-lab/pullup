@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-7";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-7";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-8";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-8";
 
 // Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
 // même scène, chacun à sa place habituelle — à la mi-temps, et un temps
@@ -373,7 +373,21 @@ export function createStaging(api, getCfg) {
   // affichée). Bail renouvelé ici : séquence finie, page quittée ou vue
   // détruite, la musique s'efface d'elle-même (assets/audio/music.js), en
   // même temps que le fondu de sortie du show.
-  const SHOW_MUSIC = { pompom: "pompom", mascot: "mascotte", tshirt: "lanceur" };
+  // Mascotte SEULE : ses trois musiques à tour de rôle (une par show, l'ordre
+  // est gardé d'un match à l'autre dans ce navigateur). Gala (pompom girls
+  // + mascotte) : musique des pompom girls.
+  const SHOW_MUSIC = { pompom: "pompom", gala: "pompom", tshirt: "lanceur" };
+  const MASCOT_TRACKS = ["mascotte1", "mascotte2", "mascotte3"];
+  function nextMascotTrack() {
+    let i = 0;
+    try { i = (Number(localStorage.getItem("hm-mascot-track")) + 1) % MASCOT_TRACKS.length || 0; localStorage.setItem("hm-mascot-track", String(i)); }
+    catch (e) { i = (nextMascotTrack.n = ((nextMascotTrack.n == null ? -1 : nextMascotTrack.n) + 1) % MASCOT_TRACKS.length); }
+    return MASCOT_TRACKS[i];
+  }
+  function showMusic(sh) {
+    if (sh.name === "mascot") return sh.music || (sh.music = nextMascotTrack());
+    return SHOW_MUSIC[sh.name] || null;
+  }
   let musicAt = 0, musicKey = null;
   function music(ph, nowP) {
     const M = typeof window !== "undefined" ? window.HMMusic : null;
@@ -382,7 +396,7 @@ export function createStaging(api, getCfg) {
     const on = !api.shown || api.shown();
     let want = null;
     if (on && ph.kind === "intro") want = "entree";
-    else if (on && show && SHOW_MUSIC[show.name] && ph.st && api.now() < ph.st.endsAt - 900) want = SHOW_MUSIC[show.name];
+    else if (on && show && showMusic(show) && ph.st && api.now() < ph.st.endsAt - 900) want = showMusic(show);
     if (musicKey && musicKey !== want) { M.stop(musicKey); musicKey = null; }
     if (want === "entree") { M.play("entree", { lease: 1500 }); musicKey = want; }
     else if (want) { M.play(want, { lease: 1500 }); musicKey = want; }
