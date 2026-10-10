@@ -46,10 +46,11 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
   interception → clameur (sons existants) — 2026-10-10
 - [x] Montée à l'approche des 24 s (défense, ≤ 6 s) — 2026-10-10
 - [x] « Ooooh ! » d'émerveillement → `amb_wow_1..3` (324890 + IENBA 488472, superposés) :
-  contre du domicile, puis clameur — 2026-10-10 (licence de 324890 à confirmer)
+  contre du domicile, puis clameur — 2026-10-10
 - [x] Public qui retient son souffle → `amb_gasp` (HowardV 264376) : tir décisif imminent,
   blessure — 2026-10-10
-- [ ] Huées contre le porteur adverse, dernière possession
+- [x] Huées contre le meilleur marqueur adverse (≥ 20 pts) quand il va tirer ; dernière
+  possession défensive serrée : salle debout (tension) — 2026-10-10
 - [ ] Dunk / alley-oop : le moteur ne les distingue pas (types : three, jumper, fastbreak,
   layup, post, floater)
 - [ ] Variantes faible / moyenne / forte / exceptionnelle des réactions fréquentes

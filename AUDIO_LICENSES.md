@@ -190,11 +190,11 @@ figure ici).
 | Ressource originale | (1) « Crowd Oooh.wav » (Freesound n° 324890, compte de l'auteur supprimé) ; (2) « Small crowd reactions » (Freesound n° 488472) — fichiers originaux fournis par le propriétaire du jeu |
 | Auteur | (1) deleted_user_2104797 (alias Adam_N) ; (2) IENBA |
 | Source | https://freesound.org/s/324890/ ; https://freesound.org/people/IENBA/sounds/488472/ |
-| Licence | (2) Creative Commons 0 (recherche Freesound) ; (1) **à confirmer** sur la page (les autres sons de ce compte vérifiés — 324891, 346684 — sont CC0) |
+| Licence | Creative Commons 0 (CC0 1.0) pour les deux : (1) confirmée par le propriétaire du jeu sur la page Freesound lors du téléchargement ; (2) recherche Freesound |
 | Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
 | Vérifiée le | 2026-10-10 (Freesound inaccessible depuis l'environnement) |
-| Attribution requise | Non si CC0 |
-| Usage commercial / jeu | Autorisé si CC0 |
+| Attribution requise | Non |
+| Usage commercial / jeu | Autorisé |
 | Modifications | « Salle pleine » : chaque variante superpose les 3 « Oooh » de 324890 (×3 hauteurs ±5 %, panoramique) et les 4 premières réactions de 488472 (à −10 dB), départs décalés de 0 à 80 ms ; 3,6 s, extinction 1,2 s, −16 dBFS ; MP3 96 kb/s |
 | Restrictions | Aucune connue |
 

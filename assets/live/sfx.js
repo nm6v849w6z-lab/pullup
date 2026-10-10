@@ -494,13 +494,24 @@ export function createSfx(opts = {}) {
     // la salle bout (couche `amb_bed_hot`), sans changer de mode.
     const hot = !!(S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6);
     // Défense, 24 s de l'adversaire à 6 s ou moins : tension (montée).
-    const tension = mode === "defense" && !!S && typeof S.shotClock === "number" && S.shotClock > 0 && S.shotClock <= 6;
+    // Dernière possession défensive d'un match serré (Q4+, ≤ 24 s, écart ≤ 3) :
+    // la salle est debout, tension maximale quel que soit le chrono des 24 s.
+    const close3 = !!S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 24 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 3;
+    const tension = mode === "defense" && !!S && ((typeof S.shotClock === "number" && S.shotClock > 0 && S.shotClock <= 6) || close3);
     const hotChanged = hot !== amb.hot, tensionChanged = tension !== amb.tension;
     if (hotChanged) { amb.hot = hot; amb.log.push({ kind: "hot", on: hot, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
     if (tensionChanged) { amb.tension = tension; amb.log.push({ kind: "tension", on: tension, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
     // Tir décisif imminent (4e quart ou prolongation, ≤ 24 s, écart ≤ 3) :
     // le public retient son souffle, une fois par tir annoncé.
     const na = S && S.nextAction;
+    // Meilleur marqueur adverse (≥ 20 pts) qui s'apprête à tirer : courtes
+    // huées, une fois par tir annoncé.
+    const away = 1 - (o.home != null ? o.home : 0);
+    if (na && na.kind === "shot" && na.team === away && mode === "defense" && S.teams && S.teams[away] && Array.isArray(S.teams[away].players)) {
+      const ps = S.teams[away].players, top = ps.reduce((b, p) => ((p.pts || 0) > ((b && b.pts) || 0) ? p : b), null);
+      const shooter = na.actors && na.actors.shooter, dt = na.airAt - nowMs();
+      if (top && (top.pts || 0) >= 20 && shooter === top.id && dt > 0 && dt <= 2500 && amb.starBooFor !== na.airAt) { amb.starBooFor = na.airAt; react({ kind: "jeer", intensity: 0.7 }); }
+    }
     if (na && na.kind === "shot" && mode !== "off" && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 24 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 3) {
       const dt = na.airAt - nowMs();
       if (dt > 0 && dt <= 1800 && amb.gaspFor !== na.airAt) { amb.gaspFor = na.airAt; react({ kind: "gasp", intensity: 1 }); }

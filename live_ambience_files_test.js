@@ -158,6 +158,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   sfx.updateAmbience({ ...clutch, clock: 60, nextAction: { kind: "shot", team: 0, airAt: t + 9000 } });
   await sleep(20);
   assert.strictEqual(gasps(), 1, "souffle retenu une seule fois, seulement sur un tir décisif imminent");
+  // Meilleur marqueur adverse (≥ 20 pts) qui va tirer : courtes huées, une fois.
+  const nj = jeers().length;
+  const star = { ...base, possession: 1, teams: [{ score: 50, players: [{ id: "H1", pts: 30 }] }, { score: 48, players: [{ id: "A1", pts: 24 }, { id: "A2", pts: 6 }] }] };
+  sfx.updateAmbience({ ...star, nextAction: { kind: "shot", team: 1, airAt: t + 2000, actors: { shooter: "A1" } } });
+  sfx.updateAmbience({ ...star, nextAction: { kind: "shot", team: 1, airAt: t + 2000, actors: { shooter: "A1" } } });
+  sfx.updateAmbience({ ...star, nextAction: { kind: "shot", team: 1, airAt: t + 2100, actors: { shooter: "A2" } } });
+  await sleep(20);
+  assert.strictEqual(jeers().length, nj + 1, "huées sur le meilleur marqueur adverse seulement, une fois par tir");
+  // Dernière possession défensive serrée : tension même avec un chrono des 24 s plein.
+  const tLog = () => sfx.debug().ambLog.filter(x => x.kind === "tension").map(x => x.on).pop();
+  sfx.updateAmbience({ ...base, possession: 1, quarter: 4, clock: 15, shotClock: 20, teams: [{ score: 80 }, { score: 79 }] });
+  assert.strictEqual(tLog(), true, "dernière possession défensive serrée : salle debout");
+  sfx.updateAmbience({ ...base, possession: 0 });
   ok(`Faute contre le domicile : protestation (${[...new Set(j)].join(", ")}) ; contre du domicile : « Ooooh ! » puis grande clameur ; tir décisif : le public retient son souffle.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");

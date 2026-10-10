@@ -203,7 +203,10 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     superposées) sur un contre du domicile, enchaîné (`r.also`, 700 ms)
     avec la grande clameur ; `amb_gasp` (HowardV 264376) : blessure, et
     tir décisif imminent (Q4+, ≤ 24 s, écart ≤ 3, `nextAction` à ≤ 1,8 s,
-    une fois par tir).
+    une fois par tir). Meilleur marqueur adverse (≥ 20 pts, `players[].pts`)
+    qui va tirer (`nextAction.actors.shooter`) : `jeer` 0,7, une fois par
+    tir. Dernière possession défensive serrée (Q4+, ≤ 24 s, écart ≤ 3) :
+    `amb.tension` quel que soit le chrono des 24 s.
   - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
     de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
     « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
@@ -231,7 +234,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-12`.
+    trois. Assets du direct en `?v=20261010-13`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;
