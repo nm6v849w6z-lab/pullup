@@ -20,6 +20,28 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-10) — Lenteur des clics (Ordres et partout) : DOM
+  géant gardé en mémoire + écouteurs globaux**. Mesuré (ligue avancée de
+  14 journées, après une visite du Marché, CPU ×4 téléphone) : bouton de
+  tactique 176 → 64 ms, case de la feuille 264 → 120 ms.
+  - Cause 1 : le Marché fait ≈ 830 éléments PAR annonce (150 000 pour une
+    liste normale) et restait dans la page, masqué, jusqu'au rechargement
+    (+ 17 000 pour « Pendant votre absence »). Désormais vidés en quittant
+    la page (`PAGE_DISCARD_ON_LEAVE`, showPage) : 177 000 → 17 600
+    éléments ; ils sont reconstruits à chaque ouverture.
+  - Cause 2 : écouteurs de clic posés sur tout le document qui fouillaient
+    la page entière à CHAQUE clic du jeu : Entraînement (`.tm-eff.open`,
+    35 ms/clic à CPU ×6) → limité à #trainingSection ; menus « ⋯ » de
+    l'Effectif réécrits même fermés → seulement les ouverts. Coût des
+    écouteurs par clic : 50 → 6 ms (CPU ×6).
+  - `body:has(#liveSection…)` remplacé par la classe `body.page-live`
+    (posée par showPage) : plus de réévaluation des styles de toute la page.
+  - Reste à faire (hors de ce lot) : alléger la carte du Marché (830
+    éléments) — l'ouverture du Marché reste lourde.
+  - Tests instables connus constatés aussi sur l'ancienne version :
+    my_auctions_test (champ d'offre), live_possession_sync_test (1/6 sous
+    charge), cup_ordres_planning_test, private_league_ui_test.
+
 - **🟢 LIVRÉ (2026-10-10) — Téléphone : défilement fluide, Ordres
   instantanés (envoi à « Enregistrer »)**.
   - **Ordres, envoi différé** (moteurbasket3.html, `ordresPending`) :

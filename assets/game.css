@@ -7993,7 +7993,7 @@
   /* Retour utilisateur (2026-09-26, capture du direct) : « enlève le score
      dans la barre quand on est sur cette page, ça fait doublon » — le
      mini-bandeau du topbar reste sur les autres pages. */
-  body:has(#liveSection:not(.hidden)) #topbarLiveStrip{display:none !important;}
+  body.page-live #topbarLiveStrip{display:none !important;} /* classe posée par showPage (plus de body:has, 2026-10-10) */
   /* =====================================================================
      THÈME CLAIR (2026-09-26, retour utilisateur : « travaille sur une
      version claire du jeu », choix dans Paramètres à côté d'« Identité du

@@ -21259,6 +21259,7 @@ const WIDE_PAGE_IDS = new Set(PAGE_IDS);
 // besoin.
 const NARROW_PAGE_IDS = new Set([]);
 
+const PAGE_DISCARD_ON_LEAVE = { marcheSection: ["marketListings"], catchupSection: ["catchupContent"] };
 function showPage(id) {
   if (typeof hmNavSchedule === "function") hmNavSchedule();
   // On quitte l'écran Ordres sans « Enregistrer » : réglages envoyés en
@@ -21284,6 +21285,22 @@ function showPage(id) {
   PAGE_IDS.forEach(pid => {
     const el = document.getElementById(pid);
     if (el) el.classList.toggle("hidden", pid !== id);
+  });
+  // Pages très lourdes libérées en les quittant (performance, 2026-10-10 :
+  // « un clic dans Ordres est lent, avant c'était instantané », scroll qui
+  // accroche sur téléphone) : une fois visité, le Marché (≈ 830 éléments
+  // par annonce, 150 000 pour une liste normale) restait dans la page,
+  // masqué, jusqu'au rechargement — chaque clic, recalcul de style et
+  // défilement de TOUTES les autres pages le traînait. Ces contenus sont
+  // entièrement reconstruits à chaque ouverture (TAB_HANDLERS.marche →
+  // renderMarcheSection, showCatchupSummaryIfAny).
+  // Page du direct affichée : classe sur <body> (remplace l'ancien
+  // `body:has(#liveSection:not(.hidden))`, qui faisait réévaluer les styles
+  // de TOUTE la page à chaque modification du DOM).
+  document.body.classList.toggle("page-live", id === "liveSection");
+  Object.entries(PAGE_DISCARD_ON_LEAVE).forEach(([pid, holders]) => {
+    if (pid === id) return;
+    holders.forEach(h => { const el = document.getElementById(h); if (el && el.firstChild) el.innerHTML = ""; });
   });
   const wrapEl = document.querySelector(".wrap");
   if (wrapEl) {
@@ -38782,14 +38799,21 @@ function trainingReportNotesHtml(weekResult) {
 }
 
 // Délégation des clics/changements de l'écran Entraînement (posée une fois).
+// Bulles « rendement » ouvertes : uniquement dans #trainingSection, on ne
+// cherche que là (avant 2026-10-10 : tout le document à CHAQUE clic du jeu,
+// Ordres compris — des dizaines de ms sur téléphone avec un DOM chargé).
+function closeTrainingEffTips() {
+  const sec = document.getElementById("trainingSection");
+  if (sec) sec.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open"));
+}
 document.addEventListener("click", (e) => {
   const sec = document.getElementById("trainingSection");
   if (!sec || !sec.contains(e.target)) {
-    document.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open"));
+    if (sec && !sec.classList.contains("hidden")) closeTrainingEffTips();
     return;
   }
   const t = e.target.closest("[data-slot-intensity],[data-slot-remove],[data-eff-toggle],[data-apply-advice],[data-train-day],[data-day-option],[data-mentor-remove],[data-training-week]");
-  if (!t) { document.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open")); return; }
+  if (!t) { closeTrainingEffTips(); return; }
   const d = t.dataset;
   if (d.slotIntensity != null) {
     const slots = teamA.activeTrainingSlots().map(s => ({ ...s }));
@@ -38807,7 +38831,7 @@ document.addEventListener("click", (e) => {
   if (t.hasAttribute("data-eff-toggle")) {
     const box = t.closest(".tm-eff");
     const open = !box.classList.contains("open");
-    document.querySelectorAll(".tm-eff.open").forEach(el => el.classList.remove("open"));
+    closeTrainingEffTips();
     box.classList.toggle("open", open);
     t.setAttribute("aria-expanded", String(open));
     return;
@@ -42088,7 +42112,11 @@ function effActionsMenuHtml(p, isListed) {
 }
 
 function closeEffectifMenus(except) {
-  document.querySelectorAll("#rosterContent .eff-menu").forEach(menu => {
+  // Seulement les menus ouverts (avant 2026-10-10 : tous réécrits à chaque
+  // clic du jeu, même fermés → recalcul de style inutile).
+  const root = document.getElementById("rosterContent");
+  if (!root) return;
+  root.querySelectorAll(".eff-menu:not([hidden])").forEach(menu => {
     if (menu === except) return;
     menu.hidden = true;
     const btn = document.querySelector(`#rosterContent [data-eff-menu="${menu.id.replace("effMenu_", "")}"]`);
