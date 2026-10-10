@@ -542,6 +542,9 @@ function playFriendlyMatch(Engine, homeReal, awayReal, homeSetup, awaySetup, at,
     res.scoreHome = result.finalScore.A;
     res.scoreAway = result.finalScore.B;
     res.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
+    // Pertes de balle d'ÉQUIPE (violations), hors lignes individuelles.
+    res.teamTovHome = (result.teamStats && result.teamStats.A.tov) || 0;
+    res.teamTovAway = (result.teamStats && result.teamStats.B.tov) || 0;
     res.seed = result.seed;
     // Tactiques des deux équipes, sous la feuille de match (retour 2026-10-03).
     res.tacticsUsed = tacticsUsed;

@@ -301,6 +301,9 @@ function playMatch(store, comp, m, leagues, world, now) {
       m.scoreHome = result.finalScore.A; m.scoreAway = result.finalScore.B;
       m.quarterScores = { home: result.quarterScores.A, away: result.quarterScores.B };
       m.boxHome = boxOf(result.boxScoreA, tempIds); m.boxAway = boxOf(result.boxScoreB, tempIds);
+      // Pertes de balle d'ÉQUIPE (violations), hors lignes individuelles.
+      m.teamTovHome = (result.teamStats && result.teamStats.A.tov) || 0;
+      m.teamTovAway = (result.teamStats && result.teamStats.B.tov) || 0;
       // Tactiques réellement jouées (analyse, comme tacticsUsed d'un club).
       m.tacticsUsed = tacticsUsed; m.seed = result.seed;
       // Direct : diffusion calée sur le coup d'envoi (LiveMatch.schedulePlayback,
@@ -317,7 +320,7 @@ function playMatch(store, comp, m, leagues, world, now) {
             forfeit: false, finalScore: { home: m.scoreHome, away: m.scoreAway },
             quarterScores: m.quarterScores, seed: result.seed, tacticsUsed,
             events: pb.events, pauses: pb.pauses, totalDurationMs: pb.totalDurationMs,
-            boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
+            boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB, teamStats: result.teamStats || null,
           },
           teams: { home: guests[0], away: guests[1] },
         });
@@ -795,7 +798,8 @@ function matchDetail(store, matchId, now) {
   const live = isLive(m, viewNow(now));
   return {
     ...publicMatch(m, viewNow(now)), label: m.label || null, stage: m.stage || null, season, comp,
-    boxHome: live ? [] : m.boxHome || [], boxAway: live ? [] : m.boxAway || [], injuries: live ? [] : m.injuries || [], tacticsUsed: live ? null : m.tacticsUsed || null,
+    boxHome: live ? [] : m.boxHome || [], boxAway: live ? [] : m.boxAway || [],
+    teamTovHome: live ? 0 : m.teamTovHome || 0, teamTovAway: live ? 0 : m.teamTovAway || 0, injuries: live ? [] : m.injuries || [], tacticsUsed: live ? null : m.tacticsUsed || null,
     homeLabel: NT().teamLabel(m.home), awayLabel: NT().teamLabel(m.away), homeCountry: m.home.split("-")[0], awayCountry: m.away.split("-")[0],
   };
 }

@@ -311,6 +311,9 @@ function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, k
     seed: result.seed,
     events, pauses, totalDurationMs,
     boxScoreA: result.boxScoreA, boxScoreB: result.boxScoreB,
+    // Pertes de balle D'ÉQUIPE (violations, hors feuilles individuelles),
+    // repère domicile (A) / extérieur (B) comme les feuilles de match.
+    teamStats: result.teamStats || null,
   };
 }
 
@@ -974,6 +977,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
       forfeit: entry.forfeit, finalScore: entry.finalScore,
       events: entry.events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
       boxScoreA: entry.boxScoreA, boxScoreB: entry.boxScoreB,
+      teamStats: entry.teamStats || null,
       // Tactiques des deux équipes (repère domicile/extérieur), affichées
       // sous la feuille de match du direct (retour utilisateur 2026-10-03).
       tacticsUsed: entry.tacticsUsed || null,
@@ -1012,6 +1016,9 @@ function viewLiveMatchForTeam(league, teamIndex) {
     ...(ev.score !== undefined ? { score: { A: ev.score.B, B: ev.score.A } } : null),
     // Deltas de statistiques par équipe (live 2D, 2026-10-07) : même repère.
     ...(ev.delta !== undefined ? { delta: { ...(ev.delta.B ? { A: ev.delta.B } : null), ...(ev.delta.A ? { B: ev.delta.A } : null) } } : null),
+    // Pertes de balle d'équipe et flèche d'alternance (2026-10-10) : même repère.
+    ...(ev.teamDelta !== undefined ? { teamDelta: { ...(ev.teamDelta.B ? { A: ev.teamDelta.B } : null), ...(ev.teamDelta.A ? { B: ev.teamDelta.A } : null) } } : null),
+    ...(ev.arrow !== undefined ? { arrow: swapTeamLabel(ev.arrow) } : null),
   }));
 
   return {
@@ -1020,6 +1027,7 @@ function viewLiveMatchForTeam(league, teamIndex) {
     forfeit: entry.forfeit, finalScore: entry.finalScore,
     events, pauses: entry.pauses, totalDurationMs: entry.totalDurationMs,
     boxScoreA: entry.boxScoreB, boxScoreB: entry.boxScoreA,
+    teamStats: entry.teamStats ? { A: entry.teamStats.B, B: entry.teamStats.A } : null,
     tacticsUsed: entry.tacticsUsed || null,
     seed: entry.seed,
   };

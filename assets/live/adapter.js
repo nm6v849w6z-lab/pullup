@@ -26,7 +26,7 @@
 
 // Règles de jeu partagées avec le moteur (24/14 s, violations…) : le même
 // fichier que engine.js et moteurbasket3.html (expose globalThis.HM_RULES).
-import "../game-rules.js?v=20261010-20";
+import "../game-rules.js?v=20261010-21";
 const Rules = globalThis.HM_RULES;
 
 const SPOT_GEOM = {
@@ -155,7 +155,7 @@ export function createLiveAdapter(opts) {
     st.events = []; st.shots = []; st.fouls = []; st.raw = []; st.seq = 0; st.quarter = 1; st.final = false;
     st.scoreAB = { A: 0, B: 0 }; st.clock = QL; st.shotClock = null; st.possession = null; st.lastAirAt = 0;
     st.fat = {};
-    st.rows = { A: new Map(), B: new Map() }; st.starters = { A: new Set(), B: new Set() }; st.onCourt = { A: new Set(), B: new Set() };
+    st.rows = { A: new Map(), B: new Map() }; st.teamTov = { A: 0, B: 0 }; st.starters = { A: new Set(), B: new Set() }; st.onCourt = { A: new Set(), B: new Set() };
     st.elapsed = 0; st.run = { team: null, pts: 0, said: false }; st.prevScore = [0, 0]; st.moneyQ = null; st.finalSaid = false;
     for (const key of ["A", "B"]) {
       const box = key === "A" ? live.boxScoreA : live.boxScoreB;
@@ -212,6 +212,9 @@ export function createLiveAdapter(opts) {
 
   function applyStats(ev) {
     if (ev.fat && typeof ev.fat === "object") Object.assign(st.fat, ev.fat);
+    // Pertes de balle D'ÉQUIPE (violations, 2026-10-10) : compteur d'équipe,
+    // jamais imputé au porteur nommé dans l'événement.
+    if (ev.teamDelta && typeof ev.teamDelta === "object") for (const key of ["A", "B"]) st.teamTov[key] += (ev.teamDelta[key] && ev.teamDelta[key].tov) || 0;
     if (ev.delta && typeof ev.delta === "object") {
       for (const key of ["A", "B"]) { const per = ev.delta[key]; if (!per) continue; for (const id in per) { const row = rowOf(key, Number(id)); for (const f of DELTA_FIELDS) if (typeof per[id][f] === "number") row[f] += per[id][f]; } }
       return;
@@ -222,7 +225,7 @@ export function createLiveAdapter(opts) {
       case "shot": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); const three = ev.zone === "three"; if (three) r.fga3++; else r.fga2++; if (ev.made) { r.pts += three ? 3 : 2; if (three) r.fgm3++; else r.fgm2++; if (ev.assisterId != null) rowOf(t, ev.assisterId, ev.assister).ast++; } else { if (ev.blockerId != null) rowOf(other(t), ev.blockerId, ev.blocker).blk++; if (ev.defenderId != null && !ev.blocked) rowOf(other(t), ev.defenderId, ev.defender).pf++; } break; }
       case "rebound": { if (ev.rebounderId != null) { const r = rowOf(t, ev.rebounderId, ev.rebounder); r.reb++; if (ev.offensive) r.oreb++; else r.dreb++; } const sk = ev.offensive ? t : other(t); if (ev.shooterId != null && !ev.blocked && !ev.freeThrow) { const r = rowOf(sk, ev.shooterId, ev.shooter); if (ev.zone === "three") r.fga3++; else r.fga2++; } break; }
       case "freeThrow": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); r.fta += ev.attempts || 0; r.ftm += ev.made || 0; r.pts += ev.made || 0; break; }
-      case "turnover": { if (ev.playerId != null) rowOf(t, ev.playerId, ev.player).tov++; if (ev.stealerId != null) rowOf(other(t), ev.stealerId, ev.stealer).stl++; break; }
+      case "turnover": { if (ev.playerId != null && !ev.teamTurnover) rowOf(t, ev.playerId, ev.player).tov++; if (ev.stealerId != null) rowOf(other(t), ev.stealerId, ev.stealer).stl++; break; }
       case "foul": { if (ev.defenderId != null) rowOf(t, ev.defenderId, ev.defender).pf++; break; }
       default: break;
     }
@@ -385,7 +388,7 @@ export function createLiveAdapter(opts) {
           number: Number.isInteger(p.number) ? p.number : null, fatigue: typeof st.fat[id] === "number" ? st.fat[id] : null };
       });
       return { name: team.name || (t ? "Extérieur" : "Domicile"), short: team.short || (team.name || "?").slice(0, 3).toUpperCase(), sponsor: team.sponsor || null, score: total[t], quarterScores: quarterScores[t],
-        teamFouls: st.fouls.filter(f => f.team === t && f.quarter === st.quarter).length, ...timeouts(t), color: team.color || null, logo: team.logo || "", mine: opts.mine === key, tactics: team.tactics || null, players };
+        teamFouls: st.fouls.filter(f => f.team === t && f.quarter === st.quarter).length, ...timeouts(t), color: team.color || null, logo: team.logo || "", mine: opts.mine === key, tactics: team.tactics || null, teamTov: st.teamTov[key] || 0, players };
     });
     const dress = opts.dress || {};
     return {

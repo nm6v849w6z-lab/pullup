@@ -64,7 +64,7 @@ function fail(msg) { throw new Error("❌ " + msg); }
 
   const ids = new Set(S.teams.flatMap(t => t.players.map(p => p.id)));
   for (const e of S.events) for (const id of Object.values(e.actors || {})) if (id && !ids.has(id)) fail(`acteur inconnu ${id} (événement ${e.kind}).`);
-  const shots = S.events.filter(e => e.kind === "shot" || e.kind === "rebound");
+  const shots = S.events.filter(e => (e.kind === "shot" || e.kind === "rebound") && !e.freeThrow);   // (rebond de lancer franc : pas un tir)
   if (!shots.every(e => e.passes && e.passes[e.passes.length - 1] === e.actors.shooter && e.shotType && e.quality && e.possLen > 0)) fail("chaque tir doit porter passes / shotType / quality / possLen.");
   if (S.shots.length !== shots.filter(e => e.shot).length || !S.shots.every(s => s.x >= 0 && s.x <= 94)) fail("carte des tirs incohérente.");
   console.log(`✅ ${S.events.length} événements, acteurs par id, ${shots.length} tirs avec faits de possession, ${S.shots.length} points sur la carte.`);

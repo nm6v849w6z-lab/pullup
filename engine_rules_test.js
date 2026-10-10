@@ -116,7 +116,9 @@ const seq = vals => { let i = 0; return () => vals[Math.min(i++, vals.length - 1
         const other = e.team === "A" ? "B" : "A";
         assert.strictEqual(e.possessionAfter, other, "violation : ballon à l'adversaire");
         assert.ok(ids[e.team].has(e.playerId) && e.deadBall === true, "violation : joueur responsable identifié, ballon mort");
-        assert.strictEqual(e.delta[e.team][e.playerId].tov, 1, "violation : une perte de balle, au joueur responsable");
+        // Perte de balle D'ÉQUIPE (2026-10-10) : +1 équipe, +0 joueur.
+        assert.ok(e.teamTurnover === true && e.teamDelta && e.teamDelta[e.team].tov === 1, "violation : une perte de balle d'équipe");
+        assert.ok(!(e.delta && e.delta[e.team] && e.delta[e.team][e.playerId] && e.delta[e.team][e.playerId].tov), "violation : aucune perte au porteur nommé");
         const next = ev.slice(i + 1).find(isGame);
         if (next && next.quarter === e.quarter && next.type !== "quarterStart") assert.strictEqual(next.possession, other, `après la violation, l'action suivante est jouée par l'adversaire (${next.type})`);
         if (e.tovKind === "eightSeconds") { v8++; assert.strictEqual(e.possLen, 8, "8 s consommées"); }
@@ -162,7 +164,7 @@ const seq = vals => { let i = 0; return () => vals[Math.min(i++, vals.length - 1
   ok(`5. ${techMissed} lancers manqués de faute technique / antisportive : aucun rebond (remise en jeu réglementaire).`);
   ok("6-7. Rebondeur identique dans l'événement, les statistiques et la feuille de match ; aucun rebond compté deux fois ni oublié.");
   assert.ok(v8 > 3 && v24 > 10 && vbc > 2, `violations observées (${v8} / ${v24} / ${vbc})`);
-  ok(`8. ${v8} violations des 8 s : 8 s consommées, perte au porteur, ballon à l'adversaire.`);
+  ok(`8. ${v8} violations des 8 s : 8 s consommées, perte de balle d'équipe (aucune au porteur), ballon à l'adversaire.`);
   ok(`9. ${cross} possessions remontées depuis la zone arrière : franchissement légal avant 8 s.`);
   ok(`10. ${v24} violations des 24 s : chronomètre entièrement consommé, ballon à l'adversaire.`);
   ok(`11. ${buzzer} tirs partis juste avant la sirène des 24 s : panier ou rebond normal (violation seulement si l'anneau n'est pas touché et que l'attaque reprend).`);

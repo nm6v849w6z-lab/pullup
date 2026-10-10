@@ -16,8 +16,8 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de, floorAdInk } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261010-20";
-import { createHighlights } from "./highlights.js?v=20261010-20";
+import { createCourt2D } from "./court2d.js?v=20261010-21";
+import { createHighlights } from "./highlights.js?v=20261010-21";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -279,7 +279,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261010-20").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261010-21").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -294,7 +294,7 @@ export function createLiveView(root, opts = {}) {
   // fil (une fois chacun), pas par le terrain. Niveau réglé au bouton
   // (coupés → bas → moyen → fort), gardé dans ce navigateur.
   let sfx = null, buzzerCue = null;
-  import("./sfx.js?v=20261010-20").then(m => { if (sfx === false) return; sfx = m.createSfx(); buzzerCue = m.buzzerCue; if (!audible) sfx.setAudible(false); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
+  import("./sfx.js?v=20261010-21").then(m => { if (sfx === false) return; sfx = m.createSfx(); buzzerCue = m.buzzerCue; if (!audible) sfx.setAudible(false); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
   const SFX_LABELS = ["coupés", "bas", "moyen", "fort"];
   function syncSfxBtn() {
     const b = $("sfxBtn"); if (!b) return;
@@ -362,7 +362,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261010-20").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261010-21").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
@@ -866,7 +866,7 @@ export function createLiveView(root, opts = {}) {
   // Signature des stats (sans les avatars) : la feuille et les tuiles ne
   // sont redessinées que si un chiffre a bougé (l'horloge rafraîchit la vue
   // chaque seconde, les avatars SVG coûtent cher à réinjecter).
-  const sig = T => T.players.map(p => [p.id, p.onCourt ? 1 : 0, p.slot || "", S.status, JSON.stringify(T.tactics || null), Math.floor(p.seconds / 60), p.pts, p.reb, p.oreb || 0, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
+  const sig = T => (T.teamTov || 0) + "|" + T.players.map(p => [p.id, p.onCourt ? 1 : 0, p.slot || "", S.status, JSON.stringify(T.tactics || null), Math.floor(p.seconds / 60), p.pts, p.reb, p.oreb || 0, p.ast, p.stl, p.blk, p.tov, p.pf, p.fg2m, p.fg2a, p.fg3m, p.fg3a, p.ftm, p.fta].join(",")).join(";");
   let leadersKey = null, boxKey = null;
 
   function renderLeaders() {
@@ -1042,6 +1042,8 @@ export function createLiveView(root, opts = {}) {
   const totals = T => {
     const o = { pts: 0, reb: 0, oreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, ftm: 0, fta: 0 };
     T.players.forEach(p => { for (const k in o) o[k] += p[k] || 0; });
+    // Pertes de balle d'ÉQUIPE (violations) : une fois, hors joueurs.
+    o.tov += T.teamTov || 0;
     return o;
   };
 
@@ -1111,6 +1113,7 @@ export function createLiveView(root, opts = {}) {
       <tbody>
         ${first.length ? `<tr class="grp"><td colspan="${COLS}">${live ? "Sur le terrain" : "Cinq de départ"}</td></tr>${first.map(row).join("")}` : ""}
         ${bench.length ? `<tr class="grp"><td colspan="${COLS}">Banc</td></tr>${bench.map(row).join("")}` : ""}
+        ${T.teamTov ? `<tr class="team-row"><td title="Pertes de balle d'équipe (violations)">Équipe</td><td></td><td></td><td></td><td class="c2"></td><td></td><td class="c2"></td><td class="c2"></td><td class="c2">${T.teamTov}</td><td></td><td class="c3"></td><td class="c3"></td><td></td><td></td></tr>` : ""}
         <tr class="total"><td>Total</td><td></td><td>${t.pts}</td><td>${t.reb}</td><td class="c2">${t.oreb}</td><td>${t.ast}</td>
           <td class="c2">${t.stl}</td><td class="c2">${t.blk}</td><td class="c2">${t.tov}</td><td>${t.pf}</td>
           <td class="c3">${t.fg2m}/${t.fg2a}<span class="pct">${pct(t.fg2m, t.fg2a)}</span></td>

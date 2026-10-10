@@ -20,6 +20,31 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-10) — Pertes de balle d'ÉQUIPE (violations)**.
+  Test : `team_turnovers_test.js`.
+  - Toute violation (8 s, 24 s, airball à la sirène repris par l'attaque,
+    retour en zone) = +1 perte d'ÉQUIPE, +0 au porteur
+    (`MatchEngine.addTeamTurnover`, `teamStats {A,B}.tov`). Le porteur reste
+    nommé dans l'événement (récit, terrain) mais sans statistique.
+    Événement : `teamTurnover: true`, `teamDelta: { A|B: { tov: 1 } }`
+    (jamais de `delta` joueur). Pertes individuelles (interception, ballon
+    arraché, passe perdue / dehors, ballon mal contrôlé, dribble raté) :
+    inchangées, au joueur responsable.
+  - Invariant : pertes de l'équipe = somme des joueurs + pertes d'équipe =
+    nombre d'événements `turnover`.
+  - Propagation : `simulate()` → `result.teamStats` ; `team.matchStats`
+    (sauvegardé comme `p.stats`) → `matchLog[].teamTov` (info du MATCH
+    recopiée sur chaque entrée, comme `quarterScores` : à lire UNE fois par
+    match, jamais à additionner par joueur) → archive de saison
+    (`home/away.teamTov`). Direct : `teamStats` dans l'entrée / la vue
+    (repère retourné pour l'extérieur, `teamDelta` aussi). Amicaux, ligue
+    privée, sélections : `teamTovHome/Away` stockés avec le match.
+  - Affichage : ligne « Équipe » + total (feuille finale `boxscoreTableHtml`,
+    direct `liveBoxscoreTableHtml`, spectateur, face à face, live-view),
+    statistiques d'équipe de la saison (`computeScoutingAdvancedStats`).
+    Stats individuelles (moyennes, records, fiches) : les violations n'y
+    sont simplement plus. Matchs joués avant : inchangés (perte au porteur).
+
 - **🟢 LIVRÉ (2026-10-10) — Moteur : rebonds, violations, possessions,
   une seule implémentation**. Tests : `engine_rules_test.js` (20 contrôles),
   `live_court2d_rules_test.js`.
@@ -36,7 +61,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     Lancers de faute technique / antisportive : `reboundable: false`, tirés
     AVANT ceux de la faute personnelle (ordre FIBA).
   - Violations décidées dans `simulate()` avant la possession (temps
-    consommé, perte au porteur, ballon à l'adversaire, `logViolation`) ;
+    consommé, perte d'équipe — voir ci-dessus —, ballon à l'adversaire, `logViolation`) ;
     tir forcé à la sirène (`_buzzerShot`) ; airball repris par l'attaque =
     violation des 24 s. Possession suivant un rebond offensif : 14 s.
     Événements : `shotClock`, `crossAt`, `buzzerShot`, `arrow`,

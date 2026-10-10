@@ -6437,6 +6437,7 @@ function buildSeasonArchive(league, opts = {}) {
       if (side.isHome == null && typeof e.isHome === "boolean") side.isHome = e.isHome;
       if (!side.opponent && e.opponent) side.opponent = e.opponent;
       if (side.at == null && typeof e.at === "number") side.at = e.at;
+      if (side.teamTov == null && typeof e.teamTov === "number") side.teamTov = e.teamTov;
       const row = { id, name, position, starter: !!e.starter, isMvp: !!e.isMvp, min: e.min, pts: e.pts, reb: e.reb, oreb: e.oreb || 0, ast: e.ast, stl: e.stl, blk: e.blk, tov: e.tov, pf: e.pf,
         fgm2: e.fgm2, fga2: e.fga2, fgm3: e.fgm3, fga3: e.fga3, ftm: e.ftm, fta: e.fta, plusMinus: e.plusMinus || 0 };
       side.rows.push(ARCHIVE_ROW_COLS.map(c => (row[c] === undefined ? null : row[c])));
@@ -6455,7 +6456,7 @@ function buildSeasonArchive(league, opts = {}) {
     const used = new Set();
     const pushMatch = (home, away) => {
       const at = (home && home.at) || (away && away.at) || (typeof opts.timeOf === "function" ? opts.timeOf(g.competition, g.round) : null);
-      const pack = s => ({ team: s.team, rows: s.rows.sort((x, y) => (y[3] - x[3]) || ((y[5] || 0) - (x[5] || 0))) });
+      const pack = s => ({ team: s.team, rows: s.rows.sort((x, y) => (y[3] - x[3]) || ((y[5] || 0) - (x[5] || 0))), ...(s.teamTov ? { teamTov: s.teamTov } : null) });
       matches.push({ competition: g.competition, round: g.round, at: at || null, quarterScores: g.quarterScores, scoreHome: totH, scoreAway: totA, home: pack(home), away: pack(away) });
     };
     sides.forEach(a => {
@@ -13739,6 +13740,11 @@ function recordMatchStatsForTeam(team, round, competition, now = Date.now(), qua
         // figé ici pour survivre à la remise à zéro de p.stats au prochain
         // match (resetForMatch), tout comme le reste de cette entrée.
         plusMinus: p.stats.plusMinus || 0,
+        // Pertes de balle D'ÉQUIPE du match (violations, voir
+        // MatchEngine.addTeamTurnover) : info du MATCH recopiée sur chaque
+        // entrée, comme quarterScores — jamais additionnée par joueur, lue
+        // une fois par match pour les totaux d'équipe (teamTurnoversOfGame).
+        teamTov: (team.matchStats && team.matchStats.tov) || 0,
         // Score par quart-temps du MATCH (pas de ce joueur) — voir le grand
         // commentaire au-dessus de la signature de cette fonction.
         quarterScores,
@@ -18313,6 +18319,9 @@ function serializeTeam(team) {
     sponsorReputation: typeof team.sponsorReputation === "number" ? team.sponsorReputation : SPONSOR_REPUTATION_DEFAULT,
     lastSponsorOfferAt: typeof team.lastSponsorOfferAt === "number" ? team.lastSponsorOfferAt : 0,
     seasonHistory: Array.isArray(team.seasonHistory) ? team.seasonHistory : [],
+    // Statistiques d'équipe du dernier match simulé (direct en cours entre
+    // le coup d'envoi et l'enregistrement final), comme p.stats.
+    ...(team.matchStats ? { matchStats: team.matchStats } : null),
     clubRecords: team.clubRecords && typeof team.clubRecords === "object" ? team.clubRecords : {},
     allTimePlayers: team.allTimePlayers && typeof team.allTimePlayers === "object" ? team.allTimePlayers : {},
     // Mémoire historique (assets/history.js).
@@ -18982,6 +18991,7 @@ function teamFromSave(data) {
   team.sponsorReputation = typeof data.sponsorReputation === "number" ? clamp(data.sponsorReputation, 0, 100) : SPONSOR_REPUTATION_DEFAULT;
   team.lastSponsorOfferAt = typeof data.lastSponsorOfferAt === "number" ? data.lastSponsorOfferAt : 0;
   team.seasonHistory = Array.isArray(data.seasonHistory) ? data.seasonHistory : [];
+  team.matchStats = data.matchStats && typeof data.matchStats === "object" ? { tov: Number(data.matchStats.tov) || 0 } : null;
   team.clubRecords = data.clubRecords && typeof data.clubRecords === "object" ? data.clubRecords : {};
   team.allTimePlayers = data.allTimePlayers && typeof data.allTimePlayers === "object" ? data.allTimePlayers : {};
   team.rivalryScores = data.rivalryScores && typeof data.rivalryScores === "object" ? data.rivalryScores : {};
@@ -21336,15 +21346,26 @@ class MatchEngine {
   // perte de balle du porteur, ballon mort, possession à l'adversaire. Le
   // changement de possession est fait UNE fois, par simulate (valeur
   // renvoyée), comme pour toute autre perte.
+  // Statistiques D'ÉQUIPE du match (pertes de balle d'équipe : violations).
+  // Recopiées sur l'objet Team (team.matchStats, comme p.stats pour les
+  // joueurs) pour recordMatchStatsForTeam, qui les fige dans le matchLog.
+  addTeamTurnover(team) {
+    const k = this.teamKey(team);
+    this.teamStats[k].tov++;
+    team.matchStats = { ...(team.matchStats || {}), tov: this.teamStats[k].tov };
+  }
   logViolation(kind, offTeam, defTeam, quarter, clock, events) {
     const five = offTeam.onCourtPlayers();
     if (!five.length) return { possessionOffense: false };
     const handler = weightedPick(five, p => p.eff("dribble") + p.eff("pass"));
-    handler.stats.tov++;
-    handler.consecutiveMisses++;
+    // Perte de balle D'ÉQUIPE (2026-10-10, « violations ») : une violation
+    // n'est pas l'erreur du porteur — +1 au compteur de l'équipe
+    // (teamStats, teamDelta de l'événement), +0 pour le joueur. Le porteur
+    // reste nommé dans l'événement (récit, terrain 2D) sans statistique.
+    this.addTeamTurnover(offTeam);
     if (this._possCtx) { this._possCtx.handler = handler.name; this._possCtx.handlerId = handler.id; }
     const phr = kind === "eightSeconds" ? PHRASES.eightSeconds : kind === "backcourt" ? PHRASES.backcourtViolation : PHRASES.shotClockViolation;
-    this.log(events, quarter, clock, say(phr, { team: offTeam.name, ballHandler: handler.name }), { type: "turnover", tovType: "violation", tovKind: kind, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
+    this.log(events, quarter, clock, say(phr, { team: offTeam.name, ballHandler: handler.name }), { type: "turnover", tovType: "violation", tovKind: kind, teamTurnover: true, teamDelta: { [this.teamKey(offTeam)]: { tov: 1 } }, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
     return { possessionOffense: false, violation: kind };
   }
 
@@ -21392,8 +21413,8 @@ class MatchEngine {
       // l'attaque : violation (la défense, elle, garde un rebond normal).
       if (this._buzzerShot && !freeThrow && offensiveRebound && rand01() < 0.2 && !Rules.isShotClockViolation({ shotReleased: true, releasedBeforeExpiry: true, touchedRim: true })) {
         const handler = shooter;
-        handler.stats.tov++;
-        this.log(events, quarter, clock, say(PHRASES.shotClockAirball, { shooter: shooter.name, team: offTeam.name }), { type: "turnover", tovType: "violation", tovKind: "shotClock", afterShot: true, airball: true, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, shooter: shooter.name, shooterId: shooter.id, zone, spot, made: false, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
+        this.addTeamTurnover(offTeam);   // violation : perte d'équipe (voir logViolation)
+        this.log(events, quarter, clock, say(PHRASES.shotClockAirball, { shooter: shooter.name, team: offTeam.name }), { type: "turnover", tovType: "violation", tovKind: "shotClock", afterShot: true, airball: true, teamTurnover: true, teamDelta: { [this.teamKey(offTeam)]: { tov: 1 } }, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, shooter: shooter.name, shooterId: shooter.id, zone, spot, made: false, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
         return { offensiveRebound: false, rebounder: null, shotClockViolation: true };
       }
 
@@ -21665,6 +21686,9 @@ class MatchEngine {
     // puis recalculé, rediffusion, match signalé rejoué) n'était plus
     // identique malgré la même graine.
     [this.teamA, this.teamB].forEach(t => { delete t._setPlay; delete t._advanceBall; delete t._transitionBoost; delete t._secondChance; });
+    // Statistiques d'équipe du match (pertes de balle d'équipe, voir addTeamTurnover).
+    this.teamStats = { A: { tov: 0 }, B: { tov: 0 } };
+    this.teamA.matchStats = { tov: 0 }; this.teamB.matchStats = { tov: 0 };
     let possessionTeam = rand01() < 0.5 ? "A" : "B";
 
     // Retour utilisateur : "début du premier quart temps, faut le mettre
@@ -21934,6 +21958,9 @@ class MatchEngine {
       quarterScores,
       // Temps morts pris par chaque équipe sur le match.
       timeoutsUsed: { A: this.timeoutsUsed.A.total, B: this.timeoutsUsed.B.total },
+      // Pertes de balle D'ÉQUIPE (violations), hors feuilles individuelles :
+      // total des pertes de l'équipe = somme des joueurs + teamStats.tov.
+      teamStats: { A: { ...this.teamStats.A }, B: { ...this.teamStats.B } },
       events,
       boxScoreA: this.buildBoxScore(this.teamA),
       boxScoreB: this.buildBoxScore(this.teamB),

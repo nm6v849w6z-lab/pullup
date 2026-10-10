@@ -66,7 +66,7 @@ console.log(`✅ nextAction = ${na.kind} à +${Math.round((na.airAt - clock.now)
 
 // 2b. Faits de possession (moteur 2026-10-07) : chaîne de passes réelle,
 // type de tir, qualité, durée — présents sur les tirs, jamais le résultat.
-const shots = S.events.filter(e => e.kind === "shot" || e.kind === "rebound");
+const shots = S.events.filter(e => (e.kind === "shot" || e.kind === "rebound") && !e.freeThrow);   // (rebond de lancer franc : pas un tir)
 if (!shots.length) fail("des tirs sont attendus à mi-match.");
 for (const e of shots) {
   if (!Array.isArray(e.passes) || !e.passes.length) fail(`chaque tir doit porter sa chaîne de passes réelle (événement #${e.id}).`);

@@ -104,8 +104,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261010-20">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261010-20">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261010-21">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261010-21">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -113,7 +113,7 @@
 <script src="assets/i18n/i18n.js" defer></script>
 <!-- Règles de jeu partagées avec engine.js (24/14 s, violations, possession
      alternée, rebondeur) : window.HM_RULES (lu seulement pendant le direct). -->
-<script src="assets/game-rules.js?v=20261010-20" defer></script>
+<script src="assets/game-rules.js?v=20261010-21" defer></script>
 <!-- Registre central des succès (partagé avec engine.js, voir son en-tête). -->
 <script src="assets/achievements.js" defer></script>
 <!-- Dynamique de groupe (partagé avec engine.js). -->
@@ -29643,6 +29643,9 @@ function computeScoutingAdvancedStats(team, teamIdx, source = null) {
       if (!gameBuckets.has(key)) {
         const g = { round: m.round, competition: m.competition, quarterScores: m.quarterScores || null };
         STAT_KEYS.forEach(k => { g[k] = 0; });
+        // Pertes de balle d'ÉQUIPE (violations) : info du match recopiée
+        // sur chaque entrée, comptée UNE fois par match.
+        g.tov = m.teamTov || 0;
         gameBuckets.set(key, g);
       }
       const g = gameBuckets.get(key);
@@ -34009,7 +34012,7 @@ function enterLiveMatch(liveMatch, opts) {
   const keepCurrentPage = !!(opts && opts.keepCurrentPage);
   clearLiveTimers();
   currentLiveMatch = liveMatch;
-  matchResult = { boxScoreA: liveMatch.boxScoreA, boxScoreB: liveMatch.boxScoreB };
+  matchResult = { boxScoreA: liveMatch.boxScoreA, boxScoreB: liveMatch.boxScoreB, teamStats: liveMatch.teamStats || null };
   resetPlaybackTrackers();
   hmLiveReset(liveMatch);
   renderLiveReplaySeekBar(liveMatch);
@@ -34249,6 +34252,7 @@ function appendPauseFeedItem(pause) {
 //      changement de joueur (y compris fauté-out/blessure, pas seulement les
 //      changements volontaires — voir le grand commentaire de
 //      substituteIfNeeded côté moteur pour le correctif correspondant).
+let liveTeamTov = { A: 0, B: 0 }; // pertes de balle d'ÉQUIPE (violations) du direct en cours
 let liveBoxScore = null; // { A: Map<clé, ligne>, B: Map<clé, ligne> } (clé : voir liveRowKey)
 let liveBoxScoreActiveTeam = "A";
 // Joueurs actuellement SUR LE TERRAIN et depuis quand (en secondes écoulées
@@ -34487,6 +34491,7 @@ let liveCourtSlot = { A: new Map(), B: new Map() };
 
 function resetLiveBoxScore() {
   liveBoxScore = { A: new Map(), B: new Map() };
+  liveTeamTov = { A: 0, B: 0 };
   liveCourtState = { A: new Map(), B: new Map() };
   liveCourtSlot = { A: new Map(), B: new Map() };
   liveBoxScoreNowElapsed = 0;
@@ -34543,6 +34548,9 @@ function applyLiveBoxScoreEvent(ev) {
   // calculé avant ce changement (sans `delta`) garde l'ancien calcul.
   const hasDelta = ev.delta && typeof ev.delta === "object";
   if (hasDelta) applyLiveStatsDelta(ev.delta);
+  // Pertes de balle d'ÉQUIPE (violations, 2026-10-10) : delta d'équipe,
+  // jamais imputé au porteur nommé dans l'événement.
+  if (ev.teamDelta) ["A", "B"].forEach(k => { liveTeamTov[k] += (ev.teamDelta[k] && ev.teamDelta[k].tov) || 0; });
   if (ev.team !== "A" && ev.team !== "B") { renderLiveBoxScore(); return; }
   const STAT_TYPES = { shot: 1, rebound: 1, freeThrow: 1, turnover: 1, foul: 1, unsportsmanlikeFoul: 1, technicalFoul: 1 };
   if (hasDelta && STAT_TYPES[ev.type]) { renderLiveBoxScore(); return; }
@@ -34593,7 +34601,7 @@ function applyLiveBoxScoreEvent(ev) {
       break;
     }
     case "turnover": {
-      if (ev.player) liveBoxScoreRow(ev.team, ev.player, ev.playerId).tov++;
+      if (ev.player && !ev.teamTurnover) liveBoxScoreRow(ev.team, ev.player, ev.playerId).tov++;
       if (ev.stealer) liveBoxScoreRow(oppOfLiveTeam(ev.team), ev.stealer, ev.stealerId).stl++;
       break;
     }
@@ -34655,7 +34663,7 @@ const LIVE_BOXSCORE_COLS = [
 // Ligne de total (retour Discord d'Ariane, relayé par l'utilisateur,
 // 2026-09-24) : même patron que boxscoreTableHtml (feuille finale) —
 // classe `boxscore-totals`, déjà stylée, réutilisée telle quelle.
-function liveBoxscoreTableHtml(rows) {
+function liveBoxscoreTableHtml(rows, teamTov = 0) {
   let html = "<table class='boxscore'><thead><tr><th>Joueur</th><th>Poste</th>";
   LIVE_BOXSCORE_COLS.forEach(c => html += `<th>${c[1]}</th>`);
   html += "<th>2PTS</th><th>3PTS</th><th>LF</th><th>ÉVAL</th></tr></thead><tbody>";
@@ -34670,6 +34678,15 @@ function liveBoxscoreTableHtml(rows) {
     totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
     totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
   });
+  // Ligne « Équipe » : pertes de balle d'équipe (violations), comptées une
+  // fois dans le total (voir boxscoreTableHtml).
+  const tTov = Math.max(0, Number(teamTov) || 0);
+  if (rows.length && tTov) {
+    html += `<tr class="bx-team-row"><td title="Pertes de balle d'équipe (violations)">Équipe</td><td></td>`;
+    LIVE_BOXSCORE_COLS.forEach(c => html += `<td>${c[0] === "tov" ? tTov : ""}</td>`);
+    html += "<td></td><td></td><td></td><td></td></tr>";
+    totals.tov = (totals.tov || 0) + tTov;
+  }
   if (rows.length) {
     html += `<tr class="boxscore-totals"><td>Total</td><td></td>`;
     LIVE_BOXSCORE_COLS.forEach(c => html += `<td>${totals[c[0]]}</td>`);
@@ -34700,7 +34717,7 @@ function renderLiveBoxScore() {
     // hasard de l'ordre d'insertion.
     .sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
   holder.innerHTML = rows.length
-    ? liveBoxscoreTableHtml(rows)
+    ? liveBoxscoreTableHtml(rows, liveTeamTov[liveBoxScoreActiveTeam] || 0)
     : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
 }
 
@@ -34746,7 +34763,7 @@ let spectateState = null; // { teamIdx, opponentIdx, teamName, opponentName, tea
 // encore en cours) : recalcule tout depuis les champs structurés des
 // événements eux-mêmes, comme pour son propre direct.
 function computeSpectateBoxScore(airedEvents, teamA, teamB) {
-  const box = { A: new Map(), B: new Map() };
+  const box = { A: new Map(), B: new Map(), teamTov: { A: 0, B: 0 } };
   const onCourtSince = { A: new Map(), B: new Map() };
   let nowElapsed = 0;
   [["A", teamA], ["B", teamB]].forEach(([key, team]) => {
@@ -34778,6 +34795,8 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
 
   airedEvents.forEach(ev => {
     if (ev.quarter != null && ev.clock != null) nowElapsed = elapsedSecondsAt(ev.quarter, ev.clock);
+    // Pertes de balle d'équipe (violations) : compteur d'équipe, aucun joueur.
+    if (ev.teamDelta) ["A", "B"].forEach(k => { box.teamTov[k] += (ev.teamDelta[k] && ev.teamDelta[k].tov) || 0; });
     if (ev.team !== "A" && ev.team !== "B") return;
     switch (ev.type) {
       case "shot": {
@@ -34806,7 +34825,7 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
         break;
       }
       case "turnover":
-        if (ev.player) row(ev.team, ev.player, ev.playerId).tov++;
+        if (ev.player && !ev.teamTurnover) row(ev.team, ev.player, ev.playerId).tov++;
         if (ev.stealer) row(opp(ev.team), ev.stealer, ev.stealerId).stl++;
         break;
       case "foul":
@@ -34876,7 +34895,7 @@ function renderSpectateBoxScoreTab(side) {
   if (!holder) return;
   const rows = Array.from(spectateState.box[side].values()).sort((a, b) => (b.min - a.min) || (b.pts - a.pts) || (b.reb - a.reb) || (b.ast - a.ast));
   holder.innerHTML = rows.length
-    ? liveBoxscoreTableHtml(rows)
+    ? liveBoxscoreTableHtml(rows, spectateState.box.teamTov ? spectateState.box.teamTov[side] : 0)
     : "<p class='training-empty'>Aucune statistique enregistrée pour le moment.</p>";
 }
 
@@ -35276,7 +35295,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261010-20";
+const HM_LIVE_ASSET_VERSION = "20261010-21";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -36015,6 +36034,8 @@ function hmLiveBuildState() {
       // Tactiques jouées (sous la feuille de match du direct, retour
       // utilisateur 2026-10-03) : t = 0 domicile, 1 extérieur.
       tactics: (m.tacticsUsed && m.tacticsUsed[t === 0 ? "home" : "away"]) || null,
+      // Pertes de balle d'ÉQUIPE (violations) diffusées jusqu'ici.
+      teamTov: (liveTeamTov && liveTeamTov[key]) || 0,
       players,
     };
   });
@@ -36071,7 +36092,7 @@ function formatPlusMinus(n) {
 // voir CSS .boxscore-mvp-row) ; comparaison par référence d'objet, pas par
 // nom (deux joueurs de clubs différents pourraient théoriquement porter le
 // même nom, le générateur de noms n'en garantit pas l'unicité).
-function boxscoreTableHtml(rows, mvpRow) {
+function boxscoreTableHtml(rows, mvpRow, teamTov = 0) {
   // Refonte visuelle (retour utilisateur, 2026-09-26 : "améliore les
   // feuilles de stats, elles ne sont pas très belles" puis "respecte plus
   // l'esprit de la DA des autres pages"). Ordre et TEXTE des cellules
@@ -36116,6 +36137,16 @@ function boxscoreTableHtml(rows, mvpRow) {
     totals.fgm3 += p.fgm3 || 0; totals.fga3 += p.fga3 || 0;
     totals.ftm += p.ftm || 0; totals.fta += p.fta || 0;
   });
+  // Pertes de balle d'ÉQUIPE (2026-10-10) : les violations (8 s, 24 s,
+  // retour en zone) ne sont imputées à aucun joueur ; elles apparaissent
+  // sur une ligne « Équipe » et s'ajoutent au total (une seule fois).
+  const tTov = Math.max(0, Number(teamTov) || 0);
+  if (rows.length && tTov) {
+    html += `<tr class="bx-team-row"><td class="bx-name" title="Pertes de balle d'équipe (violations)">Équipe</td><td></td>`;
+    BOXSCORE_COLS.forEach(c => html += c[0] === "tov" ? num(tTov, SEP_BEFORE.has(c[0]) ? "bx-sep" : "") : `<td class="bx-zero${SEP_BEFORE.has(c[0]) ? " bx-sep" : ""}"></td>`);
+    html += "<td class='bx-sep'></td><td></td><td></td><td class='bx-sep'></td><td></td></tr>";
+    totals.tov = (totals.tov || 0) + tTov;
+  }
   if (rows.length) {
     html += `<tr class="boxscore-totals"><td class="bx-name">Total</td><td></td>`;
     BOXSCORE_COLS.forEach(c => html += `<td class="${[c[0] === "pts" ? "bx-pts" : "", SEP_BEFORE.has(c[0]) ? "bx-sep" : ""].filter(Boolean).join(" ")}">${totals[c[0]]}</td>`);
@@ -36228,7 +36259,8 @@ function renderBoxScore(side) {
   const mvp = boxscoreMatchMvp(matchResult.boxScoreA, matchResult.boxScoreB);
   const mvpHolder = document.getElementById("boxscoreMvpHolder");
   if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp, teamA, teamB) : "";
-  document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows, mvp ? mvp.row : null);
+  const ts = matchResult.teamStats && matchResult.teamStats[side];
+  document.getElementById("boxscoreHolder").innerHTML = boxscoreTableHtml(rows, mvp ? mvp.row : null, ts ? ts.tov : 0);
 }
 
 // ---------------------------------------------------------------------
@@ -36383,6 +36415,16 @@ function matchTacticsHtml(tactics, homeTeam, awayTeam) {
     `<div class="tac-grid">${tacticCardHtml(h, homeTeam, colors[0])}${tacticCardHtml(a, awayTeam, colors[1])}</div></div>`;
 }
 
+// Pertes de balle D'ÉQUIPE du match (violations, voir engine.js
+// MatchEngine.addTeamTurnover) : info du match recopiée sur chaque entrée
+// du matchLog (teamTov) — lue UNE fois, jamais additionnée par joueur.
+function matchTeamTovFromTeam(team, round, competition, expect = null) {
+  for (const p of (team && team.players) || []) {
+    const entry = matchLogEntryFor(p, team, round, competition, expect);
+    if (entry && typeof entry.teamTov === "number") return entry.teamTov;
+  }
+  return 0;
+}
 function matchQuarterScoresFromTeam(team, round, competition, expect = null) {
   for (const p of team.players) {
     const entry = matchLogEntryFor(p, team, round, competition, expect);
@@ -36431,7 +36473,7 @@ function renderMatchBoxscoreTab(side) {
   const mvpHolder = document.getElementById("matchBoxscoreMvpHolder");
   if (mvpHolder) mvpHolder.innerHTML = mvp ? matchMvpCalloutHtml(mvp, matchBoxscoreState.teamHome, matchBoxscoreState.teamAway) : "";
   document.getElementById("matchBoxscoreHolder").innerHTML = rows.length
-    ? boxscoreTableHtml(rows, mvp ? mvp.row : null)
+    ? boxscoreTableHtml(rows, mvp ? mvp.row : null, side === "A" ? matchBoxscoreState.teamTovHome : matchBoxscoreState.teamTovAway)
     : "<p class='training-empty'>Aucune statistique disponible pour cette équipe sur ce match (joueurs partis depuis).</p>";
 }
 
@@ -36476,7 +36518,7 @@ function matchBoxscoreContext(round, competition, homeIdx, awayIdx, quarterScore
 // face à face, barre du meilleur des deux en ambre. Calculé sur les lignes
 // affichées (mêmes limites que boxscoreRowsFromMatchLog : un joueur parti
 // depuis n'est plus compté).
-function matchBoxscoreDuelHtml(rowsHome, rowsAway) {
+function matchBoxscoreDuelHtml(rowsHome, rowsAway, teamTovHome = 0, teamTovAway = 0) {
   if (!rowsHome.length || !rowsAway.length) return "";
   const sum = (rows, k) => rows.reduce((a, p) => a + (p[k] || 0), 0);
   const pct = (m, a) => a ? Math.round(100 * m / a) : 0;
@@ -36490,6 +36532,8 @@ function matchBoxscoreDuelHtml(rowsHome, rowsAway) {
     };
   };
   const h = side(rowsHome), a = side(rowsAway);
+  // Pertes de balle d'équipe (violations) ajoutées une fois au total.
+  h.tov += Number(teamTovHome) || 0; a.tov += Number(teamTovAway) || 0;
   const lines = [
     ["Tirs", h.fg, a.fg, "%", h.fgTxt, a.fgTxt],
     ["3 points", h.tp, a.tp, "%", h.tpTxt, a.tpTxt],
@@ -36526,6 +36570,8 @@ function showMatchBoxscore(round, competition, homeIdx, awayIdx) {
     // Score par quart-temps (voir matchQuarterScoresFromTeam) : domicile
     // d'abord, extérieur en repli (effectif sans plus aucun joueur de l'époque).
     quarterScores: matchQuarterScoresFromTeam(homeTeam, round, competition, expect) || matchQuarterScoresFromTeam(awayTeam, round, competition, expect),
+    teamTovHome: matchTeamTovFromTeam(homeTeam, round, competition, expect),
+    teamTovAway: matchTeamTovFromTeam(awayTeam, round, competition, expect),
   };
   const st = matchBoxscoreState;
   const ctx = matchBoxscoreContext(round, competition, homeIdx, awayIdx, st.quarterScores, st.rowsHome, st.rowsAway);
@@ -36680,7 +36726,7 @@ function openMatchBoxscoreModal(homeTeam, awayTeam, homeIdx, awayIdx, ctx) {
     (ctx.noteHtml || "") +
     `<div class="mbx-body">` +
     `<div id="matchBoxscoreMvpHolder"></div>` +
-    matchBoxscoreDuelHtml(st.rowsHome, st.rowsAway) +
+    matchBoxscoreDuelHtml(st.rowsHome, st.rowsAway, st.teamTovHome, st.teamTovAway) +
     `<div class="mbx-block"><div class="mbx-block-title">Statistiques individuelles</div>` +
     `<div class="boxscore-toggle mbx-tabs">` +
     `<button type="button" class="bs-tab active" data-team="A">${escapeHtml(homeTeam.name)}</button>` +
@@ -43275,6 +43321,7 @@ function showArchivedBoxscore(i) {
     rowsHome: m.home.rows.map(toRow), rowsAway: m.away.rows.map(toRow),
     nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
     quarterScores: m.quarterScores || null,
+    teamTovHome: m.home.teamTov || 0, teamTovAway: m.away.teamTov || 0,
   };
   const ctx = {
     kicker: `Saison ${d.season} · ${archiveMatchLabel(m, d.totalRounds)}`,
@@ -48947,6 +48994,7 @@ function showNationalBoxscore(md) {
     rowsHome: rows(md.boxHome), rowsAway: rows(md.boxAway),
     nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
     quarterScores: md.quarterScores || null,
+    teamTovHome: md.teamTovHome || 0, teamTovAway: md.teamTovAway || 0,
   };
   openMatchBoxscoreModal(homeTeam, awayTeam, -1, -2, {
     kicker: md.label || `Fenêtre internationale ${md.w} · qualifications`,
@@ -49016,6 +49064,7 @@ function showPrivateLeagueBoxscore(lp, roundIndex, homeIdx, awayIdx) {
     nameHome: homeTeam.name, nameAway: awayTeam.name,
     teamHome: homeTeam, teamAway: awayTeam,
     quarterScores: m.quarterScores || null,
+    teamTovHome: m.teamTovHome || 0, teamTovAway: m.teamTovAway || 0,
   };
   const ctx = {
     kicker: `Ligue privée · ${lp.name} · Journée ${roundIndex + 1}`,
@@ -49429,6 +49478,7 @@ function showFriendlyBoxscore(id) {
     rowsHome: rows(f.result.boxScoreHome), rowsAway: rows(f.result.boxScoreAway),
     nameHome: homeTeam.name, nameAway: awayTeam.name, teamHome: homeTeam, teamAway: awayTeam,
     quarterScores: f.result.quarterScores || null,
+    teamTovHome: f.result.teamTovHome || 0, teamTovAway: f.result.teamTovAway || 0,
     noMvp: true,
   };
   openMatchBoxscoreModal(homeTeam, awayTeam, f.homeIdx, f.awayIdx, {
