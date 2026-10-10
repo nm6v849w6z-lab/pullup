@@ -142,6 +142,42 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     par les nouveaux événements dans live-view.js), sons SYNTHÉTISÉS ;
     fichiers optionnels dans `assets/audio/sfx/` (voir README.md du
     dossier). Bouton « Bruitages » (coupés / bas / moyen / fort).
+    Son `miss` : UNIQUEMENT un lancer franc manqué (`kind === "freeThrow"`,
+    `made === 0`) ; l'ancienne règle sur `rebound` (tout tir manqué) est
+    supprimée (2026-10-10).
+  - **Ambiance de salle (2026-10-10)** : dans `sfx.js` (même AudioContext,
+    bus `ambOut`/`ambDuck` séparé, baissé sous les bruitages importants).
+    `ambienceMode(S, now, home)` (pure) : offense / defense (possession
+    réelle), ftHome (murmure), ftAway (huées, sifflets), break (temps
+    mort, arrêt, mi-temps, musique du spectacle), pregame, final, off
+    (onglet masqué). `crowdReactionFor(e, S, home)` (pure) : clameur /
+    déception / applaudissements selon l'équipe et le résultat réel.
+    Couches en boucle créées UNE fois, fondus `setTargetAtTime` ; chants
+    « DE-FENSE » (3 variantes) seulement en défense, minuteries coupées
+    au changement de mode. `updateAmbience` appelé à chaque mise à jour
+    de live-view.js (ne fait rien si le mode n'a pas changé). Bouton
+    « Ambiance » (coupée / basse / moyenne / forte), réglage séparé des
+    bruitages (`localStorage` « hm-live-sfx » `{level, amb}`). Sons
+    synthétisés ; fichiers facultatifs `amb_*` (README du dossier).
+    Test : `live_ambience_test.js`.
+  - **Lancers francs réglementaires (2026-10-10)** : `ftAlignment` /
+    `alignForFreeThrow` (court2d.js) : tireur seul sur la ligne, 3
+    défenseurs + 2 coéquipiers dans les emplacements, les autres derrière
+    la ligne à 3 points et la ligne des lancers prolongée (préparation,
+    événement, entre deux lancers). Diag `ft-align`.
+  - **Bon tireur (2026-10-10)** : préparation en attente si le tireur du
+    moteur n'a pas encore de sprite (changement juste avant, diag
+    `plan-wait`) ; rattrapage du tireur après la dernière passe
+    (`shooter-catchup`) et ballon donné au tireur au lâcher
+    (`shot-release`) ; remise en jeu directe au tireur imminent
+    (`imminentShooter`, sinon `giveBall` refusait après le changement de
+    possession). Test : `live_court2d_freethrow_shooter_test.js`.
+  - **Spectacles (2026-10-10)** : `showfx.js` : poses `diagR`, `diagL`,
+    `hips`, `star`, `shake`, `wave`, `clap`, mesures B4/B5 (pas chassés),
+    6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
+    salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
+    `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
+    trois. Assets du direct en `?v=20261010-1`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

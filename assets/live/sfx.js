@@ -12,7 +12,9 @@
 //   panier à 3 points VALIDÉ de l'équipe à domicile → courte sirène arcade ;
 //   faute sifflée (faute, technique, antisportive, faute sur tir) → sifflet ;
 //   interception de l'équipe à domicile → jingle arcade ;
-//   tir ou lancer franc RATÉ de l'équipe à l'extérieur → « wah-wah » comique.
+//   lancer franc RATÉ de l'équipe à l'extérieur → « wah-wah » comique
+//   (seulement un lancer franc : avant le 2026-10-10, il partait aussi sur
+//   un tir classique manqué — l'événement « rebound » du fil).
 // Sons : fichier s'il est déclaré dans assets/audio/sfx/manifest.json
 // ({ "files": { "siren": "siren.mp3" } }), sinon synthèse Web Audio
 // (aucun fichier fourni à ce jour). Un fichier absent ou illisible retombe
@@ -36,12 +38,73 @@ export const SFX_RULES = [
   { key: "siren", when: (e, home) => e.kind === "shot" && e.made === true && e.zone === "three" && e.team === home },
   { key: "whistle", when: e => e.kind === "foul" || e.kind === "technicalFoul" || e.kind === "unsportsmanlikeFoul" || (e.kind === "shot" && !!e.foulType && !e.made) },
   { key: "steal", when: (e, home) => e.kind === "turnover" && e.tovType === "steal" && e.possessionAfter === home },
-  // Raté de l'équipe à l'extérieur : lancer franc manqué, ou tir manqué
-  // (dans le fil, un tir manqué est l'événement « rebound » : équipe du
-  // tireur = celle du rebondeur sur un rebond offensif, l'autre sinon).
+  // Lancer franc manqué de l'équipe à l'extérieur, et RIEN d'autre : un tir
+  // classique manqué (événement « rebound » du fil) déclenche seulement une
+  // réaction du public (CROWD_RULES), jamais ce bruitage.
   { key: "miss", when: (e, home) => e.kind === "freeThrow" && (e.made || 0) === 0 && (e.team === 0 || e.team === 1) && e.team !== home },
-  { key: "miss", when: (e, home) => e.kind === "rebound" && (e.team === 0 || e.team === 1) && (e.offensive ? e.team : 1 - e.team) !== home },
 ];
+
+// ---------------------------------------------------------------------
+// Ambiance de salle (2026-10-10, « inspirée de NBA 2K ») : un fond de
+// public permanent dont l'humeur suit l'état RÉEL du match, plus des
+// réactions ponctuelles aux événements. Modes (ambienceMode, pure) :
+//   offense  — domicile en attaque : public qui pousse, applaudissements ;
+//   defense  — domicile en défense : chants « DE-FENSE ! » (variations) ;
+//   ftHome   — lancer franc à domicile : silence de concentration, murmure ;
+//   ftAway   — lancer franc adverse : huées et sifflets ;
+//   break    — temps mort, entre quarts, mi-temps : brouhaha calme ;
+//   pregame / final / neutral.
+// Un lancer franc compte dès qu'il est annoncé par le moteur
+// (nextAction.kind === "freeThrow" à moins de 12 s) ou qu'une série est en
+// cours (dernier événement = lancer n° k < n).
+export const AMB_LEVELS = [0, 0.3, 0.55, 0.85];
+export function ambienceMode(S, now = Date.now(), home = 0) {
+  if (!S) return "off";
+  if (S.status === "final") return "final";
+  if (S.status === "pregame") return "pregame";
+  if (S.status === "halftime" || S.stoppage || S.timeout) return "break";
+  const na = S.nextAction;
+  let ft = null;
+  if (na && na.kind === "freeThrow" && (na.team === 0 || na.team === 1) && na.airAt - now <= 12000) ft = na.team;
+  const evs = S.events || [];
+  for (let i = evs.length - 1; i >= 0 && ft === null; i--) {
+    const e = evs[i];
+    if (!e || e.kind === "quote" || e.kind === "substitution") continue;
+    if (e.kind === "freeThrow" && e.of > 1 && e.attempt < e.of) ft = e.team;
+    break;
+  }
+  if (ft === 0 || ft === 1) return ft === home ? "ftHome" : "ftAway";
+  if (S.possession === home) return "offense";
+  if (S.possession === 0 || S.possession === 1) return "defense";
+  return "neutral";
+}
+// Réactions du public à un événement réel (pure : testable). `intensity` :
+// 1 normale, plus forte sur un 3 points, un panier décisif (4e quart ou
+// prolongation, 2 dernières minutes, écart ≤ 6).
+export function crowdReactionFor(e, S, home = 0) {
+  if (!e || !e.kind || e.kind === "quote") return null;
+  const t = e.team;
+  const clutch = S && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6;
+  if (e.kind === "shot" && e.made === true) {
+    if (t === home) return { kind: "cheer", intensity: (e.zone === "three" ? 1.4 : 1) * (clutch ? 1.5 : 1) };
+    return { kind: "groan", intensity: clutch ? 1.3 : 1 };
+  }
+  // Tir classique manqué (fil : « rebound » ; équipe du tireur = celle du
+  // rebondeur sur un rebond offensif, l'autre sinon).
+  if (e.kind === "rebound" && (t === 0 || t === 1)) {
+    const shooterTeam = e.offensive ? t : 1 - t;
+    return shooterTeam === home ? { kind: "groan", intensity: 0.6 } : { kind: "cheer", intensity: clutch ? 1.2 : 0.7 };
+  }
+  if (e.kind === "freeThrow" && (t === 0 || t === 1)) {
+    const made = (e.made || 0) > 0;
+    if (t === home) return made ? { kind: "applause", intensity: 0.8 } : { kind: "groan", intensity: 0.7 };
+    return made ? null : { kind: "cheer", intensity: 0.8 };
+  }
+  if (e.kind === "turnover" && e.tovType === "steal" && e.possessionAfter === home) return { kind: "cheer", intensity: 0.9 };
+  if (e.kind === "timeout" || e.type === "timeout") return { kind: "applause", intensity: 0.6 };
+  if (e.kind === "quarterEnd") return { kind: "applause", intensity: 1 };
+  return null;
+}
 // Bruitages d'un événement (pure : testable). Plusieurs règles peuvent
 // répondre (sons différents) ; un même son n'est listé qu'une fois.
 export function sfxForEvent(e, home = 0) {
@@ -54,12 +117,12 @@ export function sfxForEvent(e, home = 0) {
 export function createSfx(opts = {}) {
   const nowMs = opts.now || (() => Date.now());
   const base = opts.base || new URL("../audio/sfx", import.meta.url).href;
-  const prefs = (() => { try { const p = JSON.parse(localStorage.getItem(STORE) || "null"); if (p && Number.isInteger(p.level)) return p; } catch (e) { /* rien */ } return { level: 2 }; })();
+  const prefs = (() => { try { const p = JSON.parse(localStorage.getItem(STORE) || "null"); if (p && Number.isInteger(p.level)) return { amb: 2, ...p }; } catch (e) { /* rien */ } return { level: 2, amb: 2 }; })();
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch (e) { /* rien */ } };
   const played = new Set();       // ids d'événements déjà sonorisés
   const lastAt = {};              // bruitage → instant de la dernière lecture
   const log = [];                 // derniers bruitages (tests, diagnostic)
-  let ctx = null, master = null, comp = null;
+  let ctx = null, master = null, comp = null, ambOut = null, ambDuck = null;
   let manifest = { files: {} };
   const buffers = new Map();
   const ready = (typeof fetch === "function"
@@ -76,6 +139,11 @@ export function createSfx(opts = {}) {
       comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
       master = ctx.createGain(); master.gain.value = SFX_LEVELS[prefs.level] || 0;
       master.connect(comp); comp.connect(ctx.destination);
+      // Bus de l'ambiance : son propre volume (réglage « Ambiance »), et un
+      // étage « duck » qui s'efface sous les bruitages importants.
+      ambOut = ctx.createGain(); ambOut.gain.value = AMB_LEVELS[prefs.amb] || 0;
+      ambDuck = ctx.createGain(); ambDuck.gain.value = 1;
+      ambDuck.connect(ambOut); ambOut.connect(comp);
     } catch (e) { ctx = null; }
     return ctx;
   }
@@ -172,6 +240,7 @@ export function createSfx(opts = {}) {
     log.push({ key, why, at: t }); if (log.length > 60) log.shift();
     const c = audio(); if (!c) return true;   // pas de Web Audio (tests) : compté, rien joué
     try { if (c.state === "suspended") c.resume(); } catch (e) { /* rien */ }
+    duckAmbience(key === "whistle" ? 0.35 : 0.5, key === "siren" ? 1.1 : 0.7);
     load(key).then(buf => {
       try {
         if (buf) { const src = c.createBufferSource(); src.buffer = buf; src.connect(master); src.start(); return; }
@@ -180,10 +249,214 @@ export function createSfx(opts = {}) {
     }).catch(() => {});
     return true;
   }
+  // ---------- ambiance de salle ----------
+  // Synthèse par défaut (aucun fichier fourni) ; fichiers facultatifs du
+  // manifeste : amb_bed (fond, en boucle), amb_boo (huées, en boucle),
+  // amb_chant (« DE-FENSE », une ou plusieurs prises), amb_cheer, amb_groan,
+  // amb_clap. Un seul fond et une seule boucle de huées, créés une fois ;
+  // le mode change par fondus (setTargetAtTime), jamais par relance.
+  const AMB_MIX = {   // fond : volume, couleur (filtre) ; huées ; chants
+    offense: { bed: 0.62, tone: 1250, boo: 0, chant: false, claps: true },
+    defense: { bed: 0.5, tone: 1050, boo: 0, chant: true, claps: false },
+    ftHome: { bed: 0.13, tone: 700, boo: 0, chant: false, claps: false },
+    ftAway: { bed: 0.32, tone: 900, boo: 0.55, chant: false, claps: false },
+    break: { bed: 0.34, tone: 950, boo: 0, chant: false, claps: false },
+    pregame: { bed: 0.3, tone: 950, boo: 0, chant: false, claps: false },
+    neutral: { bed: 0.45, tone: 1000, boo: 0, chant: false, claps: false },
+    final: { bed: 0.3, tone: 950, boo: 0, chant: false, claps: false },
+    off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
+  };
+  const amb = { mode: "off", bed: null, boo: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
+  let noiseBuf = null;
+  function crowdNoise() {
+    // Bruit « rose » de 4 s, généré UNE fois et réutilisé partout.
+    if (noiseBuf) return noiseBuf;
+    const len = ctx.sampleRate * 4, buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch); let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0527; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.16; }
+    }
+    return (noiseBuf = buf);
+  }
+  function loopLayer(fileKey, build) {
+    // Couche en boucle : fichier du manifeste s'il existe, sinon synthèse.
+    const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(ambDuck);
+    const layer = { gain: g, filter: null };
+    load(fileKey).then(buf => {
+      try {
+        const src = ctx.createBufferSource(); src.loop = true;
+        if (buf) { src.buffer = buf; src.connect(g); }
+        else { src.buffer = crowdNoise(); build(src, g, layer); }
+        src.start(ctx.currentTime + 0.02, Math.random() * 3);
+        layer.src = src;
+      } catch (e) { /* rien */ }
+    });
+    return layer;
+  }
+  function ensureLayers() {
+    if (amb.bed || !audio()) return;
+    // Fond : brouhaha (passe-bande large) qui « respire » (deux LFO lents).
+    amb.bed = loopLayer("amb_bed", (src, g, layer) => {
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1000; bp.Q.value = 0.55;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200;
+      const breath = ctx.createGain(); breath.gain.value = 0.85;
+      for (const [f, d] of [[0.11, 0.12], [0.27, 0.08]]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = f; og.gain.value = d; o.connect(og); og.connect(breath.gain); o.start(); }
+      src.connect(bp); bp.connect(lp); lp.connect(breath); breath.connect(g); layer.filter = bp;
+    });
+    // Huées : voix graves (bruit passe-bande bas, vibrato).
+    amb.boo = loopLayer("amb_boo", (src, g) => {
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 330; bp.Q.value = 2.2;
+      const bp2 = ctx.createBiquadFilter(); bp2.type = "bandpass"; bp2.frequency.value = 620; bp2.Q.value = 3;
+      const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 0.6; vg.gain.value = 60; vib.connect(vg); vg.connect(bp.frequency); vib.start();
+      const mix = ctx.createGain(); mix.gain.value = 1.6;
+      src.connect(bp); src.connect(bp2); bp.connect(mix); bp2.connect(mix); mix.connect(g);
+    });
+  }
+  const T = (param, v, tc = 0.6) => { try { param.cancelScheduledValues(ctx.currentTime); param.setTargetAtTime(Math.max(0.0001, v), ctx.currentTime, tc); } catch (e) { /* rien */ } };
+  function duckAmbience(to, sec) {
+    if (!ambDuck || !ctx) return;
+    try { const t = ctx.currentTime; ambDuck.gain.cancelScheduledValues(t); ambDuck.gain.setTargetAtTime(to, t, 0.04); ambDuck.gain.setTargetAtTime(1, t + sec, 0.35); } catch (e) { /* rien */ }
+  }
+  // Voix de foule pour les chants : plusieurs voix détunées (dents de scie)
+  // à travers deux formants de voyelle, plus le souffle des consonnes.
+  function shout(t, dur, f0, vowel, peak) {
+    const F = vowel === "e" ? [530, 1850] : vowel === "en" ? [480, 1600] : [600, 1100];
+    const g = ctx.createGain(); g.connect(ambDuck);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.04); g.gain.setValueAtTime(peak, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter();
+    f1.type = f2.type = "bandpass"; f1.frequency.value = F[0]; f2.frequency.value = F[1]; f1.Q.value = 5; f2.Q.value = 7;
+    f1.connect(g); f2.connect(g);
+    for (let i = 0; i < 6; i++) {
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      const f = f0 * (0.82 + Math.random() * 0.4);
+      o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * 0.93, t + dur);
+      o.connect(f1); o.connect(f2); o.start(t); o.stop(t + dur + 0.05);
+    }
+  }
+  function hiss(t, dur, peak, freq = 4500) {
+    const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = crowdNoise(); hp.type = "highpass"; hp.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(hp); hp.connect(g); g.connect(ambDuck); src.start(t, Math.random() * 3); src.stop(t + dur + 0.05);
+  }
+  function stomp(t, peak) {   // coup de pied / batterie de tribune
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); g.connect(ambDuck); o.start(t); o.stop(t + 0.25);
+  }
+  function crowdClap(t, peak) {   // applaudissement collectif : plusieurs mains, léger flou
+    for (let i = 0; i < 5; i++) hiss(t + Math.random() * 0.03, 0.07, peak * (0.6 + Math.random() * 0.4), 1400 + Math.random() * 900);
+  }
+  // « DE-FENSE ! » : trois variantes (avec frappes de pieds, avec mains,
+  // tempo et hauteur légèrement différents) tirées sans répétition.
+  let lastChant = -1;
+  function chantOnce() {
+    if (amb.mode !== "defense" || !ctx) return;
+    load("amb_chant").then(buf => {
+      if (amb.mode !== "defense") return;
+      try {
+        if (buf) { const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ambDuck); src.start(); return; }
+        let v; do { v = Math.floor(Math.random() * 3); } while (v === lastChant); lastChant = v;
+        const t = ctx.currentTime + 0.03, f0 = [165, 185, 150][v], tempo = [1, 0.92, 1.08][v], pk = 0.12;
+        shout(t, 0.24 * tempo, f0 * 1.12, "e", pk);                 // « DE »
+        hiss(t + 0.3 * tempo, 0.07, 0.05, 3800);                      // « f »
+        shout(t + 0.34 * tempo, 0.36 * tempo, f0, "en", pk);          // « FEN »
+        hiss(t + 0.66 * tempo, 0.12, 0.05, 5000);                     // « se »
+        if (v === 0) { stomp(t + 0.95 * tempo, 0.22); stomp(t + 1.25 * tempo, 0.22); }
+        else if (v === 1) { crowdClap(t + 0.95 * tempo, 0.12); crowdClap(t + 1.22 * tempo, 0.12); }
+        else { stomp(t + 0.95 * tempo, 0.2); crowdClap(t + 1.22 * tempo, 0.12); }
+      } catch (e) { /* rien */ }
+    });
+    amb.log.push({ kind: "chant", at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+  }
+  function clapsOnce() {   // encouragements en attaque : rafale d'applaudissements rythmés
+    if (amb.mode !== "offense" || !ctx) return;
+    try { const t = ctx.currentTime + 0.02, n = 5 + Math.floor(Math.random() * 4), gap = 0.42 + Math.random() * 0.08; for (let i = 0; i < n; i++) crowdClap(t + i * gap, 0.07); } catch (e) { /* rien */ }
+  }
+  function whistleOnce() {   // sifflets du public sur un lancer adverse
+    if (amb.mode !== "ftAway" || !ctx) return;
+    try {
+      const t = ctx.currentTime + 0.02;
+      for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) {
+        const o = ctx.createOscillator(), g = ctx.createGain(), at = t + Math.random() * 0.6, f = 2100 + Math.random() * 900, d = 0.35 + Math.random() * 0.4;
+        o.frequency.setValueAtTime(f, at); o.frequency.linearRampToValueAtTime(f * (Math.random() < 0.5 ? 1.25 : 0.8), at + d);
+        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.035, at + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, at + d);
+        o.connect(g); g.connect(ambDuck); o.start(at); o.stop(at + d + 0.05);
+      }
+    } catch (e) { /* rien */ }
+  }
+  function clearAmbTimers() { ["chantTimer", "clapTimer", "whistleTimer"].forEach(k => { if (amb[k]) { clearTimeout(amb[k]); amb[k] = null; } }); }
+  function scheduleLoops() {
+    clearAmbTimers();
+    const m = AMB_MIX[amb.mode] || AMB_MIX.off;
+    if (m.chant) { const loop = () => { chantOnce(); amb.chantTimer = setTimeout(loop, 2600 + Math.random() * 900); }; amb.chantTimer = setTimeout(loop, 700); }
+    if (m.claps) { const loop = () => { clapsOnce(); amb.clapTimer = setTimeout(loop, 5200 + Math.random() * 3500); }; amb.clapTimer = setTimeout(loop, 1800 + Math.random() * 1500); }
+    if (amb.mode === "ftAway") { const loop = () => { whistleOnce(); amb.whistleTimer = setTimeout(loop, 1400 + Math.random() * 1200); }; amb.whistleTimer = setTimeout(loop, 300); }
+  }
+  function setMode(mode) {
+    if (mode === amb.mode) return false;
+    const prev = amb.mode; amb.mode = mode;
+    amb.log.push({ kind: "mode", mode, from: prev, at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+    if (!(prefs.amb > 0) || !audio()) { clearAmbTimers(); return true; }
+    ensureLayers();
+    const m = AMB_MIX[mode] || AMB_MIX.off;
+    // Lancer franc : on « fait le silence » vite ; sinon fondu plus doux.
+    const tc = mode === "ftHome" ? 0.35 : 0.9;
+    if (amb.bed) { T(amb.bed.gain.gain, m.bed, tc); if (amb.bed.filter) T(amb.bed.filter.frequency, m.tone, 1.2); }
+    if (amb.boo) T(amb.boo.gain.gain, m.boo, m.boo ? 0.5 : 0.8);
+    scheduleLoops();
+    return true;
+  }
+  // État du direct (appelé à chaque mise à jour de la vue, pas à chaque
+  // image) : seul un CHANGEMENT de mode agit. Onglet masqué : silence.
+  function updateAmbience(S, o = {}) {
+    const hidden = typeof document !== "undefined" && document.hidden;
+    const musicOn = typeof window !== "undefined" && window.HMMusic && window.HMMusic.current;
+    let mode = hidden ? "off" : ambienceMode(S, nowMs(), o.home != null ? o.home : 0);
+    if (musicOn && mode !== "off") mode = "break";   // musique des shows : le public se fait discret
+    return setMode(mode) ? mode : null;
+  }
+  function react(r) {
+    if (!r || !(prefs.amb > 0)) return false;
+    const t0 = nowMs();
+    if (t0 - (amb.lastReact[r.kind] || -1e9) < 900) return false;   // pas deux fois la même réaction collée
+    amb.lastReact[r.kind] = t0;
+    amb.log.push({ kind: "react", react: r.kind, intensity: r.intensity, at: t0 }); if (amb.log.length > 80) amb.log.shift();
+    const c = audio(); if (!c) return true;
+    ensureLayers();
+    load("amb_" + r.kind).then(buf => {
+      try {
+        const t = ctx.currentTime + 0.02, k = Math.min(1.8, r.intensity || 1);
+        if (buf) { const src = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = Math.min(1, 0.6 * k); src.buffer = buf; src.connect(g); g.connect(ambDuck); src.start(t); return; }
+        const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+        src.buffer = crowdNoise(); bp.type = "bandpass";
+        if (r.kind === "cheer") {          // clameur qui monte puis retombe (+ « woo » aigu)
+          bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.4); bp.Q.value = 0.7;
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45 * k, t + 0.18); g.gain.setTargetAtTime(0.0001, t + 0.7, 0.55 + 0.25 * k);
+          if (k >= 1.3) for (let i = 0; i < 3; i++) shout(t + 0.1 + i * 0.12, 0.7, 330 + Math.random() * 90, "o", 0.035);
+          for (let i = 0; i < Math.round(6 * k); i++) crowdClap(t + 0.35 + i * 0.16 + Math.random() * 0.05, 0.06);
+        } else if (r.kind === "groan") {   // « ohhh » déçu, grave, qui descend
+          bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(380, t + 0.9); bp.Q.value = 1.4;
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * k, t + 0.12); g.gain.setTargetAtTime(0.0001, t + 0.5, 0.35);
+        } else {                           // applaudissements
+          bp.frequency.value = 2200; bp.Q.value = 0.6; g.gain.value = 0.0001;
+          for (let i = 0; i < Math.round(10 * k); i++) crowdClap(t + i * 0.13 + Math.random() * 0.05, 0.05);
+        }
+        src.connect(bp); bp.connect(g); g.connect(ambDuck); src.start(t, Math.random() * 2); src.stop(t + 3.5);
+      } catch (e) { /* rien */ }
+    }).catch(() => {});
+    return true;
+  }
+  function setAmbLevel(level) {
+    prefs.amb = Math.max(0, Math.min(AMB_LEVELS.length - 1, Number(level) | 0)); save();
+    if (ambOut) try { T(ambOut.gain, AMB_LEVELS[prefs.amb], 0.3); } catch (e) { /* rien */ }
+    if (prefs.amb > 0) { unlock(); const m = amb.mode; amb.mode = "off"; setMode(m); } else clearAmbTimers();
+  }
+
   // Nouveaux événements du fil (déjà diffusés). `state.teams` index 0 =
   // domicile. Événement déjà sonorisé, en retard ou citation : rien.
   function onEvents(events, state, o = {}) {
-    if (!events || !events.length || !(prefs.level > 0)) return [];
+    if (!events || !events.length || !(prefs.level > 0 || prefs.amb > 0)) return [];
     const home = o.home != null ? o.home : 0;
     const t = nowMs(), out = [];
     for (const e of events) {
@@ -193,6 +466,9 @@ export function createSfx(opts = {}) {
       played.add(id); if (played.size > 800) played.delete(played.values().next().value);
       if (e.airAt && t - e.airAt > STALE_MS) continue;
       for (const key of sfxForEvent(e, home)) if (play(key, e.kind)) out.push(key);
+      // Réaction du public (journal de l'ambiance, debug().ambLog).
+      const r = crowdReactionFor(e, state, home);
+      if (r) react(r);
     }
     return out;
   }
@@ -201,12 +477,14 @@ export function createSfx(opts = {}) {
     if (master) try { master.gain.value = SFX_LEVELS[prefs.level]; } catch (e) { /* rien */ }
     if (prefs.level > 0) { unlock(); preload(); }
   }
-  const onGesture = () => { if (prefs.level > 0) unlock(); if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); };
+  const onGesture = () => { if (prefs.level > 0 || prefs.amb > 0) { unlock(); if (prefs.amb > 0 && amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); } } if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); };
   if (typeof document !== "undefined") document.addEventListener("pointerdown", onGesture, true);
   return {
-    onEvents, play, setLevel, ready,
+    onEvents, play, setLevel, ready, updateAmbience, setAmbLevel,
     get level() { return prefs.level; },
-    debug: () => ({ level: prefs.level, files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    get ambLevel() { return prefs.amb; },
+    get ambMode() { return amb.mode; },
+    debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
+    destroy() { clearAmbTimers(); if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
   };
 }

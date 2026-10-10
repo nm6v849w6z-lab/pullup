@@ -13,19 +13,22 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261009-32";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261009-32";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-1";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-1";
 
-// Moment → show. Les autres arrêts (mi-temps, fin Q2, prolongations) n'ont
-// pas de show pour l'instant : ajouter une ligne ici suffit.
+// Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
+// même scène, chacun à sa place habituelle — à la mi-temps, et un temps
+// mort sur trois (même choix pour tous les spectateurs : graine = début de
+// l'arrêt). Prolongations : pas de show.
 export const SHOW_FOR = {
   "timeout": "pompom",
   "quarter-break:1": "mascot",
   "quarter-break:3": "tshirt",
+  "halftime": "gala",
 };
 export function showFor(stoppage, quarter) {
   if (!stoppage) return null;
-  if (stoppage.kind === "timeout") return SHOW_FOR.timeout || null;
+  if (stoppage.kind === "timeout") return stoppage.startAt && Math.floor(stoppage.startAt / 1000) % 3 === 2 ? "gala" : (SHOW_FOR.timeout || null);
   if (stoppage.kind === "quarter-break") return SHOW_FOR["quarter-break:" + (stoppage.quarter || quarter)] || null;
   return SHOW_FOR[stoppage.kind] || null;
 }
@@ -187,7 +190,18 @@ export function createStaging(api, getCfg) {
   // Shows dessinés (showfx.js, visuels de la maquette « Shows Live 2D ») :
   // un canvas posé sur le terrain, dans le repère de la maquette. Sans
   // canvas 2D, rendu SVG d'origine ci-dessous.
-  const FX_OF = { pompom: "pom", mascot: "masc", tshirt: "tee" };
+  const FX_OF = { pompom: "pom", mascot: "masc", tshirt: "tee", gala: "both" };
+  // Ferveur du match (0 à 3) pour la mascotte : 3 points et paniers
+  // décisifs RÉELS de l'équipe qui reçoit, parmi les dernières actions.
+  function hypeOf(state) {
+    const evs = (state && state.events) || [];
+    let h = 0;
+    for (let i = evs.length - 1, n = 0; i >= 0 && n < 30; i--) {
+      const e = evs[i]; if (!e || e.kind === "quote") continue; n++;
+      if (e.kind === "shot" && e.made === true && e.team === 0) h += e.zone === "three" ? 1 : (e.quarter >= 4 && e.clock <= 120 ? 1 : 0);
+    }
+    return Math.min(3, h);
+  }
   function makeFxShow(name, st, colors) {
     const fx = FX_OF[name];
     if (!fx || typeof createShowFx !== "function" || typeof api.overlay !== "function") return null;
@@ -195,13 +209,14 @@ export function createStaging(api, getCfg) {
     if (!ov) return null;
     const ctx = ov.canvas.getContext("2d");
     if (!ctx) { api.dropOverlay(); return null; }
-    const variant = fx === "pom" ? "A" : fx === "tee" ? "C" : mascotVariant(cfg, S);
+    const variant = fx === "pom" || fx === "both" ? "A" : fx === "tee" ? "C" : mascotVariant(cfg, S);
+    const mvariant = fx === "both" ? mascotVariant(cfg, S) : null;
     const mcfg = cfg.mascot || null;
     const fxr = createShowFx(showColors(colors[0], colors[1], cfg.homeShort, mcfg && mcfg.number != null ? mcfg.number : 8));
     const cycle = (SHOW_CYCLE[fx === "pom" ? "pom" : fx + variant] || 14) * 1000;
     const STILL = { pom: 6, mascA: 2.5, mascB: 3, teeC: 3.3 };      // image fixe (mouvement réduit)
     let ci = null;
-    if (fx === "pom") { ci = Math.floor(rng(Math.floor(st.startAt / 1000))() * 4); if (ci === lastChoreo) ci = (ci + 1) % 4; lastChoreo = ci; }
+    if (fx === "pom" || fx === "both") { ci = Math.floor(rng(Math.floor(st.startAt / 1000))() * 6); if (ci === lastChoreo) ci = (ci + 1) % 6; lastChoreo = ci; }
     ov.canvas.classList.add("stg-show", "stg-show-" + name);
     ov.canvas.setAttribute("data-variant", variant);
     const LEAD = 400;                                                // ms après le début de l'arrêt
@@ -227,18 +242,21 @@ export function createStaging(api, getCfg) {
       ctx.setTransform(kx, 0, 0, ky, ox + sc * api.OX - dx * kx, oy + sc * api.OY - dy * ky);
       // Le tableau d'affichage reste au-dessus des personnages.
       ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.clip("evenodd");
-      const key = fx === "pom" ? "pom" : fx + variant;
+      const key = fx === "pom" || fx === "both" ? "pom" : fx + variant;
       // Pompom girls : un seul show sur tout le temps mort (entrée, danse,
       // sortie juste avant la reprise) ; les autres shows bouclent.
       const total = (st.endsAt - st.startAt - LEAD - 1000) / 1000;
-      const t = api.reduced ? STILL[key] : fx === "pom" ? el0 / 1000 : (el0 % cycle) / 1000;
-      try { frame = fxr.draw(ctx, { show: fx, variant, t, q: kx, order: ci || 0, total }); } catch (e) { frame = null; }
+      const t = api.reduced ? STILL[key] : fx === "pom" || fx === "both" ? el0 / 1000 : (el0 % cycle) / 1000;
+      const mcycle = (SHOW_CYCLE["masc" + (mvariant || "A")] || 14) * 1000;
+      const t2 = api.reduced ? STILL["masc" + (mvariant || "A")] : (Math.max(0, el0 - 2500) % mcycle) / 1000;   // mascotte : entre après les danseuses
+      try { frame = fxr.draw(ctx, { show: fx, variant, mvariant, t, t2, q: kx, order: ci || 0, total, hype: hypeOf(S) }); } catch (e) { frame = null; }
       ctx.restore();
     }, frame: () => frame, destroy() { api.dropOverlay(); } };
   }
 
   function makeShow(name, st) {
     const seed = Math.floor(st.startAt / 1000);
+    if (name === "gala" && !(typeof createShowFx === "function" && typeof api.overlay === "function" && api.overlay())) name = "pompom";   // sans canvas : danse seule
     const r = rng(seed);
     const colors = cfg.homeColors || [api.colors()[0], "#ffd34d"];
     const fxShow = makeFxShow(name, st, colors);

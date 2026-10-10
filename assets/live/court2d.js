@@ -1162,6 +1162,19 @@ export function createCourt2D(host, opts = {}) {
   // 2) l'arbitre lui donne le ballon une fois qu'il y est (au plus 3 s) ;
   // 3) il le tient un instant puis passe au meneur (état INBOUND) ;
   // 4) reprise à la réception dans le terrain (completeInbound).
+  // Receveur de la remise en jeu (2026-10-10, « tir attribué à un autre ») :
+  // si le moteur annonce un tir de cette équipe dans les secondes qui
+  // suivent, c'est le TIREUR désigné qui reçoit la remise (une remise suivie
+  // d'un tir rapide) ; sinon le meneur. Avant, le meneur recevait toujours
+  // et, faute de temps pour préparer l'action, le tir partait de ses mains.
+  function imminentShooter(nt) {
+    const na = S && S.nextAction;
+    if (!na || !na.actors || !na.actors.shooter || !(na.kind === "shot" || na.kind === "rebound")) return null;
+    const team = teamOf(na.possessionTeam) !== null ? na.possessionTeam : na.kind === "rebound" ? (na.offensive ? na.team : 1 - na.team) : na.team;
+    if (team !== nt || !(na.airAt - now() < 6000)) return null;
+    const sp = spriteOf(na.actors.shooter);
+    return sp && sp.team === nt && !sp.leaving ? sp : null;
+  }
   function runInbound(nt, pg, inb, why, keepClock, stopped) {
     const t0 = performance.now();
     const goal = inb ? { x: inb.tx, y: inb.ty } : null;
@@ -1240,8 +1253,10 @@ export function createCourt2D(host, opts = {}) {
     scene(2400);
     const dir = rim.x > 47 ? 1 : -1;
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
-    const pg = team[0], inb = team[team.length - 1];
+    let pg = team[0], inb = team[team.length - 1];
     if (!pg) { setPhase("LIVE", "remise sans joueur"); return; }
+    const shr = imminentShooter(nt);
+    if (shr && shr !== pg) { if (shr === inb) inb = pg; pg = shr; diag("inbound-to-shooter", { shooter: shr.id }); }
     for (const sp of sprites.values()) sp.busy = false;
     // Le remiseur sort DERRIÈRE la ligne de fond (hors du terrain), le
     // meneur vient chercher le ballon à l'intérieur ; les autres remontent
@@ -1284,8 +1299,10 @@ export function createCourt2D(host, opts = {}) {
     setPhase("INBOUND_SETUP", why);
     scene(2600);
     const team = onCourt(nt).sort((a, b) => a.slot - b.slot);
-    const pg = team[0];
+    let pg = team[0];
     if (!pg) { setPhase("LIVE", "touche sans joueur"); return; }
+    const shr = imminentShooter(nt);
+    if (shr && shr !== pg) { pg = shr; diag("inbound-to-shooter", { shooter: shr.id }); }
     // Remiseur : le coéquipier le plus proche de l'endroit de la remise.
     const spot0 = at && Number.isFinite(at.x) ? at : { x: ball.x, y: ball.y };
     const inb = team.filter(sp => sp !== pg).sort((a, b) => Math.hypot(a.x - spot0.x, a.y - spot0.y) - Math.hypot(b.x - spot0.x, b.y - spot0.y))[0] || pg;
@@ -1440,6 +1457,39 @@ export function createCourt2D(host, opts = {}) {
   // le ballon atteigne le cercle exactement à `airAt`. Les acteurs viennent
   // de l'événement (le moteur a déjà décidé) ; le résultat n'est joué qu'à
   // l'arrivée réelle de l'événement (playEvent), donc jamais dévoilé avant.
+  // Alignement RÉGLEMENTAIRE des lancers francs (2026-10-10 : « trop de
+  // joueurs autour de la raquette ») : avant, les 9 autres joueurs étaient
+  // tous alignés le long de la raquette. Désormais (FIBA/NBA) : le tireur
+  // seul sur la ligne ; 5 emplacements de rebond au plus — 3 pour l'équipe
+  // qui défend (les deux plus proches du panier + le 3e d'un côté), 2 pour
+  // l'équipe du tireur (les 2es, en alternance) ; les 4 autres derrière la
+  // ligne à 3 points et la ligne des lancers prolongée. Les plus grands
+  // gabarits (créneau le plus haut) prennent les emplacements.
+  // Pieds : ligne de fond à 0, raquette jusqu'à 19 (ligne des lancers),
+  // côtés de la raquette à y = 17 et 33.
+  function ftAlignment(t, shooter) {
+    const rim = RIM[t], dir = rim.x > 47 ? -1 : 1, base = rim.x - dir * 5.25;
+    const X = d => base + dir * d;
+    const bySize = list => list.slice().sort((a, b) => b.slot - a.slot);
+    const off = bySize(onCourt(t).filter(sp => sp !== shooter)), def = bySize(onCourt(1 - t));
+    const out = [];
+    const put = (sp, d, y, role) => { if (sp) out.push({ sp, x: X(d), y, role }); };
+    put(def[0], 8.3, 16.2, "lane"); put(def[1], 8.3, 33.8, "lane");
+    put(off[0], 11.3, 16.2, "lane"); put(off[1], 11.3, 33.8, "lane");
+    put(def[2], 14.3, 16.2, "lane");
+    const perim = [[31, 9], [31, 41], [33, 19.5], [33, 30.5], [29, 4], [29, 46]];
+    [off[2], def[3], off[3], def[4], ...off.slice(4), ...def.slice(5)].filter(Boolean)
+      .forEach((sp, i) => { const p = perim[i % perim.length]; put(sp, p[0], p[1], "perimeter"); });
+    return { line: { x: X(19), y: 25 }, spots: out };
+  }
+  function alignForFreeThrow(t, shooter, ms, speed) {
+    const al = ftAlignment(t, shooter);
+    if (shooter) { busy(shooter, ms); moveTo(shooter, al.line.x, al.line.y, speed); }
+    al.spots.forEach(({ sp, x, y }) => { busy(sp, ms); moveTo(sp, x, y, speed); });
+    diag("ft-align", { team: t, lane: al.spots.filter(x => x.role === "lane").map(x => x.sp.team), perimeter: al.spots.filter(x => x.role === "perimeter").length });
+    return al;
+  }
+
   function buildPlan(na) {
     // Une scène est en cours (remise en jeu, rebond…) : on attend sa fin
     // avant de lancer la possession, sans jamais couper la chorégraphie.
@@ -1470,6 +1520,16 @@ export function createCourt2D(host, opts = {}) {
       : kind === "foul" || kind === "unsportsmanlikeFoul" || kind === "technicalFoul" ? 1 - na.team
       : na.team;
     if (offT !== 0 && offT !== 1) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
+    // Tireur désigné par le moteur pas encore sur le terrain (il entre par un
+    // changement appliqué juste avant l'action, 2026-10-10 : « tir de Greco
+    // attribué à un autre ») : on attend son sprite au lieu de faire tirer
+    // le dernier porteur ; trop tard → version courte, avec le bon tireur.
+    if ((kind === "shot" || kind === "rebound" || kind === "freeThrow") && a.shooter && !spriteOf(a.shooter)) {
+      diag("plan-wait", { why: "tireur pas encore entré", shooter: a.shooter });
+      plan = { airAt: na.airAt, fired: false, pending: true };
+      later(250, () => { if (plan && plan.airAt === na.airAt && plan.pending) buildPlan(na); });
+      return;
+    }
     if (possession !== offT) startPossession(offT);
     plan = { airAt: na.airAt, kind, offT, fired: false, steps: [] };
     // Les étapes ne valent que pour CE plan : un arrêt de jeu (temps mort,
@@ -1494,14 +1554,10 @@ export function createCourt2D(host, opts = {}) {
     formation();
     if (kind === "freeThrow") {
       // Alignement pour les lancers francs, tir calé sur airAt.
-      const rim = RIM[offT], dir = rim.x > 47 ? -1 : 1;
       at(0.05, () => {
-        const line = { x: rim.x + dir * 13.75, y: 25 };
         const sh = shooter || handler;
         for (const sp of sprites.values()) sp.busy = false;
-        busy(sh, total); moveTo(sh, line.x, line.y, 1.8);
-        const others = [...onCourt(offT).filter(s => s !== sh), ...onCourt(1 - offT)];
-        others.forEach((sp, i) => { busy(sp, total); moveTo(sp, rim.x + dir * (3 + (i >> 1) * 5.5), i % 2 ? 16.5 : 33.5, 1.8); });
+        alignForFreeThrow(offT, sh, total, 1.8);
         later(700, () => { if (plan === self && sh && ball.holder !== sh.id) flyTo(sh, 300, 1.5, () => giveBall(sh)); });
       });
       at(0.97, () => { fly({ x: RIM[offT].x, y: RIM[offT].y }, Math.max(350, total * 0.03), 6); plan.fired = true; firedAt = na.airAt; });
@@ -1560,6 +1616,20 @@ export function createCourt2D(host, opts = {}) {
       const limit = (i + 1 < nPass ? times[i + 1] : tShot - 120) - t;
       atMs(t, () => pass(from, to, lob, limit));
     }
+    // Filet (2026-10-10, « tir attribué à un autre ») : une passe prévue est
+    // abandonnée si un autre ballon est encore en l'air à son heure (fin de
+    // remise en jeu, passe précédente) — le tireur du moteur n'avait alors
+    // jamais le ballon et c'est le porteur du moment qui tirait. Juste avant
+    // le tir, il le reçoit : tout de suite, ou dès la réception en cours.
+    // Après la DERNIÈRE passe programmée (action courte : elle tombe tard),
+    // jamais avant — sinon une passe de la chaîne reprenait le ballon au
+    // tireur.
+    atMs(Math.max(0, tShot - 650, nPass ? times[nPass - 1] + 90 : 0), () => {
+      if (!shooter || ball.holder === shooter.id || (ball.flight && ball.flight.target === shooter.id)) return;
+      if (ball.flight) { const tgt = spriteOf(ball.flight.target); if (tgt && tgt.team === offT) pass(tgt, shooter, false, 260); return; }
+      const h = ball.holder ? spriteOf(ball.holder) : null;
+      if (!h || h.team === offT) { diag("shooter-catchup", { shooter: shooter.id, from: h ? h.id : null }); pass(h, shooter, false, 300); }
+    });
     // Le tireur rejoint son emplacement (un drive attaque le cercle depuis
     // le périmètre ; un post-up se gagne dos au panier, lentement).
     const tMove = Math.max(150, Math.min(total * 0.55, tLastPass - 500));
@@ -1585,8 +1655,12 @@ export function createCourt2D(host, opts = {}) {
       // fin de passe) : plus de téléportation sur le tireur.
       const sh = shooter || spriteOf(ball.holder);
       // Passe vers le tireur encore en l'air (action très courte) : il la
-      // reçoit maintenant, le tir part de ses mains.
-      if (sh && ball.flight && ball.flight.target === sh.id) { ball.flight.done = null; giveBall(sh); const h = sprites.get(sh.id); if (h) { ball.x = h.x; ball.y = h.y; } }
+      // reçoit maintenant, le tir part de ses mains. Ballon encore en l'air
+      // vers un coéquipier (dernière passe tardive) : c'est aussi le tireur
+      // du moteur qui le récupère — le tir ne part jamais d'un autre joueur.
+      const inAir = ball.flight && sh && (ball.flight.target === sh.id || (spriteOf(ball.flight.target) || {}).team === offT);
+      if (inAir || (sh && ball.holder && ball.holder !== sh.id && (spriteOf(ball.holder) || {}).team === offT)) { if (ball.flight) ball.flight.done = null; ball.flight = null; giveBall(sh); const h = sprites.get(sh.id); if (h) { ball.x = h.x; ball.y = h.y; } }
+      diag("shot-release", { via: "plan", shooter: shooter ? shooter.id : null, from: sh ? sh.id : null, holder: ball.holder || null });
       if (sh) jump(sh, drive ? 0.9 : 1.15);
       if (defender && na.quality !== "ouvert") later(120, () => jump(defender, 1.1));
       fly({ x: rim.x, y: rim.y }, flightMs, flightH, null, "shot" + offT);
@@ -1753,7 +1827,22 @@ export function createCourt2D(host, opts = {}) {
         if (handler && ball.holder !== handler.id && !ball.flight) giveBall(handler);
         if (assister && assister !== handler && assister !== shooter) { later(delay, () => pass(handler, assister)); delay += 420; }
         if (shooter && (handler !== shooter || assister)) { later(delay, () => pass(assister || handler, shooter)); delay += 450; }
-        later(delay + 250, () => fly({ x: rim.x, y: rim.y }, e.zone === "three" ? 700 : 520, e.zone === "paint" ? 4 : 8, finish, "shot" + offT));
+        // Le tir part TOUJOURS des mains du tireur du moteur (2026-10-10) :
+        // une passe abandonnée (ballon encore en l'air à son heure) est
+        // rattrapée avant le tir, au lieu de faire tirer le porteur du moment.
+        let shotGone = false;
+        const shootNow = () => { if (shotGone) return; shotGone = true; diag("shot-release", { via: "court", shooter: shooter ? shooter.id : null, holder: ball.holder || null }); fly({ x: rim.x, y: rim.y }, e.zone === "three" ? 700 : 520, e.zone === "paint" ? 4 : 8, finish, "shot" + offT); };
+        later(delay + 250 + 1100, shootNow);   // garantie : le tir part quoi qu'il arrive
+        later(delay + 250, () => {
+          if (!shooter || ball.holder === shooter.id) { shootNow(); return; }
+          diag("shooter-catchup", { shooter: shooter.id, from: ball.holder || null, short: true });
+          if (ball.flight) {
+            const tgt = ball.flight.target === shooter.id ? null : spriteOf(ball.flight.target), d = ball.flight.done;
+            ball.flight.done = () => { if (d) d(); if (tgt) { pass(tgt, shooter, false, 260); later(480, shootNow); } else later(260, shootNow); };
+            return;
+          }
+          pass(spriteOf(ball.holder), shooter, false, 260); later(480, shootNow);
+        });
         break;
       }
       case "freeThrow": {
@@ -1775,10 +1864,11 @@ export function createCourt2D(host, opts = {}) {
           moment(made ? "lancer_reussi" : "lancer_rate", { team: t });
           scene(more ? 2400 : 1500);
           if (more) {
-            const line = { x: rim.x + dir * 13.75, y: 25 };
             later(450, () => {
-              if (shooter) { busy(shooter, 2200); moveTo(shooter, line.x, line.y, 1.4); flyTo(shooter, 420, 2, () => giveBall(shooter)); }
-              else { ball.flight = null; ball.x = line.x; ball.y = line.y; }
+              // Réalignement (un changement a pu se glisser entre deux lancers).
+              const al = alignForFreeThrow(t, shooter, 2200, 1.4);
+              if (shooter) flyTo(shooter, 420, 2, () => giveBall(shooter));
+              else { ball.flight = null; ball.x = al.line.x; ball.y = al.line.y; }
             });
             return;
           }
@@ -1801,10 +1891,7 @@ export function createCourt2D(host, opts = {}) {
           });
         };
         if (prePlayed) { ball.flight = null; ball.x = rim.x; ball.y = rim.y; finish(); break; }
-        const line = { x: rim.x + dir * 13.75, y: 25 };
-        if (shooter) { busy(shooter, 2600); moveTo(shooter, line.x, line.y, 1.6); }
-        const others = [...onCourt(t).filter(s => s !== shooter), ...onCourt(1 - t)];
-        others.forEach((sp, i) => { busy(sp, 2600); moveTo(sp, rim.x + dir * (3 + (i >> 1) * 5.5), i % 2 ? 16.5 : 33.5, 1.6); });
+        alignForFreeThrow(t, shooter, 2600, 1.6);
         // Lancers joués après leur diffusion (version courte) : si le moteur a
         // déjà rendu le ballon à l'adversaire, le tireur ne le « porte » pas,
         // le ballon passe seulement par ses mains avant le cercle.

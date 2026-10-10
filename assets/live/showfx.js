@@ -96,7 +96,15 @@ export function createShowFx(team) {
     land: { aL: [60, 40], aR: [60, 40], lL: [34, -26], lR: [34, -26] },
     hype1: { aL: [28, -55], aR: [165, 140], lL: [16, -6], lR: [16, -6] },
     hype2: { aL: [165, 140], aR: [28, -55], lL: [16, -6], lR: [16, -6] },
-    brace: { aL: [-20, -60], aR: [40, 70], lL: [14, 14], lR: [14, 14] }
+    brace: { aL: [-20, -60], aR: [40, 70], lL: [14, 14], lR: [14, 14] },
+    // Enrichissement 2026-10-10 (mêmes personnages, nouvelles poses) :
+    diagR: { aL: [42, 30], aR: [138, 132], lL: [9, 9], lR: [9, 9], lean: -3 },
+    diagL: { aL: [138, 132], aR: [42, 30], lL: [9, 9], lR: [9, 9], lean: 3 },
+    hips: { aL: [22, -112], aR: [22, -112], lL: [12, 12], lR: [12, 12] },
+    star: { aL: [128, 132], aR: [128, 132], lL: [26, 26], lR: [26, 26] },
+    shake: { aL: [96, 70], aR: [96, 70], lL: [8, 8], lR: [8, 8] },
+    wave: { aL: [28, -55], aR: [150, 120], lL: [8, 8], lR: [8, 8], lean: -2 },
+    clap: { aL: [70, 40], aR: [70, 40], lL: [9, 9], lR: [9, 9] }
   };
   const KEYS = ['aL', 'aR', 'lL', 'lR'];
   function mixPose(a, b, u) {
@@ -502,18 +510,30 @@ export function createShowFx(team) {
   const B1 = ['highV', 'lowV', 'T', 'punchR', 'punchL', 'clasp', 'kickR', 'jump'];
   const B2 = ['touch', 'lowV', 'punchR', 'punchL', 'T', 'clasp', 'kickL', 'jump'];
   const B3 = ['highV', 'T', 'punchR', 'punchL', 'clasp', 'kickR', 'touch', 'touch'];
-  // Ordre des trois mesures (temps mort suivant : autre enchaînement).
-  const ORDERS = [[B1, B2, B3], [B2, B1, B3], [B1, B3, B2], [B3, B2, B1]];
+  // Mesures ajoutées le 2026-10-10 : diagonales, mains aux hanches, étoile
+  // sautée, pompons agités devant soi, salut au public — avec un pas
+  // chassé latéral synchronisé (scenePom, LATERAL).
+  const B4 = ['diagR', 'diagL', 'hips', 'star', 'shake', 'shake', 'kickL', 'jump'];
+  const B5 = ['hips', 'diagL', 'diagR', 'wave', 'punchL', 'punchR', 'star', 'jump'];
+  const LATERAL = new Set([B4, B5]);
+  // Ordre des mesures (temps mort suivant : autre enchaînement) et tempo
+  // propre à chaque enchaînement (variation de rythme, jamais mécanique).
+  const ORDERS = [[B1, B2, B3], [B2, B4, B3], [B5, B1, B4], [B3, B5, B2], [B4, B2, B5], [B1, B5, B3]];
+  const TEMPO = [1, 1.06, 0.95, 1.03, 1.08, 0.97];
   let seqOrder = 0;
   let pomTotal = 18.6;           // pompom A : fin du show (s), posée par draw
+  let hype = 0;                  // 0 à 3 : ferveur du match (staging.js), sauts de la mascotte
   const bar = k => ORDERS[seqOrder % ORDERS.length][k];
   function dancePose(seq, tl) {
+    tl *= TEMPO[seqOrder % TEMPO.length];
     const n = clamp(Math.floor(tl / BEAT), 0, seq.length - 1);
     const u = tl / BEAT - n;
     const prev = P[n > 0 ? seq[n - 1] : 'ready'], cur = P[seq[n]];
     const p = mixPose(prev, cur, eo(u / 0.32));
     const name = seq[n];
     if (name === 'jump') p.lift = 26 * Math.sin(Math.PI * clamp(u / 0.8, 0, 1));
+    else if (name === 'star') p.lift = 18 * Math.sin(Math.PI * clamp(u / 0.7, 0, 1));
+    else if (name === 'shake' || name === 'wave') { const w = Math.sin(u * Math.PI * 6); p.aR[0] += 10 * w; if (name === 'shake') p.aL[0] -= 10 * w; }
     else if (name.indexOf('kick') < 0) { const b = Math.exp(-u * 7) * (u < 0.05 ? u / 0.05 : 1); p.lL[0] += 12 * b; p.lL[1] -= 16 * b; p.lR[0] += 12 * b; p.lR[1] -= 16 * b; }
     return { pose: p, shake: Math.exp(-u * 5), flare: name === 'jump' ? 1.25 : 1 + 0.12 * Math.exp(-u * 6) };
   }
@@ -588,6 +608,8 @@ export function createShowFx(team) {
           if (d0.tl < 0) { c.pose = idlePose(t, i); return; }
           const d = dancePose(d0.seq, d0.tl);
           Object.assign(c, { pose: d.pose, shake: d.shake, flare: d.flare });
+          // Pas chassé latéral, toutes ensemble (mesures B4/B5).
+          if (LATERAL.has(d0.seq)) { const ph = d0.tl / BAR; c.x += 22 * Math.sin(ph * Math.PI * 2); c.face = Math.cos(ph * Math.PI * 2) >= 0 ? 1 : -1; }
         });
         if (c) out.chars.push(c);
         out.guides.paths.push(pin);
@@ -689,11 +711,21 @@ export function createShowFx(team) {
       } else if (t < 5.25) { const u = (t - 4.85) / 0.4; c = mascChar(look, gx, gy, { pose: mixPose(P.slam, P.hang, eo(u / 0.4)), face: 1, h: hDunk - 6 * Math.sin(Math.PI * u) }); }
       else if (t < 5.55) { const u = (t - 5.25) / 0.3; c = mascChar(look, gx, gy, { pose: mixPose(P.hang, P.land, eo(u)), face: 1, h: hDunk * (1 - u * u) }); }
       else if (t < 7.3) {
+        // Célébration (2026-10-10) : sauts (plus hauts quand le match est
+        // chaud, `hype`), puis danse hype, salut au public et applaudissements.
         const u = t - 5.55;
-        const ph = Math.floor(u / 0.44), v = (u % 0.44) / 0.44;
-        const p = ph % 2 ? mixPose(P.highV, P.jump, eo(v / 0.3)) : mixPose(P.jump, P.highV, eo(v / 0.3));
-        const h = ph % 2 ? 20 * Math.sin(Math.PI * v) : 0;
-        c = mascChar(look, gx, gy, { pose: p, face: 1, h });
+        if (u < 0.88) {
+          const ph = Math.floor(u / 0.44), v = (u % 0.44) / 0.44;
+          const p = ph % 2 ? mixPose(P.highV, P.jump, eo(v / 0.3)) : mixPose(P.jump, P.highV, eo(v / 0.3));
+          c = mascChar(look, gx, gy, { pose: p, face: 1, h: ph % 2 ? (20 + 6 * hype) * Math.sin(Math.PI * v) : 0 });
+        } else if (u < 1.3) {
+          const v = (u - 0.88) / 0.42, p = mixPose(P.hype1, P.hype2, sm(Math.abs(Math.sin(v * Math.PI * 2))));
+          c = mascChar(look, gx, gy, { pose: p, face: 1, h: 4 * Math.abs(Math.sin(v * Math.PI * 2)) });
+        } else {
+          const v = (u - 1.3) / 0.45, p = mixPose(P.wave, P.clap, sm(clamp(v * 2 - 0.4, 0, 1)));
+          if (v < 0.6) p.aR[0] += 14 * Math.sin(v * Math.PI * 10);
+          c = mascChar(look, gx, gy, { pose: p, face: -1 });
+        }
       } else { const m = mover(p3, 7.3, p3.total / 2.3, t); if (!m.done) c = mascChar(look, m.x, m.y, { pose: runPose(m.d / 17), face: m.dx >= 0 ? 1 : -1 }); }
       if (c) out.chars.push(c);
       if (t >= 4.85 && t < 9.4) {
@@ -723,8 +755,12 @@ export function createShowFx(team) {
           if (v > 0.15 && v < 0.75) { const hp = k % 2 ? P.punchL : P.punchR; const pp = mixPose(pose, hp, sm((v - 0.15) / 0.15) * (1 - sm((v - 0.6) / 0.15))); pp.lL = pose.lL; pp.lR = pose.lR; pose = pp; }
         } else if (h === 0) {
           face = seg === 0 ? 1 : -1;
-          const v = (m.d % 200) / 200;
-          if (v > 0.2 && v < 0.7) { const pp = mixPose(pose, P.point, sm((v - 0.2) / 0.15) * (1 - sm((v - 0.55) / 0.15))); pp.lL = pose.lL; pp.lR = pose.lR; pose = pp; }
+          const v = (m.d % 200) / 200, salute = Math.floor(m.d / 200) % 3 === 2;
+          if (v > 0.2 && v < 0.7) {
+            const pp = mixPose(pose, salute ? P.wave : P.point, sm((v - 0.2) / 0.15) * (1 - sm((v - 0.55) / 0.15)));
+            if (salute) pp.aR[0] += 12 * Math.sin(v * Math.PI * 8);   // salut de la main au public
+            pp.lL = pose.lL; pp.lR = pose.lR; pose = pp;
+          }
         }
         out.chars.push(mascChar(look, m.x, m.y, { pose, face, h }));
         out.overScore = m.x > 780 && m.x < 1220 && m.y < 200;
@@ -988,7 +1024,15 @@ export function createShowFx(team) {
     const t = Math.max(0, opts.t || 0);
     seqOrder = opts.order || 0;
     pomTotal = opts.total > 0 ? opts.total : 18.6;
-    const sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t) : sceneTee(variant, look, t);
+    hype = clamp(opts.hype || 0, 0, 3);
+    let sc;
+    if (show === 'both') {
+      // Mi-temps / grand temps mort (2026-10-10) : pompom girls au centre ET
+      // mascotte sur son parcours habituel (panier de droite, tour), dans
+      // la même scène — mêmes personnages, chacun à sa place.
+      const sp = scenePom('A', SHOW_LOOK.pom, t), sm2 = sceneMasc(opts.mvariant || 'A', SHOW_LOOK['masc' + (opts.mvariant || 'A')] || 'cartoon', Math.max(0, opts.t2 || 0));
+      sc = { chars: sp.chars.concat(sm2.chars), dim: Math.max(sp.dim, sm2.dim), spots: sp.spots.concat(sm2.spots), fx: sp.fx.concat(sm2.fx), floor: (sm2.floor || []), guides: sp.guides };
+    } else sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t) : sceneTee(variant, look, t);
     drawLighting(sc.dim, sc.spots);
     const env = makeEnv(sc.dim, sc.spots);
     (sc.floor || []).forEach(f => drawFloor(f, t));

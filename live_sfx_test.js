@@ -47,13 +47,15 @@ function fakeAudio() {
     [{ kind: "turnover", team: H, tovType: "steal", possessionAfter: A }, [], "interception extérieure"],
     [{ kind: "turnover", team: A, tovType: "lost", possessionAfter: H }, [], "perte sans interception"],
     [{ kind: "freeThrow", team: A, made: 0 }, ["miss"], "lancer franc raté extérieur"],
-    [{ kind: "rebound", team: H, offensive: false }, ["miss"], "tir raté extérieur (rebond défensif domicile)"],
-    [{ kind: "rebound", team: A, offensive: true }, ["miss"], "tir raté extérieur (rebond offensif)"],
+    // 2026-10-10 : le « wah-wah » est réservé au LANCER FRANC raté ; un tir
+    // classique manqué (événement « rebound ») ne le déclenche plus.
+    [{ kind: "rebound", team: H, offensive: false }, [], "tir classique raté extérieur (rebond défensif domicile) : pas de son de lancer raté"],
+    [{ kind: "rebound", team: A, offensive: true }, [], "tir classique raté extérieur (rebond offensif) : pas de son de lancer raté"],
     [{ kind: "rebound", team: A, offensive: false }, [], "tir raté domicile : pas de « wah-wah »"],
     [{ kind: "quote", team: null }, [], "citation du présentateur"],
   ];
   for (const [e, want, label] of cases) assert.deepStrictEqual(sfxForEvent(e, H), want, label);
-  ok(`${cases.length} cas : caisse (lancer franc réussi domicile), sirène (3 pts validé domicile), sifflet (fautes), jingle (interception domicile), « wah-wah » (raté extérieur) — et rien pour les événements voisins invalides (${SFX_RULES.length} règles).`);
+  ok(`${cases.length} cas : caisse (lancer franc réussi domicile), sirène (3 pts validé domicile), sifflet (fautes), jingle (interception domicile), « wah-wah » (lancer franc raté extérieur uniquement) — et rien pour les événements voisins invalides (${SFX_RULES.length} règles).`);
 
   // 2. Une fois par événement, en retard / coupé : rien ; sans Web Audio : pas d'erreur.
   global.localStorage = { _: {}, getItem(k) { return this._[k] || null; }, setItem(k, v) { this._[k] = v; } };

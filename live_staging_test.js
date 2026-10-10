@@ -46,7 +46,11 @@ const mkTeam = (key, color) => ({ name: key, short: key.slice(0, 3).toUpperCase(
   if (STG.showFor({ kind: "timeout" }) !== "pompom") fail("temps mort → pompom girls.");
   if (STG.showFor({ kind: "quarter-break", quarter: 1 }) !== "mascot") fail("fin Q1 → mascotte.");
   if (STG.showFor({ kind: "quarter-break", quarter: 3 }) !== "tshirt") fail("fin Q3 → canon à t-shirts.");
-  if (STG.showFor({ kind: "quarter-break", quarter: 2 }) || STG.showFor({ kind: "halftime", quarter: 2 }) || STG.showFor({ kind: "quarter-break", quarter: 5 })) fail("pas de show à la mi-temps, en fin de Q2 ni en prolongation.");
+  // 2026-10-10 : mi-temps → « gala » (pompom girls + mascotte) ; un temps
+  // mort sur trois aussi (graine = début de l'arrêt) ; prolongation : rien.
+  if (STG.showFor({ kind: "halftime", quarter: 2 }) !== "gala") fail("mi-temps → pompom girls et mascotte (gala).");
+  if (STG.showFor({ kind: "timeout", startAt: 2000 }) !== "gala" || STG.showFor({ kind: "timeout", startAt: 1000 }) !== "pompom") fail("temps mort : gala un sur trois (graine), pompom girls sinon.");
+  if (STG.showFor({ kind: "quarter-break", quarter: 2 }) || STG.showFor({ kind: "quarter-break", quarter: 5 })) fail("pas de show en fin de Q2 (hors mi-temps) ni en prolongation.");
   console.log("✅ Table moment → show (temps mort, fin Q1, fin Q3 ; rien ailleurs).");
 
   // --- Coach devant chaque banc ---
