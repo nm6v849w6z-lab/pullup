@@ -126,11 +126,11 @@ figure ici).
 | Ressource originale | « crowd partying cheering applause all around.flac » (Freesound n° 637468), fichier original FLAC fourni par le propriétaire du jeu |
 | Auteur | kyles |
 | Source | https://freesound.org/people/kyles/sounds/637468/ |
-| Licence | Creative Commons 0 (CC0 1.0) — **à reconfirmer sur la page** : Freesound inaccessible depuis l'environnement le 2026-10-10 ; tous les autres sons de cet auteur vérifiés (635492, 629884, 451600) sont CC0 |
+| Licence | Creative Commons 0 (CC0 1.0) — confirmée par le propriétaire du jeu sur la page Freesound lors du téléchargement (2026-10-10) |
 | Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
 | Attribution requise | Non (crédit facultatif) |
 | Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
-| Vérifiée le | 2026-10-10 (indirectement, voir Licence) |
+| Vérifiée le | 2026-10-10 |
 | Modifications | Extrait 0,2–28,6 s (sifflet vers 29 s retiré) ; boucle de 26,9 s, fondu enchaîné 1,5 s ; −21 dBFS RMS ; MP3 112 kb/s stéréo 44,1 kHz |
 | Restrictions | Aucune connue |
 
