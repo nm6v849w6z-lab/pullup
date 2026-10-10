@@ -215,6 +215,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     Bruitage `buzzer` (fin de quart-temps / match, `quarterEnd`) :
     `buzzer.mp3` fourni (licence non vérifiée, voir AUDIO_LICENSES.md),
     synthèse de repli. Pas de speaker (refusé : « too much »).
+    Sons existants EMPILÉS (choix du propriétaire) : série à domicile ≥ 8-0
+    (`amb.run`, suivie dans `onEvents`) = clameur + « Ooooh ! » +
+    applaudissements, puis ébullition (`amb.runHot`) jusqu'au prochain
+    panier adverse ; grand match (`isBigGame` : « play-off / barrage /
+    finale » dans `S.meta`) = réactions ×1,2, ébullition dès 5 min / écart
+    ≤ 8, victoire finale = clameur + « Ooooh ! » + applaudissements.
   - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
     de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
     « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
@@ -242,7 +248,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-16`.
+    trois. Assets du direct en `?v=20261010-17`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

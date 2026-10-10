@@ -30,7 +30,7 @@ function fakeAudio() {
 }
 
 (async () => {
-  const { ambienceMode, crowdReactionFor, createSfx } = await import(pathToFileURL(path.join(__dirname, "assets/live/sfx.js")).href);
+  const { ambienceMode, crowdReactionFor, createSfx, isBigGame } = await import(pathToFileURL(path.join(__dirname, "assets/live/sfx.js")).href);
   const H = 0, A = 1, now = 5_000_000;
   const base = { status: "live", quarter: 2, clock: 300, teams: [{ score: 40 }, { score: 38 }], events: [] };
 
@@ -63,6 +63,8 @@ function fakeAudio() {
   R({ kind: "timeout", type: "timeout", team: H }, {}, { kind: "applause", i: 0.6 }, "temps mort : applaudissements");
   R({ kind: "shot", team: H, made: true, zone: "mid" }, { quarter: 4, clock: 40 }, { kind: "cheer", i: 1.5 }, "panier décisif en fin de match : plus fort");
   assert.strictEqual(crowdReactionFor({ kind: "substitution", team: H }, base, H), null, "changement : rien");
+  assert.ok(isBigGame({ meta: { competition: "Play-offs" } }) && isBigGame({ meta: { competition: "Barrage" } }) && isBigGame({ meta: { competition: "Coupe", round: "Finale" } }), "grands matchs reconnus");
+  assert.ok(!isBigGame({ meta: { competition: "Championnat", round: "Journée 3" } }) && !isBigGame({}), "match ordinaire");
   // Priorité 2 (2026-10-10) : contres, contre-attaques, fautes contre l'équipe à domicile.
   R({ kind: "shot", team: A, made: false, blocked: true }, {}, { kind: "wow", i: 1.2 }, "contre de l'équipe à domicile : « Ooooh ! »");
   assert.strictEqual(crowdReactionFor({ kind: "shot", team: A, made: false, blocked: true }, base, H).also.kind, "cheer", "… puis grande clameur");

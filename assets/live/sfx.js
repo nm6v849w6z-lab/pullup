@@ -83,6 +83,8 @@ export function ambienceMode(S, now = Date.now(), home = 0) {
 // Réactions du public à un événement réel (pure : testable). `intensity` :
 // 1 normale, plus forte sur un 3 points, un panier décisif (4e quart ou
 // prolongation, 2 dernières minutes, écart ≤ 6).
+// Grand match (playoffs, barrage, finale) : d'après la description du direct.
+export function isBigGame(S) { return !!(S && S.meta && /play.?off|barrage|finale/i.test(String(S.meta.competition || "") + " " + String(S.meta.round || ""))); }
 export function crowdReactionFor(e, S, home = 0) {
   if (!e || !e.kind || e.kind === "quote") return null;
   const t = e.team;
@@ -466,7 +468,7 @@ export function createSfx(opts = {}) {
   function applyMix() {
     const mode = amb.mode, m = AMB_MIX[mode] || AMB_MIX.off;
     const cm = amb.calm ? CALM_MIX[mode] : null;
-    const hot = amb.hot && !!amb.heat && (mode === "offense" || mode === "defense");
+    const hot = (amb.hot || amb.runHot) && !!amb.heat && (mode === "offense" || mode === "defense");
     // 24 s de l'adversaire qui s'achèvent : la salle et le chant montent.
     const tense = amb.tension && mode === "defense" ? 1.6 : 1;
     // Lancer franc : on « fait le silence » vite ; sinon fondu plus doux.
@@ -499,7 +501,8 @@ export function createSfx(opts = {}) {
     if (musicOn && mode !== "off") mode = "break";   // musique des shows : le public se fait discret
     // Fin de match serrée (4e quart ou prolongation, ≤ 2 min, écart ≤ 6) :
     // la salle bout (couche `amb_bed_hot`), sans changer de mode.
-    const hot = !!(S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6);
+    const big = isBigGame(S);
+    const hot = !!(S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= (big ? 300 : 120) && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= (big ? 8 : 6));
     // Défense, 24 s de l'adversaire à 6 s ou moins : tension (montée).
     // Dernière possession défensive d'un match serré (Q4+, ≤ 24 s, écart ≤ 3) :
     // la salle est debout, tension maximale quel que soit le chrono des 24 s.
@@ -531,7 +534,8 @@ export function createSfx(opts = {}) {
     if (mode === "final" && LIVE_MODES.includes(amb.mode) && S && S.teams) {
       const h = o.home != null ? o.home : 0, d = (S.teams[h].score || 0) - (S.teams[1 - h].score || 0);
       amb.lastReact.cheer = amb.lastReact.groan = -1e9;   // prioritaire, même juste après le dernier panier
-      if (d > 0) react({ kind: "cheer", intensity: d <= 5 ? 1.8 : 1.4, also: { kind: "applause", intensity: 1.3, delay: 1800 } });
+      if (d > 0) react(big ? { kind: "cheer", intensity: 1.8, also: { kind: "wow", intensity: 1.3, delay: 200, also: { kind: "applause", intensity: 1.4, delay: 1400 } } }   // grand match : tout empilé
+        : { kind: "cheer", intensity: d <= 5 ? 1.8 : 1.4, also: { kind: "applause", intensity: 1.3, delay: 1800 } });
       else if (d < 0) react({ kind: "groan", intensity: d >= -5 ? 1.4 : 1, also: { kind: "applause", intensity: 0.6, delay: 2500 } });
       amb.log.push({ kind: "finalReaction", diff: d, at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
     }
@@ -607,7 +611,23 @@ export function createSfx(opts = {}) {
       if (e.airAt && t - e.airAt > STALE_MS) continue;
       for (const key of sfxForEvent(e, home)) if (play(key, e.kind)) out.push(key);
       // Réaction du public (journal de l'ambiance, debug().ambLog).
-      const r = crowdReactionFor(e, state, home);
+      let r = crowdReactionFor(e, state, home);
+      // Série en cours (points consécutifs d'une même équipe) : à 8-0 ou plus
+      // pour l'équipe à domicile, la salle s'enflamme (clameur + « Ooooh ! » +
+      // applaudissements empilés) et reste en ébullition jusqu'au prochain
+      // panier adverse.
+      const pts = e.kind === "shot" && e.made === true ? (e.zone === "three" ? 3 : 2) : e.kind === "freeThrow" ? (e.made || 0) : 0;
+      if (pts > 0 && (e.team === 0 || e.team === 1)) {
+        amb.run = amb.run && amb.run.team === e.team ? { team: e.team, pts: amb.run.pts + pts } : { team: e.team, pts };
+        const runHot = amb.run.team === home && amb.run.pts >= 8;
+        if (runHot && !amb.runHot && e.kind === "shot") {
+          r = { kind: "cheer", intensity: 1.5, also: { kind: "wow", intensity: 1, delay: 150, also: { kind: "applause", intensity: 1.2, delay: 250 } } };
+          amb.log.push({ kind: "run", pts: amb.run.pts, at: t }); if (amb.log.length > 80) amb.log.shift();
+        }
+        if (runHot !== amb.runHot) { amb.runHot = runHot; if (prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); } }
+      }
+      // Grand match : réactions plus fortes.
+      if (r && isBigGame(state)) r = { ...r, intensity: Math.min(1.8, (r.intensity || 1) * 1.2) };
       if (r) react(r);
     }
     return out;

@@ -61,4 +61,4 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] Victoire à domicile / défaite au coup de sifflet final (sons existants) — 2026-10-10
 - [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts) : musiques fournies, sons de foule à ajouter
 - [x] Blessure (souffle retenu), expulsion et 5e faute, antisportive (protestation) — 2026-10-10
-- [ ] Événements rares : remontée au score, playoffs, titre
+- [x] Remontée / série 8-0, playoffs, barrages, finales : sons existants empilés — 2026-10-10

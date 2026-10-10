@@ -97,7 +97,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const cheers = () => started.filter(s => /^amb_cheer/.test(s.name)).map(s => s.name);
   let id = 100;
-  for (let i = 0; i < 12; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(5); }
+  for (let i = 0; i < 12; i++) {
+    t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(5);
+    if (i % 3 === 2) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "freeThrow", team: 1, made: 1 }], base); await sleep(5); }   // pas de série 8-0
+  }
   const c = cheers();
   assert.strictEqual(c.length, 12, "une clameur par panier à domicile");
   assert.ok(c.every(n => man.files.amb_cheer.includes(n)), "panier à 2 points : variantes courtes");
@@ -184,6 +187,24 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   sfx.updateAmbience({ ...base, status: "final" });
   assert.strictEqual(sfx.debug().ambLog.filter(x => x.kind === "finalReaction").length, nf, "match déjà fini : pas de nouvelle réaction");
   sfx.updateAmbience({ ...base, possession: 0 });
+  // Série 8-0 à domicile : clameur + « Ooooh ! » + applaudissements empilés,
+  // une fois ; ébullition jusqu'au prochain panier adverse.
+  const runs = () => sfx.debug().ambLog.filter(x => x.kind === "run").length;
+  const stack = () => started.length;
+  t += 5000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 1, made: true, zone: "mid" }], base); await sleep(5);
+  for (const z of ["mid", "three"]) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: z }], base); await sleep(5); }
+  assert.strictEqual(runs(), 0, "5-0 : pas encore de série");
+  const r0 = stack(), w0 = wows().length;
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "three" }], base); await sleep(600);
+  assert.strictEqual(runs(), 1, "8-0 : la salle s'enflamme");
+  assert.ok(wows().length === w0 + 1 && started.slice(r0).some(x => /^amb_applause/.test(x.name)) && started.slice(r0).some(x => /^amb_cheer/.test(x.name)), "clameur + « Ooooh ! » + applaudissements empilés");
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(600);
+  assert.strictEqual(runs(), 1, "10-0 : pas de nouvel empilement");
+  // Grand match : réactions plus fortes (log d'intensité).
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 1, made: true, zone: "mid" }], { ...base, meta: { competition: "Play-offs" } }); await sleep(5);
+  const lastGroan = sfx.debug().ambLog.filter(x => x.kind === "react" && x.react === "groan").pop();
+  assert.ok(Math.abs(lastGroan.intensity - 1.2) < 1e-9, "play-offs : déception plus forte (" + lastGroan.intensity + ")");
+  ok("Série 8-0 à domicile : clameur, « Ooooh ! » et applaudissements empilés, une seule fois ; play-offs : réactions plus fortes.");
   ok(`Faute contre le domicile : protestation (${[...new Set(j)].join(", ")}) ; contre du domicile : « Ooooh ! » puis grande clameur ; tir décisif : le public retient son souffle.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");
