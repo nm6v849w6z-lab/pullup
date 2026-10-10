@@ -98,10 +98,30 @@ export function createStaging(api, getCfg) {
   const { el, PX } = api;
   const routeOf = (team, i = 0) => { const r = api.tunnelRoute ? api.tunnelRoute(team, i) : ROUTE_DEFAULT(team); if (!api.tunnelRoute) r.inside = { x: r.inside.x, y: r.inside.y + i * 3.6 }; return r; };
   const tunnelOf = (team, i = 0) => routeOf(team, i).inside;
-  // Cible sur le parcours du tunnel : `since` ms après le départ de
-  // l'intérieur, d'abord le dégagement, puis `dest` ; à l'envers pour rentrer.
-  const outOfTunnel = (team, since, dest) => (since < TUNNEL_WALK_MS ? routeOf(team).apron : dest);
-  const intoTunnel = (team, since, i = 0) => (since < TUNNEL_WALK_MS + 400 ? routeOf(team).apron : routeOf(team, i).inside);
+  // Étape suivante sur le parcours du tunnel, selon la POSITION (jamais un
+  // raccourci à travers les tribunes) : dans le couloir → embouchure →
+  // dégagement → destination ; à l'envers pour rentrer.
+  const inCorridor = (team, p) => { const r = routeOf(team); return !!p && Math.abs(p.x - r.mouth.x) < 2.2 && p.y > r.mouth.y - 0.4; };
+  const near = (p, q, d) => !!p && Math.hypot(p.x - q.x, p.y - q.y) < d;
+  function outOfTunnel(team, since, dest, p) {
+    const r = routeOf(team);
+    if (p) {
+      if (inCorridor(team, p) && p.y > r.mouth.y + 0.4) return r.mouth;
+      if (p.y > r.apron.y + 0.8 && !near(p, r.apron, 1.4)) return r.apron;
+      return dest;
+    }
+    return since < TUNNEL_WALK_MS ? r.apron : dest;
+  }
+  function intoTunnel(team, since, i = 0, p) {
+    const r = routeOf(team);
+    if (p) {
+      if (inCorridor(team, p) || near(p, r.mouth, 1.2)) return routeOf(team, i).inside;
+      if (near(p, r.apron, 1.4) || (p.y > r.apron.y && Math.abs(p.x - r.apron.x) < 3)) return r.mouth;
+      return r.apron;
+    }
+    return since < TUNNEL_WALK_MS + 400 ? r.apron : routeOf(team, i).inside;
+  }
+  const posOf = sp => (sp && Number.isFinite(sp.x) ? { x: sp.x, y: sp.y } : null);
   let cfg = null, S = null;
   let destroyed = false;
   const coaches = [null, null];
@@ -195,7 +215,8 @@ export function createStaging(api, getCfg) {
     } else if (t < 24000) dest = { ...line, speed: 1.2 };
     else if (i === 4) dest = { x: 47 + dir * 1.4, y: 25, speed: 1.4 };   // entre-deux : pivots au centre
     else { const ys = [14.5, 21, 29, 35.5]; dest = { x: 47 + dir * 8, y: ys[i], speed: 1.4 }; }
-    if (t - start < TUNNEL_WALK_MS) { const a = routeOf(team).apron; return { x: a.x, y: a.y, speed: 1.5 }; }
+    const step = outOfTunnel(team, t - start, null, posOf(sp));
+    if (step) return { x: step.x, y: step.y, speed: 1.5 };
     return dest;
   }
   function showIntroCard(sp) {
@@ -512,12 +533,12 @@ export function createStaging(api, getCfg) {
         if (ph.kind === "intro") {
           // Le coach sort du tunnel de son équipe (caché sous le toit avant).
           if (ph.t < 19000) { const tn = tunnelOf(c.t, 5); c.tx = tn.x; c.ty = tn.y; if (late || changed) { c.x = c.tx; c.y = c.ty; } }
-          else { const p = outOfTunnel(c.t, ph.t - 19000, { x: bx, y: COACH_Y }); c.tx = p.x; c.ty = p.y; }
+          else { const p = outOfTunnel(c.t, ph.t - 19000, { x: bx, y: COACH_Y }, c); c.tx = p.x; c.ty = p.y; }
         } else if (ph.kind === "halftime" && cfg.playerIntro) {
           // Mi-temps : retour aux vestiaires par le tunnel.
-          const p = intoTunnel(c.t, now - ph.st.startAt, 5); c.tx = p.x; c.ty = p.y;
+          const p = intoTunnel(c.t, now - ph.st.startAt, 5, c); c.tx = p.x; c.ty = p.y;
         } else if (ph.kind === "return" && cfg.playerIntro) {
-          const p = outOfTunnel(c.t, ph.t, { x: bx, y: COACH_Y }); c.tx = p.x; c.ty = p.y;
+          const p = outOfTunnel(c.t, ph.t, { x: bx, y: COACH_Y }, c); c.tx = p.x; c.ty = p.y;
         } else if (ph.kind === "timeout" || ph.kind === "quarter-break" || ph.kind === "halftime" || ph.kind === "return") {
           c.tx = bx; c.ty = COACH_Y;
           if (ph.kind === "timeout") coachAnim(c, "instruct", 400);
@@ -561,7 +582,7 @@ export function createStaging(api, getCfg) {
         // ne reste planté au bord du terrain ni ne disparaît sur place.
         const since = now - ph.st.startAt;
         for (const t of [0, 1]) byTeam(t).forEach((sp, i) => {
-          const p = intoTunnel(t, since - i * 250, i);
+          const p = since < i * 250 ? posOf(sp) || intoTunnel(t, 0, i) : intoTunnel(t, since, i, posOf(sp));
           hold(sp, p.x, p.y, 1.3, late);
         });
       } else if (ph.kind === "return") {
@@ -569,7 +590,7 @@ export function createStaging(api, getCfg) {
         // tunnel ensemble, puis gagnent leur place.
         for (const t of [0, 1]) byTeam(t).forEach((sp, i) => {
           const dest = api.slotPos(sp.team, sp.slot, sp.team === api.possession());
-          const p = cfg.playerIntro ? outOfTunnel(t, ph.t - i * 300, dest) : dest;
+          const p = cfg.playerIntro ? outOfTunnel(t, ph.t - i * 300, dest, posOf(sp)) : dest;
           if (cfg.playerIntro && ph.t < i * 300) { const tn = tunnelOf(t, i); hold(sp, tn.x, tn.y, 1.4, late || changed); return; }
           hold(sp, p.x, p.y, ph.t < 8000 ? 1.1 : 1.4, late);
         });
