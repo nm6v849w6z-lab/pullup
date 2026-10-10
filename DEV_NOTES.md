@@ -39,8 +39,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     fonds opaques ; tableau Staff (analyste vidéo) qui débordait (433 px).
     Mesuré dans Chromium : 0 tâche longue, 0 décalage de mise en page,
     aucune page plus large que 390 px. Non reproduit sur un vrai iPhone.
-  - Tests : ordres_deferred_save_test.js (nouveau) ; confirmed_tactics et
-    ordres_lock_revert adaptés (cliquer « Enregistrer »).
+  - **Latence des appuis, cause mesurée** (profil CPU d'un appui sur la
+    composition) : `parisLocalDateParts` créait un `Intl.DateTimeFormat` à
+    chaque appel (forme physique de chaque joueur → currentCondition →
+    parisCalendarDayIndex) : > 50 % du rendu. Formateur gardé par fuseau
+    (`zonedDtf`, comme engine.js côté serveur) : appui ×2,8 plus rapide ;
+    profite aussi à Effectif, Centre médical, calendrier.
+  - `validateOrdres` : double appui ignoré pendant un envoi.
+  - Défilement mesuré par vrais gestes tactiles (CDP, CPU ×4) sur 8 pages
+    longues : aucun arrêt ni retour en arrière.
+  - Tests : ordres_deferred_save_test.js (nouveau : réseau lent, double
+    appui, erreur + nouvelle tentative, rechargement) ; confirmed_tactics
+    et ordres_lock_revert adaptés (cliquer « Enregistrer »).
   - Déjà en échec avant (dépendent de la date) : cup_ordres_planning_test,
     private_league_ui_test.
 

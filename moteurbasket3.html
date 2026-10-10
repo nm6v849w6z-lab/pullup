@@ -16653,12 +16653,28 @@ function parisUtcOffsetMs(utcMs) {
   const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
   return asUtc - utcMs;
 }
+// Formateur gardé par fuseau (performance, 2026-10-10, téléphone : « si
+// j'appuie sur un bouton des ordres, il ne s'active pas de suite ») : en
+// recréer un à chaque appel coûtait plus de la moitié d'un rendu de la
+// composition (forme physique de chaque joueur → currentCondition →
+// parisCalendarDayIndex), bien plus encore sur iPhone. Même correctif que
+// engine.js:zonedDtf côté serveur ; résultats identiques.
+const ZONED_DTF = new Map();
+function zonedDtf(timeZone) {
+  const tz = timeZone || "Europe/Paris";
+  let dtf = ZONED_DTF.get(tz);
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+    ZONED_DTF.set(tz, dtf);
+  }
+  return dtf;
+}
 function parisLocalDateParts(utcMs) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: calendarTimeZone, hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(calendarTimeZone);
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {
@@ -16697,11 +16713,7 @@ function parisEpochForLocalTime(year, month, day, hour, minute = 0, second = 0) 
 // Paris). Mêmes principes que parisLocalDateParts/parisEpochForLocalTime
 // ci-dessus, pour n'importe quel fuseau IANA. `timeZone` absent = Paris.
 function zonedLocalDateParts(utcMs, timeZone) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: timeZone || "Europe/Paris", hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const dtf = zonedDtf(timeZone);
   const map = {};
   dtf.formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== "literal") map[p.type] = p.value; });
   return {
@@ -23267,6 +23279,9 @@ function renderOrdresGrid() {
 let ordresValidationInFlight = null;
 
 async function validateOrdres() {
+  // Double appui pendant l'envoi (téléphone, réseau lent) : une seule
+  // sauvegarde à la fois, la seconde est ignorée (2026-10-10).
+  if (ordresValidationInFlight) return ordresValidationInFlight;
   let releaseOrdresValidationGate;
   ordresValidationInFlight = new Promise(resolve => { releaseOrdresValidationGate = resolve; });
   try {
