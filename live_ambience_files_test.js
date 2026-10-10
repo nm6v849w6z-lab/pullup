@@ -28,7 +28,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     decodeAudioData(b, res) { const name = Buffer.from(b).toString(); const d = new Float32Array(8000).fill(0.1); const buf = { name, duration: 1, sampleRate: 8000, getChannelData: () => d }; res(buf); }
     resume() {} close() {}
   }
-  global.window = { AudioContext: AC };
+  const listeners = {};
+  global.window = { AudioContext: AC, addEventListener(n, f) { (listeners[n] = listeners[n] || []).push(f); }, removeEventListener() {}, __cue: d => (listeners["hm-crowd-cue"] || []).forEach(f => f({ detail: d })) };
   global.localStorage = { _: {}, getItem(k) { return this._[k] || null; }, setItem(k, v) { this._[k] = v; } };
   global.fetch = async url => {
     const f = String(url).replace(/^.*\/sfx\//, "").split("?")[0];
@@ -205,6 +206,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const lastGroan = sfx.debug().ambLog.filter(x => x.kind === "react" && x.react === "groan").pop();
   assert.ok(Math.abs(lastGroan.intensity - 1.2) < 1e-9, "play-offs : déception plus forte (" + lastGroan.intensity + ")");
   ok("Série 8-0 à domicile : clameur, « Ooooh ! » et applaudissements empilés, une seule fois ; play-offs : réactions plus fortes.");
+  // Spectacle en musique : mode « show » (public très discret) ; seules les
+  // réactions du spectacle (signal hm-crowd-cue) passent, très basses.
+  window.HMMusic = { current: "pompom" };
+  assert.strictEqual(sfx.updateAmbience({ ...base, possession: 0, stoppage: { kind: "timeout" } }), "show", "musique du spectacle : mode show");
+  const nr = () => sfx.debug().ambLog.filter(x => x.kind === "react").length, r1 = nr();
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "timeout", type: "timeout", team: 1 }], base); await sleep(5);
+  assert.strictEqual(nr(), r1, "pendant le spectacle : pas de réaction de match");
+  t += 3000; window.__cue({ kind: "applause", intensity: 0.9 }); await sleep(5);
+  const last = sfx.debug().ambLog.filter(x => x.kind === "react").pop();
+  assert.ok(nr() === r1 + 1 && last.react === "applause" && last.intensity <= 0.5, "fin de chorégraphie : applaudissements très discrets (" + JSON.stringify(last) + ")");
+  window.HMMusic = null;
+  assert.strictEqual(sfx.updateAmbience({ ...base, possession: 0 }), "offense", "fin du spectacle : retour au jeu");
+  ok("Spectacle : public très discret, réactions du spectacle seulement (≤ 0,5).");
   ok(`Faute contre le domicile : protestation (${[...new Set(j)].join(", ")}) ; contre du domicile : « Ooooh ! » puis grande clameur ; tir décisif : le public retient son souffle.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");

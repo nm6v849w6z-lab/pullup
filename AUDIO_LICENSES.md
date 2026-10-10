@@ -91,15 +91,15 @@ figure ici).
 
 | Champ | Valeur |
 |---|---|
-| Fichiers | `entree-joueurs.mp3` (remplacée le 2026-10-10), `mascotte-1.mp3`, `mascotte-2.mp3`, `mascotte-3.mp3` (2026-10-10) ; plus anciennes : `emission.mp3`, `pompom.mp3`, `lanceur-maillot.mp3` |
-| Ressource originale | Fichiers fournis par le propriétaire du jeu (entre_e_des_joueurs.mp3, mascotte1.mp3, mascotte2.flac, mascotte3.ogg, …) |
+| Fichiers | `entree-joueurs.mp3` (remplacée le 2026-10-10), `mascotte-1..3.mp3`, `pompom-1..3.mp3` (2026-10-10 ; pompom-1 = ancienne `pompom.mp3`) ; plus anciennes : `emission.mp3`, `lanceur-maillot.mp3` |
+| Ressource originale | Fichiers fournis par le propriétaire du jeu (entre_e_des_joueurs.mp3, mascotte1.mp3, mascotte2.flac, mascotte3.ogg, pompom_girl.mp3, pompom1.wav, pompom2.ogg, …) |
 | Auteur | Non communiqué |
 | Source | Fichiers transmis par le propriétaire du jeu |
 | Licence | Non vérifiée par Claude — fournis et choisis par le propriétaire du jeu, sous sa responsabilité |
 | Conditions | Non communiquées |
 | Vérifiée le | 2026-10-10 (format, durée, volume uniquement) |
 | Attribution requise | Non communiquée |
-| Modifications | entree-joueurs : réencodée MP3 192 kb/s (volume d'origine) ; mascotte-1..3 : volume aligné à ≈ −16,5 LUFS (loudnorm, crête −1,5 dBTP), MP3 192 kb/s |
+| Modifications | entree-joueurs : réencodée MP3 192 kb/s (volume d'origine) ; mascotte-1..3 : volume aligné à ≈ −16,5 LUFS ; pompom-1..3 : volume aligné à ≈ −13 LUFS (l'ancienne pompom.mp3 était à −8,8 LUFS et saturait) ; loudnorm, crête −1,5 dBTP, MP3 192 kb/s |
 | Restrictions | À confirmer par le propriétaire (droits sur les musiques) |
 
 ## amb_boo.mp3

@@ -22,18 +22,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   // Fichiers fournis, intacts.
   const up = "/root/.claude/uploads/c939ee43-4ee9-577a-8871-07f47979dac5/";
-  for (const f of ["emission.mp3", "entree-joueurs.mp3", "pompom.mp3", "mascotte-1.mp3", "mascotte-2.mp3", "mascotte-3.mp3", "lanceur-maillot.mp3"]) {
+  for (const f of ["emission.mp3", "entree-joueurs.mp3", "pompom-1.mp3", "pompom-2.mp3", "pompom-3.mp3", "mascotte-1.mp3", "mascotte-2.mp3", "mascotte-3.mp3", "lanceur-maillot.mp3"]) {
     const p = path.join(__dirname, "assets/audio/music", f);
     if (!fs.existsSync(p) || fs.statSync(p).size < 100000) fail(`musique manquante : ${f}`);
     if (fs.readFileSync(p).subarray(0, 3).toString("hex") !== "494433" && fs.readFileSync(p)[0] !== 0xff) fail(`${f} n'est pas un mp3`);
   }
   if (fs.existsSync(up + "837c1693-e_mission_de_la_mi_temps.mp3") && !fs.readFileSync(up + "837c1693-e_mission_de_la_mi_temps.mp3").equals(fs.readFileSync(path.join(__dirname, "assets/audio/music/emission.mp3")))) fail("emission.mp3 doit être le fichier fourni, tel quel.");
-  for (const [u, f] of [["2af1efac-pompom_girl.mp3", "pompom.mp3"], ["4c8dcd23-lanceur_maillot.mp3", "lanceur-maillot.mp3"]])
+  for (const [u, f] of [["4c8dcd23-lanceur_maillot.mp3", "lanceur-maillot.mp3"]])
     if (fs.existsSync(up + u) && !fs.readFileSync(up + u).equals(fs.readFileSync(path.join(__dirname, "assets/audio/music", f)))) fail(`${f} doit être le fichier fourni, tel quel.`);
   const mjs = fs.readFileSync(path.join(__dirname, "assets/audio/music.js"), "utf8");
-  if (!/pompom: "pompom\.mp3", mascotte1: "mascotte-1\.mp3", mascotte2: "mascotte-2\.mp3", mascotte3: "mascotte-3\.mp3", lanceur: "lanceur-maillot\.mp3"/.test(mjs)) fail("music.js : pistes des shows déclarées.");
+  if (!/pompom1: "pompom-1\.mp3", pompom2: "pompom-2\.mp3", pompom3: "pompom-3\.mp3", mascotte1: "mascotte-1\.mp3", mascotte2: "mascotte-2\.mp3", mascotte3: "mascotte-3\.mp3", lanceur: "lanceur-maillot\.mp3"/.test(mjs)) fail("music.js : pistes des shows déclarées.");
   if (fs.existsSync(path.join(__dirname, "assets/audio/music/mascotte.mp3")) || /"mascotte\.mp3"/.test(mjs)) fail("ancienne musique de mascotte supprimée (2026-10-10).");
-  ok("Fichiers en place : emission, entree-joueurs, pompom, mascotte-1 / -2 / -3 (l'ancienne mascotte.mp3 supprimée), lanceur-maillot.");
+  ok("Fichiers en place : emission, entree-joueurs, pompom-1 / -2 / -3, mascotte-1 / -2 / -3 (l'ancienne mascotte.mp3 supprimée), lanceur-maillot.");
 
   // ---------- Module HMMusic, audio simulé ----------
   const dom = new JSDOM(`<!doctype html><body></body>`, { runScripts: "outside-only", url: "http://localhost/" });
@@ -182,10 +182,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     // Shows : une musique par show, le temps du show seulement.
     S.events = [{ id: 0, kind: "tipoff", type: "period", quarter: 1, clock: 600, airAt: NOW - 1000, text: "" }];
     const mascotKeys = [];
-    for (const [st, key0] of [[{ kind: "timeout", team: 0, quarter: 1 }, "pompom"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 3 }, "lanceur"]]) {
+    const pomKeys = [];
+    for (const [st, key0] of [[{ kind: "timeout", team: 0, quarter: 1 }, "pompom"], [{ kind: "timeout", team: 1, quarter: 1 }, "pompom"], [{ kind: "timeout", team: 0, quarter: 1 }, "pompom"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 1 }, "mascotte"], [{ kind: "quarter-break", quarter: 3 }, "lanceur"]]) {
       let key = key0;
       S.quarter = st.quarter; S.stoppage = { ...st, startAt: NOW, endsAt: NOW + 60000 };
       NOW += 2000; court.update(S, []); await sleep(900);
+      if (key === "pompom") {
+        const p = calls.filter(c => c[0] === "play" && /^pompom[123]$/.test(c[1])).pop();
+        if (!p) fail(`show pompom girls : une des trois musiques attendue, obtenu ${JSON.stringify(calls.slice(-4))}.`);
+        key = p[1]; pomKeys.push(key);
+      }
       if (key === "mascotte") {
         const p = calls.filter(c => c[0] === "play" && /^mascotte[123]$/.test(c[1])).pop();
         if (!p) fail(`show mascotte seule : une des deux musiques de mascotte attendue, obtenu ${JSON.stringify(calls.slice(-4))}.`);
@@ -198,13 +204,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       if (!calls.slice(-3).some(c => c[0] === "stop" && c[1] === key)) fail(`show « ${key} » : musique arrêtée avec le fondu de sortie du show.`);
       NOW = S.stoppage.endsAt + 10; S.stoppage = null; court.update(S, []); await sleep(500);
     }
+    if (new Set(pomKeys).size !== 3 || pomKeys.some((k, i) => i && k === pomKeys[i - 1])) fail("pompom girls : les trois musiques à tour de rôle, obtenu " + pomKeys.join(", "));
     if (new Set(mascotKeys).size !== 3 || mascotKeys.some((k, i) => i && k === mascotKeys[i - 1])) fail("mascotte seule : les trois musiques à tour de rôle, obtenu " + mascotKeys.join(", "));
     S.stoppage = { kind: "quarter-break", quarter: 2, startAt: NOW, endsAt: NOW + 60000 }; S.quarter = 2;
     const before = calls.length; NOW += 2000; court.update(S, []); await sleep(800);
     if (calls.slice(before).some(c => c[0] === "play")) fail("pas de show en fin de Q2 : aucune musique.");
     S.stoppage = null; NOW += 60000; court.update(S, []);
     court.destroy();
-    ok(`Shows : pompom.mp3 aux temps morts, mascotte seule en fin de Q1 avec ses 3 musiques à tour de rôle (${mascotKeys.join(" → ")}), lanceur-maillot.mp3 en fin de Q3, le temps du show seulement.`);
+    ok(`Shows : pompom girls aux temps morts avec leurs 3 musiques à tour de rôle (${pomKeys.join(" → ")}), mascotte seule en fin de Q1 avec ses 3 musiques à tour de rôle (${mascotKeys.join(" → ")}), lanceur-maillot.mp3 en fin de Q3, le temps du show seulement.`);
   }
 
   // ---------- Serveur : mp3 avec requêtes partielles ----------

@@ -299,6 +299,7 @@ export function createSfx(opts = {}) {
     ftHome: { bed: 0.13, tone: 700, boo: 0, chant: false, claps: false },
     ftAway: { bed: 0.32, tone: 900, boo: 1.0, chant: false, claps: false },
     break: { bed: 0.5, tone: 950, boo: 0, chant: false, claps: false },
+    show: { bed: 0.07, tone: 850, boo: 0, chant: false, claps: false },   // spectacle en musique : public très discret
     pregame: { bed: 0.48, tone: 950, boo: 0, chant: false, claps: false },
     neutral: { bed: 0.55, tone: 1000, boo: 0, chant: false, claps: false },
     final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
@@ -463,7 +464,7 @@ export function createSfx(opts = {}) {
   }
   // Avec le fichier « salle calme » : il remplace le brouhaha dans les moments
   // calmes (avant-match, pauses, fin, murmure du lancer franc à domicile).
-  const CALM_MIX = { ftHome: { bed: 0.02, calm: 0.2 }, break: { bed: 0.08, calm: 0.5 }, pregame: { bed: 0.05, calm: 0.5 }, final: { bed: 0.1, calm: 0.45 }, ftAway: { bed: 0.2, calm: 0.25 } };
+  const CALM_MIX = { show: { bed: 0, calm: 0.1 }, ftHome: { bed: 0.02, calm: 0.2 }, break: { bed: 0.08, calm: 0.5 }, pregame: { bed: 0.05, calm: 0.5 }, final: { bed: 0.1, calm: 0.45 }, ftAway: { bed: 0.2, calm: 0.25 } };
   const OFFENSE_GAIN = 0.55, HEAT_GAIN = 1.4;
   function applyMix() {
     const mode = amb.mode, m = AMB_MIX[mode] || AMB_MIX.off;
@@ -498,7 +499,7 @@ export function createSfx(opts = {}) {
     const hidden = typeof document !== "undefined" && document.hidden;
     const musicOn = typeof window !== "undefined" && window.HMMusic && window.HMMusic.current;
     let mode = hidden ? "off" : ambienceMode(S, nowMs(), o.home != null ? o.home : 0);
-    if (musicOn && mode !== "off") mode = "break";   // musique des shows : le public se fait discret
+    if (musicOn && mode !== "off") mode = "show";   // spectacle en musique : public très discret
     // Fin de match serrée (4e quart ou prolongation, ≤ 2 min, écart ≤ 6) :
     // la salle bout (couche `amb_bed_hot`), sans changer de mode.
     const big = isBigGame(S);
@@ -530,7 +531,7 @@ export function createSfx(opts = {}) {
     // match déjà fini) : victoire à domicile = explosion puis longs
     // applaudissements (plus fort si le match était serré) ; défaite =
     // grande déception puis applaudissements polis.
-    const LIVE_MODES = ["offense", "defense", "ftHome", "ftAway", "neutral", "break"];
+    const LIVE_MODES = ["offense", "defense", "ftHome", "ftAway", "neutral", "break", "show"];
     if (mode === "final" && LIVE_MODES.includes(amb.mode) && S && S.teams) {
       const h = o.home != null ? o.home : 0, d = (S.teams[h].score || 0) - (S.teams[1 - h].score || 0);
       amb.lastReact.cheer = amb.lastReact.groan = -1e9;   // prioritaire, même juste après le dernier panier
@@ -545,6 +546,8 @@ export function createSfx(opts = {}) {
   }
   function react(r) {
     if (!r || !(prefs.amb > 0)) return false;
+    // Pendant un spectacle : seules les réactions du spectacle (très basses).
+    if (amb.mode === "show" && !r.cue) return false;
     const t0 = nowMs();
     if (t0 - (amb.lastReact[r.kind] || -1e9) < 900) return false;   // pas deux fois la même réaction collée
     amb.lastReact[r.kind] = t0;
@@ -649,12 +652,15 @@ export function createSfx(opts = {}) {
     if (!wasRunning && prefs.amb > 0 && amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); }
   };
   if (typeof document !== "undefined") GESTURES.forEach(g => document.addEventListener(g, onGesture, true));
+  // Réactions des shows (staging.js) : volontairement très discrètes.
+  const onCue = ev => { const d = ev && ev.detail; if (d && d.kind) react({ kind: d.kind, intensity: Math.min(0.5, d.intensity || 0.4), cue: true }); };
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") window.addEventListener("hm-crowd-cue", onCue);
   return {
     onEvents, play, setLevel, ready, updateAmbience, setAmbLevel,
     get level() { return prefs.level; },
     get ambLevel() { return prefs.amb; },
     get ambMode() { return amb.mode; },
     debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    destroy() { if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("hm-crowd-cue", onCue); clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
   };
 }

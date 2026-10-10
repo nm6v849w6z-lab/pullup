@@ -59,6 +59,7 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] Buzzer de fin de quart-temps / match → `buzzer.mp3` (fichier fourni, licence non vérifiée) — 2026-10-10
 - [—] Speaker / annonces : refusé par le propriétaire (« ça fait too much »)
 - [x] Victoire à domicile / défaite au coup de sifflet final (sons existants) — 2026-10-10
-- [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts) : musiques fournies, sons de foule à ajouter
+- [x] Shows : public très discret pendant la musique ; applaudissements en fin de chorégraphie,
+  petite clameur au dunk de la mascotte, cris aux t-shirts (sons existants, très bas) — 2026-10-10
 - [x] Blessure (souffle retenu), expulsion et 5e faute, antisportive (protestation) — 2026-10-10
 - [x] Remontée / série 8-0, playoffs, barrages, finales : sons existants empilés — 2026-10-10

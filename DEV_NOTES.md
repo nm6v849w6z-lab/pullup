@@ -221,11 +221,18 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     panier adverse ; grand match (`isBigGame` : « play-off / barrage /
     finale » dans `S.meta`) = réactions ×1,2, ébullition dès 5 min / écart
     ≤ 8, victoire finale = clameur + « Ooooh ! » + applaudissements.
+    Shows en musique : mode `show` (public très discret : salle calme 0,1,
+    aucune réaction de match) ; seules les réactions du show passent
+    (`staging.js:crowdCues` → évènement `hm-crowd-cue`, intensité ≤ 0,5) :
+    applaudissements en fin de chorégraphie (pompom / gala), petite clameur
+    au dunk de la mascotte (variante A, ~5,3 s du cycle de 14 s), cris
+    toutes les 5,4 s pendant les t-shirts, applaudissements en fin de show.
   - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
-    de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
-    « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
-    mascotte) → musique des pompom girls ; ancienne `mascotte.mp3`
-    supprimée. Nouvelle `entree-joueurs.mp3` (fichier fourni, 192 kb/s).
+    de rôle (`mascotte-1..3.mp3`) ; pompom girls (show seul ou gala) → 3
+    musiques à tour de rôle (`pompom-1..3.mp3`, -1 = ancienne pompom.mp3,
+    toutes ≈ −13 LUFS) ; ordre gardé dans `localStorage` (« hm-mascot-track »,
+    « hm-pompom-track », `staging.js:nextTrack`) ; ancienne `mascotte.mp3`
+    supprimée. `FILES_VERSION` « 20261010b », `music.js?v=4`. Nouvelle `entree-joueurs.mp3` (fichier fourni, 192 kb/s).
     `music.js` : URL des fichiers versionnées (`FILES_VERSION`, cache 24 h)
     — à changer à chaque remplacement de fichier ; `music.js?v=3`.
     Test : `live_ambience_files_test.js`. Boucles de
@@ -248,7 +255,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-17`.
+    trois. Assets du direct en `?v=20261010-18`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-17";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-17";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-18";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-18";
 
 // Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
 // même scène, chacun à sa place habituelle — à la mi-temps, et un temps
@@ -221,7 +221,7 @@ export function createStaging(api, getCfg) {
     ov.canvas.setAttribute("data-variant", variant);
     const LEAD = 400;                                                // ms après le début de l'arrêt
     let frame = null;
-    return { name, variant, key: st.startAt, choreo: ci, renderer: "canvas", render(now) {
+    return { name, variant, mvariant, key: st.startAt, choreo: ci, renderer: "canvas", render(now) {
       const o = api.overlay();
       if (!o) return;
       const cv = o.canvas;
@@ -376,16 +376,21 @@ export function createStaging(api, getCfg) {
   // Mascotte SEULE : ses trois musiques à tour de rôle (une par show, l'ordre
   // est gardé d'un match à l'autre dans ce navigateur). Gala (pompom girls
   // + mascotte) : musique des pompom girls.
-  const SHOW_MUSIC = { pompom: "pompom", gala: "pompom", tshirt: "lanceur" };
-  const MASCOT_TRACKS = ["mascotte1", "mascotte2", "mascotte3"];
-  function nextMascotTrack() {
-    let i = 0;
-    try { i = (Number(localStorage.getItem("hm-mascot-track")) + 1) % MASCOT_TRACKS.length || 0; localStorage.setItem("hm-mascot-track", String(i)); }
-    catch (e) { i = (nextMascotTrack.n = ((nextMascotTrack.n == null ? -1 : nextMascotTrack.n) + 1) % MASCOT_TRACKS.length); }
-    return MASCOT_TRACKS[i];
+  // Pompom girls (show seul ou gala) : leurs trois musiques à tour de rôle,
+  // ordre gardé lui aussi dans ce navigateur.
+  const SHOW_MUSIC = { tshirt: "lanceur" };
+  const ROTATIONS = { mascot: { store: "hm-mascot-track", tracks: ["mascotte1", "mascotte2", "mascotte3"] },
+    pompom: { store: "hm-pompom-track", tracks: ["pompom1", "pompom2", "pompom3"] } };
+  const rotN = {};
+  function nextTrack(which) {
+    const R = ROTATIONS[which]; let i = 0;
+    try { i = (Number(localStorage.getItem(R.store)) + 1) % R.tracks.length || 0; localStorage.setItem(R.store, String(i)); }
+    catch (e) { i = rotN[which] = ((rotN[which] == null ? -1 : rotN[which]) + 1) % R.tracks.length; }
+    return R.tracks[i];
   }
   function showMusic(sh) {
-    if (sh.name === "mascot") return sh.music || (sh.music = nextMascotTrack());
+    if (sh.name === "mascot") return sh.music || (sh.music = nextTrack("mascot"));
+    if (sh.name === "pompom" || sh.name === "gala") return sh.music || (sh.music = nextTrack("pompom"));
     return SHOW_MUSIC[sh.name] || null;
   }
   let musicAt = 0, musicKey = null;
@@ -403,12 +408,38 @@ export function createStaging(api, getCfg) {
   }
   function musicOff() { const M = typeof window !== "undefined" ? window.HMMusic : null; if (M && musicKey) M.stop(musicKey); musicKey = null; }
 
+  // ---------- réactions (discrètes) du public pendant les shows ----------
+  // 2026-10-10 : applaudissements à la fin de la chorégraphie des pompom
+  // girls, petite clameur au dunk de la mascotte (variante A), cris quand
+  // les t-shirts partent. Signal « hm-crowd-cue » écouté par sfx.js (qui
+  // garde ces réactions très basses) ; une fois par moment.
+  const cued = new Set();
+  function cue(id, kind, intensity) {
+    if (cued.has(id) || typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
+    cued.add(id); if (cued.size > 200) cued.delete(cued.values().next().value);
+    try { window.dispatchEvent(new CustomEvent("hm-crowd-cue", { detail: { kind, intensity } })); } catch (e) { /* rien */ }
+  }
+  function crowdCues(ph, now) {
+    if (!show || !ph.st || (api.shown && !api.shown())) return;
+    const el = now - ph.st.startAt - 400, left = ph.st.endsAt - now, k = ph.st.startAt;
+    if (el < 0) return;
+    if ((show.name === "pompom" || show.name === "gala") && left <= 2600 && left > 900) cue(k + ":fin-choreo", "applause", 0.5);
+    const mascA = (show.name === "mascot" && show.variant === "A") || (show.name === "gala" && show.mvariant === "A");
+    if (mascA) {
+      const m = show.name === "gala" ? el - 2500 : el;
+      if (m >= 0) { const n = Math.floor(m / 14000), ph2 = m - n * 14000; if (ph2 >= 5300 && ph2 < 6500 && left > 1500) cue(k + ":dunk:" + n, "cheer", 0.45); }
+    }
+    if (show.name === "tshirt" && left > 1500) { const n = Math.floor(el / 5400); if (el - n * 5400 < 800) cue(k + ":tee:" + n, "cheer", 0.35); }
+    if ((show.name === "mascot" || show.name === "tshirt") && left <= 2600 && left > 900) cue(k + ":fin", "applause", 0.4);
+  }
+
   // ---------- boucle ----------
   function tick(nowP) {
     if (destroyed) return;
     const now = api.now();
     const ph = phaseAt(now);
     music(ph, nowP);
+    crowdCues(ph, now);
     const changed = ph.key !== phaseKey;
     if (changed) {
       phaseKey = ph.key; phaseStartedAt = now;
