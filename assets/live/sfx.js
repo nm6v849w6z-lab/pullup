@@ -87,7 +87,10 @@ export function crowdReactionFor(e, S, home = 0) {
   const clutch = S && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6;
   // Contre (fil : tir manqué `blocked`, équipe = celle du tireur) : grande
   // clameur si l'équipe à domicile contre, déception si elle est contrée.
-  if (e.kind === "shot" && e.blocked && (t === 0 || t === 1)) return t === home ? { kind: "groan", intensity: 0.8 } : { kind: "cheer", intensity: 1.35 * (clutch ? 1.2 : 1) };
+  // Contre du domicile : « Ooooh ! » d'émerveillement, puis la clameur.
+  if (e.kind === "shot" && e.blocked && (t === 0 || t === 1)) return t === home ? { kind: "groan", intensity: 0.8 } : { kind: "wow", intensity: 1.2, also: { kind: "cheer", intensity: 1.35 * (clutch ? 1.2 : 1), delay: 700 } };
+  // Blessure : le public retient son souffle, inquiet.
+  if (e.kind === "injury") return { kind: "gasp", intensity: 0.9 };
   // Faute sifflée CONTRE l'équipe à domicile (fil : équipe = celle qui fait
   // la faute ; faute sur tir : tir manqué avec `foulType`, faute de l'autre
   // équipe) : huées de protestation, plus fortes sur technique / antisportive.
@@ -495,6 +498,13 @@ export function createSfx(opts = {}) {
     const hotChanged = hot !== amb.hot, tensionChanged = tension !== amb.tension;
     if (hotChanged) { amb.hot = hot; amb.log.push({ kind: "hot", on: hot, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
     if (tensionChanged) { amb.tension = tension; amb.log.push({ kind: "tension", on: tension, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
+    // Tir décisif imminent (4e quart ou prolongation, ≤ 24 s, écart ≤ 3) :
+    // le public retient son souffle, une fois par tir annoncé.
+    const na = S && S.nextAction;
+    if (na && na.kind === "shot" && mode !== "off" && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 24 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 3) {
+      const dt = na.airAt - nowMs();
+      if (dt > 0 && dt <= 1800 && amb.gaspFor !== na.airAt) { amb.gaspFor = na.airAt; react({ kind: "gasp", intensity: 1 }); }
+    }
     const changed = setMode(mode);   // applique le mélange avec les états « bouillant » / « tension » à jour
     if ((hotChanged || tensionChanged) && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
     return changed ? mode : null;
@@ -506,6 +516,8 @@ export function createSfx(opts = {}) {
     amb.lastReact[r.kind] = t0;
     amb.log.push({ kind: "react", react: r.kind, intensity: r.intensity, at: t0 }); if (amb.log.length > 80) amb.log.shift();
     crowdSound(r);
+    // Réaction enchaînée (ex. « Ooooh ! » puis clameur sur un contre).
+    if (r.also) { const nx = r.also; const fire = () => { amb.lastReact[nx.kind] = -1e9; react(nx); }; if (nx.delay) { const id = setTimeout(fire, nx.delay); amb.alsoTimers = (amb.alsoTimers || []).concat(id); } else fire(); }
     return true;
   }
   function crowdSound(r) {
@@ -523,12 +535,12 @@ export function createSfx(opts = {}) {
         if (buf) { const src = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = Math.min(1.3, 0.85 * k * (0.92 + Math.random() * 0.16)); src.buffer = buf; src.connect(g); g.connect(ambDuck); src.start(t + 0.13); return; }
         const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
         src.buffer = crowdNoise(); bp.type = "bandpass";
-        if (r.kind === "cheer") {          // clameur qui monte puis retombe (+ « woo » aigu)
+        if (r.kind === "cheer" || r.kind === "wow") {          // clameur qui monte puis retombe (+ « woo » aigu)
           bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.4); bp.Q.value = 0.7;
           g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45 * k, t + 0.18); g.gain.setTargetAtTime(0.0001, t + 0.7, 0.55 + 0.25 * k);
           if (k >= 1.3) for (let i = 0; i < 3; i++) shout(t + 0.1 + i * 0.12, 0.7, 330 + Math.random() * 90, "o", 0.035);
           for (let i = 0; i < Math.round(6 * k); i++) crowdClap(t + 0.35 + i * 0.16 + Math.random() * 0.05, 0.06);
-        } else if (r.kind === "groan" || r.kind === "jeer") {   // « ohhh » déçu, grave, qui descend
+        } else if (r.kind === "groan" || r.kind === "jeer" || r.kind === "gasp") {   // « ohhh » déçu, grave, qui descend
           bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(380, t + 0.9); bp.Q.value = 1.4;
           g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * k, t + 0.12); g.gain.setTargetAtTime(0.0001, t + 0.5, 0.35);
         } else {                           // applaudissements
@@ -593,6 +605,6 @@ export function createSfx(opts = {}) {
     get ambLevel() { return prefs.amb; },
     get ambMode() { return amb.mode; },
     debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { clearAmbTimers(); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    destroy() { clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
   };
 }

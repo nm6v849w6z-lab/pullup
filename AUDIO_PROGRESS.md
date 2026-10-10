@@ -45,9 +45,11 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] Contre du domicile → grande clameur ; contre-attaque conclue → grand moment ;
   interception → clameur (sons existants) — 2026-10-10
 - [x] Montée à l'approche des 24 s (défense, ≤ 6 s) — 2026-10-10
-- [ ] « Ooooh ! » d'émerveillement (fichiers à fournir : noah0189 264499, IENBA 488472)
-- [ ] Huées contre le porteur adverse, dernière possession, public qui retient son souffle
-  (HowardV 264376)
+- [x] « Ooooh ! » d'émerveillement → `amb_wow_1..3` (324890 + IENBA 488472, superposés) :
+  contre du domicile, puis clameur — 2026-10-10 (licence de 324890 à confirmer)
+- [x] Public qui retient son souffle → `amb_gasp` (HowardV 264376) : tir décisif imminent,
+  blessure — 2026-10-10
+- [ ] Huées contre le porteur adverse, dernière possession
 - [ ] Dunk / alley-oop : le moteur ne les distingue pas (types : three, jumper, fastbreak,
   layup, post, floater)
 - [ ] Variantes faible / moyenne / forte / exceptionnelle des réactions fréquentes

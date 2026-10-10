@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "files": {
     "amb_bed": "amb_bed.mp3",
     "amb_cheer": ["amb_cheer_1.mp3", "amb_cheer_2.mp3", "amb_cheer_3.mp3"],
@@ -13,6 +13,8 @@
     "amb_bed_calm": "amb_bed_calm.mp3",
     "amb_bed_hot": "amb_bed_hot.mp3",
     "amb_offense": "amb_offense.mp3",
-    "amb_jeer": ["amb_jeer_1.mp3", "amb_jeer_2.mp3", "amb_jeer_3.mp3"]
+    "amb_jeer": ["amb_jeer_1.mp3", "amb_jeer_2.mp3", "amb_jeer_3.mp3"],
+    "amb_wow": ["amb_wow_1.mp3", "amb_wow_2.mp3", "amb_wow_3.mp3"],
+    "amb_gasp": "amb_gasp.mp3"
   }
 }

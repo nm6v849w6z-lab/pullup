@@ -182,3 +182,35 @@ figure ici).
 | Modifications | Extraits de la boucle « salle pleine » (1–3,6 s, 8,5–11,3 s, 15,5–17,9 s), montée 0,22 s, extinction 1,1 s, −16 dBFS RMS ; MP3 96 kb/s |
 | Restrictions | Aucune connue |
 
+## amb_wow_1.mp3 · amb_wow_2.mp3 · amb_wow_3.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_wow_{1,2,3}.mp3` (clé `amb_wow`, « Ooooh ! » d'émerveillement : contre de l'équipe à domicile, avant la clameur) |
+| Ressource originale | (1) « Crowd Oooh.wav » (Freesound n° 324890, compte de l'auteur supprimé) ; (2) « Small crowd reactions » (Freesound n° 488472) — fichiers originaux fournis par le propriétaire du jeu |
+| Auteur | (1) deleted_user_2104797 (alias Adam_N) ; (2) IENBA |
+| Source | https://freesound.org/s/324890/ ; https://freesound.org/people/IENBA/sounds/488472/ |
+| Licence | (2) Creative Commons 0 (recherche Freesound) ; (1) **à confirmer** sur la page (les autres sons de ce compte vérifiés — 324891, 346684 — sont CC0) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 (Freesound inaccessible depuis l'environnement) |
+| Attribution requise | Non si CC0 |
+| Usage commercial / jeu | Autorisé si CC0 |
+| Modifications | « Salle pleine » : chaque variante superpose les 3 « Oooh » de 324890 (×3 hauteurs ±5 %, panoramique) et les 4 premières réactions de 488472 (à −10 dB), départs décalés de 0 à 80 ms ; 3,6 s, extinction 1,2 s, −16 dBFS ; MP3 96 kb/s |
+| Restrictions | Aucune connue |
+
+## amb_gasp.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_gasp.mp3` (clé `amb_gasp`, public qui retient son souffle : tir décisif imminent, blessure) |
+| Ressource originale | « small crowd gasp shock surprise.wav » (Freesound n° 264376), fichier original fourni par le propriétaire du jeu |
+| Auteur | HowardV |
+| Source | https://freesound.org/people/HowardV/sounds/264376/ |
+| Licence | Creative Commons 0 (CC0 1.0) (recherche Freesound) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 |
+| Attribution requise | Non |
+| Usage commercial / jeu | Autorisé |
+| Modifications | 4 couches décalées (0 / 120 / 250 / 400 ms, hauteur ×0,95 à ×1,05, panoramique) pour une plus grande salle ; 3,8 s, extinction 1,4 s, −18 dBFS ; MP3 96 kb/s |
+| Restrictions | Aucune connue |
+

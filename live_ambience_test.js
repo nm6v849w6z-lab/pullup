@@ -64,7 +64,9 @@ function fakeAudio() {
   R({ kind: "shot", team: H, made: true, zone: "mid" }, { quarter: 4, clock: 40 }, { kind: "cheer", i: 1.5 }, "panier décisif en fin de match : plus fort");
   assert.strictEqual(crowdReactionFor({ kind: "substitution", team: H }, base, H), null, "changement : rien");
   // Priorité 2 (2026-10-10) : contres, contre-attaques, fautes contre l'équipe à domicile.
-  R({ kind: "shot", team: A, made: false, blocked: true }, {}, { kind: "cheer", i: 1.35 }, "contre de l'équipe à domicile : grande clameur");
+  R({ kind: "shot", team: A, made: false, blocked: true }, {}, { kind: "wow", i: 1.2 }, "contre de l'équipe à domicile : « Ooooh ! »");
+  assert.strictEqual(crowdReactionFor({ kind: "shot", team: A, made: false, blocked: true }, base, H).also.kind, "cheer", "… puis grande clameur");
+  R({ kind: "injury", team: H }, {}, { kind: "gasp", i: 0.9 }, "blessure : le public retient son souffle");
   R({ kind: "shot", team: H, made: false, blocked: true }, {}, { kind: "groan", i: 0.8 }, "domicile contré : déception");
   R({ kind: "shot", team: H, made: true, zone: "paint", shotType: "fastbreak" }, {}, { kind: "cheer", i: 1.3 }, "contre-attaque au cercle : grand moment");
   R({ kind: "foul", team: H }, {}, { kind: "jeer", i: 1 }, "faute sifflée contre le domicile : protestation");
