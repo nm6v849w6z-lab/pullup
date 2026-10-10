@@ -6,9 +6,13 @@ vérification). Licences : `AUDIO_LICENSES.md`. Moteur : `assets/live/sfx.js`
 synthèse prend le relais). Accès réseau de l'environnement : freesound.org /
 cdn.freesound.org autorisés (pixabay.com refusé : 403).
 
-## En cours
-- [ ] A. Brouhaha permanent → `amb_bed` (boucle continue, sans speaker, sans
-  pause, sans applaudissements)
+## Fait
+- [x] A. Brouhaha permanent → `amb_bed.mp3` (Freesound 635492, kyles, CC0) — 2026-10-10
+
+## Retenu pour plus tard
+- Freesound 678544 « AF Crowd Cheer LOOP » (mglennsound, CC0, 21 s, enregistré
+  à un match de basket) : l'utilisateur le voit après un panier à domicile
+  (`amb_cheer`) — à proposer au prochain tour.
 
 ## Pistes refusées
 - Freesound 412160 « Fans at Basketball Game » (phillyfan972) : speaker,
@@ -16,7 +20,7 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 
 ## Priorité 1 — Indispensable (prochains)
 - [ ] C. Chant « Defense! Defense! » → `amb_chant` (actuellement synthétisé)
-- [ ] D. Clameur panier à domicile (2 pts / 3 pts, intensités) → `amb_cheer`
+- [ ] D. Clameur panier à domicile (2 pts / 3 pts, intensités) → `amb_cheer` (piste pressentie : 678544)
 - [ ] D/E. Déception (panier adverse, tir ou lancer manqué à domicile) → `amb_groan`
 - [ ] A/E. Applaudissements (lancer réussi, temps mort, fin de quart) → `amb_applause`
 - [ ] E. Huées sur lancer franc adverse (boucle) → `amb_boo`
