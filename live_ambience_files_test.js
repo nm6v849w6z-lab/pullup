@@ -75,6 +75,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   sfx.updateAmbience({ ...base, possession: 0 });
   ok("Lancer franc adverse : huées enregistrées (amb_boo.mp3) en boucle, remontées sans relance ; plus de sifflets synthétisés.");
 
+  // Encouragements en attaque (amb_offense), salle calme (amb_bed_calm),
+  // ébullition en fin de match serrée (amb_bed_hot) : boucles créées une
+  // seule fois ; l'état « bouillant » suit le score et le temps réels.
+  const once = n => started.filter(s => s.name === n);
+  sfx.updateAmbience({ ...base, possession: 0 });
+  sfx.updateAmbience({ ...base, status: "pregame" });
+  sfx.updateAmbience({ ...base, possession: 0 });
+  await sleep(50);
+  for (const n of ["amb_offense.mp3", "amb_bed_calm.mp3", "amb_bed_hot.mp3"]) assert.ok(once(n).length === 1 && once(n)[0].loop, n + " : une boucle, créée une fois");
+  const hotLog = () => sfx.debug().ambLog.filter(x => x.kind === "hot").map(x => x.on);
+  sfx.updateAmbience({ ...base, possession: 0, quarter: 4, clock: 90, teams: [{ score: 80 }, { score: 78 }] });
+  sfx.updateAmbience({ ...base, possession: 1, quarter: 4, clock: 80, teams: [{ score: 80 }, { score: 78 }] });
+  sfx.updateAmbience({ ...base, possession: 1, quarter: 4, clock: 70, teams: [{ score: 90 }, { score: 70 }] });
+  assert.deepStrictEqual(hotLog(), [true, false], "salle en ébullition en fin de match serrée seulement : " + JSON.stringify(hotLog()));
+  assert.ok(!sfx.debug().ambLog.some(x => x.kind === "mode" && /hot/.test(x.mode)), "l'ébullition ne change pas le mode");
+  sfx.updateAmbience({ ...base, possession: 0 });
+  await sleep(50);
+  assert.ok(["amb_offense.mp3", "amb_bed_calm.mp3", "amb_bed_hot.mp3"].every(n => once(n).length === 1), "aucune relance des boucles");
+  ok("Attaque : encouragements enregistrés ; avant-match / pauses : salle calme ; fin de match serrée : salle en ébullition — boucles créées une fois, jamais relancées.");
+
   const cheers = () => started.filter(s => /^amb_cheer/.test(s.name)).map(s => s.name);
   let id = 100;
   for (let i = 0; i < 12; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 0, made: true, zone: "mid" }], base); await sleep(5); }

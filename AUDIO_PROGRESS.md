@@ -22,6 +22,11 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
   fin de quart-temps (version longue)
 - [x] E. Huées sur lancer franc adverse → `amb_boo.mp3` (Freesound 678537, mglennsound, CC0,
   fichier original fourni ; 8 couches empilées pour une plus grande salle) — 2026-10-10
+- [x] B. Encouragements en attaque → `amb_offense.mp3` (Freesound 637468, kyles, CC0 à
+  reconfirmer) — 2026-10-10
+- [x] A. Salle calme → `amb_bed_calm.mp3` (Freesound 360703, eguobyte, CC0) ; salle en
+  ébullition (fin de match serrée) → `amb_bed_hot.mp3` (Freesound 629884, kyles, CC0, empilé)
+  — 2026-10-10
 
 
 ## Pistes refusées
@@ -33,8 +38,7 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
   creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
-- [ ] B. Applaudissements rythmiques / « Let's go » en attaque
-- [ ] A. Variantes de fond : salle calme, salle en ébullition
+- [ ] B. « Let's go [équipe] ! » scandé (aucune source libre trouvée pour l'instant)
 
 ## Priorité 2 — Immersion
 - [ ] Huées contre le porteur adverse, contestation arbitrale, grognements

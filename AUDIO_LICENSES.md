@@ -117,3 +117,52 @@ figure ici).
 | Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
 | Modifications | « Salle plus grande » : 8 couches empilées (décalages aléatoires, hauteur ×0,92 à ×1,08, panoramique, filtrage des aigus pour les couches lointaines, micro-retards) ; extrait 6–30 s du mélange bouclé avec fondu enchaîné de 1,5 s (boucle de 24 s) ; −20 dBFS RMS ; MP3 112 kb/s stéréo 44,1 kHz (0,34 Mo) |
 | Restrictions | Aucune connue (huées et sifflets de foule, pas de parole identifiable) |
+
+## amb_offense.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_offense.mp3` (clé `amb_offense`, boucle montée quand l'équipe à domicile attaque, remplace les applaudissements synthétisés) |
+| Ressource originale | « crowd partying cheering applause all around.flac » (Freesound n° 637468), fichier original FLAC fourni par le propriétaire du jeu |
+| Auteur | kyles |
+| Source | https://freesound.org/people/kyles/sounds/637468/ |
+| Licence | Creative Commons 0 (CC0 1.0) — **à reconfirmer sur la page** : Freesound inaccessible depuis l'environnement le 2026-10-10 ; tous les autres sons de cet auteur vérifiés (635492, 629884, 451600) sont CC0 |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Attribution requise | Non (crédit facultatif) |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Vérifiée le | 2026-10-10 (indirectement, voir Licence) |
+| Modifications | Extrait 0,2–28,6 s (sifflet vers 29 s retiré) ; boucle de 26,9 s, fondu enchaîné 1,5 s ; −21 dBFS RMS ; MP3 112 kb/s stéréo 44,1 kHz |
+| Restrictions | Aucune connue |
+
+## amb_bed_calm.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_bed_calm.mp3` (clé `amb_bed_calm`, salle calme : avant-match, pauses, fin de match, murmure des lancers francs à domicile) |
+| Ressource originale | « Large_crowd_medium_distance_stereo.wav » (Freesound n° 360703), fichier original WAV fourni par le propriétaire du jeu |
+| Auteur | eguobyte |
+| Source | https://freesound.org/people/eguobyte/sounds/360703/ |
+| Licence | Creative Commons 0 (CC0 1.0) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Attribution requise | Non (crédit facultatif) |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Vérifiée le | 2026-10-10 (page Freesound, avant le blocage) |
+| Modifications | Boucle de 55,1 s (fichier entier, fondu enchaîné 2 s) ; −23 dBFS RMS ; MP3 112 kb/s stéréo 44,1 kHz |
+| Restrictions | Aucune connue (≈ 1 000 personnes qui discutent, pas de parole distincte) |
+
+## amb_bed_hot.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_bed_hot.mp3` (clé `amb_bed_hot`, salle en ébullition : 4e quart-temps ou prolongation, ≤ 2 min, écart ≤ 6) |
+| Ressource originale | « crowd large cheer arena stadium hockey game Montreal Canadiens Habs chant applause whistle.flac » (Freesound n° 629884), fichier original FLAC fourni par le propriétaire du jeu |
+| Auteur | kyles |
+| Source | https://freesound.org/people/kyles/sounds/629884/ |
+| Licence | Creative Commons 0 (CC0 1.0) (résultat de recherche Freesound filtrée CC0) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Attribution requise | Non (crédit facultatif) |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Vérifiée le | 2026-10-10 |
+| Modifications | Passage « chaud » 8–16,8 s (avant : salle calme ; après : sifflet et coupure) nivelé puis empilé en 7 couches (décalages, hauteur ×0,93 à ×1,07, panoramique, aigus adoucis pour les couches lointaines) ; boucle de 22,5 s, fondu 1,5 s ; −20 dBFS RMS ; MP3 112 kb/s |
+| Restrictions | Aucune connue |
+

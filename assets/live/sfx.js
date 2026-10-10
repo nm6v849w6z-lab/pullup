@@ -283,7 +283,7 @@ export function createSfx(opts = {}) {
     final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
     off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
   };
-  const amb = { mode: "off", bed: null, boo: null, chant: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
+  const amb = { mode: "off", hot: false, bed: null, boo: null, chant: null, calm: null, heat: null, cheerLoop: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
   let noiseBuf = null;
   function crowdNoise() {
     // Bruit « rose » de 4 s, généré UNE fois et réutilisé partout.
@@ -328,10 +328,19 @@ export function createSfx(opts = {}) {
   // changement de possession ; sans fichier, chants synthétisés (chantOnce).
   const CHANT_GAIN = 0.75;
   const hasFile = key => !!(manifest.files && manifest.files[key]);
+  // Couches enregistrées facultatives (créées une fois, si le fichier existe) :
+  // chant défensif, salle calme (`amb_bed_calm`), salle en ébullition
+  // (`amb_bed_hot`), encouragements en attaque (`amb_offense`).
+  function fileLayers() {
+    if (!amb.chant && hasFile("amb_chant")) amb.chant = loopLayer("amb_chant", () => {});
+    if (!amb.calm && hasFile("amb_bed_calm")) amb.calm = loopLayer("amb_bed_calm", () => {});
+    if (!amb.heat && hasFile("amb_bed_hot")) amb.heat = loopLayer("amb_bed_hot", () => {});
+    if (!amb.cheerLoop && hasFile("amb_offense")) amb.cheerLoop = loopLayer("amb_offense", () => {});
+  }
   function ensureLayers() {
-    if (!amb.chant && amb.bed && hasFile("amb_chant")) amb.chant = loopLayer("amb_chant", () => {});
-    if (amb.bed || !audio()) return;
-    if (hasFile("amb_chant")) amb.chant = loopLayer("amb_chant", () => {});
+    if (amb.bed) { fileLayers(); return; }
+    if (!audio()) return;
+    fileLayers();
     // Fond : brouhaha (passe-bande large) qui « respire » (deux LFO lents).
     amb.bed = loopLayer("amb_bed", (src, g, layer) => {
       const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1000; bp.Q.value = 0.55;
@@ -427,9 +436,27 @@ export function createSfx(opts = {}) {
     clearAmbTimers();
     const m = AMB_MIX[amb.mode] || AMB_MIX.off;
     if (m.chant && !amb.chant) { const loop = () => { chantOnce(); amb.chantTimer = setTimeout(loop, 2600 + Math.random() * 900); }; amb.chantTimer = setTimeout(loop, 700); }
-    if (m.claps) { const loop = () => { clapsOnce(); amb.clapTimer = setTimeout(loop, 5200 + Math.random() * 3500); }; amb.clapTimer = setTimeout(loop, 1800 + Math.random() * 1500); }
+    if (m.claps && !amb.cheerLoop) { const loop = () => { clapsOnce(); amb.clapTimer = setTimeout(loop, 5200 + Math.random() * 3500); }; amb.clapTimer = setTimeout(loop, 1800 + Math.random() * 1500); }
     // Fichier de huées fourni : ses sifflets suffisent (pas de sifflets synthétisés).
     if (amb.mode === "ftAway" && !hasFile("amb_boo")) { const loop = () => { whistleOnce(); amb.whistleTimer = setTimeout(loop, 1400 + Math.random() * 1200); }; amb.whistleTimer = setTimeout(loop, 300); }
+  }
+  // Avec le fichier « salle calme » : il remplace le brouhaha dans les moments
+  // calmes (avant-match, pauses, fin, murmure du lancer franc à domicile).
+  const CALM_MIX = { ftHome: { bed: 0.02, calm: 0.2 }, break: { bed: 0.08, calm: 0.5 }, pregame: { bed: 0.05, calm: 0.5 }, final: { bed: 0.1, calm: 0.45 }, ftAway: { bed: 0.2, calm: 0.25 } };
+  const OFFENSE_GAIN = 0.55, HEAT_GAIN = 1.4;
+  function applyMix() {
+    const mode = amb.mode, m = AMB_MIX[mode] || AMB_MIX.off;
+    const cm = amb.calm ? CALM_MIX[mode] : null;
+    const hot = amb.hot && !!amb.heat && (mode === "offense" || mode === "defense");
+    // Lancer franc : on « fait le silence » vite ; sinon fondu plus doux.
+    const tc = mode === "ftHome" ? 0.35 : 0.9;
+    const bed = (cm ? cm.bed : m.bed) * (hot ? 0.45 : 1);
+    if (amb.bed) { T(amb.bed.gain.gain, bed, tc); if (amb.bed.filter) T(amb.bed.filter.frequency, m.tone, 1.2); }
+    if (amb.calm) T(amb.calm.gain.gain, cm ? cm.calm : 0, tc);
+    if (amb.heat) T(amb.heat.gain.gain, hot ? HEAT_GAIN : 0, hot ? 1.2 : 0.8);
+    if (amb.cheerLoop) T(amb.cheerLoop.gain.gain, mode === "offense" ? OFFENSE_GAIN * (hot ? 1.4 : 1) : 0, mode === "offense" ? 0.6 : 0.4);
+    if (amb.boo) T(amb.boo.gain.gain, m.boo, m.boo ? 0.5 : 0.8);
+    if (amb.chant) T(amb.chant.gain.gain, m.chant ? CHANT_GAIN * (hot ? 1.15 : 1) : 0, m.chant ? 0.45 : 0.3);
   }
   function setMode(mode) {
     if (mode === amb.mode) return false;
@@ -437,15 +464,8 @@ export function createSfx(opts = {}) {
     amb.log.push({ kind: "mode", mode, from: prev, at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
     if (!(prefs.amb > 0) || !audio()) { clearAmbTimers(); return true; }
     ensureLayers();
-    const m = AMB_MIX[mode] || AMB_MIX.off;
-    // Lancer franc : on « fait le silence » vite ; sinon fondu plus doux.
-    const tc = mode === "ftHome" ? 0.35 : 0.9;
-    if (amb.bed) { T(amb.bed.gain.gain, m.bed, tc); if (amb.bed.filter) T(amb.bed.filter.frequency, m.tone, 1.2); }
-    if (amb.boo) T(amb.boo.gain.gain, m.boo, m.boo ? 0.5 : 0.8);
-    if (amb.chant) {
-      T(amb.chant.gain.gain, m.chant ? CHANT_GAIN : 0, m.chant ? 0.45 : 0.3);
-      if (m.chant) { amb.log.push({ kind: "chant", file: true, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
-    }
+    applyMix();
+    if (amb.chant && (AMB_MIX[mode] || {}).chant) { amb.log.push({ kind: "chant", file: true, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
     scheduleLoops();
     return true;
   }
@@ -456,7 +476,14 @@ export function createSfx(opts = {}) {
     const musicOn = typeof window !== "undefined" && window.HMMusic && window.HMMusic.current;
     let mode = hidden ? "off" : ambienceMode(S, nowMs(), o.home != null ? o.home : 0);
     if (musicOn && mode !== "off") mode = "break";   // musique des shows : le public se fait discret
-    return setMode(mode) ? mode : null;
+    // Fin de match serrée (4e quart ou prolongation, ≤ 2 min, écart ≤ 6) :
+    // la salle bout (couche `amb_bed_hot`), sans changer de mode.
+    const hot = !!(S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6);
+    const hotChanged = hot !== amb.hot;
+    if (hotChanged) { amb.hot = hot; amb.log.push({ kind: "hot", on: hot, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
+    const changed = setMode(mode);   // applique le mélange avec l'état « bouillant » à jour
+    if (hotChanged && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
+    return changed ? mode : null;
   }
   function react(r) {
     if (!r || !(prefs.amb > 0)) return false;

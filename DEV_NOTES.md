@@ -186,7 +186,13 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     1,3 → version longue. Huées `amb_boo` = boucle de 24 s « salle
     pleine » (Freesound 678537, CC0, 8 couches empilées), gain 1,0 en
     `ftAway` (≈ niveau du chant) ; avec ce fichier, plus de sifflets
-    synthétisés.
+    synthétisés. Couches facultatives (`fileLayers`) : `amb_offense`
+    (attaque, remplace les claps synthétisés), `amb_bed_calm` (CALM_MIX :
+    avant-match, pauses, fin, murmure lancer domicile), `amb_bed_hot`
+    (fin de match serrée = `amb.hot`, n'est pas un mode : `applyMix`
+    sans changement de mode). Niveaux mesurés (Chromium, « moyenne ») :
+    lancer domicile −33 dB < calme −25 < attaque −21 < défense −17 ≈ huées
+    < fin serrée −15.
   - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
     de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
     « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
@@ -214,7 +220,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-9`.
+    trois. Assets du direct en `?v=20261010-10`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;
