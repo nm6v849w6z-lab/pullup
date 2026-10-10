@@ -20,6 +20,30 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-10) — Téléphone : défilement fluide, Ordres
+  instantanés (envoi à « Enregistrer »)**.
+  - **Ordres, envoi différé** (moteurbasket3.html, `ordresPending`) :
+    chaque réglage s'applique tout de suite à l'écran et rejoint une file
+    (`ordresQueueTactics` / `ordresQueueLineup` / `ordresQueuePlan`) au lieu
+    d'un POST par appui. « Enregistrer » (validateOrdres) envoie l'état
+    complet et vide la file (remise en place si échec). Filet de sécurité :
+    `flushOrdresPending` en quittant l'écran (showPage), en changeant de
+    journée (renderOrdresGrid), avant `refreshFromServerAndReenter`, et
+    `visibilitychange`/`pagehide` (keepalive). « Annuler » et l'application
+    d'une tactique enregistrée vident la file. Hors de l'écran Ordres :
+    envoi immédiat comme avant.
+  - **Défilement** (assets/mobile/mobile.css, mobile.js `html.m-ios`) :
+    plus d'`overscroll-behavior:none` sur iPhone (fige le défilement en
+    bord de page sous WebKit) ; plus aucun `backdrop-filter` sur téléphone
+    (barre du bas, barre Enregistrer, menus du terrain de composition…),
+    fonds opaques ; tableau Staff (analyste vidéo) qui débordait (433 px).
+    Mesuré dans Chromium : 0 tâche longue, 0 décalage de mise en page,
+    aucune page plus large que 390 px. Non reproduit sur un vrai iPhone.
+  - Tests : ordres_deferred_save_test.js (nouveau) ; confirmed_tactics et
+    ordres_lock_revert adaptés (cliquer « Enregistrer »).
+  - Déjà en échec avant (dépendent de la date) : cup_ordres_planning_test,
+    private_league_ui_test.
+
 - **🟢 LIVRÉ (2026-10-09) — Mode Sélection : « Donner / Modifier vos
   ordres » depuis le calendrier, la barre du haut et le tableau de bord**.
   Causes : (1) le calendrier du mode (calendrier public des sélections,

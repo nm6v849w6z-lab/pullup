@@ -4174,6 +4174,7 @@ window.HM_I18N_EN = {
   "Voir la tactique": "View tactics",
   "Ce match n'est plus à venir : ses ordres ne sont plus modifiables.": "This game is no longer upcoming: its orders can no longer be changed.",
   "Aucun match à venir : vous préparez la tactique par défaut.": "No upcoming game: you are setting the default tactics.",
+  "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page).": "Your settings apply on screen right away. “Save” sends them to the server (they are also sent automatically if you leave the page).",
   "Modifier vos ordres": "Edit your orders",
   "mohawk": "mohawk",
   "Moins": "Less",

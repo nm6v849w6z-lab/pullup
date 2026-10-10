@@ -3870,6 +3870,7 @@ window.HM_I18N_EL = {
   "Voir la tactique": "Δες την τακτική",
   "Ce match n'est plus à venir : ses ordres ne sont plus modifiables.": "Αυτός ο αγώνας δεν είναι πλέον προσεχής: οι εντολές του δεν αλλάζουν πια.",
   "Aucun match à venir : vous préparez la tactique par défaut.": "Κανένας προσεχής αγώνας: ετοιμάζεις την προεπιλεγμένη τακτική.",
+  "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page).": "Οι ρυθμίσεις σου εφαρμόζονται αμέσως στην οθόνη. Το «Αποθήκευση» τις στέλνει στον διακομιστή (στέλνονται και αυτόματα αν φύγεις από τη σελίδα).",
   "Modifier vos ordres": "Επεξεργάσου τις εντολές σου",
   "mohawk": "mohawk",
   "Moins": "Λιγότερο",

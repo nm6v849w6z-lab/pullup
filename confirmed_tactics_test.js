@@ -259,7 +259,10 @@ console.log("✅ Les 3 lignes 'Surveiller' ajoutent/retirent bien des affectatio
 // ---------------------------------------------------------------------
 // 7) Persistance de bout en bout : tous ces changements survivent à un
 //    rechargement complet de la page (nouvelle session JSDOM, même serveur).
+//    Envoi différé (2026-10-10) : les réglages partent à « Enregistrer ».
 // ---------------------------------------------------------------------
+win.document.getElementById("ordresValidateBtn").click();
+await new Promise(r => setTimeout(r, 0));
 await flush(dom);
 const saved = readRawSave(savePath);
 console.log("\nSauvegarde brute — tactique confirmée :", {
@@ -354,6 +357,9 @@ if (liveTierAfter !== liveTierBefore) throw new Error("❌ Éditer le niveau tac
 if (plannedTier !== "confirmée") throw new Error("❌ Le changement aurait dû être enregistré dans le plan de cette journée future.");
 console.log("✅ Préparer une journée future avec le niveau tactique 'confirmée' ne touche jamais aux ordres en direct.");
 
+// Envoi différé (2026-10-10) : le plan part à « Enregistrer ».
+doc3.getElementById("ordresValidateBtn").click();
+await new Promise(r => setTimeout(r, 0));
 await flush(dom3);
 const savedPlan = readRawSave(savePath);
 // Clé composite "championship:<round>" (voir Team.planKey côté moteur) dans

@@ -141,6 +141,10 @@
     var mq = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
     var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
     document.documentElement.classList.toggle("m-standalone", !!standalone);
+    // iPhone / iPad (iPadOS se présente comme un Mac tactile) : html.m-ios,
+    // réglage du défilement propre à WebKit (voir mobile.css, 2026-10-10).
+    var ios = /iP(hone|ad|od)/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    document.documentElement.classList.toggle("m-ios", ios);
     // Appli native (Capacitor, voir mobile-app/) : le pont Capacitor est
     // injecté dans la page du jeu (allowNavigation) → html.m-native (retour
     // utilisateur 2026-09-30 (téléphone), nom du club masqué dans l'en-tête).

@@ -3870,6 +3870,7 @@ window.HM_I18N_ZH = {
   "Voir la tactique": "查看战术",
   "Ce match n'est plus à venir : ses ordres ne sont plus modifiables.": "这场比赛已不再是即将进行的比赛：其指令无法再修改。",
   "Aucun match à venir : vous préparez la tactique par défaut.": "没有即将进行的比赛：你正在设置默认战术。",
+  "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page).": "你的设置会立即在屏幕上生效。“保存”会将其发送到服务器（离开页面时也会自动发送）。",
   "Modifier vos ordres": "修改你的指令",
   "mohawk": "mohawk",
   "Moins": "更少",

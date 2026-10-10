@@ -80,7 +80,9 @@ const clickSeg = (groupId, value) => [...doc.querySelectorAll(`#${groupId} .seg-
 const other = v => win.eval("DEF_LIST").find(x => x !== v);
 clickSeg("ordresDefenseSelect", other(win.eval(`teamA.getPlanForRound(${future.round}, "championship").defense`)));
 await flush(dom);
-assert(win.eval(`teamA.hasPlanForRound(${future.round}, "championship")`) && savedPlans()[key], "Une modification crée le plan (local + serveur)");
+// Envoi différé (2026-10-10) : le plan existe tout de suite à l'écran, il
+// ne part au serveur qu'à « Enregistrer » (ou en quittant la journée).
+assert(win.eval(`teamA.hasPlanForRound(${future.round}, "championship")`) && !savedPlans()[key] && win.eval("ordresPending.plans.size") === 1, "Une modification crée le plan en local, envoi différé (rien au serveur avant « Enregistrer »)");
 assert(!$("ordresRevertBtn").disabled, "« Annuler » actif après modification");
 $("ordresRevertBtn").click();
 await flush(dom);

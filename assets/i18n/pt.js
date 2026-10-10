@@ -3870,6 +3870,7 @@ window.HM_I18N_PT = {
   "Voir la tactique": "Ver a tática",
   "Ce match n'est plus à venir : ses ordres ne sont plus modifiables.": "Este jogo já não está por disputar: as suas ordens já não podem ser alteradas.",
   "Aucun match à venir : vous préparez la tactique par défaut.": "Nenhum jogo por disputar: está a preparar a tática padrão.",
+  "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page).": "As suas definições aplicam-se logo no ecrã. «Guardar» envia-as para o servidor (também são enviadas automaticamente se sair da página).",
   "Modifier vos ordres": "Editar suas ordens",
   "mohawk": "mohawk",
   "Moins": "Menos",

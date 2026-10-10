@@ -14,7 +14,28 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
    tactile → même couche mobile qu'en portrait (voir MOBILE_QUERY). */
 @media (max-width: 768px), (max-height: 520px) and (pointer: coarse) {
   html { -webkit-text-size-adjust: 100%; }
-  body { overscroll-behavior-y: none; }
+  /* Défilement (retour utilisateur 2026-10-10, téléphone : « quand je
+     scrolle, la page peut se bloquer, petit tremblement pendant 1 ou 2 s »).
+     - iPhone (html.m-ios, voir mobile.js) : plus d'overscroll-behavior:none
+       sur la page ; sous WebKit, il fige le défilement en bord de page le
+       temps du rebond supprimé (à-coup, appuis ignorés). Rebond natif rendu.
+       Ailleurs (Android) : gardé, contre le « tirer pour actualiser ».
+     - Plus aucun flou d'arrière-plan (backdrop-filter) : barre du bas fixe,
+       barre « Enregistrer » collée, menus du terrain de composition (un par
+       poste)… recalculés à CHAQUE image du défilement sur téléphone. Fonds
+       opaques (ils l'étaient déjà presque : rendu identique). */
+  html:not(.m-ios) body { overscroll-behavior-y: none; }
+  .m-tabbar, .ordres-savebar, .pz-nav, .court-marker select, .sp2-hero-stats, .sl-ring {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  }
+  .ordres-savebar { background: var(--panel) !important; }
+  .pz-nav { background: var(--bg) !important; }
+  /* Staff : le tableau des rapports de l'analyste vidéo dépassait de
+     l'écran (433 px pour 390) — la page entière glissait de côté sous le
+     doigt. Il défile désormais dans sa carte, colonnes resserrées. */
+  .stf-fog { overflow-x: auto; }
+  .stf-fog .fog-table td:nth-child(4) { white-space: normal; }
+  .stf-fog .fog-table td, .stf-fog .fog-table th { padding: 6px 4px; }
   /* iOS zoome sur tout champ texte de moins de 16px au focus : on l'en
      empêche (les <select> gardent leur taille, sinon les menus du terrain
      de la feuille de match débordent). */
@@ -132,7 +153,7 @@ html.m-standalone .topbar-club, html.m-native .topbar-club { display: none; }
   .m-tabbar {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-    background: rgba(15,23,40,.96); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    background: rgb(15,23,40);
     border-top: 1px solid var(--line);
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
   }

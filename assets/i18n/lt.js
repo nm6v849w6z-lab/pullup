@@ -3870,6 +3870,7 @@ window.HM_I18N_LT = {
   "Voir la tactique": "Žiūrėti taktiką",
   "Ce match n'est plus à venir : ses ordres ne sont plus modifiables.": "Šios rungtynės jau nebeateina: jų nurodymų nebegalima keisti.",
   "Aucun match à venir : vous préparez la tactique par défaut.": "Nėra artėjančių rungtynių: ruošiate numatytąją taktiką.",
+  "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page).": "Jūsų nustatymai iškart taikomi ekrane. „Išsaugoti“ juos išsiunčia į serverį (jie taip pat išsiunčiami automatiškai, jei išeinate iš puslapio).",
   "Modifier vos ordres": "Keisk savo nurodymus",
   "mohawk": "mohawk",
   "Moins": "Mažiau",

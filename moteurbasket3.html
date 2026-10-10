@@ -20395,6 +20395,64 @@ function syncTacticsToServer(patch) {
   }
 }
 
+// Écran Ordres : envoi DIFFÉRÉ (retour utilisateur 2026-10-10, téléphone :
+// « si j'appuie sur un des boutons, il ne s'active pas de suite […]
+// l'information pourrait être envoyée seulement quand on clique sur
+// Enregistrer »). Chaque réglage s'applique tout de suite à l'écran (état
+// local) et rejoint cette file au lieu de partir vers le serveur ;
+// « Enregistrer » (validateOrdres) envoie l'état complet de la journée et
+// vide la file. Filet de sécurité, pour qu'un réglage oublié soit quand
+// même joué : la file part en UN envoi, en arrière-plan, quand on quitte
+// l'écran Ordres, qu'on change de journée, que l'appli passe en arrière-
+// plan, ou avant un rechargement de l'équipe depuis le serveur. Hors de
+// l'écran Ordres (autres pages qui réutilisent ces éditeurs) : envoi
+// immédiat, comme avant.
+const ordresPending = { tactics: null, lineup: false, plans: new Map() };
+function ordresDeferring() {
+  const prep = typeof document !== "undefined" && document.getElementById("prepSection");
+  return !!prep && !prep.classList.contains("hidden");
+}
+function ordresQueueTactics(patch) {
+  if (!ordresDeferring()) { syncTacticsToServer(patch); return; }
+  ordresPending.tactics = Object.assign(ordresPending.tactics || {}, JSON.parse(JSON.stringify(patch)));
+}
+function ordresQueueLineup() {
+  if (!ordresDeferring()) { syncLineupToServer(); return; }
+  ordresPending.lineup = true;
+}
+function ordresQueuePlan(round, patch, competition) {
+  if (!ordresDeferring()) { syncPlanToServer(round, patch, competition); return; }
+  ordresPending.plans.set((competition || "championship") + "|" + round, { round, competition, patch: JSON.parse(JSON.stringify(patch)) });
+}
+function ordresHasPending() {
+  return !!ordresPending.tactics || ordresPending.lineup || ordresPending.plans.size > 0;
+}
+function ordresClearPending() {
+  ordresPending.tactics = null; ordresPending.lineup = false; ordresPending.plans.clear();
+}
+// Envoie la file (état ACTUEL de teamA pour la feuille de match) ; résout
+// une fois les réponses reçues. `keepalive` : page en train de se fermer.
+function flushOrdresPending(keepalive) {
+  if (!ordresHasPending() || typeof teamA === "undefined" || !teamA) return Promise.resolve();
+  const sends = [];
+  const post = (url, body, label) => {
+    try {
+      sends.push(fetchApi(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: !!keepalive })
+        .then(res => { if (!res.ok) console.warn(label + " refusé côté serveur.", res.status); })
+        .catch(e => console.warn(label + " : serveur indisponible :", e)));
+    } catch (e) { console.warn(label + " : serveur indisponible :", e); }
+  };
+  if (ordresPending.tactics) post("/api/tactics", ordresPending.tactics, "Tactiques");
+  if (ordresPending.lineup) post("/api/lineup", { starters: teamA.lineup.starters, backupPositions: teamA.lineup.backupPositions, minutes: teamA.lineup.minutes || null, convoked: teamA.lineup.convoked || null }, "Feuille de match");
+  ordresPending.plans.forEach(x => post("/api/plan", { round: x.round, patch: x.patch, competition: x.competition }, "Plan (préparation à l'avance)"));
+  ordresClearPending();
+  return Promise.all(sends).then(() => undefined);
+}
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOrdresPending(true); });
+}
+if (typeof window !== "undefined") window.addEventListener("pagehide", () => flushOrdresPending(true));
+
 // Préparation à l'avance d'une journée FUTURE (voir renderOrdresGrid/commit
 // ci-dessus, planProxyForRound, Team.stagePlanForRound côté moteur) —
 // contrepartie serveur de syncTacticsToServer/syncLineupToServer ci-dessus,
@@ -21191,6 +21249,9 @@ const NARROW_PAGE_IDS = new Set([]);
 
 function showPage(id) {
   if (typeof hmNavSchedule === "function") hmNavSchedule();
+  // On quitte l'écran Ordres sans « Enregistrer » : réglages envoyés en
+  // arrière-plan (envoi différé, voir ordresPending).
+  if (id !== "prepSection" && typeof ordresHasPending === "function" && ordresHasPending()) flushOrdresPending();
   // Nouvelle page : on repart du haut (retour utilisateur 2026-09-30 : sur
   // téléphone, une fiche joueur ouverte depuis le bas d'une liste gardait
   // le défilement, le « ← Retour » du haut restait hors de l'écran).
@@ -22835,7 +22896,7 @@ function renderOrdresStatus() {
   el.className = "ordres-status " + kind;
   el.innerHTML = `<span class="ordres-status-dot" aria-hidden="true"></span><span>${text}</span>`;
   el.title = (kind === "dirty" || kind === "todo")
-    ? "Chaque changement est déjà enregistré automatiquement. « Enregistrer » confirme l'enregistrement auprès du serveur."
+    ? "Vos réglages s'appliquent tout de suite à l'écran. « Enregistrer » les envoie au serveur (ils partent aussi automatiquement si vous quittez la page)."
     : "";
   // Barre du bas (vue composition, 2026-09-30) : « Annuler » n'a de sens
   // qu'avec des modifications depuis l'ouverture de la journée ; tout est
@@ -22929,6 +22990,8 @@ function ordresOrdersSnapshot(team) {
 function revertOrdres() {
   const base = ordresBaseline;
   if (!base || ordresPanelLocked || tqEdit || !ordresDirty) return;
+  // Rien de ce qui est annulé ne doit partir (envoi différé).
+  ordresClearPending();
   const snap = JSON.parse(JSON.stringify(base.snap));
   if (base.immediate) {
     TACTIC_PRESET_FIELDS.forEach(k => { teamA[k] = snap[k]; });
@@ -22993,6 +23056,9 @@ function syncTopbarHeightVar() {
 })();
 
 function renderOrdresGrid() {
+  // Nouvelle journée affichée / écran reconstruit : les réglages pas encore
+  // enregistrés de l'affichage précédent partent d'abord (envoi différé).
+  if (ordresHasPending()) flushOrdresPending();
   const grid = document.getElementById("prepGrid");
   grid.innerHTML = "";
   // Retour utilisateur (2026-09) : "ça me met ✅ Ordres enregistrés. [...] je
@@ -23127,7 +23193,7 @@ function renderOrdresGrid() {
     // ligne partagée était donc silencieusement perdu au prochain
     // rechargement, et jamais vu par l'auto-simulation du serveur au moment
     // programmé du match. Voir server/actions.js:setPlan + /api/plan.
-    syncPlanToServer(round, patch, competition);
+    ordresQueuePlan(round, patch, competition);
     renderOrdresRoundSelector(); // pour faire apparaître/rester le ● "déjà préparé"
     renderOrdresChemistryGauge();
     renderOrdresTacticalKnowledgeGauge(proxy);
@@ -23244,6 +23310,11 @@ async function validateOrdresImpl() {
   }
   if (btn) btn.disabled = true;
   setFeedback("Enregistrement en cours…", "pending");
+  // Envoi différé (voir ordresPending) : cet envoi porte l'état complet de
+  // la journée, la file est donc vidée ; remise en place en cas d'échec,
+  // pour partir plus tard (sortie de page) si le manager ne réessaie pas.
+  const pendingBefore = { tactics: ordresPending.tactics, lineup: ordresPending.lineup, plans: new Map(ordresPending.plans) };
+  ordresClearPending();
   try {
     if (isImmediate) {
       const [tacticsRes, lineupRes] = await Promise.all([
@@ -23329,6 +23400,9 @@ async function validateOrdresImpl() {
     // rester visible sur l'écran Ordres, pas être masqué par une navigation.
     TAB_HANDLERS.calendrier();
   } catch (e) {
+    if (pendingBefore.tactics) ordresPending.tactics = Object.assign(pendingBefore.tactics, ordresPending.tactics || {});
+    ordresPending.lineup = ordresPending.lineup || pendingBefore.lineup;
+    pendingBefore.plans.forEach((v, k) => { if (!ordresPending.plans.has(k)) ordresPending.plans.set(k, v); });
     setFeedback(`Échec de l'enregistrement : ${e.message || e}`, "error");
   } finally {
     if (btn) btn.disabled = ordresPanelLocked;
@@ -23573,6 +23647,9 @@ async function refreshFromServerAndReenter(justWatchedRound, justWatchedCompetit
   // (countdown, visibilitychange, goToLiveTab, goToOrdresTab), aucun
   // desquels n'attend le retour de cette fonction.
   if (ordresValidationInFlight) await ordresValidationInFlight;
+  // Réglages des Ordres pas encore envoyés : au serveur AVANT de recharger
+  // l'équipe, sinon le rechargement les effacerait.
+  if (ordresHasPending()) await flushOrdresPending();
   const loaded = await loadMyTeam();
   // Serveur injoignable : rien à faire de plus ici (pas de nouvelle
   // tentative automatique) — un rechargement manuel de la page suffira une
@@ -33754,7 +33831,7 @@ function buildTeamPanel(team, side, opts = {}) {
   colRight.className = "prep-col prep-col--right";
   columnsWrap.append(colLeft, colRight);
 
-  const syncField = (field, value) => { if (editable && team === teamA) syncTacticsToServer({ [field]: value }); };
+  const syncField = (field, value) => { if (editable && team === teamA) ordresQueueTactics({ [field]: value }); };
 
   // --- petits gabarits locaux (carte, champ, aide, segmenté) ---
   const makeCard = (id, title, aside) => {
@@ -33874,7 +33951,7 @@ function buildTeamPanel(team, side, opts = {}) {
         if (editable) onDirty();
         // Uniquement les ordres EN DIRECT de teamA — jamais un plan préparé
         // à l'avance (voir planProxyForRound), qui passe par onDirty/commit.
-        if (editable && team === teamA) syncTacticsToServer({ offensivePriorities: team.offensivePriorities });
+        if (editable && team === teamA) ordresQueueTactics({ offensivePriorities: team.offensivePriorities });
       });
       chip.appendChild(cb);
       if (checked) {
@@ -34267,7 +34344,7 @@ function renderLineupEditor(team, container, opts = {}) {
   // Uniquement les ordres EN DIRECT de teamA — voir syncLineupToServer ; un
   // plan préparé à l'avance (proxy, voir planProxyForRound) passe par
   // onDirty/commit.
-  const sync = () => { if (team === teamA) syncLineupToServer(); rerender(); };
+  const sync = () => { if (team === teamA) ordresQueueLineup(); rerender(); };
   const makeCard = (id, title, asideText) => {
     const section = document.createElement("section");
     section.className = "ordres-card" + (id ? " area-" + id : "");
@@ -34772,7 +34849,7 @@ function renderPlayingTimeCard(team, container, makeCard, rerender) {
   // "enlève ça : Minutes visées par poste, sur 40 / Le moteur vise ces
   // minutes…") — tout est dans le guide.
   const card = makeCard("ordresCardMinutes", "Temps de jeu");
-  const sync = () => { if (team === teamA) syncLineupToServer(); rerender(); };
+  const sync = () => { if (team === teamA) ordresQueueLineup(); rerender(); };
   const starterIds = new Set(POSITIONS.map(pos => team.lineup.starters[pos]).filter(Boolean));
   const grid = document.createElement("div");
   grid.className = "pt-grid";
@@ -48030,6 +48107,8 @@ function saveTacticPresetFrom(slot, name, snap) {
 function applyTacticPresetToOrders(slot, round, competition, immediate) {
   const patch = teamA.tacticPresetPatch(slot);
   if (!patch) return false;
+  // La tactique remplace tous les réglages : rien d'ancien ne doit partir après elle.
+  ordresClearPending();
   if (immediate) {
     const tactics = {};
     TACTIC_PRESET_FIELDS.forEach(k => { if (patch[k] !== undefined) { teamA[k] = patch[k]; tactics[k] = patch[k]; } });
