@@ -57,5 +57,6 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 
 ## Priorité 3 — Finition
 - [ ] Présentation des joueurs, entrée des équipes, speaker, mi-temps / reprise
-- [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts), victoire à domicile
+- [x] Victoire à domicile / défaite au coup de sifflet final (sons existants) — 2026-10-10
+- [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts) : musiques fournies, sons de foule à ajouter
 - [ ] Événements rares : blessure, expulsion, antisportive, remontée, playoffs, titre

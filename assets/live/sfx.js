@@ -516,6 +516,18 @@ export function createSfx(opts = {}) {
       const dt = na.airAt - nowMs();
       if (dt > 0 && dt <= 1800 && amb.gaspFor !== na.airAt) { amb.gaspFor = na.airAt; react({ kind: "gasp", intensity: 1 }); }
     }
+    // Coup de sifflet final (passage du jeu à « final », pas l'arrivée sur un
+    // match déjà fini) : victoire à domicile = explosion puis longs
+    // applaudissements (plus fort si le match était serré) ; défaite =
+    // grande déception puis applaudissements polis.
+    const LIVE_MODES = ["offense", "defense", "ftHome", "ftAway", "neutral", "break"];
+    if (mode === "final" && LIVE_MODES.includes(amb.mode) && S && S.teams) {
+      const h = o.home != null ? o.home : 0, d = (S.teams[h].score || 0) - (S.teams[1 - h].score || 0);
+      amb.lastReact.cheer = amb.lastReact.groan = -1e9;   // prioritaire, même juste après le dernier panier
+      if (d > 0) react({ kind: "cheer", intensity: d <= 5 ? 1.8 : 1.4, also: { kind: "applause", intensity: 1.3, delay: 1800 } });
+      else if (d < 0) react({ kind: "groan", intensity: d >= -5 ? 1.4 : 1, also: { kind: "applause", intensity: 0.6, delay: 2500 } });
+      amb.log.push({ kind: "finalReaction", diff: d, at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+    }
     const changed = setMode(mode);   // applique le mélange avec les états « bouillant » / « tension » à jour
     if ((hotChanged || tensionChanged) && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
     return changed ? mode : null;
