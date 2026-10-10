@@ -6,8 +6,13 @@ vérification). Licences : `AUDIO_LICENSES.md`. Moteur : `assets/live/sfx.js`
 synthèse prend le relais). Accès réseau de l'environnement : freesound.org /
 cdn.freesound.org autorisés (pixabay.com refusé : 403).
 
-## Fait
-- [x] A. Brouhaha permanent → `amb_bed.mp3` (Freesound 412160, CC0) — 2026-10-10
+## En cours
+- [ ] A. Brouhaha permanent → `amb_bed` (boucle continue, sans speaker, sans
+  pause, sans applaudissements)
+
+## Pistes refusées
+- Freesound 412160 « Fans at Basketball Game » (phillyfan972) : speaker,
+  creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
 - [ ] C. Chant « Defense! Defense! » → `amb_chant` (actuellement synthétisé)

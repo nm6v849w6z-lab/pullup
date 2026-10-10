@@ -168,8 +168,8 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     (pointerup / touchend / click / keydown ; « interrupted » sur iPhone).
     Vrais sons (2026-10-10, un par un, validés par l'utilisateur) : registre
     `AUDIO_LICENSES.md`, suivi `AUDIO_PROGRESS.md`, test
-    `audio_assets_license_test.js`. `amb_bed.mp3` (Freesound 412160, CC0,
-    boucle de 100 s, −23 dBFS ≈ niveau de l'ancienne synthèse). Boucles de
+    `audio_assets_license_test.js`. (1re piste de fond refusée et retirée :
+    speaker, creux, applaudissements ; fond synthétisé en attendant.) Boucles de
     fichiers : départ à un point aléatoire, `trimLoop` ignore le silence
     d'encodeur MP3 aux bords.
   - **Lancers francs réglementaires (2026-10-10)** : `ftAlignment` /
