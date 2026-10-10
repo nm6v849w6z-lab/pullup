@@ -53,7 +53,8 @@ function fakeAudio() {
   const R = (e, S, want, label) => { const r = crowdReactionFor(e, { ...base, ...S }, H); assert.deepStrictEqual(r && { kind: r.kind, i: +r.intensity.toFixed(2) }, want, label); };
   R({ kind: "shot", team: H, made: true, zone: "mid" }, {}, { kind: "cheer", i: 1 }, "2 points domicile : clameur");
   R({ kind: "shot", team: H, made: true, zone: "three" }, {}, { kind: "cheer", i: 1.4 }, "3 points domicile : clameur plus forte");
-  R({ kind: "shot", team: A, made: true, zone: "three" }, {}, { kind: "groan", i: 1 }, "panier adverse : déception");
+  R({ kind: "shot", team: A, made: true, zone: "mid" }, {}, { kind: "groan", i: 1 }, "panier adverse : déception");
+  R({ kind: "shot", team: A, made: true, zone: "three" }, {}, { kind: "groan", i: 1.3 }, "3 points adverse : grande déception");
   R({ kind: "rebound", team: H, offensive: false }, {}, { kind: "cheer", i: 0.7 }, "tir adverse manqué : le public se réjouit");
   R({ kind: "rebound", team: A, offensive: false }, {}, { kind: "groan", i: 0.6 }, "tir domicile manqué : déception");
   R({ kind: "freeThrow", team: A, made: 0 }, {}, { kind: "cheer", i: 0.8 }, "lancer adverse manqué");

@@ -78,9 +78,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok("3 points ou panier décisif à domicile : version longue amb_cheer_big.");
 
   const n0 = cheers().length;
+  const groans = () => started.filter(s => /^amb_groan/.test(s.name)).map(s => s.name);
   t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 1, made: true, zone: "three" }], base); await sleep(5);
   assert.strictEqual(cheers().length, n0, "panier adverse : aucune clameur");
-  ok("Panier adverse : pas de clameur (déception à la place).");
+  assert.strictEqual(groans().pop(), "amb_groan_big.mp3", "3 points adverse : grand « ohhh »");
+  for (let i = 0; i < 8; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 1, made: true, zone: "mid" }], base); await sleep(5); }
+  const g = groans().slice(1);
+  assert.strictEqual(g.length, 8, "une déception par panier adverse");
+  assert.ok(g.every(n => man.files.amb_groan.includes(n)) && g.every((n, i) => i === 0 || n !== g[i - 1]), "variantes courtes, jamais la même deux fois de suite : " + g.join(","));
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "rebound", team: 1, offensive: false }], base); await sleep(5);
+  assert.strictEqual(groans().length, 10, "tir manqué à domicile : déception");
+  assert.strictEqual(cheers().length, n0, "… et aucune clameur");
+  ok(`Panier adverse : déception (${[...new Set(g)].join(", ")}), grand « ohhh » sur un 3 points ; tir manqué à domicile : déception ; jamais de clameur.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");
   process.exit(0);

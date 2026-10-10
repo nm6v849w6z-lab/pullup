@@ -54,3 +54,19 @@ figure ici).
 | Attribution requise | Inconnue |
 | Modifications | Désécrêtage (ffmpeg adeclip), −6 dB, passe-haut 90 Hz, égalisation (−2,5 dB à 3,5 kHz, −1,5 dB à 250 Hz) ; extrait 8,28–21,52 s (6 cycles « DE-FENSE ») bouclé avec fondu de 0,3 s dans un creux ; −18 dBFS RMS ; 2 variantes de hauteur/tempo (×0,955 → 13,9 s ; ×1,035 → 12,8 s) ; MP3 112 kb/s stéréo |
 | Restrictions | **À REMPLACER** par un chant sous licence (achat ou enregistrement maison) avant toute exploitation où le risque n'est pas accepté ; remplacement = déposer d'autres fichiers sous la même clé `amb_chant` |
+
+## amb_groan_1.mp3 · amb_groan_2.mp3 · amb_groan_3.mp3 · amb_groan_big.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_groan_{1,2,3}.mp3` (clé `amb_groan`, variantes tirées au hasard) et `amb_groan_big.mp3` (clé `amb_groan_big`, 3 points adverse / fin de match serrée) |
+| Ressource originale | « CRWDReac-SOCCER_Millerntor Stadium Crowd Reaction Chance Missed 01_PHILIPP FEIT_FCSP 29.546_Sound Of Sankt Pauli » (Freesound n° 829452) |
+| Auteur | itmightgetloud (Philipp Feit, « Sound Of Sankt Pauli ») |
+| Source | https://freesound.org/people/itmightgetloud/sounds/829452/ |
+| Licence | Creative Commons 0 (CC0 1.0, dédicace au domaine public) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 (page Freesound de la ressource, champ licence) |
+| Attribution requise | Non (crédit facultatif : « itmightgetloud / Freesound ») |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Modifications | Aperçu HQ MP3 (1 min 01, 6 réactions séparées par des silences) ; réactions 2, 4 et 5 (13,75–18,9 s, 38,55–44,1 s, 45,45–49,25 s) → variantes de 3,7 à 5,4 s ; réaction 1 (0–9 s) → version longue ; départ calé sur la réaction (fondu 30 ms), fondu final cos² ; corps à −16 dBFS RMS ; MP3 96 kb/s stéréo 44,1 kHz (45–110 Ko) |
+| Restrictions | Aucune connue (foule de stade, pas de parole identifiable, pas de musique) |

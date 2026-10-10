@@ -14,16 +14,19 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] C. Chant « Defense! Defense! » → `amb_chant_1..2.mp3` (fichier fourni, match Miami
   Heat 2022, **sans licence vérifiée**, utilisé sur décision du propriétaire — à remplacer
   par un chant sous licence à terme) — 2026-10-10
+- [x] D/E. Déception → `amb_groan_1..3.mp3` + `amb_groan_big.mp3` (Freesound 829452,
+  stade FC St. Pauli, CC0) — 2026-10-10 : panier adverse (grand « ohhh » sur 3 pts ou
+  fin serrée), tir manqué et lancer franc manqué à domicile
 
 
 ## Pistes refusées
 - Chant défensif : LS 11537 (CC-BY), craigsmith 438396 (CC0), johnnyguitar01 424793
   (CC0) refusés à l'écoute (2026-10-10)
+- Déception : ShangusBurger 763880 et mrrap4food 619007 (CC0) non retenus (2026-10-10)
 - Freesound 412160 « Fans at Basketball Game » (phillyfan972) : speaker,
   creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
-- [ ] D/E. Déception (panier adverse, tir ou lancer manqué à domicile) → `amb_groan`
 - [ ] A/E. Applaudissements (lancer réussi, temps mort, fin de quart) → `amb_applause`
 - [ ] E. Huées sur lancer franc adverse (boucle) → `amb_boo`
 - [ ] B. Applaudissements rythmiques / « Let's go » en attaque

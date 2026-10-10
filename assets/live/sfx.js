@@ -87,7 +87,7 @@ export function crowdReactionFor(e, S, home = 0) {
   const clutch = S && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6;
   if (e.kind === "shot" && e.made === true) {
     if (t === home) return { kind: "cheer", intensity: (e.zone === "three" ? 1.4 : 1) * (clutch ? 1.5 : 1) };
-    return { kind: "groan", intensity: clutch ? 1.3 : 1 };
+    return { kind: "groan", intensity: (e.zone === "three" ? 1.3 : 1) * (clutch ? 1.3 : 1) };   // 3 points / fin serrée : grand « ohhh »
   }
   // Tir classique manqué (fil : « rebound » ; équipe du tireur = celle du
   // rebondeur sur un rebond offensif, l'autre sinon).
