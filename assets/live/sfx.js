@@ -280,6 +280,19 @@ export function createSfx(opts = {}) {
     }
     return (noiseBuf = buf);
   }
+  // Boucle d'un fichier compressé : le MP3 / AAC ajoute un court silence
+  // au début et à la fin (délai d'encodeur, selon le navigateur) → clic ou
+  // trou à chaque tour. On boucle entre le premier et le dernier échantillon
+  // non silencieux (la boucle est préparée avec un fondu enchaîné).
+  function trimLoop(src, buf) {
+    try {
+      const d = buf.getChannelData(0), n = d.length, eps = 1e-4, lim = Math.min(n >> 2, buf.sampleRate);
+      let a = 0, b = n - 1;
+      while (a < lim && Math.abs(d[a]) < eps) a++;
+      while (b > n - 1 - lim && Math.abs(d[b]) < eps) b--;
+      if (b - a > buf.sampleRate) { src.loopStart = a / buf.sampleRate; src.loopEnd = (b + 1) / buf.sampleRate; }
+    } catch (e) { /* boucle entière */ }
+  }
   function loopLayer(fileKey, build) {
     // Couche en boucle : fichier du manifeste s'il existe, sinon synthèse.
     const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(ambDuck);
@@ -287,9 +300,9 @@ export function createSfx(opts = {}) {
     load(fileKey).then(buf => {
       try {
         const src = ctx.createBufferSource(); src.loop = true;
-        if (buf) { src.buffer = buf; src.connect(g); }
+        if (buf) { src.buffer = buf; src.connect(g); trimLoop(src, buf); }
         else { src.buffer = crowdNoise(); build(src, g, layer); }
-        src.start(ctx.currentTime + 0.02, Math.random() * 3);
+        src.start(ctx.currentTime + 0.02, Math.random() * (buf ? buf.duration * 0.9 : 3));   // point de départ varié
         layer.src = src;
       } catch (e) { /* rien */ }
     });

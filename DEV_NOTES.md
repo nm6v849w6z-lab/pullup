@@ -166,6 +166,12 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     mesuré dans Chromium), courte clameur d'essai au toucher du bouton,
     contexte audio relancé à chaque geste tant qu'il n'est pas « running »
     (pointerup / touchend / click / keydown ; « interrupted » sur iPhone).
+    Vrais sons (2026-10-10, un par un, validés par l'utilisateur) : registre
+    `AUDIO_LICENSES.md`, suivi `AUDIO_PROGRESS.md`, test
+    `audio_assets_license_test.js`. `amb_bed.mp3` (Freesound 412160, CC0,
+    boucle de 100 s, −23 dBFS ≈ niveau de l'ancienne synthèse). Boucles de
+    fichiers : départ à un point aléatoire, `trimLoop` ignore le silence
+    d'encodeur MP3 aux bords.
   - **Lancers francs réglementaires (2026-10-10)** : `ftAlignment` /
     `alignForFreeThrow` (court2d.js) : tireur seul sur la ligne, 3
     défenseurs + 2 coéquipiers dans les emplacements, les autres derrière
@@ -183,7 +189,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-2`.
+    trois. Assets du direct en `?v=20261010-3`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

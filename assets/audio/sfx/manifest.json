@@ -1,4 +1,6 @@
 {
-  "version": 1,
-  "files": {}
+  "version": 2,
+  "files": {
+    "amb_bed": "amb_bed.mp3"
+  }
 }
