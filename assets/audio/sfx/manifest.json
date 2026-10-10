@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "files": {
     "amb_bed": "amb_bed.mp3",
     "amb_cheer": ["amb_cheer_1.mp3", "amb_cheer_2.mp3", "amb_cheer_3.mp3"],
@@ -15,6 +15,7 @@
     "amb_offense": "amb_offense.mp3",
     "amb_jeer": ["amb_jeer_1.mp3", "amb_jeer_2.mp3", "amb_jeer_3.mp3"],
     "amb_wow": ["amb_wow_1.mp3", "amb_wow_2.mp3", "amb_wow_3.mp3"],
-    "amb_gasp": "amb_gasp.mp3"
+    "amb_gasp": "amb_gasp.mp3",
+    "buzzer": "buzzer.mp3"
   }
 }

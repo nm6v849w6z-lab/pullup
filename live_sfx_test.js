@@ -53,6 +53,8 @@ function fakeAudio() {
     [{ kind: "rebound", team: A, offensive: true }, [], "tir classique raté extérieur (rebond offensif) : pas de son de lancer raté"],
     [{ kind: "rebound", team: A, offensive: false }, [], "tir raté domicile : pas de « wah-wah »"],
     [{ kind: "quote", team: null }, [], "citation du présentateur"],
+    [{ kind: "quarterEnd", team: null }, ["buzzer"], "fin de quart-temps : buzzer"],
+    [{ kind: "timeout", type: "timeout", team: H }, [], "temps mort : pas de buzzer"],
   ];
   for (const [e, want, label] of cases) assert.deepStrictEqual(sfxForEvent(e, H), want, label);
   ok(`${cases.length} cas : caisse (lancer franc réussi domicile), sirène (3 pts validé domicile), sifflet (fautes), jingle (interception domicile), « wah-wah » (lancer franc raté extérieur uniquement) — et rien pour les événements voisins invalides (${SFX_RULES.length} règles).`);

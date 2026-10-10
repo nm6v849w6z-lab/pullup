@@ -214,3 +214,18 @@ figure ici).
 | Modifications | 4 couches décalées (0 / 120 / 250 / 400 ms, hauteur ×0,95 à ×1,05, panoramique) pour une plus grande salle ; 3,8 s, extinction 1,4 s, −18 dBFS ; MP3 96 kb/s |
 | Restrictions | Aucune connue |
 
+## buzzer.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/buzzer.mp3` (bruitage `buzzer` : fin de quart-temps et de match) |
+| Ressource originale | « SHOT CLOCK SOUND EFFECT HD (NO COPYRIGHT) » (fichier fourni par le propriétaire du jeu, extrait d'une vidéo en ligne) |
+| Auteur | Inconnu |
+| Source | Fichier transmis le 2026-10-10 par le propriétaire du jeu ; URL d'origine non communiquée |
+| Licence | **Non vérifiée** : mention « No Copyright » d'une vidéo, qui n'est pas une licence ; utilisation décidée par le propriétaire du jeu |
+| Conditions | Inconnues |
+| Vérifiée le | 2026-10-10 (format, durée) |
+| Attribution requise | Inconnue |
+| Modifications | Extrait utile 2,02–3,72 s (le reste est du silence), attaque 8 ms, extinction 120 ms, −14 dBFS RMS ; MP3 128 kb/s (28 Ko) |
+| Restrictions | **À remplacer** par un buzzer sous licence si le risque n'est pas accepté (même clé `buzzer`) ; son très générique (bip électronique) |
+

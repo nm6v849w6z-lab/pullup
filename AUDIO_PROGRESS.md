@@ -56,7 +56,8 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [ ] Variantes faible / moyenne / forte / exceptionnelle des réactions fréquentes
 
 ## Priorité 3 — Finition
-- [ ] Présentation des joueurs, entrée des équipes, speaker, mi-temps / reprise
+- [x] Buzzer de fin de quart-temps / match → `buzzer.mp3` (fichier fourni, licence non vérifiée) — 2026-10-10
+- [—] Speaker / annonces : refusé par le propriétaire (« ça fait too much »)
 - [x] Victoire à domicile / défaite au coup de sifflet final (sons existants) — 2026-10-10
 - [ ] Shows (pom-pom girls, mascotte, lancer de t-shirts) : musiques fournies, sons de foule à ajouter
 - [x] Blessure (souffle retenu), expulsion et 5e faute, antisportive (protestation) — 2026-10-10

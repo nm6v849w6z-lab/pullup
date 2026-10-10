@@ -38,6 +38,8 @@ export const SFX_RULES = [
   { key: "siren", when: (e, home) => e.kind === "shot" && e.made === true && e.zone === "three" && e.team === home },
   { key: "whistle", when: e => e.kind === "foul" || e.kind === "technicalFoul" || e.kind === "unsportsmanlikeFoul" || (e.kind === "shot" && !!e.foulType && !e.made) },
   { key: "steal", when: (e, home) => e.kind === "turnover" && e.tovType === "steal" && e.possessionAfter === home },
+  // Buzzer de fin de quart-temps (et de fin de match).
+  { key: "buzzer", when: e => e.kind === "quarterEnd" },
   // Lancer franc manqué de l'équipe à l'extérieur, et RIEN d'autre : un tir
   // classique manqué (événement « rebound » du fil) déclenche seulement une
   // réaction du public (CROWD_RULES), jamais ce bruitage.
@@ -214,6 +216,8 @@ export function createSfx(opts = {}) {
     src.start(t); src.stop(t + dur + 0.05);
   }
   const SYNTH = {
+    // Buzzer (sans fichier) : deux carrés graves légèrement désaccordés.
+    buzzer(t) { osc("square", 196, t, 1.4, 0.16, 0.01); osc("square", 199, t, 1.4, 0.12, 0.01); },
     // Caisse enregistreuse : « ka » mécanique (tiroir) puis deux tintements
     // de cloche (partiels inharmoniques), le second plus aigu : « cha-ching ».
     cash(t) {
