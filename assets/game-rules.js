@@ -48,6 +48,33 @@
   // temps de jeu que de temps de possession (règle FIBA : éteint sinon).
   const shotClockOn = (gameClock, shotClock) => gameClock > shotClock;
 
+  // Chrono du quart-temps entre deux événements du moteur (mission live
+  // 2026-10-10, « le chrono remonte ») : le moteur date tous les événements
+  // d'une possession au chrono de son DÉBUT ; le chrono défile de `prevSec`
+  // (premier événement de la série, `t0`) vers `nextSec` (prochain chrono
+  // différent, `t1`). Chaque arrêt de jeu de la série (`stops` : { at,
+  // hold } — hold = Infinity tant que des lancers francs restent à tirer)
+  // FIGE le chrono à la valeur atteinte à cet instant ; il repart après la
+  // remise en jeu et rejoint `nextSec` à `t1`. Calcul par segments, dans
+  // l'ordre des arrêts : un arrêt connu plus tard ne change jamais ce qui a
+  // déjà été affiché → le chrono ne remonte JAMAIS. Renvoie le chrono
+  // (secondes, non arrondi) et `frozenAt` (valeur au dernier arrêt, ou null).
+  function clockBetween({ prevSec, nextSec, t0, t1, now, stops = [] }) {
+    let v = prevSec, from = t0, frozenAt = null;   // segment en cours : (from, v) → (t1, nextSec)
+    const at = t => (t >= t1 ? nextSec : v - (v - nextSec) * Math.min(1, Math.max(0, (t - from) / Math.max(1, t1 - from))));
+    for (const st of stops) {
+      if (!(st.at >= t0) || st.at > now) continue;
+      const a = Math.min(st.at, t1);
+      if (a < from) { frozenAt = v; continue; }   // arrêt pendant un arrêt : déjà figé
+      v = at(a); frozenAt = v;
+      // Reprise après la remise en jeu, au plus tard à 60 % du temps restant
+      // (le chrono doit avoir le temps de rejoindre `nextSec`).
+      from = Math.min(a + (Number.isFinite(st.hold) ? Math.max(0, st.hold) : Infinity), a + (t1 - a) * 0.6);
+    }
+    if (now <= from) return { clock: v, frozenAt };
+    return { clock: at(now), frozenAt };
+  }
+
   // ---------- violations ----------
   // 8 secondes : contrôle en zone arrière sans franchissement légal.
   function isEightSecondViolation({ backcourtStart, crossedAt }) {
@@ -152,7 +179,7 @@
 
   return {
     SHOT_CLOCK, SHOT_CLOCK_RESET, BACKCOURT_SECONDS, FT_OFFENSIVE_REBOUND_FACTOR,
-    shotClockAfter, shotClockOn,
+    shotClockAfter, shotClockOn, clockBetween,
     isEightSecondViolation, isShotClockViolation, isBackcourtViolation, violationChances, rollViolations,
     arrowAfterTipoff, alternatingPossession, periodStartTeam,
     pickWeighted,

@@ -144,6 +144,10 @@ const TEMPLATE = `
         <div class="seg" data-seg="res"><button data-v="all" aria-pressed="true">Tous</button><button data-v="made">Réussis</button><button data-v="miss">Manqués</button></div>
       </div>
     </div>
+    <button type="button" class="snd-resume" data-ref="sndResume" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6M22 9l-6 6"/></svg>
+      <span>Le navigateur a mis le son en pause — <b>touchez pour le réactiver</b></span>
+    </button>
     <div class="court2d" data-ref="court2d"></div>
     <div class="court-wrap" data-ref="courtWrap" hidden><svg class="court" data-ref="court" viewBox="0 0 940 500" role="img" aria-label="Terrain avec les tirs"></svg><div class="shot-tip" data-ref="shotTip" role="tooltip"></div></div>
     <div class="legend" data-ref="chartLegend" hidden>
@@ -293,8 +297,16 @@ export function createLiveView(root, opts = {}) {
   // Bruitages (sfx.js, 2026-10-09) : déclenchés par les événements réels du
   // fil (une fois chacun), pas par le terrain. Niveau réglé au bouton
   // (coupés → bas → moyen → fort), gardé dans ce navigateur.
-  let sfx = null, buzzerCue = null;
-  import("./sfx.js?v=20261010-21").then(m => { if (sfx === false) return; sfx = m.createSfx(); buzzerCue = m.buzzerCue; if (!audible) sfx.setAudible(false); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
+  let sfx = null, buzzerCue = null, offAudio = null;
+  // Son mis en pause par le navigateur (retour sur l'onglet, rechargement,
+  // iPhone) alors que le direct en veut : bouton explicite « touchez pour le
+  // réactiver » (mission live 2026-10-10) au lieu d'un silence inexpliqué.
+  function syncSndResume() {
+    const b = $("sndResume"); if (!b) return;
+    const show = !!sfx && audible && !closed && sfx.audioStatus === "blocked";
+    if (b.hidden === show) b.hidden = !show;
+  }
+  import("./sfx.js?v=20261010-21").then(m => { if (sfx === false) return; sfx = m.createSfx(); buzzerCue = m.buzzerCue; if (!audible) sfx.setAudible(false); syncSfxBtn(); offAudio = sfx.onAudioStatus(syncSndResume); syncSndResume(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
   const SFX_LABELS = ["coupés", "bas", "moyen", "fort"];
   function syncSfxBtn() {
     const b = $("sfxBtn"); if (!b) return;
@@ -452,6 +464,7 @@ export function createLiveView(root, opts = {}) {
   }
   $("fsBtn").addEventListener("click", () => setFull(!full));
   $("commBtn").addEventListener("click", () => { if (!comm) return; comm.setOn(!comm.on); syncCommBtn(); });
+  $("sndResume").addEventListener("click", () => { if (!sfx) return; try { sfx.resumeAudio(); } catch (e) { /* rien */ } if (comm && comm.on) try { comm.setOn(true); } catch (e) { /* rien */ } setTimeout(syncSndResume, 800); });
   $("sfxBtn").addEventListener("click", () => { if (!sfx) return; sfx.setLevel((sfx.level + 1) % 4); syncSfxBtn(); if (sfx.level > 0) sfx.play("whistle", "essai"); });
   $("ambBtn").addEventListener("click", () => { if (!sfx) return; sfx.setAmbLevel((sfx.ambLevel + 1) % 4); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } });
   $("fsExit").addEventListener("click", () => setFull(false));
@@ -501,6 +514,7 @@ export function createLiveView(root, opts = {}) {
     audible = !!on;
     if (sfx) try { sfx.setAudible(audible); } catch (e) { /* rien */ }
     if (!audible && comm) try { comm.stop(); } catch (e) { /* rien */ }
+    syncSndResume();
   }
   function closeLive() {
     if (closed) return;
@@ -509,6 +523,7 @@ export function createLiveView(root, opts = {}) {
     if (comm) try { comm.stop(); } catch (e) { /* rien */ }
     if (court2d) try { court2d.halt(); } catch (e) { /* rien */ }
     root.classList.add("live-closed");
+    syncSndResume();
   }
   function reopenLive() {
     closed = false; closeTimer = 0;
@@ -518,6 +533,7 @@ export function createLiveView(root, opts = {}) {
   }
   function update(state) {
     if (full) adoptSeek();
+    syncSndResume();
     S = state;
     const first = seenEvents === null;
     // Fin du match : fermeture définitive ~10 s après le coup de sifflet
@@ -626,6 +642,7 @@ export function createLiveView(root, opts = {}) {
     if (miniRaf) cancelAnimationFrame(miniRaf);
     if (court2d) { try { court2d.destroy(); } catch (e) { /* rien */ } court2d = null; }
     if (comm) { try { comm.destroy(); } catch (e) { /* rien */ } } comm = false;
+    if (offAudio) { try { offAudio(); } catch (e) { /* rien */ } offAudio = null; }
     if (sfx) { try { sfx.destroy(); } catch (e) { /* rien */ } } sfx = false;
     clearTimeout(closeTimer);
     if (typeof document !== "undefined") { document.removeEventListener("fullscreenchange", onFsChange); document.removeEventListener("keydown", onFsKey); }
@@ -1171,5 +1188,5 @@ export function createLiveView(root, opts = {}) {
     $("dlg").showModal();
   }
 
-  return { update, destroy, highlights, setAudible, closeLive, get closed() { return closed; } };
+  return { update, destroy, highlights, setAudible, closeLive, get closed() { return closed; }, get audio() { return sfx || null; } };
 }

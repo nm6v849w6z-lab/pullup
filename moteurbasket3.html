@@ -93,7 +93,8 @@
      un bouton (openHoopShow), donc son chargement différé ne change rien
      en pratique. -->
 <script src="assets/hoop-shows/showPlayer.js?v=20261003-1" defer></script>
-<script src="assets/audio/music.js?v=4" defer></script>
+<script src="assets/audio/audio-core.js?v=20261010-22" defer></script>
+<script src="assets/audio/music.js?v=5" defer></script>
 <!-- Couche mobile (voir le commentaire PWA plus haut) : APRÈS la grande
      feuille de style, pour que ses règles @media(max-width:768px) l'emportent
      à spécificité égale ; defer pour la même raison que showPlayer.js. -->
@@ -19077,12 +19078,20 @@ function updateLiveClockTick() {
     // Ballon mort (sortie, faute, dernier lancer réussi, panier des deux
     // dernières minutes) : chrono ARRÊTÉ pendant la remise en jeu — même
     // règle que assets/live/adapter.js (deadBallHoldMs / shotClockBase).
+    // Arrêts de jeu de la série (même règle que assets/live/adapter.js:stopHoldMs) :
+    // remise en jeu, ou arrêt jusqu'au lancer suivant (faute sur tir, lancer non dernier).
     let stopEv = null;
-    for (let i = runStartIdx; i <= prevIdx; i++) if (liveDeadBallHoldMs(liveTickEvents[i]) || liveShotClockBase(liveTickEvents[i], prev.clockSec) !== 24) stopEv = liveTickEvents[i];
-    const t0 = runStart.airAt, t1 = nextDiff.airAt;
-    const start = stopEv ? Math.min(Math.max(t0, stopEv.airAt + liveDeadBallHoldMs(stopEv)), t0 + (t1 - t0) * 0.6) : t0;
-    const fraction = Math.min(1, Math.max(0, (now - start) / Math.max(1, t1 - start)));
-    const interpSec = prev.clockSec - (prev.clockSec - nextDiff.clockSec) * fraction;
+    const stops = [];
+    for (let i = runStartIdx; i <= prevIdx; i++) {
+      const e = liveTickEvents[i];
+      const h = (e.type === "shot" && e.foulType) || (e.type === "freeThrow" && (e.attempt || 1) < (e.of || 1)) ? Infinity : liveDeadBallHoldMs(e);
+      if (h || liveShotClockBase(e, prev.clockSec) !== 24) { stopEv = e; stops.push({ at: e.airAt, hold: h }); }
+    }
+    // Chrono : HM_RULES.clockBetween (même calcul que assets/live/adapter.js,
+    // mission live 2026-10-10 « le chrono remonte ») — arrêté au ballon mort à
+    // la valeur atteinte, jamais recalculé vers le haut.
+    const cb = window.HM_RULES.clockBetween({ prevSec: prev.clockSec, nextSec: nextDiff.clockSec, t0: runStart.airAt, t1: nextDiff.airAt, now, stops });
+    const interpSec = cb.clock;
     // Le chrono des 24s est dérivé de la valeur ARRONDIE du chrono de match
     // (pas de la valeur brute) pour que les deux restent TOUJOURS cohérents
     // entre eux à l'affichage (24 - secondes écoulées affichées = valeur
@@ -19097,12 +19106,19 @@ function updateLiveClockTick() {
     liveState.clock = interpSecRounded;
     // Chrono des 24 s : SOURCE UNIQUE (le bandeau et le terrain 2D lisent
     // liveState.shotClock), en dixièmes pour que le terrain soit fluide.
-    const elapsedSinceEvent = Math.max(0, prev.clockSec - interpSec);
+    const elapsedSinceEvent = Math.max(0, (cb.frozenAt !== null ? cb.frozenAt : prev.clockSec) - interpSec);
     const shotSec = Math.max(0, Math.min(24, liveShotClockBase(stopEv, prev.clockSec) - elapsedSinceEvent));
-    liveState.shotClock = shotSec;
-    badge.classList.remove("off");
-    badge.classList.toggle("low", shotSec <= 5);
-    badge.textContent = String(Math.ceil(shotSec));
+    // Règle FIBA (mission live 2026-10-10) : s'il reste moins de temps au
+    // quart-temps que sur le chrono des 24 s, celui-ci est ÉTEINT — jamais un
+    // « 24 » trompeur à 17 s de la fin. Même règle que le moteur et
+    // assets/live/adapter.js (HM_RULES.shotClockOn).
+    if (!(window.HM_RULES ? window.HM_RULES.shotClockOn(interpSec, shotSec) : interpSec > shotSec)) { liveState.shotClock = null; badge.classList.add("off"); }
+    else {
+      liveState.shotClock = shotSec;
+      badge.classList.remove("off");
+      badge.classList.toggle("low", shotSec <= 5);
+      badge.textContent = String(Math.ceil(shotSec));
+    }
     // La possession pendant cet intervalle est celle de l'événement à venir
     // (`next`, littéralement adjacent — pas `nextDiff` : dès la toute
     // prochaine annonce, même à chrono identique, la balle peut déjà avoir
@@ -34135,7 +34151,7 @@ function enterLiveMatch(liveMatch, opts) {
 
   liveTickEvents = liveMatch.events
     .map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSecondsFromStr(ev.clock), possession: ev.possession || null, possessionAfter: ev.possessionAfter || null, type: ev.type, team: ev.team,
-      made: ev.made, tovType: ev.tovType, deadBall: ev.deadBall, inbound: !!ev.inbound, lastTouch: ev.lastTouch || null, lastMade: ev.lastMade, of: ev.of, attempt: ev.attempt, possStart: ev.possStart }))
+      made: ev.made, tovType: ev.tovType, deadBall: ev.deadBall, inbound: !!ev.inbound, lastTouch: ev.lastTouch || null, lastMade: ev.lastMade, of: ev.of, attempt: ev.attempt, possStart: ev.possStart, foulType: ev.foulType || null, offensive: !!ev.offensive }))
     .sort((a, b) => a.airAt - b.airAt);
   liveTickPauses = liveMatch.pauses.map(p => ({ airAt: p.airAt, endAt: p.airAt + p.durationMs }));
   startLiveClockTick();

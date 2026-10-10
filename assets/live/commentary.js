@@ -90,15 +90,24 @@ export function createCommentary(opts = {}) {
   // n'a pas à gérer les requêtes partielles (Range).
   let ctx = null, gain = null;
   const buffers = new Map();   // url → Promise<AudioBuffer|null>
+  // Contexte du noyau partagé (assets/audio/audio-core.js) : un seul pour
+  // tout le jeu, jamais fermé ici ; repli sur un contexte propre (tests).
+  let core = null, ownCtx = false;
   function audio() {
+    if (!core && typeof globalThis !== "undefined" && globalThis.HMAudioCore && typeof window !== "undefined") { try { core = globalThis.HMAudioCore.get(window); } catch (e) { core = null; } }
+    if (core) {
+      const c = core.context();
+      if (c && c !== ctx) { ctx = c; buffers.clear(); try { gain = ctx.createGain(); gain.gain.value = prefs.vol; gain.connect(ctx.destination); } catch (e) { gain = null; } }
+      return ctx;
+    }
     if (ctx) return ctx;
     const AC = typeof window !== "undefined" ? (window.AudioContext || window.webkitAudioContext) : null;
     if (!AC) return null;
-    try { ctx = new AC(); gain = ctx.createGain(); gain.gain.value = prefs.vol; gain.connect(ctx.destination); } catch (e) { ctx = null; }
+    try { ctx = new AC(); ownCtx = true; gain = ctx.createGain(); gain.gain.value = prefs.vol; gain.connect(ctx.destination); } catch (e) { ctx = null; }
     return ctx;
   }
   function unlock() {
-    const c = audio(); if (c && c.state === "suspended") { try { c.resume(); } catch (e) { /* rien */ } }
+    const c = audio(); if (c && c.state === "suspended") { if (core) core.resume(); else { try { c.resume(); } catch (e) { /* rien */ } } }
     // Synthèse vocale : iOS n'accepte la première phrase que dans un geste.
     const s = tts(); if (s && !unlocked) { unlocked = true; try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; s.speak(u); } catch (e) { /* rien */ } }
   }
@@ -185,6 +194,6 @@ export function createCommentary(opts = {}) {
     say, stop, setOn, setVolume, ready,
     get on() { return prefs.on; }, get volume() { return prefs.vol; },
     debug: () => ({ on: prefs.on, files: manifest.files, log: log.slice() }),
-    destroy() { stop(); if (typeof document !== "undefined") { document.removeEventListener("visibilitychange", onVis); document.removeEventListener("pointerdown", onGesture, true); } if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    destroy() { stop(); if (typeof document !== "undefined") { document.removeEventListener("visibilitychange", onVis); document.removeEventListener("pointerdown", onGesture, true); } if (ctx && ownCtx) { try { ctx.close(); } catch (e) { /* rien */ } } else if (gain) { try { gain.disconnect(); } catch (e) { /* rien */ } } },
   };
 }

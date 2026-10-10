@@ -94,7 +94,11 @@ function fakeAudio() {
   const ctxBefore = calls.ctx;
   sfx.setAudible(false);
   assert.strictEqual(sfx.ambMode, "off", "page quittée : ambiance coupée");
-  assert.ok(calls.suspend >= 1, "page quittée : contexte audio en pause");
+  // Noyau audio partagé (assets/audio/audio-core.js, 2026-10-10) : la vue
+  // se retire (plus aucun module ne veut de son → contexte mis en pause après
+  // un court délai, pour qu'une vue qui en remplace une autre reprenne la
+  // main sans suspension) ; sa sortie propre est coupée tout de suite.
+  assert.ok(calls.suspend >= 1 || (global.window.HMAudio && global.window.HMAudio.debug().wants.length === 0), "page quittée : la vue ne demande plus de son (contexte mis en pause)");
   t += 1000;
   assert.strictEqual(sfx.play("whistle", "test"), false, "page quittée : aucun bruitage");
   sfx.onEvents([{ id: 60, kind: "shot", made: true, zone: "three", team: H, airAt: t }], live(), { home: H });

@@ -30,7 +30,18 @@
   let next = null;       // { key, opts } : demandée pendant le fondu de sortie de `cur`
   let leaseTimer = 0;
 
+  // Contexte du noyau partagé (audio-core.js, chargé avant ce fichier) :
+  // un seul AudioContext pour tout le jeu ; repli sur un contexte propre.
+  const core = window.HMAudioCore ? (() => { try { return window.HMAudioCore.get(window); } catch (e) { return null; } })() : null;
+  if (core) core.onReset(() => {
+    // Contexte recréé (bloqué / figé) : la piste en cours repart sur le nouveau.
+    ctx = null;
+    const t = cur; if (!t || t.state !== "play") return;
+    const left = t.lease ? Math.max(1000, t.lease - Date.now()) : 0;
+    release(t); cur = null; start(t.key, left ? { lease: left } : {});
+  });
   function audioCtx() {
+    if (core) { ctx = core.context(); return ctx; }
     if (ctx) return ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
@@ -69,10 +80,11 @@
     if (c) {
       try { t.src = c.createMediaElementSource(el); t.gain = c.createGain(); t.gain.gain.value = 0; t.src.connect(t.gain); t.gain.connect(c.destination); }
       catch (e) { t.src = t.gain = null; }
-      if (c.state === "suspended") { try { c.resume(); } catch (e) { /* rien */ } }
+      if (c.state === "suspended") { if (core) core.resume(); else { try { c.resume(); } catch (e) { /* rien */ } } }
     }
     if (!t.gain) el.volume = 0;
     cur = t;
+    if (core) core.want("music", true);
     renew(opts);
     if (!document.hidden) begin(t);
   }
@@ -103,7 +115,7 @@
     t.state = "out";
     ramp(t, 0, ms, () => {
       release(t);
-      if (cur === t) cur = null;
+      if (cur === t) { cur = null; if (core && !next) core.want("music", false); }
       const n = next; next = null;
       if (n) start(n.key, n.opts);
     });

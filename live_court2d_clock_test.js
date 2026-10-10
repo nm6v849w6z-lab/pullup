@@ -147,7 +147,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   let d = court.debug();
   if (d.gameOn || d.holder) fail(`coup d'envoi passé, entre-deux pas encore diffusé : pas de porteur, jeu pas commencé (gameOn ${d.gameOn}, porteur ${d.holder}).`);
   const clockTxt = () => host.querySelector(".c2d-clock-val") ? host.querySelector(".c2d-clock-val").textContent : null;
-  if (clockTxt() !== null && clockTxt() !== "24") fail(`avant l'entre-deux : 24 s figé, obtenu ${clockTxt()}.`);
+  if (clockTxt() !== null && clockTxt() !== "") fail(`avant l'entre-deux : chrono des 24 s éteint (vide, jamais un « 24 » par défaut), obtenu ${clockTxt()}.`);
   // Attente 5 s puis avance du temps de 30 s, toujours AVANT l'entre-deux.
   await run(5000);
   d = court.debug();

@@ -27,6 +27,13 @@
 // coupé, 1 bas, 2 moyen, 3 fort) gardée dans ce navigateur.
 // =====================================================================
 
+// Contexte audio : celui du noyau partagé (assets/audio/audio-core.js,
+// mission live 2026-10-10) — un seul pour tout le jeu, jamais fermé par une
+// vue ; repli sur un contexte propre sans noyau (tests).
+import "../audio/audio-core.js?v=20261010-22";
+const coreOf = () => { try { return typeof globalThis !== "undefined" && globalThis.HMAudioCore && typeof window !== "undefined" ? globalThis.HMAudioCore.get(window) : null; } catch (e) { return null; } };
+let sfxSeq = 0;
+
 export const SFX_LEVELS = [0, 0.25, 0.5, 0.85];
 const STORE = "hm-live-sfx";
 const COOLDOWN_MS = 450;          // même bruitage : pas deux fois en moins de 0,45 s
@@ -169,7 +176,9 @@ export function createSfx(opts = {}) {
   const played = new Set();       // ids d'événements déjà sonorisés
   const lastAt = {};              // bruitage → instant de la dernière lecture
   const log = [];                 // derniers bruitages (tests, diagnostic)
-  let ctx = null, master = null, comp = null, ambOut = null, ambDuck = null;
+  let ctx = null, master = null, comp = null, ambOut = null, ambDuck = null, out = null;
+  const owner = "sfx" + (++sfxSeq);
+  let core = null, offReset = null;
   let manifest = { files: {} };
   const buffers = new Map();
   const ready = (typeof fetch === "function"
@@ -178,26 +187,56 @@ export function createSfx(opts = {}) {
 
   function audio() {
     if (life.destroyed) return null;   // jamais de contexte recréé après destroy (manifeste arrivé en retard)
+    if (!core) { core = coreOf(); if (core) { offReset = core.onReset(onCoreReset); syncWant(); } }
+    if (core) { const c = core.context(); if (c && c !== ctx) buildGraph(c); return ctx; }
     if (ctx) return ctx;
     const AC = typeof window !== "undefined" ? (window.AudioContext || window.webkitAudioContext) : null;
     if (!AC) return null;
+    try { buildGraph(new AC()); } catch (e) { ctx = null; }
+    return ctx;
+  }
+  // Graphe de cette vue sur le contexte `c` : mixage (compresseur) → `out`
+  // (coupure propre à la vue : page quittée, fin du match) → sortie.
+  function buildGraph(c) {
+    ctx = c;
+    // Nouveau contexte (noyau recréé) : les couches de l'ancien sont mortes.
+    for (const k of ["bed", "boo", "chant", "calm", "heat", "cheerLoop"]) amb[k] = null;
+    noiseBuf = null; buffers.clear();
     try {
-      ctx = new AC();
       comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
       master = ctx.createGain(); master.gain.value = SFX_LEVELS[prefs.level] || 0;
-      master.connect(comp); comp.connect(ctx.destination);
+      out = ctx.createGain(); out.gain.value = life.audible && !life.closed ? 1 : 0;
+      master.connect(comp); comp.connect(out); out.connect(ctx.destination);
       // Bus de l'ambiance : son propre volume (réglage « Ambiance »), et un
       // étage « duck » qui s'efface sous les bruitages importants.
       ambOut = ctx.createGain(); ambOut.gain.value = AMB_LEVELS[prefs.amb] || 0;
       ambDuck = ctx.createGain(); ambDuck.gain.value = 1;
       ambDuck.connect(ambOut); ambOut.connect(comp);
     } catch (e) { ctx = null; }
-    return ctx;
   }
+  // Le noyau a recréé le contexte (bloqué / figé, dans un geste) : graphe
+  // reconstruit, ambiance relancée sur l'état courant.
+  function onCoreReset() {
+    if (life.destroyed) return;
+    ctx = null; audio();
+    if (amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); }
+  }
+  // Cette vue veut du son (niveau > 0, page affichée, match pas clos).
+  function syncWant() {
+    if (!core) return;
+    core.want(owner, !life.destroyed && life.audible && !life.closed && (prefs.level > 0 || prefs.amb > 0));
+  }
+  // Coupure / retour propres à la vue (le contexte partagé n'est jamais
+  // suspendu pour une seule vue : une autre peut l'utiliser).
+  function setOut(on) { if (out && ctx) { try { out.gain.cancelScheduledValues(ctx.currentTime); out.gain.setTargetAtTime(on ? 1 : 0.0001, ctx.currentTime, 0.08); } catch (e) { out.gain.value = on ? 1 : 0; } } }
   // Contexte mis en pause par le navigateur (créé avant un geste, onglet
   // revenu, « interrupted » sur iPhone) : relancé au prochain geste.
-  function unlock() { const c = audio(); if (c && c.state !== "running" && c.state !== "closed") { try { const q = c.resume(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
+  function unlock() {
+    const c = audio(); if (!c) return;
+    if (core) { syncWant(); if (c.state !== "running") core.resume(); return; }
+    if (c.state !== "running" && c.state !== "closed") { try { const q = c.resume(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } }
+  }
   // Variantes : une clé du manifeste peut lister plusieurs fichiers ; on en
   // tire un au hasard, jamais deux fois de suite le même.
   const lastPick = {};
@@ -646,6 +685,7 @@ export function createSfx(opts = {}) {
       crowdSound({ kind: "cheer", intensity: 0.8 });
       amb.log.push({ kind: "preview", at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
     } else clearAmbTimers();
+    syncWant();
   }
 
   // Nouveaux événements du fil (déjà diffusés). `state.teams` index 0 =
@@ -689,6 +729,7 @@ export function createSfx(opts = {}) {
     prefs.level = Math.max(0, Math.min(SFX_LEVELS.length - 1, Number(level) | 0)); save();
     if (master) try { master.gain.value = SFX_LEVELS[prefs.level]; } catch (e) { /* rien */ }
     if (prefs.level > 0) { unlock(); preload(); }
+    syncWant();
   }
   // Déblocage du son : à CHAQUE geste tant que le contexte n'est pas
   // « running » (pointerdown seul ne compte pas comme geste sur iPhone :
@@ -711,28 +752,36 @@ export function createSfx(opts = {}) {
   // Page du direct affichée ou non (live-view.setAudible) : hors de la
   // page, plus aucun son (contexte en pause, boucles coupées) ; au retour,
   // l'ambiance reprend sur l'état courant.
-  function suspendCtx() { if (ctx && ctx.state === "running") { try { const q = ctx.suspend(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
+  // Sans noyau partagé (tests) : contexte propre mis en pause. Avec le
+  // noyau : il suspend lui-même le contexte quand plus personne ne veut de son.
+  function suspendCtx() { if (core) { syncWant(); return; } if (ctx && ctx.state === "running") { try { const q = ctx.suspend(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
   function setAudible(on) {
     on = !!on;
     if (on === life.audible) return;
     life.audible = on;
+    setOut(on && !life.closed);
     if (!on) { clearAmbTimers(); setMode("off"); suspendCtx(); }
     else if (!life.closed) unlock();
+    syncWant();
   }
   // Rediffusion ramenée avant la fin : le direct (et son ambiance) reprend.
   function reopen() {
     if (!life.closed) return;
     life.closed = false; clearTimeout(life.finalTimer); life.finalTimer = null;
+    setOut(life.audible);
     if (life.audible) unlock();
+    syncWant();
   }
   function close() {
     life.closed = true;
     clearAmbTimers();
     setMode("off");
-    setTimeout(suspendCtx, 2500);   // après le fondu
+    setTimeout(() => { setOut(false); suspendCtx(); syncWant(); }, 2500);   // après le fondu
     amb.log.push({ kind: "closed", at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
   }
-  const onVis = () => { if (typeof document === "undefined") return; if (document.hidden) { clearAmbTimers(); suspendCtx(); } else if (life.audible && !life.closed) unlock(); };
+  // Onglet masqué : boucles programmées coupées (le noyau met le contexte en
+  // pause) ; retour : reprise (refusée → bouton « Activer le son » du direct).
+  const onVis = () => { if (typeof document === "undefined") return; if (document.hidden) { clearAmbTimers(); if (!core) suspendCtx(); } else if (life.audible && !life.closed) unlock(); };
   if (typeof document !== "undefined" && typeof document.addEventListener === "function") document.addEventListener("visibilitychange", onVis);
   // Réactions des shows (staging.js) : volontairement très discrètes.
   const onCue = ev => { const d = ev && ev.detail; if (d && d.kind) react({ kind: d.kind, intensity: Math.min(0.5, d.intensity || 0.4), cue: true }); };
@@ -745,6 +794,21 @@ export function createSfx(opts = {}) {
     get ambLevel() { return prefs.amb; },
     get ambMode() { return amb.mode; },
     debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { life.destroyed = true; clearTimeout(life.finalTimer); if (typeof document !== "undefined" && typeof document.removeEventListener === "function") document.removeEventListener("visibilitychange", onVis); if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("hm-crowd-cue", onCue); clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    // État du son pour le bouton « Activer le son » du direct : « blocked »
+    // = la vue veut du son mais le navigateur l'a mis en pause (geste requis).
+    get audioStatus() { return core ? core.status : ctx ? (ctx.state === "running" ? "running" : "idle") : "none"; },
+    onAudioStatus(fn) { const c = core || coreOf(); return c ? c.onChange(fn) : () => {}; },
+    resumeAudio() { audio(); syncWant(); if (core) return core.forceResume(); unlock(); return true; },
+    destroy() {
+      life.destroyed = true; clearTimeout(life.finalTimer);
+      if (typeof document !== "undefined" && typeof document.removeEventListener === "function") document.removeEventListener("visibilitychange", onVis);
+      if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("hm-crowd-cue", onCue);
+      clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture();
+      // Contexte partagé : jamais fermé ; seules les boucles et la sortie de
+      // CETTE vue sont arrêtées et débranchées (pas de son fantôme, pas de doublon).
+      for (const k of ["bed", "boo", "chant", "calm", "heat", "cheerLoop"]) { const l = amb[k]; if (l && l.src) { try { l.src.stop(); } catch (e) { /* rien */ } } amb[k] = null; }
+      if (core) { try { if (out) out.disconnect(); } catch (e) { /* rien */ } core.want(owner, false); if (offReset) offReset(); }
+      else if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } }
+    },
   };
 }

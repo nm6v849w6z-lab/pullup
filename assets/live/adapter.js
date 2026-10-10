@@ -114,6 +114,16 @@ export function deadBallHoldMs(ev) {
 // remis à 24 (règle FIBA). Sinon : 24.
 // Règles partagées (assets/game-rules.js, 2026-10-10) : rebond offensif → 14 s ;
 // faute défensive → au moins 14 s ; sortie provoquée par la défense → le restant.
+// Durée d'arrêt du chrono après un événement de la série : remise en jeu
+// (deadBallHoldMs), ou Infinity tant que des lancers francs restent à tirer
+// (faute sur tir, lancer non dernier) — le chrono ne court jamais entre une
+// faute et ses lancers francs.
+export function stopHoldMs(ev) {
+  if (!ev) return 0;
+  if (ev.type === "shot" && ev.foulType) return Infinity;
+  if (ev.type === "freeThrow" && (ev.attempt || 1) < (ev.of || 1)) return Infinity;
+  return deadBallHoldMs(ev);
+}
 export function shotClockBase(ev, sec) {
   if (ev && ev.type === "rebound" && ev.offensive) return Rules.shotClockAfter("offensiveRebound");
   const keep = ev && ((ev.type === "outOfBounds" && ev.lastTouch === "defense") || (ev.type === "foul" && ev.inbound));
@@ -333,15 +343,26 @@ export function createLiveAdapter(opts) {
     // (le ballon mort peut être suivi, au même chrono, de changements ou de
     // lancers : on regarde toute la séquence au chrono `prevSec`)
     let stopEv = null;
-    for (let i = runStart; i <= prevIdx; i++) if (deadBallHoldMs(evs[i]) || shotClockBase(evs[i], prevSec) !== 24) stopEv = evs[i];
+    const stops = [];
+    for (let i = runStart; i <= prevIdx; i++) {
+      const h = stopHoldMs(evs[i]);
+      if (h || shotClockBase(evs[i], prevSec) !== 24) { stopEv = evs[i]; stops.push({ at: evs[i].airAt, hold: h }); }
+    }
     // Le chrono repart au plus tôt `hold` après l'arrêt, et toujours avant
     // l'action suivante (au moins 40 % de l'intervalle pour s'écouler).
-    const t0 = evs[runStart].airAt, t1 = nextDiff.airAt;
-    const start = stopEv ? Math.min(Math.max(t0, stopEv.airAt + deadBallHoldMs(stopEv)), t0 + (t1 - t0) * 0.6) : t0;
-    const frac = Math.min(1, Math.max(0, (now - start) / Math.max(1, t1 - start)));
-    const interp = prevSec - (prevSec - clockSeconds(nextDiff.clock)) * frac;
+    // Chrono : Rules.clockBetween (même calcul que le direct de son club) —
+    // arrêté au ballon mort à la valeur atteinte, jamais recalculé vers le
+    // haut (le chrono du quart-temps ne remonte jamais).
+    const cb = Rules.clockBetween({ prevSec, nextSec: clockSeconds(nextDiff.clock), t0: evs[runStart].airAt, t1: nextDiff.airAt, now, stops });
+    const interp = cb.clock;
     st.clock = Math.max(0, Math.ceil(interp - 1e-6));   // 00:00 seulement à la fin réelle (buzzer)
-    st.shotClock = Math.max(0, Math.min(24, shotClockBase(stopEv, prevSec) - Math.max(0, prevSec - interp)));
+    // 24 s : depuis l'arrêt de jeu (valeur réglementaire après l'arrêt), sinon depuis le début de la possession.
+    const shot = Math.max(0, Math.min(24, shotClockBase(stopEv, prevSec) - Math.max(0, (cb.frozenAt !== null ? cb.frozenAt : prevSec) - interp)));
+    // Règle FIBA (mission live 2026-10-10, « 17 s au quart-temps et le 24 s
+    // affiche 24 ») : moins de temps de jeu que de temps de possession → le
+    // chrono des 24 s est ÉTEINT (pas affiché), le chrono du quart-temps
+    // reste la seule référence. Même règle que le moteur (Rules.shotClockOn).
+    st.shotClock = Rules.shotClockOn(interp, shot) ? shot : null;
     const poss = possessionAt(evs, prevIdx);
     if (poss) st.possession = idx(poss);
   }

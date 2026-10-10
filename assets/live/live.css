@@ -762,3 +762,12 @@ html.hm-live-full,html.hm-live-full body{overflow:hidden}
 @keyframes hl-flame{from{transform:scaleY(.82) skewX(-4deg)}to{transform:scaleY(1.08) skewX(4deg)}}
 @keyframes hl-trophy{from{transform:translateY(40px) scale(.5) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
 @keyframes hl-pop{0%{opacity:0;transform:scale(.1)}15%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
+
+/* Son mis en pause par le navigateur (mission live 2026-10-10) : reprise
+   explicite, au-dessus du terrain, jamais un silence inexpliqué. */
+.hm-live .snd-resume{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;margin:0 0 10px;padding:8px 14px;border-radius:12px;border:1px solid var(--accent,#f5a13a);background:color-mix(in srgb,var(--accent,#f5a13a) 16%,var(--panel2,#1a2130));color:var(--text,#fff);font-weight:700;font-size:14px;cursor:pointer;text-align:left;animation:hmSndPulse 1.6s ease-in-out infinite}
+.hm-live .snd-resume[hidden]{display:none}
+.hm-live .snd-resume svg{flex:none;color:var(--accent,#f5a13a)}
+@keyframes hmSndPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#f5a13a) 30%,transparent)}}
+@media (prefers-reduced-motion:reduce){.hm-live .snd-resume{animation:none}}
+.c2d-clock.off{opacity:.45}

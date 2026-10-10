@@ -2906,8 +2906,11 @@ export function createCourt2D(host, opts = {}) {
       // Source unique : state.shotClock (calculé par le client depuis la
       // timeline du moteur) ; repli sur le chrono chorégraphique sinon.
       const left = !gameOn ? null : typeof S.shotClock === "number" ? S.shotClock : S.shotClock === null ? null : Math.max(0, SHOT_CLOCK - (now() - possStart) / 1000);
-      const txt = left === null ? "24" : left < 5 ? left.toFixed(1) : String(Math.ceil(left));
-      if (clockTxt.textContent !== txt) clockTxt.textContent = txt;
+      // Chrono éteint (null : pause, entre-deux, moins de temps au
+      // quart-temps qu'au chrono des 24 s — règle FIBA) : écran vide, jamais
+      // un « 24 » par défaut (mission live 2026-10-10).
+      const txt = left === null ? "" : left < 5 ? left.toFixed(1) : String(Math.ceil(left));
+      if (clockTxt.textContent !== txt) { clockTxt.textContent = txt; clockG.classList.toggle("off", left === null); }
       const low = left !== null && left < 5;
       if (low !== clockLow) { clockLow = low; clockG.classList.toggle("low", low); }
     }
