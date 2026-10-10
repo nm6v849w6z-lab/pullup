@@ -90,7 +90,9 @@ export function activeTimeout(pauses, now) {
 export function activeStoppage(pauses, now) {
   const p = (pauses || []).find(x => x && (x.kind === "timeout" || x.kind === "quarter-break" || x.kind === "halftime") && now >= x.airAt && now < x.airAt + x.durationMs);
   if (!p) return null;
-  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs };
+  // remaining : secondes avant la reprise, calculées au MÊME instant que le
+  // reste de l'état (décompte affiché, buzzer, mise en scène : une seule référence).
+  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000) };
 }
 // Temps (ms de diffusion) pendant lequel le chrono reste arrêté après un
 // événement qui arrête le jeu, le temps de la remise en jeu (même durée que

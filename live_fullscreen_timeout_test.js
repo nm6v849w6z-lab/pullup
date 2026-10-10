@@ -54,6 +54,10 @@ const assert = (c, m) => { if (!c) throw new Error("❌ " + m); console.log("✅
   S = at(tmo.airAt + 3200);
   assert($("tmo").textContent !== t1 && S.timeout.remaining === Math.ceil((tmo.durationMs - 3200) / 1000), `décompte en temps réel (${t1} → ${$("tmo").textContent})`);
   S = at(tmo.airAt + tmo.durationMs + 50);
+  // (2026-10-10) À la fin, le décompte affiche « 00:00 » le temps du buzzer, puis disparaît.
+  assert(!S.timeout && ($("tmo").hidden || /00:00$/.test($("tmo").textContent)), `fin du temps mort : 00:00 au buzzer (${$("tmo").textContent})`);
+  await new Promise(r => setTimeout(r, 1600));
+  S = at(tmo.airAt + tmo.durationMs + 1700);
   assert(!S.timeout && $("tmo").hidden && $("fstmo").hidden && $("mtmo").hidden, "fin du temps mort : timer disparu");
   // Même règle côté direct de son club (copie inline).
   const html = require("./test_game_html.js").readGameHtml();

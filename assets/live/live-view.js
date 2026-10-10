@@ -484,17 +484,42 @@ export function createLiveView(root, opts = {}) {
     }
   }
 
-  // Temps mort en cours (state.timeout, calé sur la pause du moteur) :
-  // « TEMPS MORT · LYO 00:18 », distinct du chrono de match.
+  // Interruption en cours (mission live 2026-10-10 : « toujours pouvoir voir
+  // le temps restant ») : temps mort, pause entre deux quarts-temps,
+  // mi-temps — « TEMPS MORT · LYO 00:18 », « PAUSE · REPRISE 01:34 »,
+  // « MI-TEMPS · REPRISE 07:12 ». UNE seule référence de temps : la fin
+  // absolue de l'arrêt (S.stoppage.endsAt, horaires du moteur diffusés par
+  // le serveur) comparée à l'horloge — la même que le buzzer (buzzerCue) et
+  // la mise en scène ; jamais un compteur local qui pourrait se figer
+  // (onglet masqué, rechargement : la valeur est recalculée, juste).
+  // À la fin, « 00:00 » reste affiché ~1,2 s, le temps du buzzer.
+  let lastStop = null, lastStopSeen = 0;
+  const STOP_LABEL = { timeout: "Temps mort", "quarter-break": "Pause", halftime: "Mi-temps" };
+  const remOf = st => (typeof st.remaining === "number" ? st.remaining : Math.ceil((st.endsAt - Date.now()) / 1000));
+  function stoppageNow() {
+    if (!S || S.status === "final" || S.status === "pregame") { lastStop = null; return null; }
+    const st = S.stoppage && remOf(S.stoppage) > 0 ? S.stoppage : null;
+    if (st) { lastStop = st; lastStopSeen = Date.now(); return { st, remaining: remOf(st) }; }
+    // Fin de l'arrêt : « 00:00 » le temps du buzzer (affichage seulement).
+    if (lastStop && Date.now() - lastStopSeen < 1500) return { st: lastStop, remaining: 0 };
+    lastStop = null;
+    // Repli : temps mort / mi-temps sans `stoppage` (anciens états).
+    if (S.status === "live" && S.timeout && S.timeout.remaining > 0) return { st: { kind: "timeout", team: S.timeout.team }, remaining: S.timeout.remaining };
+    if (S.status === "halftime" && S.halftimeResumeIn != null) return { st: { kind: "halftime" }, remaining: S.halftimeResumeIn };
+    return null;
+  }
   function renderTimeout() {
-    const tm = S && S.status === "live" && S.timeout && S.timeout.remaining > 0 ? S.timeout : null;
-    const txt = tm ? `Temps mort${tm.team === 0 || tm.team === 1 ? " · " + S.teams[tm.team].short : ""} ${fmtClock(tm.remaining)}` : "";
+    const cur = stoppageNow();
+    const st = cur && cur.st, kind = st && STOP_LABEL[st.kind] ? st.kind : "timeout";
+    const who = st && kind === "timeout" && (st.team === 0 || st.team === 1) ? " · " + S.teams[st.team].short : kind !== "timeout" ? " · reprise" : "";
+    const txt = cur ? `${STOP_LABEL[kind]}${who} ${fmtClock(Math.max(0, cur.remaining))}` : "";
     for (const r of ["tmo", "mtmo", "fstmo"]) {
       const el = $(r);
       if (el.textContent !== txt) el.textContent = txt;
-      el.hidden = !tm;
+      if (el.hidden !== !cur) el.hidden = !cur;
+      el.dataset.kind = cur ? kind : "";
     }
-    root.classList.toggle("in-timeout", !!tm);
+    root.classList.toggle("in-timeout", !!cur);
   }
 
   // ---------- API ----------
@@ -562,7 +587,7 @@ export function createLiveView(root, opts = {}) {
     // jouées) est rafraîchie toutes les 5 s.
     const key = [S.status, S.quarter, S.events.length, S.shots.length, S.teams.map(t => t.score + ":" + t.teamFouls + ":" + t.timeoutsLeft + ":" + t.players.filter(p => p.onCourt).map(p => p.id).join(",")).join("|"), ui.box, ui.team, ui.q, ui.res, ui.feed].join("#");
     if (!first && key === lightKey && !newEv.size && !newShots.size) {
-      const tmoNow = S.timeout ? S.timeout.remaining : null;
+      const tmoNow = (() => { const c = stoppageNow(); return c ? c.st.kind + c.remaining : null; })();
       if (S.clock === lastClock && S.halftimeResumeIn === lastHalf && tmoNow === lastTmo) {
         // Seul le chrono des 24 s a bougé (dixièmes) : juste lui.
         renderShotClock();
@@ -601,7 +626,7 @@ export function createLiveView(root, opts = {}) {
         .slice(-1).forEach(e => toast(e.toast || e.text));
       [0, 1].forEach(t => { if (lastScore && S.teams[t].score > lastScore[t]) bump(t); });
     }
-    lastClock = S.clock; lastHalf = S.halftimeResumeIn; lastTmo = S.timeout ? S.timeout.remaining : null;
+    lastClock = S.clock; lastHalf = S.halftimeResumeIn; lastTmo = (() => { const c = stoppageNow(); return c ? c.st.kind + c.remaining : null; })();
     // Plein écran : le fil reste sur les actions les plus récentes.
     if (full && newEv.size) { feed.scrollTop = 0; pending = 0; $("newpill").classList.remove("show"); }
     seenEvents = new Set(S.events.map(e => e.id));

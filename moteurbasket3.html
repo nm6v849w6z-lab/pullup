@@ -18919,7 +18919,9 @@ function liveActiveTimeout(pauses, now) {
 function liveActiveStoppage(pauses, now) {
   const p = (pauses || []).find(x => x && (x.kind === "timeout" || x.kind === "quarter-break" || x.kind === "halftime") && now >= x.airAt && now < x.airAt + x.durationMs);
   if (!p) return null;
-  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs };
+  // remaining : secondes avant la reprise, calculées au MÊME instant que le
+  // reste de l'état (décompte affiché, buzzer, mise en scène : une seule référence).
+  return { kind: p.kind, team: p.team === "home" ? 0 : p.team === "away" ? 1 : null, quarter: p.quarter || null, startAt: p.airAt, endsAt: p.airAt + p.durationMs, remaining: Math.ceil((p.airAt + p.durationMs - now) / 1000) };
 }
 function livePossessionAt(evs, prevIdx) {
   const prev = evs[prevIdx];
