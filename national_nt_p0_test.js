@@ -57,6 +57,10 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     const b = doc.querySelector('#nationalContent [data-nc-conv="1"]:not([disabled])');
     const who = b.dataset.ncN;
     b.click();
+    // (2026-10-10) confirmation obligatoire avant toute modification.
+    await wait(() => doc.querySelector("#ncConvConfirm [data-nc-conv-ok]"), "confirmation de la convocation");
+    doc.querySelector("#ncConvConfirm [data-nc-conv-ok]").click();
+    await wait(() => !doc.getElementById("ncConvConfirm"), "convocation confirmée");
     await win.__lastNationalCoach; await flush(dom);
     doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
     await wait(() => st.tq && doc.getElementById("ncTqGrid") && doc.getElementById("ncTqGrid").children.length, "tactique après convocation");
@@ -72,7 +76,11 @@ const wait = async (fn, label, ms = 15000) => { const t = Date.now(); while (Dat
     await wait(() => doc.querySelector('#nationalContent [data-nc-conv="0"]'), "bouton Retirer");
     const rm = [...doc.querySelectorAll('#nationalContent [data-nc-conv="0"]')].find(x => x.dataset.ncN === who) || doc.querySelector('#nationalContent [data-nc-conv="0"]');
     const gone = rm.dataset.ncN;
-    rm.click(); await win.__lastNationalCoach; await flush(dom);
+    rm.click();
+    await wait(() => doc.querySelector("#ncConvConfirm [data-nc-conv-ok]"), "confirmation du retrait");
+    doc.querySelector("#ncConvConfirm [data-nc-conv-ok]").click();
+    await wait(() => !doc.getElementById("ncConvConfirm"), "retrait confirmé");
+    await win.__lastNationalCoach; await flush(dom);
     doc.querySelector('#ncSidebar [data-nc-nav="tactique"]').click();
     await wait(() => doc.querySelector('.nc-side-link.on[data-nc-nav="tactique"]'), "tactique après retrait");
     const k2 = st.tq ? st.tq.key : st.tqMatch, server2 = rosterOf(st.view, k2);
