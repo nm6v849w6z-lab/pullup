@@ -51,7 +51,7 @@ const independent = win.eval(`
 if (independent.startersA !== 5) throw new Error(`❌ (setup) L'équipe A devrait avoir 5 titulaires, obtenu ${independent.startersA}.`);
 
 function rowNames(side) {
-  return [...doc.querySelectorAll(`#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)`)]
+  return [...doc.querySelectorAll(`#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals):not(.bx-team-row)`)]
     .map(tr => tr.children[0].textContent.trim());
 }
 const namesA = rowNames("A").sort();
@@ -64,7 +64,7 @@ console.log(`✅ Toute la feuille de match de l'équipe A (${namesA.length} joue
 // moins un avec des minutes > 0 (déjà sur le terrain) — sinon le
 // pré-remplissage ne serait pas vraiment testé (ou le match serait fini).
 const minColIndex = 2; // Joueur(0) Poste(1) MIN(2) ...
-const rowsA = [...doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals)")];
+const rowsA = [...doc.querySelectorAll("#liveBoxscoreHolder table.boxscore tbody tr:not(.boxscore-totals):not(.bx-team-row)")];
 const minsA = rowsA.map(tr => Number(tr.children[minColIndex].textContent));
 if (!minsA.some(m => m === 0)) throw new Error(`❌ Au moins un remplaçant pas encore entré (0 minute) devrait apparaître, obtenu : ${JSON.stringify(minsA)}.`);
 if (!minsA.some(m => m > 0)) throw new Error(`❌ Au moins un joueur déjà entré (minutes > 0) devrait apparaître à mi-diffusion, obtenu : ${JSON.stringify(minsA)}.`);
