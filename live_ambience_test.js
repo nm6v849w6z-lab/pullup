@@ -59,6 +59,8 @@ function fakeAudio() {
   R({ kind: "rebound", team: A, offensive: false }, {}, { kind: "groan", i: 0.6 }, "tir domicile manqué : déception");
   R({ kind: "freeThrow", team: A, made: 0 }, {}, { kind: "cheer", i: 0.8 }, "lancer adverse manqué");
   R({ kind: "freeThrow", team: H, made: 1 }, {}, { kind: "applause", i: 0.8 }, "lancer domicile réussi");
+  R({ kind: "quarterEnd" }, {}, { kind: "applause", i: 1.3 }, "fin de quart-temps : applaudissements nourris");
+  R({ kind: "timeout", type: "timeout", team: H }, {}, { kind: "applause", i: 0.6 }, "temps mort : applaudissements");
   R({ kind: "shot", team: H, made: true, zone: "mid" }, { quarter: 4, clock: 40 }, { kind: "cheer", i: 1.5 }, "panier décisif en fin de match : plus fort");
   assert.strictEqual(crowdReactionFor({ kind: "substitution", team: H }, base, H), null, "changement : rien");
   ok("Réactions : clameur sur un panier domicile (plus forte à 3 points et en fin de match serrée), déception sur un panier adverse ou un tir domicile manqué, joie sur un tir ou lancer adverse manqué.");

@@ -102,7 +102,7 @@ export function crowdReactionFor(e, S, home = 0) {
   }
   if (e.kind === "turnover" && e.tovType === "steal" && e.possessionAfter === home) return { kind: "cheer", intensity: 0.9 };
   if (e.kind === "timeout" || e.type === "timeout") return { kind: "applause", intensity: 0.6 };
-  if (e.kind === "quarterEnd") return { kind: "applause", intensity: 1 };
+  if (e.kind === "quarterEnd") return { kind: "applause", intensity: 1.3 };   // fin de quart-temps : applaudissements nourris (version longue)
   return null;
 }
 // Bruitages d'un événement (pure : testable). Plusieurs règles peuvent

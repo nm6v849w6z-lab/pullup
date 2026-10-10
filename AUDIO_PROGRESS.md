@@ -17,17 +17,20 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [x] D/E. Déception → `amb_groan_1..3.mp3` + `amb_groan_big.mp3` (Freesound 829452,
   stade FC St. Pauli, CC0) — 2026-10-10 : panier adverse (grand « ohhh » sur 3 pts ou
   fin serrée), tir manqué et lancer franc manqué à domicile
+- [x] A/E. Applaudissements → `amb_applause_1..4.mp3` + `amb_applause_big.mp3` (Freesound
+  706732, Rogers Arena, CC0) — 2026-10-10 : lancer franc réussi à domicile, temps mort,
+  fin de quart-temps (version longue)
 
 
 ## Pistes refusées
 - Chant défensif : LS 11537 (CC-BY), craigsmith 438396 (CC0), johnnyguitar01 424793
   (CC0) refusés à l'écoute (2026-10-10)
 - Déception : ShangusBurger 763880 et mrrap4food 619007 (CC0) non retenus (2026-10-10)
+- Applaudissements : mglennsound 678543 et craigsmith 480692 (CC0) non retenus (2026-10-10)
 - Freesound 412160 « Fans at Basketball Game » (phillyfan972) : speaker,
   creux de bruit, applaudissements → pas un fond continu (refusée 2026-10-10)
 
 ## Priorité 1 — Indispensable (prochains)
-- [ ] A/E. Applaudissements (lancer réussi, temps mort, fin de quart) → `amb_applause`
 - [ ] E. Huées sur lancer franc adverse (boucle) → `amb_boo`
 - [ ] B. Applaudissements rythmiques / « Let's go » en attaque
 - [ ] A. Variantes de fond : salle calme, salle en ébullition

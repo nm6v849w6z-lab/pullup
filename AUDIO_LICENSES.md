@@ -70,3 +70,19 @@ figure ici).
 | Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
 | Modifications | Aperçu HQ MP3 (1 min 01, 6 réactions séparées par des silences) ; réactions 2, 4 et 5 (13,75–18,9 s, 38,55–44,1 s, 45,45–49,25 s) → variantes de 3,7 à 5,4 s ; réaction 1 (0–9 s) → version longue ; départ calé sur la réaction (fondu 30 ms), fondu final cos² ; corps à −16 dBFS RMS ; MP3 96 kb/s stéréo 44,1 kHz (45–110 Ko) |
 | Restrictions | Aucune connue (foule de stade, pas de parole identifiable, pas de musique) |
+
+## amb_applause_1.mp3 · amb_applause_2.mp3 · amb_applause_3.mp3 · amb_applause_4.mp3 · amb_applause_big.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_applause_{1..4}.mp3` (clé `amb_applause`, variantes tirées au hasard : lancer franc réussi à domicile, temps mort) et `amb_applause_big.mp3` (clé `amb_applause_big`, fin de quart-temps) |
+| Ressource originale | « Hockey arena pregame applause.wav » (Freesound n° 706732) — Rogers Arena, Vancouver, 2014 |
+| Auteur | SEF7 |
+| Source | https://freesound.org/people/SEF7/sounds/706732/ |
+| Licence | Creative Commons 0 (CC0 1.0, dédicace au domaine public) |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 (page Freesound de la ressource, champ licence) |
+| Attribution requise | Non (crédit facultatif : « SEF7 / Freesound ») |
+| Usage commercial / jeu | Autorisé (copie, modification, distribution, même commerciale) |
+| Modifications | Aperçu HQ MP3 (48 s, 48 kHz) ; passages sans son tonal (corne / sono évitées vers 4 s, 13 s, 24,5 s, 41,5 s) : 5–8,5 s, 8,4–11,8 s, 26–29,5 s, 34,3–37,8 s (variantes de 3,5 s) et 26–33 s (version longue de 7 s) ; montée 0,25 s, extinction cos² 1,2 s / 2 s ; −17 dBFS RMS (crête limitée à −1 dBFS) ; MP3 96 kb/s stéréo 44,1 kHz (40–85 Ko) |
+| Restrictions | Aucune connue (applaudissements de foule, pas de parole ni de musique dans les extraits gardés) |

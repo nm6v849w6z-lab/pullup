@@ -34,7 +34,7 @@ le direct : elle se coupe sans couper les bruitages.
 | `amb_chant`  | « DE-FENSE ! » quand l'équipe à domicile défend           | **fourni** : boucle `amb_chant_1..2.mp3` (montée en défense ; licence : voir AUDIO_LICENSES.md) |
 | `amb_cheer`  | clameur après un panier à domicile / tir adverse manqué   | **fourni** : 3 variantes `amb_cheer_1..3.mp3` (tirées au hasard) + `amb_cheer_big.mp3` (3 pts, panier décisif) |
 | `amb_groan`  | déception (panier adverse, tir domicile manqué)           | **fourni** : 3 variantes `amb_groan_1..3.mp3` + `amb_groan_big.mp3` (3 pts adverse, fin serrée) |
-| `amb_applause` | applaudissements (lancer réussi, temps mort, fin de quart) | applaudissements 2–3 s                      |
+| `amb_applause` | applaudissements (lancer réussi, temps mort, fin de quart) | **fourni** : 4 variantes `amb_applause_1..4.mp3` + `amb_applause_big.mp3` (fin de quart-temps) |
 
 Recommandé en priorité : `amb_bed` et `amb_chant` (la synthèse imite des voix,
 un vrai enregistrement de salle sera nettement plus réaliste). Formats : MP3

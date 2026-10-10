@@ -90,6 +90,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   assert.strictEqual(groans().length, 10, "tir manqué à domicile : déception");
   assert.strictEqual(cheers().length, n0, "… et aucune clameur");
   ok(`Panier adverse : déception (${[...new Set(g)].join(", ")}), grand « ohhh » sur un 3 points ; tir manqué à domicile : déception ; jamais de clameur.`);
+  // Applaudissements : lancer franc réussi à domicile et temps mort →
+  // variantes courtes ; fin de quart-temps → version longue.
+  const claps = () => started.filter(s => /^amb_applause/.test(s.name)).map(s => s.name);
+  const fts = [];
+  for (let i = 0; i < 6; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "freeThrow", team: 0, made: 1, attempt: 1, of: 1 }], base); await sleep(5); }
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "timeout", type: "timeout", team: 1 }], base); await sleep(5);
+  const c2 = claps();
+  assert.strictEqual(c2.length, 7, "lancers réussis et temps mort : applaudissements");
+  assert.ok(c2.every(n => man.files.amb_applause.includes(n)) && c2.every((n, i) => i === 0 || n !== c2[i - 1]), "variantes courtes, jamais la même deux fois de suite : " + c2.join(","));
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "quarterEnd", type: "period" }], base); await sleep(5);
+  assert.strictEqual(claps().pop(), "amb_applause_big.mp3", "fin de quart-temps : version longue");
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "freeThrow", team: 1, made: 1, attempt: 1, of: 1 }], base); await sleep(5);
+  assert.strictEqual(claps().length, 8, "lancer adverse réussi : pas d'applaudissements");
+  ok(`Applaudissements : lancer réussi à domicile et temps mort (${[...new Set(c2)].join(", ")}), fin de quart-temps → version longue ; rien sur un lancer adverse réussi.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");
   process.exit(0);
