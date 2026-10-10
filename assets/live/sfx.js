@@ -57,7 +57,7 @@ export const SFX_RULES = [
 // Un lancer franc compte dès qu'il est annoncé par le moteur
 // (nextAction.kind === "freeThrow" à moins de 12 s) ou qu'une série est en
 // cours (dernier événement = lancer n° k < n).
-export const AMB_LEVELS = [0, 0.3, 0.55, 0.85];
+export const AMB_LEVELS = [0, 0.6, 1.1, 1.8];
 export function ambienceMode(S, now = Date.now(), home = 0) {
   if (!S) return "off";
   if (S.status === "final") return "final";
@@ -147,7 +147,9 @@ export function createSfx(opts = {}) {
     } catch (e) { ctx = null; }
     return ctx;
   }
-  function unlock() { const c = audio(); if (c && c.state === "suspended") { try { c.resume(); } catch (e) { /* rien */ } } }
+  // Contexte mis en pause par le navigateur (créé avant un geste, onglet
+  // revenu, « interrupted » sur iPhone) : relancé au prochain geste.
+  function unlock() { const c = audio(); if (c && c.state !== "running" && c.state !== "closed") { try { const q = c.resume(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
   function load(key) {
     const file = manifest.files && manifest.files[key];
     if (!file) return Promise.resolve(null);
@@ -260,10 +262,10 @@ export function createSfx(opts = {}) {
     defense: { bed: 0.5, tone: 1050, boo: 0, chant: true, claps: false },
     ftHome: { bed: 0.13, tone: 700, boo: 0, chant: false, claps: false },
     ftAway: { bed: 0.32, tone: 900, boo: 0.55, chant: false, claps: false },
-    break: { bed: 0.34, tone: 950, boo: 0, chant: false, claps: false },
-    pregame: { bed: 0.3, tone: 950, boo: 0, chant: false, claps: false },
-    neutral: { bed: 0.45, tone: 1000, boo: 0, chant: false, claps: false },
-    final: { bed: 0.3, tone: 950, boo: 0, chant: false, claps: false },
+    break: { bed: 0.5, tone: 950, boo: 0, chant: false, claps: false },
+    pregame: { bed: 0.48, tone: 950, boo: 0, chant: false, claps: false },
+    neutral: { bed: 0.55, tone: 1000, boo: 0, chant: false, claps: false },
+    final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
     off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
   };
   const amb = { mode: "off", bed: null, boo: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
@@ -357,7 +359,7 @@ export function createSfx(opts = {}) {
       try {
         if (buf) { const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ambDuck); src.start(); return; }
         let v; do { v = Math.floor(Math.random() * 3); } while (v === lastChant); lastChant = v;
-        const t = ctx.currentTime + 0.03, f0 = [165, 185, 150][v], tempo = [1, 0.92, 1.08][v], pk = 0.12;
+        const t = ctx.currentTime + 0.03, f0 = [165, 185, 150][v], tempo = [1, 0.92, 1.08][v], pk = 0.09;
         shout(t, 0.24 * tempo, f0 * 1.12, "e", pk);                 // « DE »
         hiss(t + 0.3 * tempo, 0.07, 0.05, 3800);                      // « f »
         shout(t + 0.34 * tempo, 0.36 * tempo, f0, "en", pk);          // « FEN »
@@ -422,7 +424,12 @@ export function createSfx(opts = {}) {
     if (t0 - (amb.lastReact[r.kind] || -1e9) < 900) return false;   // pas deux fois la même réaction collée
     amb.lastReact[r.kind] = t0;
     amb.log.push({ kind: "react", react: r.kind, intensity: r.intensity, at: t0 }); if (amb.log.length > 80) amb.log.shift();
-    const c = audio(); if (!c) return true;
+    crowdSound(r);
+    return true;
+  }
+  function crowdSound(r) {
+    const c = audio(); if (!c) return;
+    unlock();
     ensureLayers();
     load("amb_" + r.kind).then(buf => {
       try {
@@ -445,12 +452,17 @@ export function createSfx(opts = {}) {
         src.connect(bp); bp.connect(g); g.connect(ambDuck); src.start(t, Math.random() * 2); src.stop(t + 3.5);
       } catch (e) { /* rien */ }
     }).catch(() => {});
-    return true;
   }
   function setAmbLevel(level) {
     prefs.amb = Math.max(0, Math.min(AMB_LEVELS.length - 1, Number(level) | 0)); save();
     if (ambOut) try { T(ambOut.gain, AMB_LEVELS[prefs.amb], 0.3); } catch (e) { /* rien */ }
-    if (prefs.amb > 0) { unlock(); const m = amb.mode; amb.mode = "off"; setMode(m); } else clearAmbTimers();
+    if (prefs.amb > 0) {
+      unlock(); const m = amb.mode; amb.mode = "off"; setMode(m);
+      // Retour immédiat au toucher du bouton (comme le sifflet d'essai des
+      // bruitages) : une courte clameur au nouveau volume.
+      crowdSound({ kind: "cheer", intensity: 0.8 });
+      amb.log.push({ kind: "preview", at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+    } else clearAmbTimers();
   }
 
   // Nouveaux événements du fil (déjà diffusés). `state.teams` index 0 =
@@ -477,14 +489,24 @@ export function createSfx(opts = {}) {
     if (master) try { master.gain.value = SFX_LEVELS[prefs.level]; } catch (e) { /* rien */ }
     if (prefs.level > 0) { unlock(); preload(); }
   }
-  const onGesture = () => { if (prefs.level > 0 || prefs.amb > 0) { unlock(); if (prefs.amb > 0 && amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); } } if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); };
-  if (typeof document !== "undefined") document.addEventListener("pointerdown", onGesture, true);
+  // Déblocage du son : à CHAQUE geste tant que le contexte n'est pas
+  // « running » (pointerdown seul ne compte pas comme geste sur iPhone :
+  // touchend / click oui ; le contexte peut aussi être remis en pause).
+  const GESTURES = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+  const offGesture = () => { if (typeof document !== "undefined") GESTURES.forEach(g => document.removeEventListener(g, onGesture, true)); };
+  const onGesture = () => {
+    if (!(prefs.level > 0 || prefs.amb > 0)) return;
+    const wasRunning = ctx && ctx.state === "running";
+    unlock();
+    if (!wasRunning && prefs.amb > 0 && amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); }
+  };
+  if (typeof document !== "undefined") GESTURES.forEach(g => document.addEventListener(g, onGesture, true));
   return {
     onEvents, play, setLevel, ready, updateAmbience, setAmbLevel,
     get level() { return prefs.level; },
     get ambLevel() { return prefs.amb; },
     get ambMode() { return amb.mode; },
     debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { clearAmbTimers(); if (typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture, true); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    destroy() { clearAmbTimers(); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
   };
 }

@@ -120,8 +120,17 @@ function fakeAudio() {
   assert.deepStrictEqual(sfx.onEvents([{ id: 54, airAt: t, kind: "shot", team: H, made: true, zone: "three" }], S), [], "bruitages coupés : pas de sirène");
   assert.strictEqual(reacts().length, nR + 1, "… mais l'ambiance réagit toujours");
   assert.strictEqual(JSON.parse(global.localStorage.getItem("hm-live-sfx")).amb, 2, "préférence d'ambiance gardée");
+  // Retour immédiat au toucher du bouton : une courte clameur (pas une
+  // « réaction » comptée) ; ambiance coupée : rien.
+  const previews = () => sfx.debug().ambLog.filter(x => x.kind === "preview").length;
+  const p0 = previews(), r0 = reacts().length;
+  sfx.setAmbLevel(3);
+  assert.strictEqual(previews(), p0 + 1, "bouton Ambiance : clameur d'essai au nouveau volume");
+  assert.strictEqual(reacts().length, r0, "… sans compter comme une réaction de match");
+  sfx.setAmbLevel(0);
+  assert.strictEqual(previews(), p0 + 1, "ambiance coupée : pas de clameur d'essai");
   sfx.destroy();
-  ok("Ambiance et bruitages se règlent séparément (l'un coupé, l'autre continue) ; préférence gardée.");
+  ok("Ambiance et bruitages se règlent séparément (l'un coupé, l'autre continue) ; préférence gardée ; clameur d'essai au toucher du bouton.");
   console.log("\n🏁 live_ambience_test.js : ambiance de salle conforme.");
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
