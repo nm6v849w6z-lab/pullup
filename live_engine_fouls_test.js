@@ -70,7 +70,10 @@ for (let g = 0; g < 60; g++) {
     }
     if (e.type === "turnover" && e.tovKind !== "fumble") {
       const d = e.delta && e.delta[e.team] || {};
-      assert.ok(d[e.playerId] && d[e.playerId].tov === 1, `perte ${e.tovKind} : créditée au joueur nommé`);
+      // Violation (8 s, 24 s, retour en zone) : perte d'ÉQUIPE, rien au
+      // porteur nommé (voir team_turnovers_test.js).
+      if (e.tovType === "violation") assert.ok(e.teamDelta && e.teamDelta[e.team].tov === 1 && !(d[e.playerId] && d[e.playerId].tov), `violation ${e.tovKind} : perte d'équipe, rien au porteur`);
+      else assert.ok(d[e.playerId] && d[e.playerId].tov === 1, `perte ${e.tovKind} : créditée au joueur nommé`);
     }
   }
 }
@@ -78,5 +81,5 @@ assert.ok(andOnes > 50 && shootingFouls > 50 && blocks > 50 && fumbles > 10, "é
 ok(`${andOnes} and-one : un seul lancer chacun (${unsOnContact} requalifiés en antisportive sans lancers en plus).`);
 ok(`${shootingFouls} fautes sur tir manqué : foulType explicite, 2 ou 3 lancers, une série.`);
 ok(`${blocks} contres : plus aucune faute fantôme.`);
-ok(`${fumbles} passes mal contrôlées : perte au receveur ; autres pertes au joueur nommé.`);
+ok(`${fumbles} passes mal contrôlées : perte au receveur ; autres pertes au joueur nommé, violations à l'équipe.`);
 console.log("\n🏁 live_engine_fouls_test.js");
