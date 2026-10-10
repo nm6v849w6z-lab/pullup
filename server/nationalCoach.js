@@ -644,9 +644,22 @@ function setConvocation(store, me, body, now, ctx) {
   if (!g) return fail("Rassemblement inconnu.", 404);
   const conv0 = convocationOf(store, team.id, g.gid);
   if ((conv0 && conv0.frozenAt) || now >= g.freezeAt) return fail("La liste est figée (3 jours avant le premier match) : seul un joueur indisponible peut encore être remplacé.");
-  if (!Array.isArray(body.players)) return fail("Liste de joueurs attendue.");
+  // Opération unitaire (2026-10-10, confirmation « Convoquer » / « Retirer
+  // de la convocation ») : { add } ou { remove } appliqué à la liste ACTUELLE
+  // du serveur — deux membres du staff qui modifient en même temps ne
+  // s'écrasent plus (l'ancienne forme, la liste complète, reste acceptée).
+  const cur0 = conv0 && Array.isArray(conv0.players) ? conv0.players : [];
+  let src = body.players;
+  if (body.add || body.remove) {
+    const r = cleanRef(body.add || body.remove);
+    if (!r) return fail("Joueur invalide.");
+    if (body.add && hasRef(cur0, r)) return fail(`${r.n} est déjà convoqué.`);
+    if (body.remove && !hasRef(cur0, r)) return fail(`${r.n} ne fait plus partie des convoqués.`);
+    src = body.add ? cur0.concat([r]) : cur0.filter(x => !sameRef(x, r));
+  }
+  if (!Array.isArray(src)) return fail("Liste de joueurs attendue.");
   const refs = [];
-  for (const raw of body.players) {
+  for (const raw of src) {
     const r = cleanRef(raw);
     if (!r) return fail("Joueur invalide.");
     if (!hasRef(refs, r)) refs.push(r);
@@ -655,11 +668,28 @@ function setConvocation(store, me, body, now, ctx) {
   const pm = poolMap(ctx.pool);
   const bad = refs.find(r => !pm.has(refKey(r)));
   if (bad) return fail(`${bad.n} n'est pas sélectionnable pour cette sélection.`);
+  // Annulation possible si l'enregistrement échoue (server/index.js :
+  // jamais un état modifié en mémoire alors que le client lit « échec »).
+  const before = { had: !!conv0, conv: conv0 ? JSON.parse(JSON.stringify(conv0)) : null, tactics: m.tactics ? JSON.parse(JSON.stringify(m.tactics)) : m.tactics, plans: m.plans ? JSON.parse(JSON.stringify(m.plans)) : m.plans };
   const conv = ensureConvocation(store, team.id, g, m.id);
+  const removed = (conv.players || []).filter(r => !hasRef(refs, r));
   conv.players = refs;
   conv.mandateId = m.id;
   conv.updatedAt = now;
-  return { ok: true, convocation: conv };
+  // Joueur retiré : plus dans le cinq ni sur la feuille des ordres (tactique
+  // par défaut et ordres des matchs de ce rassemblement) — comme un remplacement.
+  if (removed.length) {
+    if (m.tactics && m.tactics.lineup) m.tactics = scrubTactics(m, m.tactics, conv.players);
+    upcomingMatchesOf(store, team, ctx.season).forEach(x => {
+      if (x.gid === g.gid && m.plans && m.plans[x.id]) m.plans[x.id] = scrubTactics(m, m.plans[x.id], conv.players);
+    });
+  }
+  const undo = () => {
+    m.tactics = before.tactics; m.plans = before.plans;
+    if (before.had) Object.assign(conv, before.conv);
+    else if (store.convocations && store.convocations[team.id]) delete store.convocations[team.id][g.gid];
+  };
+  return { ok: true, convocation: conv, undo };
 }
 // Remplacement d'un convoqué devenu indisponible, après le gel.
 function replaceConvoked(store, me, body, now, ctx) {

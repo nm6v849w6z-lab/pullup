@@ -7758,4 +7758,15 @@ window.HM_I18N_ZH = {
   "Partager une rediffusion est réservé au Premium, comme « Revoir le direct ».": "分享回放是 Premium 专属功能，与“重看直播”相同。",
   "Les matchs de ligue privée ne se partagent pas : ils sont réservés aux membres.": "私人联赛的比赛无法分享：仅限成员观看。",
   "Ce match n'a pas de direct.": "该比赛没有直播。",
+  // Mission live 2026-10-10 (convocation, son du direct)
+  "de la convocation ?": "移出征召名单？",
+  "Il sera ajouté à la convocation": "他将被加入征召名单",
+  "Il sera retiré de la convocation": "他将被移出征召名单",
+  "Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.": "这会改变球队：更衣室、首发五人和包含他的比赛指令。",
+  "La liste est complète": "名单已满",
+  "Confirmer le retrait": "确认移除",
+  "Enregistrement…": "正在保存…",
+  "L'opération n'a pas été enregistrée": "操作未保存",
+  "Le navigateur a mis le son en pause — ": "浏览器已暂停声音 — ",
+  "touchez pour le réactiver": "点击重新开启",
 };

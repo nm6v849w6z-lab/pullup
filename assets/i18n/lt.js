@@ -7758,4 +7758,15 @@ window.HM_I18N_LT = {
   "Partager une rediffusion est réservé au Premium, comme « Revoir le direct ».": "Dalintis pakartojimu galima tik su Premium, kaip ir „Žiūrėti tiesioginę transliaciją dar kartą“.",
   "Les matchs de ligue privée ne se partagent pas : ils sont réservés aux membres.": "Privačių lygų rungtynėmis dalintis negalima: jos skirtos tik nariams.",
   "Ce match n'a pas de direct.": "Šios rungtynės neturi tiesioginės transliacijos.",
+  // Mission live 2026-10-10 (convocation, son du direct)
+  "de la convocation ?": "iš šaukimo?",
+  "Il sera ajouté à la convocation": "Jis bus įtrauktas į šaukimą",
+  "Il sera retiré de la convocation": "Jis bus išbrauktas iš šaukimo",
+  "Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.": "Tai keičia grupę: rūbinę, startinį penketą ir rungtynių nurodymus, kuriuose jis buvo.",
+  "La liste est complète": "Sąrašas pilnas",
+  "Confirmer le retrait": "Patvirtinti išbraukimą",
+  "Enregistrement…": "Išsaugoma…",
+  "L'opération n'a pas été enregistrée": "Pakeitimas neišsaugotas",
+  "Le navigateur a mis le son en pause — ": "Naršyklė pristabdė garsą — ",
+  "touchez pour le réactiver": "palieskite, kad įjungtumėte",
 };

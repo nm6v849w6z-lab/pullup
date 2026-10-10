@@ -8089,4 +8089,15 @@ window.HM_I18N_EN = {
   "Partager une rediffusion est réservé au Premium, comme « Revoir le direct ».": "Sharing a replay is a Premium feature, like \"Watch the live again\".",
   "Les matchs de ligue privée ne se partagent pas : ils sont réservés aux membres.": "Private league matches can't be shared: they're for members only.",
   "Ce match n'a pas de direct.": "This match has no live broadcast.",
+  // Mission live 2026-10-10 (convocation, son du direct)
+  "de la convocation ?": "from the call-up?",
+  "Il sera ajouté à la convocation": "He will be added to the call-up",
+  "Il sera retiré de la convocation": "He will be removed from the call-up",
+  "Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.": "This changes the squad: locker room, starting five and match orders that included him.",
+  "La liste est complète": "The list is full",
+  "Confirmer le retrait": "Confirm removal",
+  "Enregistrement…": "Saving…",
+  "L'opération n'a pas été enregistrée": "The change was not saved",
+  "Le navigateur a mis le son en pause — ": "Your browser paused the sound — ",
+  "touchez pour le réactiver": "tap to turn it back on",
 };

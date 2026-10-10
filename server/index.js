@@ -3313,7 +3313,11 @@ function createHandler(savePath = store.defaultSavePath(), nowFn = Date.now, mul
             if (!fnC) { sendJson(res, 404, { ok: false, error: "Route inconnue." }); return; }
             outC = fnC(natStore, me, body || {}, now, coachCtx);
             if (!outC.ok) { sendJson(res, outC.status || 400, { ok: false, error: outC.error }); return; }
-            try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
+            // Échec d'enregistrement : la modification est annulée en mémoire
+            // (action qui le permet : `undo`) — l'état reste celui que le
+            // client voit (« échec »), jamais un changement fantôme.
+            const undoC = typeof outC.undo === "function" ? outC.undo : null; delete outC.undo;
+            try { await NationalTeams.saveStore(natStore, multiSavePath); } catch (e) { if (undoC) { try { undoC(); } catch (e2) { /* rien */ } } sendJson(res, 503, { ok: false, error: "Enregistrement impossible, réessayez." }); return; }
             // Proposition de poste : message dans la messagerie interne (de
             // celui qui nomme à l'invité), avec « Accepter le poste ».
             if (outC.message && outC.message.to) {

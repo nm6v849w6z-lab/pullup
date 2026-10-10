@@ -7758,4 +7758,15 @@ window.HM_I18N_EL = {
   "Partager une rediffusion est réservé au Premium, comme « Revoir le direct ».": "Η κοινοποίηση επανάληψης είναι διαθέσιμη μόνο με Premium, όπως το «Ξαναδείτε τη ζωντανή μετάδοση».",
   "Les matchs de ligue privée ne se partagent pas : ils sont réservés aux membres.": "Οι αγώνες ιδιωτικών πρωταθλημάτων δεν κοινοποιούνται: είναι μόνο για τα μέλη.",
   "Ce match n'a pas de direct.": "Αυτός ο αγώνας δεν έχει ζωντανή μετάδοση.",
+  // Mission live 2026-10-10 (convocation, son du direct)
+  "de la convocation ?": "από την κλήση;",
+  "Il sera ajouté à la convocation": "Θα προστεθεί στην κλήση",
+  "Il sera retiré de la convocation": "Θα αφαιρεθεί από την κλήση",
+  "Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.": "Αλλάζει την ομάδα: αποδυτήρια, βασική πεντάδα και οδηγίες αγώνων που τον περιλάμβαναν.",
+  "La liste est complète": "Η λίστα είναι πλήρης",
+  "Confirmer le retrait": "Επιβεβαίωση αφαίρεσης",
+  "Enregistrement…": "Αποθήκευση…",
+  "L'opération n'a pas été enregistrée": "Η αλλαγή δεν αποθηκεύτηκε",
+  "Le navigateur a mis le son en pause — ": "Ο περιηγητής έθεσε τον ήχο σε παύση — ",
+  "touchez pour le réactiver": "πατήστε για επανενεργοποίηση",
 };

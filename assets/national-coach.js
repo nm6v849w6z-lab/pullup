@@ -1572,12 +1572,66 @@
     window.__lastNationalCoach = p;
     return p;
   }
+  // Convoquer / retirer (2026-10-10) : opération UNITAIRE côté serveur
+  // (add / remove sur la liste actuelle : deux membres du staff ne
+  // s'écrasent pas). Renvoie true si le serveur a accepté.
   function setConv(r, on) {
     var cur = curGathering();
-    if (!cur) return;
-    var list = convRefs(cur).filter(function (x) { return !(x.p === r.p && x.n === r.n); });
-    if (on) list.push(r);
-    post("/api/national/coach/convocation", { gatheringId: cur.gid, players: list }, on ? "Joueur convoqué." : "Joueur retiré des convoqués.");
+    if (!cur) return Promise.resolve(false);
+    var body = { gatheringId: cur.gid };
+    body[on ? "add" : "remove"] = r;
+    return post("/api/national/coach/convocation", body, on ? "Joueur convoqué." : "Joueur retiré des convoqués.");
+  }
+  // Confirmation obligatoire (demande utilisateur du 2026-10-10) : la
+  // convocation change le groupe (vestiaire, cinq, ordres des matchs).
+  // Modale du jeu (.upgrade-confirm-overlay → feuille du bas sur téléphone,
+  // CLAUDE.md) : rien n'est modifié avant « Confirmer » ; Annuler, la croix,
+  // un clic à côté ou Échap ne changent rien. Un seul envoi (boutons
+  // désactivés pendant l'enregistrement, ui.busy) ; échec : message dans la
+  // modale, sélection inchangée (le serveur annule s'il n'a pas pu enregistrer).
+  function confirmConv(r, on) {
+    var cur = curGathering();
+    if (!cur || document.getElementById("ncConvConfirm")) return;
+    var v = ui.view, lim = (v && v.limits && v.limits.convocation) || 15;
+    var inList = convRefs(cur).some(function (x) { return x.p === r.p && x.n === r.n; });
+    if (on === inList) { paint(); return; }   // déjà dans cet état (autre onglet, autre membre du staff)
+    var full = on && cur.players.length >= lim;
+    var name = esc(r.n), when = esc(gTitleText(cur));
+    var ov = document.createElement("div");
+    ov.className = "upgrade-confirm-overlay nc-conv-confirm";
+    ov.id = "ncConvConfirm";
+    ov.innerHTML = '<div class="upgrade-confirm-box" role="dialog" aria-modal="true" aria-labelledby="ncConvTitle">' +
+      '<h3 id="ncConvTitle">' + (on ? t("Convoquer") + " " + name + " ?" : t("Retirer") + " " + name + " " + t("de la convocation ?")) + "</h3>" +
+      '<p class="nc-conv-txt">' + (on
+        ? t("Il sera ajouté à la convocation") + " · " + when + " (" + (cur.players.length + 1) + " / " + lim + ")."
+        : t("Il sera retiré de la convocation") + " · " + when + ". " + t("Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.")) + "</p>" +
+      (full ? '<div class="upgrade-confirm-warning">' + t("La liste est complète") + " (" + lim + " / " + lim + ").</div>" : "") +
+      '<div class="upgrade-confirm-warning nc-conv-err" hidden></div>' +
+      '<div class="upgrade-confirm-actions">' +
+      '<button type="button" class="upgrade-confirm-cancel-btn" data-nc-conv-cancel>' + t("Annuler") + "</button>" +
+      '<button type="button" class="upgrade-confirm-validate-btn" data-nc-conv-ok' + (full ? " disabled" : "") + ">" + (on ? t("Confirmer") : t("Confirmer le retrait")) + "</button>" +
+      "</div></div>";
+    document.body.appendChild(ov);
+    var okBtn = ov.querySelector("[data-nc-conv-ok]"), err = ov.querySelector(".nc-conv-err"), sending = false;
+    var close = function () { if (sending) return; ov.remove(); document.removeEventListener("keydown", onKey, true); };
+    var onKey = function (e) { if (e.key === "Escape") { e.preventDefault(); close(); } };
+    document.addEventListener("keydown", onKey, true);
+    ov.addEventListener("click", function (e) {
+      if (e.target === ov || (e.target.closest && e.target.closest("[data-nc-conv-cancel]"))) { close(); return; }
+      if (!(e.target.closest && e.target.closest("[data-nc-conv-ok]")) || sending || okBtn.disabled) return;
+      sending = true; okBtn.disabled = true; ov.querySelector("[data-nc-conv-cancel]").disabled = true;
+      okBtn.textContent = t("Enregistrement…");
+      setConv(r, on).then(function (ok) {
+        sending = false;
+        if (ok) { close(); return; }
+        // Échec : la sélection reste celle du serveur, l'erreur est explicite.
+        err.textContent = t("L'opération n'a pas été enregistrée") + (ui.error ? " : " + ui.error : ".");
+        err.hidden = false;
+        okBtn.disabled = false; okBtn.textContent = t("Réessayer");
+        ov.querySelector("[data-nc-conv-cancel]").disabled = false;
+      });
+    });
+    setTimeout(function () { try { (full ? ov.querySelector("[data-nc-conv-cancel]") : okBtn).focus(); } catch (e) { /* rien */ } }, 0);
   }
   function onClick(e) {
     if (!ui.mode) return;
@@ -1604,7 +1658,7 @@
       return;
     }
     if (d.ncList) { post("/api/national/coach/list", { list: d.ncList, on: d.ncOn === "1", player: { p: Number(d.ncP), n: d.ncN } }); return; }
-    if (d.ncConv !== undefined && d.ncP) { setConv({ p: Number(d.ncP), n: d.ncN }, d.ncConv === "1"); return; }
+    if (d.ncConv !== undefined && d.ncP) { confirmConv({ p: Number(d.ncP), n: d.ncN }, d.ncConv === "1"); return; }
     if (d.ncReplace) { ui.replaceOut = d.ncReplace; paint(); return; }
     if (d.ncReplaceCancel) { ui.replaceOut = null; paint(); return; }
     if (d.ncReplaceGo) {

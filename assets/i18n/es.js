@@ -7758,4 +7758,15 @@ window.HM_I18N_ES = {
   "Partager une rediffusion est réservé au Premium, comme « Revoir le direct ».": "Compartir una repetición es exclusivo de Premium, como «Volver a ver el directo».",
   "Les matchs de ligue privée ne se partagent pas : ils sont réservés aux membres.": "Los partidos de liga privada no se comparten: son solo para los miembros.",
   "Ce match n'a pas de direct.": "Este partido no tiene directo.",
+  // Mission live 2026-10-10 (convocation, son du direct)
+  "de la convocation ?": "de la convocatoria?",
+  "Il sera ajouté à la convocation": "Se añadirá a la convocatoria",
+  "Il sera retiré de la convocation": "Se retirará de la convocatoria",
+  "Cela modifie le groupe : vestiaire, cinq de départ et ordres des matchs qui l'incluaient.": "Esto cambia el grupo: vestuario, quinteto inicial y órdenes de los partidos que lo incluían.",
+  "La liste est complète": "La lista está completa",
+  "Confirmer le retrait": "Confirmar la retirada",
+  "Enregistrement…": "Guardando…",
+  "L'opération n'a pas été enregistrée": "La operación no se ha guardado",
+  "Le navigateur a mis le son en pause — ": "El navegador ha pausado el sonido — ",
+  "touchez pour le réactiver": "toca para reactivarlo",
 };
