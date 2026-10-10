@@ -166,3 +166,19 @@ figure ici).
 | Modifications | Passage « chaud » 8–16,8 s (avant : salle calme ; après : sifflet et coupure) nivelé puis empilé en 7 couches (décalages, hauteur ×0,93 à ×1,07, panoramique, aigus adoucis pour les couches lointaines) ; boucle de 22,5 s, fondu 1,5 s ; −20 dBFS RMS ; MP3 112 kb/s |
 | Restrictions | Aucune connue |
 
+## amb_jeer_1.mp3 · amb_jeer_2.mp3 · amb_jeer_3.mp3
+
+| Champ | Valeur |
+|---|---|
+| Fichier | `assets/audio/sfx/amb_jeer_{1,2,3}.mp3` (clé `amb_jeer`, protestation après une faute sifflée contre l'équipe à domicile) |
+| Ressource originale | Extraits de `amb_boo.mp3` (« AF Crowd Boo Hiss LOOP 2.wav », Freesound n° 678537) |
+| Auteur | mglennsound |
+| Source | https://freesound.org/people/mglennsound/sounds/678537/ |
+| Licence | Creative Commons 0 (CC0 1.0) — voir `amb_boo.mp3` |
+| Conditions | https://creativecommons.org/publicdomain/zero/1.0/ |
+| Vérifiée le | 2026-10-10 |
+| Attribution requise | Non (crédit facultatif) |
+| Usage commercial / jeu | Autorisé |
+| Modifications | Extraits de la boucle « salle pleine » (1–3,6 s, 8,5–11,3 s, 15,5–17,9 s), montée 0,22 s, extinction 1,1 s, −16 dBFS RMS ; MP3 96 kb/s |
+| Restrictions | Aucune connue |
+

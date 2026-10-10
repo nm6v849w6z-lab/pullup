@@ -40,9 +40,16 @@ cdn.freesound.org autorisés (pixabay.com refusé : 403).
 - [ ] B. « Let's go [équipe] ! » scandé (aucune source libre trouvée pour l'instant)
 
 ## Priorité 2 — Immersion
-- [ ] Huées contre le porteur adverse, contestation arbitrale, grognements
-- [ ] Interception, contre, dunk, alley-oop (réactions dédiées)
-- [ ] Montée à l'approche des 24 s, dernière possession, public qui retient son souffle
+- [x] Contestation arbitrale : faute sifflée contre le domicile → `amb_jeer_1..3` (extraits
+  de `amb_boo`), plus fort sur technique / antisportive — 2026-10-10
+- [x] Contre du domicile → grande clameur ; contre-attaque conclue → grand moment ;
+  interception → clameur (sons existants) — 2026-10-10
+- [x] Montée à l'approche des 24 s (défense, ≤ 6 s) — 2026-10-10
+- [ ] « Ooooh ! » d'émerveillement (fichiers à fournir : noah0189 264499, IENBA 488472)
+- [ ] Huées contre le porteur adverse, dernière possession, public qui retient son souffle
+  (HowardV 264376)
+- [ ] Dunk / alley-oop : le moteur ne les distingue pas (types : three, jumper, fastbreak,
+  layup, post, floater)
 - [ ] Variantes faible / moyenne / forte / exceptionnelle des réactions fréquentes
 
 ## Priorité 3 — Finition

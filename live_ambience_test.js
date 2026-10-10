@@ -63,6 +63,15 @@ function fakeAudio() {
   R({ kind: "timeout", type: "timeout", team: H }, {}, { kind: "applause", i: 0.6 }, "temps mort : applaudissements");
   R({ kind: "shot", team: H, made: true, zone: "mid" }, { quarter: 4, clock: 40 }, { kind: "cheer", i: 1.5 }, "panier décisif en fin de match : plus fort");
   assert.strictEqual(crowdReactionFor({ kind: "substitution", team: H }, base, H), null, "changement : rien");
+  // Priorité 2 (2026-10-10) : contres, contre-attaques, fautes contre l'équipe à domicile.
+  R({ kind: "shot", team: A, made: false, blocked: true }, {}, { kind: "cheer", i: 1.35 }, "contre de l'équipe à domicile : grande clameur");
+  R({ kind: "shot", team: H, made: false, blocked: true }, {}, { kind: "groan", i: 0.8 }, "domicile contré : déception");
+  R({ kind: "shot", team: H, made: true, zone: "paint", shotType: "fastbreak" }, {}, { kind: "cheer", i: 1.3 }, "contre-attaque au cercle : grand moment");
+  R({ kind: "foul", team: H }, {}, { kind: "jeer", i: 1 }, "faute sifflée contre le domicile : protestation");
+  R({ kind: "technicalFoul", team: H }, {}, { kind: "jeer", i: 1.4 }, "technique contre le domicile : forte protestation");
+  R({ kind: "shot", team: A, made: false, foulType: "shooting" }, {}, { kind: "jeer", i: 1 }, "faute sur tir du domicile : protestation");
+  assert.strictEqual(crowdReactionFor({ kind: "foul", team: A }, base, H), null, "faute de l'adversaire : pas de huées");
+  assert.strictEqual(crowdReactionFor({ kind: "shot", team: H, made: false, foulType: "shooting" }, base, H), null, "faute sur tir subie par le domicile : pas de huées");
   ok("Réactions : clameur sur un panier domicile (plus forte à 3 points et en fin de match serrée), déception sur un panier adverse ou un tir domicile manqué, joie sur un tir ou lancer adverse manqué.");
 
   // 3. Moteur d'ambiance (Web Audio factice) : transitions, chants, doublons.
@@ -96,6 +105,13 @@ function fakeAudio() {
   assert.strictEqual(sfx.updateAmbience({ ...S, stoppage: { kind: "timeout" } }), "break");
   const modes = sfx.debug().ambLog.filter(x => x.kind === "mode").map(x => x.mode);
   assert.deepStrictEqual(modes, ["offense", "defense", "offense", "ftHome", "ftAway", "defense", "break"]);
+  // 24 s de l'adversaire : tension en défense à 6 s ou moins, pas en attaque.
+  const tens = () => sfx.debug().ambLog.filter(x => x.kind === "tension").map(x => x.on);
+  sfx.updateAmbience({ ...S, possession: A, shotClock: 12 });
+  sfx.updateAmbience({ ...S, possession: A, shotClock: 5 });
+  sfx.updateAmbience({ ...S, possession: A, shotClock: 3 });
+  sfx.updateAmbience({ ...S, possession: H, shotClock: 4 });
+  assert.deepStrictEqual(tens(), [true, false], "tension des 24 s en défense seulement : " + JSON.stringify(tens()));
   ok(`Transitions : ${modes.join(" → ")} ; chants seulement en défense, arrêtés dès la reprise de possession ; aucune relance ni nouvelle source à chaque mise à jour.`);
 
   // 4. Réactions déclenchées par les vrais événements, une fois chacun.

@@ -85,8 +85,17 @@ export function crowdReactionFor(e, S, home = 0) {
   if (!e || !e.kind || e.kind === "quote") return null;
   const t = e.team;
   const clutch = S && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6;
+  // Contre (fil : tir manqué `blocked`, équipe = celle du tireur) : grande
+  // clameur si l'équipe à domicile contre, déception si elle est contrée.
+  if (e.kind === "shot" && e.blocked && (t === 0 || t === 1)) return t === home ? { kind: "groan", intensity: 0.8 } : { kind: "cheer", intensity: 1.35 * (clutch ? 1.2 : 1) };
+  // Faute sifflée CONTRE l'équipe à domicile (fil : équipe = celle qui fait
+  // la faute ; faute sur tir : tir manqué avec `foulType`, faute de l'autre
+  // équipe) : huées de protestation, plus fortes sur technique / antisportive.
+  if ((e.kind === "foul" || e.kind === "technicalFoul" || e.kind === "unsportsmanlikeFoul") && t === home) return { kind: "jeer", intensity: e.kind === "foul" ? 1.0 : 1.4 };
+  if (e.kind === "shot" && e.made !== true && e.foulType && (t === 0 || t === 1) && 1 - t === home) return { kind: "jeer", intensity: 1.0 };
   if (e.kind === "shot" && e.made === true) {
-    if (t === home) return { kind: "cheer", intensity: (e.zone === "three" ? 1.4 : 1) * (clutch ? 1.5 : 1) };
+    // Contre-attaque conclue au cercle (shotType « fastbreak ») : grand moment.
+    if (t === home) return { kind: "cheer", intensity: (e.zone === "three" ? 1.4 : e.shotType === "fastbreak" ? 1.3 : 1) * (clutch ? 1.5 : 1) };
     return { kind: "groan", intensity: (e.zone === "three" ? 1.3 : 1) * (clutch ? 1.3 : 1) };   // 3 points / fin serrée : grand « ohhh »
   }
   // Tir classique manqué (fil : « rebound » ; équipe du tireur = celle du
@@ -283,7 +292,7 @@ export function createSfx(opts = {}) {
     final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
     off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
   };
-  const amb = { mode: "off", hot: false, bed: null, boo: null, chant: null, calm: null, heat: null, cheerLoop: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
+  const amb = { mode: "off", hot: false, tension: false, bed: null, boo: null, chant: null, calm: null, heat: null, cheerLoop: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
   let noiseBuf = null;
   function crowdNoise() {
     // Bruit « rose » de 4 s, généré UNE fois et réutilisé partout.
@@ -448,15 +457,17 @@ export function createSfx(opts = {}) {
     const mode = amb.mode, m = AMB_MIX[mode] || AMB_MIX.off;
     const cm = amb.calm ? CALM_MIX[mode] : null;
     const hot = amb.hot && !!amb.heat && (mode === "offense" || mode === "defense");
+    // 24 s de l'adversaire qui s'achèvent : la salle et le chant montent.
+    const tense = amb.tension && mode === "defense" ? 1.6 : 1;
     // Lancer franc : on « fait le silence » vite ; sinon fondu plus doux.
     const tc = mode === "ftHome" ? 0.35 : 0.9;
-    const bed = (cm ? cm.bed : m.bed) * (hot ? 0.45 : 1);
+    const bed = (cm ? cm.bed : m.bed) * (hot ? 0.45 : 1) * tense;
     if (amb.bed) { T(amb.bed.gain.gain, bed, tc); if (amb.bed.filter) T(amb.bed.filter.frequency, m.tone, 1.2); }
     if (amb.calm) T(amb.calm.gain.gain, cm ? cm.calm : 0, tc);
     if (amb.heat) T(amb.heat.gain.gain, hot ? HEAT_GAIN : 0, hot ? 1.2 : 0.8);
     if (amb.cheerLoop) T(amb.cheerLoop.gain.gain, mode === "offense" ? OFFENSE_GAIN * (hot ? 1.4 : 1) : 0, mode === "offense" ? 0.6 : 0.4);
     if (amb.boo) T(amb.boo.gain.gain, m.boo, m.boo ? 0.5 : 0.8);
-    if (amb.chant) T(amb.chant.gain.gain, m.chant ? CHANT_GAIN * (hot ? 1.15 : 1) : 0, m.chant ? 0.45 : 0.3);
+    if (amb.chant) T(amb.chant.gain.gain, m.chant ? CHANT_GAIN * (hot ? 1.15 : 1) * tense : 0, m.chant ? 0.45 : 0.3);
   }
   function setMode(mode) {
     if (mode === amb.mode) return false;
@@ -479,10 +490,13 @@ export function createSfx(opts = {}) {
     // Fin de match serrée (4e quart ou prolongation, ≤ 2 min, écart ≤ 6) :
     // la salle bout (couche `amb_bed_hot`), sans changer de mode.
     const hot = !!(S && S.status === "live" && S.quarter >= 4 && typeof S.clock === "number" && S.clock <= 120 && S.teams && Math.abs((S.teams[0].score || 0) - (S.teams[1].score || 0)) <= 6);
-    const hotChanged = hot !== amb.hot;
+    // Défense, 24 s de l'adversaire à 6 s ou moins : tension (montée).
+    const tension = mode === "defense" && !!S && typeof S.shotClock === "number" && S.shotClock > 0 && S.shotClock <= 6;
+    const hotChanged = hot !== amb.hot, tensionChanged = tension !== amb.tension;
     if (hotChanged) { amb.hot = hot; amb.log.push({ kind: "hot", on: hot, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
-    const changed = setMode(mode);   // applique le mélange avec l'état « bouillant » à jour
-    if (hotChanged && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
+    if (tensionChanged) { amb.tension = tension; amb.log.push({ kind: "tension", on: tension, at: nowMs() }); if (amb.log.length > 80) amb.log.shift(); }
+    const changed = setMode(mode);   // applique le mélange avec les états « bouillant » / « tension » à jour
+    if ((hotChanged || tensionChanged) && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
     return changed ? mode : null;
   }
   function react(r) {
@@ -514,7 +528,7 @@ export function createSfx(opts = {}) {
           g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45 * k, t + 0.18); g.gain.setTargetAtTime(0.0001, t + 0.7, 0.55 + 0.25 * k);
           if (k >= 1.3) for (let i = 0; i < 3; i++) shout(t + 0.1 + i * 0.12, 0.7, 330 + Math.random() * 90, "o", 0.035);
           for (let i = 0; i < Math.round(6 * k); i++) crowdClap(t + 0.35 + i * 0.16 + Math.random() * 0.05, 0.06);
-        } else if (r.kind === "groan") {   // « ohhh » déçu, grave, qui descend
+        } else if (r.kind === "groan" || r.kind === "jeer") {   // « ohhh » déçu, grave, qui descend
           bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(380, t + 0.9); bp.Q.value = 1.4;
           g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * k, t + 0.12); g.gain.setTargetAtTime(0.0001, t + 0.5, 0.35);
         } else {                           // applaudissements

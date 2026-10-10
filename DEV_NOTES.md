@@ -192,7 +192,14 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     (fin de match serrée = `amb.hot`, n'est pas un mode : `applyMix`
     sans changement de mode). Niveaux mesurés (Chromium, « moyenne ») :
     lancer domicile −33 dB < calme −25 < attaque −21 < défense −17 ≈ huées
-    < fin serrée −15.
+    < fin serrée −15. Priorité 2 : contre du domicile = grande clameur
+    (tir `blocked`, équipe = tireur), domicile contré = déception ;
+    contre-attaque conclue (`shotType` « fastbreak ») = intensité 1,3 ;
+    faute sifflée contre le domicile (foul / technique / antisportive, ou
+    tir manqué avec `foulType` de l'adversaire) = `amb_jeer` (extraits de
+    `amb_boo`) ; défense avec 24 s adverses ≤ 6 s = `amb.tension` (fond et
+    chant ×1,6, ≈ +2,4 dB). Pas de dunk ni de violation des 24 s dans le
+    moteur.
   - **Musiques des shows (2026-10-10)** : mascotte SEULE → 3 musiques à tour
     de rôle (`mascotte-1..3.mp3`, ordre gardé dans `localStorage`
     « hm-mascot-track », `staging.js:nextMascotTrack`) ; gala (pompom girls +
@@ -220,7 +227,7 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
     6 chorégraphies avec tempo propre, célébration de la mascotte (sauts,
     salut, applaudissements) selon `hype` (`staging.js:hypeOf`). Show
     `gala` (pom-pom girls + mascotte) à la mi-temps et un temps mort sur
-    trois. Assets du direct en `?v=20261010-10`.
+    trois. Assets du direct en `?v=20261010-11`.
   - **Remiseur protégé** : tant que `inbounder` est posé, `moveTo` ignore
     toute cible DANS le terrain (plan, formation, entrée, ballon perdu…) ;
     `busy()` à jeton (seul le dernier minuteur libère le joueur) ;

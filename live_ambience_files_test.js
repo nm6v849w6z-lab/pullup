@@ -138,6 +138,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "freeThrow", team: 1, made: 1, attempt: 1, of: 1 }], base); await sleep(5);
   assert.strictEqual(claps().length, 8, "lancer adverse réussi : pas d'applaudissements");
   ok(`Applaudissements : lancer réussi à domicile et temps mort (${[...new Set(c2)].join(", ")}), fin de quart-temps → version longue ; rien sur un lancer adverse réussi.`);
+  // Faute sifflée contre l'équipe à domicile : huées de protestation (jeer).
+  const jeers = () => started.filter(s => /^amb_jeer_\d\.mp3$/.test(s.name)).map(s => s.name);
+  for (let i = 0; i < 4; i++) { t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "foul", team: 0 }], base); await sleep(5); }
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "foul", team: 1 }], base); await sleep(5);
+  const j = jeers();
+  assert.ok(j.length === 4 && j.every((n, i) => i === 0 || n !== j[i - 1]), "protestation à chaque faute du domicile, variantes alternées, rien sur une faute adverse : " + j.join(","));
+  t += 3000; sfx.onEvents([{ id: id++, airAt: t, kind: "shot", team: 1, made: false, blocked: true }], base); await sleep(5);
+  assert.strictEqual(cheers().pop(), "amb_cheer_big.mp3", "contre du domicile : grande clameur");
+  ok(`Faute contre le domicile : protestation (${[...new Set(j)].join(", ")}) ; contre du domicile : grande clameur.`);
   sfx.destroy();
   console.log("\n🏁 live_ambience_files_test.js : fichiers d'ambiance branchés aux bons événements.");
   process.exit(0);
