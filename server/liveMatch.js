@@ -231,6 +231,19 @@ function computeLiveMatch(Engine, league, round, homeIdx, awayIdx, kickoffAt, co
 // Même calcul, à partir des deux objets Team directement (Coupe nationale :
 // les deux clubs peuvent venir de deux championnats différents, voir
 // server/nationalCup.js).
+// Graine STABLE d'un direct (mission live 2026-10-10, « un seul live par
+// match ») : dérivée de l'identité du match (équipes, journée, coup d'envoi,
+// compétition) au lieu d'un tirage au hasard. Si le direct stocké est perdu
+// et recalculé (blob manquant, cache périmé, erreur avant sauvegarde), le
+// moteur retire exactement les mêmes nombres : même match tant que les
+// équipes n'ont pas changé.
+function liveMatchSeed(home, away, round, kickoffAt, competition) {
+  const id = [home && (home.id != null ? home.id : home.name), away && (away.id != null ? away.id : away.name), round, kickoffAt, competition].join("|");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
 function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, kickoffAt, competition = "championship") {
 
   const homeCannotField = POSITIONS_MISSING(home);
@@ -274,8 +287,9 @@ function computeLiveMatchForTeams(Engine, home, away, round, homeIdx, awayIdx, k
   // sans le moindre avantage — réservé jusque-là aux ligues privées) :
   // ±HOME_ADVANTAGE_FACTOR sur les caractéristiques effectives, comme en
   // ligue privée. Mesuré : ≈60 % de victoires à domicile entre clubs égaux.
-  const engine = new Engine.MatchEngine(home, away, { homeAdvantage: true });
-  const result = engine.simulate();
+  const engine = new Engine.MatchEngine(home, away, { homeAdvantage: true, seed: liveMatchSeed(home, away, round, kickoffAt, competition) });
+  // Même `now` à chaque calcul (coup d'envoi) : un recalcul redonne le même match.
+  const result = engine.simulate(Number.isFinite(kickoffAt) ? kickoffAt : Date.now());
   const { events, pauses, totalDurationMs } = schedulePlayback(result.events, kickoffAt);
 
   return {
@@ -1033,6 +1047,7 @@ function liveMatchesLiteFor(league) {
 }
 
 module.exports = {
+  liveMatchSeed,
   HALFTIME_BREAK_MS, QUARTER_BREAK_MS, OVERTIME_BREAK_MS, TIMEOUT_BREAK_MS,
   SECONDS_SCALE_MS, MIN_EVENT_GAP_MS, SAME_CLOCK_GAP_MS,
   archiveReplay, schedulePlayback, liveMatchKey, computeLiveMatch, computeLiveMatchForTeams, ensureLiveMatchStarted, finalizeRound, viewLiveMatchForTeam,

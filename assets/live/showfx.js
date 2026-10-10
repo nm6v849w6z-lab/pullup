@@ -17,7 +17,7 @@ export const DESIGN = { W: 2000, H: 1277, court: [193, 120, 1615, 855], board: [
 // Durée d'une boucle (s) : la scène de la maquette + un temps de respiration.
 export const SHOW_CYCLE = { pom: 20, mascA: 14, mascB: 14, teeC: 12 };
 // Style par variante (choix de la maquette : « auto »).
-export const SHOW_LOOK = { pom: "cartoon", mascA: "cartoon", mascB: "real", teeC: "token" };
+export const SHOW_LOOK = { pom: "cartoon", mascA: "cartoon", mascB: "real", teeA: "token", teeB: "token", teeC: "token" };
 
 function hexRgb(h) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h || "").trim());
@@ -846,7 +846,7 @@ export function createShowFx(team) {
   }
 
   function sceneTee(variant, look, t) {
-    const cfg = TEE[variant];
+    let cfg = TEE[variant];
     const out = { chars: [], dim: 0.1, spots: [], fx: [], floor: [], shirts: [], guides: { paths: [], traj: [] }, period: cfg.period };
     const shots = cfg.shots.map((s, idx) => {
       const T = s[2], hT = s[3];
@@ -877,8 +877,15 @@ export function createShowFx(team) {
       const recoil = prev && t - prev.tF < 0.6 ? 7 * Math.exp(-(t - prev.tF) * 10) : 0;
       return { phi: p0 + d * u, recoil, brace: sm((t - (next.tF - 0.35)) / 0.25), last: prev };
     }
+    // Entrée réelle (mission live 2026-10-10 : « les personnages
+    // apparaissent directement sur le terrain ») : le chariot roule depuis
+    // le bord du bas, les lanceurs arrivent du bord le plus proche, en
+    // ENTER secondes, avant la première salve.
+    const ENTER = 0.9, ek = sm(t / ENTER);
     if (variant === 'C') {
       const a = aimAt(0, t);
+      const cy = cfg.cart[1] + (1 - ek) * (1150 - cfg.cart[1]);
+      cfg = { ...cfg, cart: [cfg.cart[0], cy] };
       out.floor.push(['cart', cfg.cart[0], cfg.cart[1], a.phi, a.recoil]);
       const gc = staffChar(look, cfg.cart[0] - 62, cfg.cart[1] + 8, { face: 1 });
       gc.pose = mixPose(P.ready, { aL: [28, -55], aR: [60, 110], lL: [12, 12], lR: [12, 12] }, 1);
@@ -887,7 +894,9 @@ export function createShowFx(team) {
       const lu = ((t - 0.4) % 1.1) / 1.1; lc.pose = mixPose(P.clasp, P.T, sm(lu * 3) * (1 - sm((lu - 0.5) * 3)));
       out.chars.push(lc);
     } else {
-      cfg.launchers.forEach((L, who) => {
+      cfg.launchers.forEach((L0, who) => {
+        const from = variant === 'A' ? [L0[0], 1150] : [L0[0] < 1000 ? -80 : 2080, L0[1]];
+        const L = [from[0] + (L0[0] - from[0]) * ek, from[1] + (L0[1] - from[1]) * ek];
         const a = aimAt(who, t);
         const mw = staffMuzzleWorld(look, L, a.phi, a.recoil);
         const pose = aimPose(a.phi, mw.face, a.brace == null ? 0.4 : 0.4 + 0.6 * a.brace);
@@ -1030,7 +1039,9 @@ export function createShowFx(team) {
       // Mi-temps / grand temps mort (2026-10-10) : pompom girls au centre ET
       // mascotte sur son parcours habituel (panier de droite, tour), dans
       // la même scène — mêmes personnages, chacun à sa place.
-      const sp = scenePom('A', SHOW_LOOK.pom, t), sm2 = sceneMasc(opts.mvariant || 'A', SHOW_LOOK['masc' + (opts.mvariant || 'A')] || 'cartoon', Math.max(0, opts.t2 || 0));
+      const sp = scenePom('A', SHOW_LOOK.pom, t);
+      // (t2 > 900 : tour de la mascotte terminé — plus de mascotte, voir staging.js:mascotLap)
+      const sm2 = opts.t2 > 900 ? { chars: [], dim: 0, spots: [], fx: [], floor: [] } : sceneMasc(opts.mvariant || 'A', SHOW_LOOK['masc' + (opts.mvariant || 'A')] || 'cartoon', Math.max(0, opts.t2 || 0));
       sc = { chars: sp.chars.concat(sm2.chars), dim: Math.max(sp.dim, sm2.dim), spots: sp.spots.concat(sm2.spots), fx: sp.fx.concat(sm2.fx), floor: (sm2.floor || []), guides: sp.guides };
     } else sc = show === 'pom' ? scenePom(variant, look, t) : show === 'masc' ? sceneMasc(variant, look, t) : sceneTee(variant, look, t);
     drawLighting(sc.dim, sc.spots);

@@ -13,7 +13,7 @@ const POS = ["M", "AS", "A", "AF", "P"];
 const mkTeam = (key, n) => ({ name: key, short: key.slice(0, 3).toUpperCase(), score: 0, color: key === "Gotham" ? "#F26B1D" : "#3B8FE0",
   players: Array.from({ length: n }, (_, i) => ({ id: key + ":" + i, name: key + " Joueur" + i, pos: POS[i % 5], onCourt: i < 5, pts: 0, reb: 0, ast: 0, number: 4 + i, fatigue: 10, pf: 0 })) });
 
-function harness() {
+function harness(extra = {}) {
   const dom = new JSDOM(`<!doctype html><div id="host"></div>`, { pretendToBeVisual: false, runScripts: "outside-only" });
   const win = dom.window;
   const T0 = 1_900_000_000_000;
@@ -27,7 +27,7 @@ function harness() {
   Object.defineProperty(win.performance, "now", { value: () => vt - T0 + 100000, configurable: true });
   win.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/format.js"), "utf8")));
   win.eval(strip(fs.readFileSync(path.join(__dirname, "assets/live/court2d.js"), "utf8")));
-  const court = win.createCourt2D(win.document.getElementById("host"), { raster: false, now: () => vt });
+  const court = win.createCourt2D(win.document.getElementById("host"), { raster: false, now: () => vt, ...extra });
   const S = { status: "live", quarter: 2, clock: 400, possession: 0, teams: [mkTeam("Gotham", 10), mkTeam("Rennes", 10)], shots: [],
     referees: [0, 1, 2].map(i => ({ id: "ref" + i })), events: [] };
   let id = 0;
@@ -53,7 +53,7 @@ function harness() {
     prev = lay;
   };
   const api = {
-    S, court, win, get vt() { return vt; },
+    S, court, win, get vt() { return vt; }, timers, get rafs() { return rafs.length; },
     run(ms, each) { const end = vt + ms; while (vt < end) { frame(); if (each) each(); } },
     // Un événement diffusé maintenant (ou `dt` ms plus tard / plus tôt).
     ev(e, dt = 0) { const x = { id: ++id, quarter: S.quarter, clock: S.clock, airAt: vt + dt, text: e.text || "", actors: {}, ...e }; S.events.push(x); return x; },

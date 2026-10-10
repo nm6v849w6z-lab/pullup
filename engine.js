@@ -20267,7 +20267,10 @@ class MatchEngine {
   // ici aussi. Sanctionnée de 2 lancers francs adverses (contre 1 pour la
   // technique, règle réelle simplifiée) - accordés qu'elle mène ou non à
   // l'exclusion cette fois-ci.
-  maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, ftShooter, quarter, clock, events) {
+  // `ftCount` (mission live 2026-10-10) : lancers accordés EN PLUS. 0 quand
+  // la faute antisportive requalifie un contact déjà sanctionné de lancers
+  // (and-one, faute sur tir) : un seul contact, une seule série de lancers.
+  maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, ftShooter, quarter, clock, events, ftCount = 2) {
     if (defender.disqualified || defender.attrs.discipline >= 50) return;
     const unsportsmanlikeChance = clamp((50 - defender.attrs.discipline) * 0.0006, 0, 0.03);
     if (rand01() >= unsportsmanlikeChance) return;
@@ -20278,7 +20281,7 @@ class MatchEngine {
     } else {
       this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
-    this.freeThrows(ftShooter, 2, events, quarter, clock, offTeam);
+    if (ftCount > 0) this.freeThrows(ftShooter, ftCount, events, quarter, clock, offTeam);
   }
 
   // scoreDiff = score(offTeam) - score(defTeam) au moment présent : sert aux
@@ -20527,7 +20530,17 @@ class MatchEngine {
       } else {
         const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, false, null, pressure);
         const phr = { passOut: PHRASES.turnoverPassOut, passLoose: PHRASES.turnoverPassLoose, fumble: PHRASES.turnoverFumble, missedMove: PHRASES.turnoverMissedMove }[sit.kind] || PHRASES.turnoverPlain;
-        this.log(events, quarter, clock, say(phr, { ballHandler: ballHandler.name, team: offTeam.name, receiver: sit.receiver ? sit.receiver.name : "", recoverer: sit.recoverer ? sit.recoverer.name : "" }), { type: "turnover", tovType: "lost", tovKind: sit.kind, team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: null, stealerId: null,
+        // Attribution (mission live 2026-10-10 : « perte attribuée à un
+        // joueur qui n'a jamais touché le ballon ») : une passe mal
+        // contrôlée est la perte du RECEVEUR (c'est lui que le fil nomme et
+        // qui a le ballon en main) ; toutes les autres restent au passeur.
+        let loser = ballHandler;
+        if (sit.kind === "fumble" && sit.receiver) {
+          loser = sit.receiver;
+          ballHandler.stats.tov--; ballHandler.consecutiveMisses--;
+          loser.stats.tov++; loser.consecutiveMisses++;
+        }
+        this.log(events, quarter, clock, say(phr, { ballHandler: ballHandler.name, team: offTeam.name, receiver: sit.receiver ? sit.receiver.name : "", recoverer: sit.recoverer ? sit.recoverer.name : "" }), { type: "turnover", tovType: "lost", tovKind: sit.kind, team: this.teamKey(offTeam), player: loser.name, playerId: loser.id, passer: ballHandler.name, passerId: ballHandler.id, stealer: null, stealerId: null,
           ...(sit.receiver ? { receiver: sit.receiver.name, receiverId: sit.receiver.id } : null), ...(sit.recoverer ? { recoverer: sit.recoverer.name, recovererId: sit.recoverer.id } : null), deadBall: sit.deadBall, possession: this.teamKey(offTeam) });
       }
       return { possessionOffense: false };
@@ -20539,7 +20552,9 @@ class MatchEngine {
         ballHandler.consecutiveMisses++;
         g.stats.stl++;
         // Pari dans les lignes de passe : interception d'une passe.
-        const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, true, g, null, () => 0);
+        // Receveur visé tiré au sort (avant : `() => 0`, toujours le premier
+        // coéquipier de la liste).
+        const sit = chooseTurnoverSituation(ballHandler, onCourtOff, onCourtDef, true, g, null);
         const phr = sit.receiver ? PHRASES.turnoverIntercept : PHRASES.turnoverSteal;
         this.log(events, quarter, clock, say(phr, { stealer: g.name, ballHandler: ballHandler.name, receiver: sit.receiver ? sit.receiver.name : "" }), { type: "turnover", tovType: "steal", tovKind: sit.receiver ? "intercept" : "strip", team: this.teamKey(offTeam), player: ballHandler.name, playerId: ballHandler.id, stealer: g.name, stealerId: g.id, ...(sit.receiver ? { receiver: sit.receiver.name, receiverId: sit.receiver.id } : null), deadBall: false, possession: this.teamKey(offTeam) });
         if (rand01() < this.transitionChanceFromSpeed(defTeam)) defTeam._transitionBoost = true;
@@ -21237,10 +21252,17 @@ class MatchEngine {
       if (shootingFoul) {
         if (this._possCtx) this._possCtx.foulType = "andOne";
         defender.stats.pf++; defender.fouls++;
-        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
+        // Mission live 2026-10-10 (« and-one : le fil indique deux LF quand
+        // un seul est tiré ») : la faute porte explicitement son type et le
+        // joueur fauté (avant : seulement le contexte de possession). Une
+        // faute antisportive sur CE MÊME contact requalifie la faute, elle
+        // n'ajoute plus 2 lancers par-dessus le lancer additionnel (avant :
+        // 1 + 2 = 3 lancers pour un seul contact) ; décidée AVANT le lancer
+        // pour que le fil reste dans l'ordre du jeu.
+        this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", foulType: "andOne", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, player: shooter.name, playerId: shooter.id, possession: this.teamKey(offTeam) });
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events, 0);
         this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
-        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
       }
       return { possessionOffense: false, scored: true };
     } else {
@@ -21255,15 +21277,15 @@ class MatchEngine {
       // tir raté normal.
       if (blocked) {
         defender.stats.blk++;
-        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.blockedShot, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, blocked: true, shooter: shooter.name, shooterId: shooter.id, blocker: defender.name, blockerId: defender.id, defender: undefined, defenderId: undefined, foulType: undefined, possession: this.teamKey(offTeam) });
       }
       if (shootingFoul) {
         defender.stats.pf++; defender.fouls++;
         if (this._possCtx) this._possCtx.foulType = "shooting";
-        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
+        this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, foulType: "shooting", fouled: true, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
+        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events, 0);
         this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
-        this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events);
         return { possessionOffense: false, scored: true };
       }
 
@@ -21567,7 +21589,13 @@ class MatchEngine {
     const freshTimeouts = () => ({ firstHalf: 0, secondHalf: 0, last2Min: 0, overtime: {}, total: 0 });
     this.timeoutsUsed = { A: freshTimeouts(), B: freshTimeouts() };
     let run = { team: null, points: 0 };
-    [this.teamA, this.teamB].forEach(t => { delete t._setPlay; delete t._advanceBall; });
+    // Drapeaux de possession portés par l'équipe (contre-attaque, seconde
+    // chance, système, remise avancée) : remis à zéro au coup d'envoi.
+    // Mission live 2026-10-10 : `_transitionBoost` / `_secondChance` restaient
+    // posés d'un match à l'autre — le même match recalculé (direct perdu
+    // puis recalculé, rediffusion, match signalé rejoué) n'était plus
+    // identique malgré la même graine.
+    [this.teamA, this.teamB].forEach(t => { delete t._setPlay; delete t._advanceBall; delete t._transitionBoost; delete t._secondChance; });
     let possessionTeam = rand01() < 0.5 ? "A" : "B";
 
     // Retour utilisateur : "début du premier quart temps, faut le mettre

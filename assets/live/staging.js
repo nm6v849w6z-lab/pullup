@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-18";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-18";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-19";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-19";
 
 // Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
 // même scène, chacun à sa place habituelle — à la mi-temps, et un temps
@@ -46,7 +46,11 @@ export function mascotVariant(cfg, state) {
 export const INTRO_MS = 30000;      // entrée des joueurs (avant-match et reprise)
 const EDGE_MS = 1100;               // entrée / sortie des animateurs
 const COACH_Y = 55;                 // debout devant son banc (arène 2026-10-08 : bancs hors du terrain)
-const TUNNEL = { x: 47, y: 53 };
+// Tunnels des vestiaires (mission live 2026-10-10 : « les joueurs
+// apparaissent depuis la table de marque ») : un par équipe, dans les coins
+// du bas, HORS du terrain — chacun entre par son côté (son banc).
+const TUNNELS = [{ x: 2, y: 54 }, { x: 92, y: 54 }];
+const tunnelOf = team => TUNNELS[team === 1 ? 1 : 0];
 
 // Petit générateur pseudo-aléatoire stable (graine = début de l'arrêt) :
 // même show pour tous les spectateurs d'un même arrêt.
@@ -55,6 +59,19 @@ function rng(seed) {
   return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 const lerp = (a, b, k) => a + (b - a) * k;
+// Tour UNIQUE de la mascotte (mission live 2026-10-10) : temps de scène pour
+// `elapsed` secondes écoulées d'un arrêt de `avail` secondes. Le parcours
+// (durée MASCOT_LAP à vitesse normale) est étiré / resserré pour remplir
+// l'arrêt — vitesse = longueur du tour / durée disponible, bornée pour rester
+// naturelle (une routine de dunk « A » ne passe pas au ralenti extrême). Fini
+// → null (plus rien n'est dessiné, jamais de second tour).
+export const MASCOT_LAP = { A: 10.6, B: 11.8 };
+export function mascotLap(variant, elapsed, avail) {
+  const per = MASCOT_LAP[variant] || MASCOT_LAP.A;
+  const speed = Math.max(variant === "B" ? 0.2 : 0.8, Math.min(2, per / Math.max(1, avail)));
+  const t = elapsed * speed;
+  return t >= per ? null : t;
+}
 const clamp01 = k => Math.max(0, Math.min(1, k));
 const ease = k => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
 
@@ -155,7 +172,7 @@ export function createStaging(api, getCfg) {
     const line = { x: 47 + dir * (6 + i * 5.5), y: 25 };
     if (t < 4800) {
       const start = 300 + (team === 1 ? 0 : 2200) + i * 380;
-      if (t < start) return { x: TUNNEL.x, y: TUNNEL.y, speed: 2, snap: true, hidden: true };
+      if (t < start) { const tn = tunnelOf(team); return { x: tn.x, y: tn.y, speed: 2, snap: true, hidden: true }; }
       return { ...line, speed: 1.5 };
     }
     if (t < 21000) {
@@ -209,11 +226,17 @@ export function createStaging(api, getCfg) {
     if (!ov) return null;
     const ctx = ov.canvas.getContext("2d");
     if (!ctx) { api.dropOverlay(); return null; }
-    const variant = fx === "pom" || fx === "both" ? "A" : fx === "tee" ? "C" : mascotVariant(cfg, S);
+    // Lanceurs de t-shirts (mission live 2026-10-10 : « toujours au même
+    // endroit, parfois depuis la table de marque ») : la configuration
+    // (centre / coins / chariot) tourne à chaque salve, déterminée par le
+    // début de l'arrêt — mêmes positions pour tous les spectateurs.
+    const TEE_ORDER = ["A", "B", "C"], teeSeed = Math.floor(st.startAt / 1000);
+    const teeVariant = n => TEE_ORDER[(teeSeed + n) % 3];
+    const variant = fx === "pom" || fx === "both" ? "A" : fx === "tee" ? teeVariant(0) : mascotVariant(cfg, S);
     const mvariant = fx === "both" ? mascotVariant(cfg, S) : null;
     const mcfg = cfg.mascot || null;
     const fxr = createShowFx(showColors(colors[0], colors[1], cfg.homeShort, mcfg && mcfg.number != null ? mcfg.number : 8));
-    const cycle = (SHOW_CYCLE[fx === "pom" ? "pom" : fx + variant] || 14) * 1000;
+    const cycle = (SHOW_CYCLE[fx === "pom" ? "pom" : fx === "tee" ? "teeC" : fx + variant] || 14) * 1000;
     const STILL = { pom: 6, mascA: 2.5, mascB: 3, teeC: 3.3 };      // image fixe (mouvement réduit)
     let ci = null;
     if (fx === "pom" || fx === "both") { ci = Math.floor(rng(Math.floor(st.startAt / 1000))() * 6); if (ci === lastChoreo) ci = (ci + 1) % 6; lastChoreo = ci; }
@@ -242,14 +265,23 @@ export function createStaging(api, getCfg) {
       ctx.setTransform(kx, 0, 0, ky, ox + sc * api.OX - dx * kx, oy + sc * api.OY - dy * ky);
       // Le tableau d'affichage reste au-dessus des personnages.
       ctx.save(); ctx.beginPath(); ctx.rect(-4000, -4000, 10000, 10000); ctx.rect(...DESIGN.board); ctx.clip("evenodd");
-      const key = fx === "pom" || fx === "both" ? "pom" : fx + variant;
       // Pompom girls : un seul show sur tout le temps mort (entrée, danse,
-      // sortie juste avant la reprise) ; les autres shows bouclent.
+      // sortie juste avant la reprise). Mascotte (mission live 2026-10-10,
+      // « la mascotte tourne en boucle ») : UN SEUL tour, à une vitesse
+      // calculée sur la durée de l'arrêt (mascotLap), puis plus rien.
+      // T-shirts : salves successives, configuration différente à chaque salve.
       const total = (st.endsAt - st.startAt - LEAD - 1000) / 1000;
-      const t = api.reduced ? STILL[key] : fx === "pom" || fx === "both" ? el0 / 1000 : (el0 % cycle) / 1000;
-      const mcycle = (SHOW_CYCLE["masc" + (mvariant || "A")] || 14) * 1000;
-      const t2 = api.reduced ? STILL["masc" + (mvariant || "A")] : (Math.max(0, el0 - 2500) % mcycle) / 1000;   // mascotte : entre après les danseuses
-      try { frame = fxr.draw(ctx, { show: fx, variant, mvariant, t, t2, q: kx, order: ci || 0, total, hype: hypeOf(S) }); } catch (e) { frame = null; }
+      const salvo = fx === "tee" ? Math.floor(el0 / cycle) : 0;
+      const v = fx === "tee" ? teeVariant(salvo) : variant;
+      const key = fx === "pom" || fx === "both" ? "pom" : fx === "tee" ? "teeC" : fx + v;
+      let t;
+      if (api.reduced) t = STILL[key];
+      else if (fx === "pom" || fx === "both") t = el0 / 1000;
+      else if (fx === "masc") { t = mascotLap(v, el0 / 1000, total); if (t === null) { ctx.restore(); frame = null; return; } }
+      else t = (el0 % cycle) / 1000;
+      const t2 = api.reduced ? STILL["masc" + (mvariant || "A")] : mascotLap(mvariant || "A", Math.max(0, el0 - 2500) / 1000, total - 2.5);   // mascotte : entre après les danseuses
+      if (fx === "tee") { cv.setAttribute("data-variant", v); this.variant = v; }
+      try { frame = fxr.draw(ctx, { show: fx, variant: v, mvariant, t, t2: t2 === null ? 999 : t2, q: kx, order: ci || 0, total, hype: hypeOf(S) }); } catch (e) { frame = null; }
       ctx.restore();
     }, frame: () => frame, destroy() { api.dropOverlay(); } };
   }
@@ -427,13 +459,18 @@ export function createStaging(api, getCfg) {
     const mascA = (show.name === "mascot" && show.variant === "A") || (show.name === "gala" && show.mvariant === "A");
     if (mascA) {
       const m = show.name === "gala" ? el - 2500 : el;
-      if (m >= 0) { const n = Math.floor(m / 14000), ph2 = m - n * 14000; if (ph2 >= 5300 && ph2 < 6500 && left > 1500) cue(k + ":dunk:" + n, "cheer", 0.45); }
+      // Un seul dunk (tour unique, voir mascotLap) : la clameur suit le temps
+      // de scène réel (dunk à 4,4–5,2 s de scène).
+      const avail = (ph.st.endsAt - ph.st.startAt - 1400) / 1000 - (show.name === "gala" ? 2.5 : 0);
+      const ts = m >= 0 ? mascotLap("A", m / 1000, avail) : null;
+      if (ts !== null && ts >= 4.4 && ts < 5.6 && left > 1500) cue(k + ":dunk", "cheer", 0.45);
     }
     if (show.name === "tshirt" && left > 1500) { const n = Math.floor(el / 5400); if (el - n * 5400 < 800) cue(k + ":tee:" + n, "cheer", 0.35); }
     if ((show.name === "mascot" || show.name === "tshirt") && left <= 2600 && left > 900) cue(k + ":fin", "applause", 0.4);
   }
 
   // ---------- boucle ----------
+  let lastTick = null;
   function tick(nowP) {
     if (destroyed) return;
     const now = api.now();
@@ -449,7 +486,12 @@ export function createStaging(api, getCfg) {
     }
     // Arrivée en retard (onglet ouvert pendant l'arrêt, saut dans un replay) :
     // chacun est posé directement à sa place, sans traversée du terrain.
-    const late = changed && ((ph.t || 0) > 1500);
+    // (seuil 4 s : un léger retard ne téléporte plus personne — on voit encore l'entrée)
+    // Saut dans le temps À L'INTÉRIEUR d'une phase (curseur de rediffusion,
+    // onglet revenu) : même chose, chacun à sa place.
+    const jumped = lastTick && Math.abs((now - lastTick.now) - (nowP - lastTick.p)) > 2500;
+    lastTick = { now, p: nowP };
+    const late = (changed && ((ph.t || 0) > 4000)) || jumped;
 
     // Coachs (sous-drapeau coach).
     if (cfg && cfg.coach && S) {
@@ -458,15 +500,21 @@ export function createStaging(api, getCfg) {
         const bx = api.BENCH[c.t].x;
         let vis = true;
         if (ph.kind === "intro") {
-          if (ph.t < 19000) { c.tx = TUNNEL.x; c.ty = TUNNEL.y; vis = false; if (late || changed) { c.x = c.tx; c.y = c.ty; } }
+          if (ph.t < 19000) { const tn = tunnelOf(c.t); c.tx = tn.x; c.ty = tn.y; vis = false; if (late || changed) { c.x = c.tx; c.y = c.ty; } }
           else { c.tx = bx; c.ty = COACH_Y; }
         } else if (ph.kind === "timeout" || ph.kind === "quarter-break" || ph.kind === "halftime" || ph.kind === "return") {
           c.tx = bx; c.ty = COACH_Y;
           if (ph.kind === "timeout") coachAnim(c, "instruct", 400);
+        } else if (ph.kind !== "live" || (S && S.status === "final")) {
+          // Fin du match (et hors jeu) : le coach reste devant son banc,
+          // plus aucun va-et-vient (mission live 2026-10-10).
+          c.tx = bx; c.ty = COACH_Y;
         } else if (nowP > c.nextWalk) {
-          // Va-et-vient discret le long de la ligne de touche.
-          c.nextWalk = nowP + 4500 + Math.random() * 3500;
-          c.tx = bx + (Math.random() - 0.5) * 6; c.ty = COACH_Y;
+          // Va-et-vient discret le long de la ligne de touche (tirage
+          // reproductible : graine = quart + chrono du match).
+          const rr = rng(((S && S.quarter) || 0) * 1000 + Math.round((S && Number(S.clock)) || 0) + c.t * 7);
+          c.nextWalk = nowP + 4500 + rr() * 3500;
+          c.tx = bx + (rr() - 0.5) * 6; c.ty = COACH_Y;
         }
         if (late) { c.x = c.tx; c.y = c.ty; }
         const d = Math.hypot(c.tx - c.x, c.ty - c.y);

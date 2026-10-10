@@ -120,31 +120,60 @@ const server = http.createServer((req, res) => {
 
     // --- Fin Q1 : mascotte A (journée paire) ---
     const Q1 = { kind: "quarter-break", quarter: 1, ms: 120000 };
-    r = await at(Q1, 400 + 4400, 1);
+    // Mission live 2026-10-10 : UN SEUL tour, vitesse calculée sur la durée
+    // de la pause (staging.js:mascotLap) — routine A jouée à 0,8× sur 2 min :
+    // le dunk (4,4 s de scène) arrive à 5,5 s.
+    r = await at(Q1, 400 + 5500, 1);
     if (r.show !== "mascot" || r.variant !== "A" || r.renderer !== "canvas") fail("fin Q1, journée paire : dunk au trampoline attendu " + JSON.stringify(r));
     const m = r.frame.chars.find(c => c.kind === "masc");
     if (!m || !(m.h > 20)) fail("la mascotte doit être en l'air (trampoline → dunk) " + JSON.stringify(r.frame));
     await snap("show-mascotte-A.png");
     ok("Fin Q1 (journée paire) : mascotte, dunk au trampoline.");
+    // Tour terminé : plus de mascotte (jamais de second tour).
+    r = await at(Q1, 400 + 40000, 1);
+    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc")) fail("mascotte A : un seul passage, plus rien après " + JSON.stringify(r.frame));
+    ok("Mascotte A : un seul passage, pas de boucle.");
     await at(null, 125000);
 
     // --- Fin Q1 : mascotte B (journée impaire) ---
     await page.evaluate(() => { CFG.round = 5; });
-    r = await at(Q1, 400 + 6000, 1);
+    // Tour d'honneur étiré sur la pause (vitesse 0,2× : 6 s de scène à 30 s).
+    r = await at(Q1, 400 + 30000, 1);
     if (r.show !== "mascot" || r.variant !== "B") fail("fin Q1, journée impaire : tour d'honneur attendu " + JSON.stringify(r));
     const mb = r.frame.chars.find(c => c.kind === "masc");
     if (!mb || !(mb.y < 200)) fail("tour d'honneur : la mascotte longe la tribune du haut à 6 s " + JSON.stringify(r.frame));
     if (r.boardInk) fail("tour d'honneur : la mascotte passe derrière le tableau d'affichage.");
     await snap("show-mascotte-B.png");
     ok("Fin Q1 (journée impaire) : mascotte, tour d'honneur et check des fans, sous le tableau.");
+    r = await at(Q1, 400 + 75000, 1);
+    if (r.frame && r.frame.chars && r.frame.chars.some(c => c.kind === "masc")) fail("mascotte B : un seul tour, plus rien après " + JSON.stringify(r.frame));
+    ok("Mascotte B : un seul tour sur la pause, pas de boucle.");
     await at(null, 125000);
 
     // --- Fin Q3 : canon rotatif ---
     r = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 4600, 3);
-    if (r.show !== "tshirt" || r.variant !== "C") fail("fin Q3 : canon rotatif sur chariot attendu " + JSON.stringify(r));
+    // Mission live 2026-10-10 : la configuration des lanceurs tourne à chaque
+    // salve (centre, coins, chariot) — jamais depuis la table de marque.
+    if (r.show !== "tshirt" || !["A", "B", "C"].includes(r.variant)) fail("fin Q3 : lanceurs de t-shirts attendus " + JSON.stringify(r));
     if (r.frame.chars.filter(c => c.kind === "staff").length !== 2 || !(r.frame.shirts > 0)) fail("2 membres du staff et des t-shirts en l'air attendus " + JSON.stringify(r.frame));
+    const tableZone = c => c.x > 820 && c.x < 1180 && c.y > 1000;
+    if (r.frame.chars.some(tableZone)) fail("aucun lanceur à la table de marque " + JSON.stringify(r.frame));
     await snap("show-canon.png");
-    ok("Fin Q3 : canon rotatif sur chariot, t-shirts lancés vers les tribunes.");
+    const seen = new Set([r.variant]);
+    for (const k of [1, 2]) {
+      const r2 = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 4600 + k * 12000, 3);
+      seen.add(r2.variant);
+      if (r2.frame && r2.frame.chars.some(tableZone)) fail("salve " + k + " : aucun lanceur à la table de marque " + JSON.stringify(r2.frame));
+    }
+    if (seen.size !== 3) fail("trois salves : trois configurations différentes attendues, vu " + [...seen].join(","));
+    // Entrée réelle (test 27) : au début d'une salve, le staff arrive encore
+    // du bord (hors du parquet), il ne surgit pas au milieu du terrain.
+    for (const k of [0, 1, 2]) {
+      const r0 = await at({ kind: "quarter-break", quarter: 3, ms: 120000 }, 400 + 300 + k * 12000, 3);
+      const onFloor = (r0.frame ? r0.frame.chars : []).filter(c => c.kind === "staff" && c.x > 193 && c.x < 1808 && c.y > 120 && c.y < 975);
+      if (onFloor.length) fail(`salve ${k} : le staff doit entrer depuis le bord, pas apparaître sur le parquet ` + JSON.stringify(r0.frame));
+    }
+    ok("Fin Q3 : t-shirts lancés vers les tribunes, configuration différente à chaque salve, jamais depuis la table.");
     // Saut dans le temps au-delà de l'arrêt : coupure propre.
     r = await at(null, 600000);
     if (r.cls) fail("saut après l'arrêt : canvas retiré.");

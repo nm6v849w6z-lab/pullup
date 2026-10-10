@@ -20,6 +20,53 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-10) — Mission live : correction et fiabilisation du
+  direct** (moteur, chronologie, terrain 2D, commentateur, sons, shows,
+  fin de match). Tests : `live_engine_fouls_test.js`,
+  `live_engine_ai_test.js`, `live_chronology_determinism_test.js`,
+  `live_persistence_test.js`, `live_court2d_mission_test.js`,
+  `live_buzzer_audio_test.js`, compléments dans `live_shows_canvas_test.js`,
+  `live_staging_test.js`, `live_sfx_test.js`.
+  - **Architecture des événements (une seule chronologie officielle)** :
+    le serveur simule le match UNE fois (`server/liveMatch.js`,
+    graine STABLE `liveMatchSeed(équipes, journée, coup d'envoi,
+    compétition)` + `simulate(kickoffAt)`) → liste d'événements datés
+    (`airAt`, schedulePlayback) stockée → adaptateur (`adapter.js` /
+    `hmLiveOnEvent`) qui l'applique dans l'ordre, une fois → état →
+    fil, feuille, terrain 2D, commentateur, sons. La présentation ne tire
+    plus jamais au hasard : graines = identité de l'action (`eventSeed`,
+    `actionKey` dans court2d, `info.key` du commentateur), jamais l'heure de
+    diffusion (décalée en rediffusion).
+  - Moteur : drapeaux `_transitionBoost` / `_secondChance` remis à zéro au
+    coup d'envoi (ils rendaient un même match recalculé différent) ;
+    and-one : 1 seul lancer même requalifié en antisportive (avant 1 + 2),
+    `foulType`/`player` explicites ; faute sur tir manqué `foulType:
+    "shooting"` ; contre : plus de `defender` hérité (faute d'équipe
+    fantôme côté client) ; passe mal contrôlée = perte du receveur.
+  - Terrain 2D : fautif au contact avant le coup de sifflet, signal après
+    le contact ; faute sur tir visible ; remiseur jamais verrouillé
+    (libéré au jeu, aux lancers, au recalage + garde-fou 7 s) ; reprise
+    après temps mort pilotée par la fin réelle de l'arrêt (`armResume` /
+    `checkResume`), lancers réalignés au lieu d'une remise côté table ;
+    effets passagers nettoyés hors chorégraphie (`fxTimer`, `clearFx`) ;
+    circulation de balle avant la chaîne réelle (cadence selon le rythme
+    de l'équipe) ; porteur qui attaque des espaces ; `halt()` en fin de
+    direct.
+  - Sons : buzzer au vrai 00:00 (chrono arrondi au-dessus) et à la fin des
+    temps morts / pauses, une fois par clé (`buzzerCue`, `buzz`) ; sifflet
+    sur sortie, passe dehors, temps mort ; chant défensif après 1,2 s de
+    possession confirmée ; silence hors de la page (`setAudible`,
+    `hmLiveSyncAudible`) ; clôture ~10 s après le coup de sifflet final
+    (`closeLive`), état terminal au rechargement.
+  - Shows : mascotte UN tour (`mascotLap`, vitesse = tour / durée de la
+    pause, bornée) ; lanceurs de t-shirts : configuration différente à
+    chaque salve, entrée depuis le bord ; tunnels des joueurs dans les
+    coins ; coachs immobiles après le match.
+  - Reste à faire : voir le bilan de la mission (rebond après lancer
+    manqué non modélisé par le moteur, violations 8 s / 24 s absentes,
+    alternance de possession aux quarts, copie client du moteur non
+    alignée).
+
 - **🟢 LIVRÉ (2026-10-10) — Lenteur des clics (Ordres et partout) : DOM
   géant gardé en mémoire + écouteurs globaux**. Mesuré (ligue avancée de
   14 journées, après une visite du Marché, CPU ×4 téléphone) : bouton de

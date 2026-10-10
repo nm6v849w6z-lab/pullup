@@ -53,8 +53,14 @@ function fakeAudio() {
     [{ kind: "rebound", team: A, offensive: true }, [], "tir classique raté extérieur (rebond offensif) : pas de son de lancer raté"],
     [{ kind: "rebound", team: A, offensive: false }, [], "tir raté domicile : pas de « wah-wah »"],
     [{ kind: "quote", team: null }, [], "citation du présentateur"],
-    [{ kind: "quarterEnd", team: null }, ["buzzer"], "fin de quart-temps : buzzer"],
-    [{ kind: "timeout", type: "timeout", team: H }, [], "temps mort : pas de buzzer"],
+    // Mission live 2026-10-10 : le buzzer n'est plus une règle d'événement
+    // (il part au 00:00 réel, voir buzzerCue / live_buzzer_audio_test.js) ;
+    // le temps mort est sifflé.
+    [{ kind: "quarterEnd", team: null }, [], "fin de quart-temps : buzzer géré par le chrono, pas par la règle"],
+    [{ kind: "timeout", type: "timeout", team: H }, ["whistle"], "temps mort : coup de sifflet, pas de buzzer"],
+    [{ kind: "outOfBounds", team: A }, ["whistle"], "ballon sorti : coup de sifflet"],
+    [{ kind: "turnover", team: H, tovType: "lost", deadBall: true }, ["whistle"], "passe dehors : coup de sifflet"],
+    [{ kind: "turnover", team: H, tovType: "lost", deadBall: false }, [], "ballon libre (jeu continue) : pas de sifflet"],
   ];
   for (const [e, want, label] of cases) assert.deepStrictEqual(sfxForEvent(e, H), want, label);
   ok(`${cases.length} cas : caisse (lancer franc réussi domicile), sirène (3 pts validé domicile), sifflet (fautes), jingle (interception domicile), « wah-wah » (lancer franc raté extérieur uniquement) — et rien pour les événements voisins invalides (${SFX_RULES.length} règles).`);

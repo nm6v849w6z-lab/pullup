@@ -16,8 +16,8 @@
 // fiche joueur (avatars, pastilles de poste ambre, tuiles de stats).
 // =====================================================================
 import { fmtClock, quarterName, pct, rating, esc, de, floorAdInk } from "./format.js";
-import { createCourt2D } from "./court2d.js?v=20261010-18";
-import { createHighlights } from "./highlights.js?v=20261010-18";
+import { createCourt2D } from "./court2d.js?v=20261010-19";
+import { createHighlights } from "./highlights.js?v=20261010-19";
 
 const BALL = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#d97b35" stroke="#2b1a0e" stroke-width="1.4"/><path d="M12 1.5v21M1.5 12h21M5 4.5c3.5 3.2 3.5 11.8 0 15M19 4.5c-3.5 3.2-3.5 11.8 0 15" fill="none" stroke="#2b1a0e" stroke-width="1.3"/></svg>`;
 
@@ -279,7 +279,7 @@ export function createLiveView(root, opts = {}) {
   // Commentaire audio (commentary.js, 2026-10-08) : chargé avec le terrain
   // animé ; le terrain annonce ses moments (onMoment), le module parle.
   let comm = null, commLoad = null;
-  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261010-18").then(m => {
+  const loadComm = () => commLoad || (commLoad = import("./commentary.js?v=20261010-19").then(m => {
     if (comm === false) return null;          // vue détruite entre-temps
     comm = m.createCommentary();
     syncCommBtn();
@@ -293,8 +293,8 @@ export function createLiveView(root, opts = {}) {
   // Bruitages (sfx.js, 2026-10-09) : déclenchés par les événements réels du
   // fil (une fois chacun), pas par le terrain. Niveau réglé au bouton
   // (coupés → bas → moyen → fort), gardé dans ce navigateur.
-  let sfx = null;
-  import("./sfx.js?v=20261010-18").then(m => { if (sfx === false) return; sfx = m.createSfx(); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
+  let sfx = null, buzzerCue = null;
+  import("./sfx.js?v=20261010-19").then(m => { if (sfx === false) return; sfx = m.createSfx(); buzzerCue = m.buzzerCue; if (!audible) sfx.setAudible(false); syncSfxBtn(); if (S) try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* rien */ } }).catch(() => {});
   const SFX_LABELS = ["coupés", "bas", "moyen", "fort"];
   function syncSfxBtn() {
     const b = $("sfxBtn"); if (!b) return;
@@ -362,7 +362,7 @@ export function createLiveView(root, opts = {}) {
     if (is2d && !court2d) {
       // Mise en scène (coach, entrée des joueurs, shows — bêta liveShows) :
       // module chargé seulement si le jeu en fournit la configuration.
-      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261010-18").catch(() => null);
+      if (opts.staging && !stagingModule) stagingModule = import("./staging.js?v=20261010-19").catch(() => null);
       loadComm();
       try { court2d = createCourt2D($("court2d"), { colors: S ? S.teams.map(t => t.color) : undefined, staging: opts.staging || null, stagingModule, onMoment: (m, info) => { if (comm) comm.say(m, info); } }); if (S) court2d.update(S, []); }
       catch (e) { court2d = null; ui.view = "chart"; applyView(); }
@@ -457,14 +457,18 @@ export function createLiveView(root, opts = {}) {
   $("fsExit").addEventListener("click", () => setFull(false));
   if (typeof document !== "undefined") {
     // Échap / geste système : le navigateur quitte le vrai plein écran.
-    document.addEventListener("fullscreenchange", () => { if (full && document.fullscreenElement !== root) setFull(false); });
-    document.addEventListener("keydown", e => {
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("keydown", onFsKey);
+  }
+  function onFsChange() { if (full && document.fullscreenElement !== root) setFull(false); }
+  function onFsKey(e) {
+    {
       if (full && e.key === "Escape" && !document.fullscreenElement) setFull(false);
       if (full && (e.key === "ArrowLeft" || e.key === "ArrowRight") && !(e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))) {
         const b = root.querySelector(`.fs-seek [data-seek="${e.key === "ArrowLeft" ? "-30000" : "30000"}"]`);
         if (b) { e.preventDefault(); b.click(); }
       }
-    });
+    }
   }
 
   // Temps mort en cours (state.timeout, calé sur la pause du moteur) :
@@ -482,10 +486,46 @@ export function createLiveView(root, opts = {}) {
 
   // ---------- API ----------
   let lightKey = null, lightTicks = 0, lastClock = null, lastHalf = null, lastTmo = null;
+  // Cycle de vie (mission live 2026-10-10) :
+  //  - `audible` : page du direct affichée (setAudible, appelé par le jeu
+  //    à chaque changement de page / ouverture d'un autre direct) — hors de
+  //    la page, plus aucun son ni commentaire ;
+  //  - `closed` : état terminal ~10 s après le coup de sifflet final (ou
+  //    tout de suite sur un match déjà fini à l'arrivée) : sons coupés,
+  //    terrain figé, plus rien ne bouge — et après rechargement aussi.
+  //  - `prevSnap` : état précédent (statut, quart, chrono, arrêt) pour le
+  //    buzzer, calculé sur la même source de temps que le chrono affiché.
+  let audible = true, closed = false, closeTimer = 0, prevSnap = null;
+  const CLOSE_AFTER_MS = opts.closeAfterMs != null ? opts.closeAfterMs : 10000;
+  function setAudible(on) {
+    audible = !!on;
+    if (sfx) try { sfx.setAudible(audible); } catch (e) { /* rien */ }
+    if (!audible && comm) try { comm.stop(); } catch (e) { /* rien */ }
+  }
+  function closeLive() {
+    if (closed) return;
+    closed = true; clearTimeout(closeTimer);
+    if (sfx) try { sfx.close(); } catch (e) { /* rien */ }
+    if (comm) try { comm.stop(); } catch (e) { /* rien */ }
+    if (court2d) try { court2d.halt(); } catch (e) { /* rien */ }
+    root.classList.add("live-closed");
+  }
+  function reopenLive() {
+    closed = false; closeTimer = 0;
+    if (sfx) try { sfx.reopen(); } catch (e) { /* rien */ }
+    if (court2d) try { court2d.resume(); } catch (e) { /* rien */ }
+    root.classList.remove("live-closed");
+  }
   function update(state) {
     if (full) adoptSeek();
     S = state;
     const first = seenEvents === null;
+    // Fin du match : fermeture définitive ~10 s après le coup de sifflet
+    // (match fini à l'arrivée : après la mise en place, 3 s).
+    if (S.status === "final" && !closed && !closeTimer) closeTimer = setTimeout(closeLive, first || (lastStatus && lastStatus === "final") || !lastStatus ? Math.min(3000, CLOSE_AFTER_MS) : CLOSE_AFTER_MS);
+    if (S.status !== "final" && closeTimer && !closed) { clearTimeout(closeTimer); closeTimer = 0; }
+    // Rediffusion : curseur ramené avant la fin → le direct reprend.
+    if (S.status !== "final" && closed) reopenLive();
     if (ui.box === null) {
       // Feuille de match : mon équipe d'abord (si l'adaptateur le précise).
       const mine = S.teams.findIndex(t => t.mine);
@@ -518,7 +558,7 @@ export function createLiveView(root, opts = {}) {
       lightKey = key; lightTicks = 0;
       render(newEv, newShots);
     }
-    if (court2d && ui.view === "2d") {
+    if (court2d && ui.view === "2d" && !closed) {
       try { court2d.update(S, [...newEv]); } catch (e) { /* le terrain ne doit jamais casser la page */ }
     }
     // Moments forts : jamais au premier affichage (arrivée en cours de match),
@@ -529,13 +569,17 @@ export function createLiveView(root, opts = {}) {
       if (first || jump) highlights.prime(S.events);
       else if (fresh.length) highlights.detect(fresh, S);
       // Bruitages : jamais à l'arrivée sur la page ni sur un saut dans le temps.
-      if (sfx && !first && !jump && fresh.length) { try { sfx.onEvents(fresh, S, { home: 0 }); } catch (e) { /* jamais bloquant */ } }
+      if (sfx && !first && !jump && fresh.length && !closed) { try { sfx.onEvents(fresh, S, { home: 0 }); } catch (e) { /* jamais bloquant */ } }
+      // Buzzer : 00:00 réel du chrono, fin d'un temps mort / d'une pause —
+      // une fois chacun (clé), jamais à l'arrivée ni sur un saut.
+      if (sfx && buzzerCue && !first && !jump && prevSnap && !closed) { const k = buzzerCue(prevSnap, S, Date.now()); if (k) try { sfx.buzz(k); } catch (e) { /* rien */ } }
       // Ambiance du public : suit l'état réel (possession, lancers francs,
       // arrêts de jeu) ; seul un changement de mode agit.
       if (sfx) { try { sfx.updateAmbience(S, { home: 0 }); } catch (e) { /* jamais bloquant */ } }
       if (!first && lastStatus && lastStatus !== "final" && S.status === "final") highlights.onFinal(S);
     } catch (e) { /* jamais bloquant */ }
     lastStatus = S.status;
+    prevSnap = { status: S.status, quarter: S.quarter, clock: S.clock, stoppage: S.stoppage ? { ...S.stoppage } : null };
     if (!first) {
       S.events.filter(e => newEv.has(e.id) && (e.type === "timeout" || e.type === "period" || e.highlight))
         .slice(-1).forEach(e => toast(e.toast || e.text));
@@ -583,6 +627,8 @@ export function createLiveView(root, opts = {}) {
     if (court2d) { try { court2d.destroy(); } catch (e) { /* rien */ } court2d = null; }
     if (comm) { try { comm.destroy(); } catch (e) { /* rien */ } } comm = false;
     if (sfx) { try { sfx.destroy(); } catch (e) { /* rien */ } } sfx = false;
+    clearTimeout(closeTimer);
+    if (typeof document !== "undefined") { document.removeEventListener("fullscreenchange", onFsChange); document.removeEventListener("keydown", onFsKey); }
     root.innerHTML = ""; root.classList.remove("hm-live");
   }
 
@@ -1122,5 +1168,5 @@ export function createLiveView(root, opts = {}) {
     $("dlg").showModal();
   }
 
-  return { update, destroy, highlights };
+  return { update, destroy, highlights, setAudible, closeLive, get closed() { return closed; } };
 }

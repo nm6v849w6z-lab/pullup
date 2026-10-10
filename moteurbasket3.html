@@ -104,8 +104,8 @@
      tout de suite dans son format (retour utilisateur, 2026-10-01 : l'ancien
      format apparaissait le temps de charger le module). Version = celle de
      HM_LIVE_ASSET_VERSION (à changer aux deux endroits). -->
-<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261010-18">
-<link rel="modulepreload" href="assets/live/live-view.js?v=20261010-18">
+<link rel="stylesheet" id="hmLiveCss" href="assets/live/live.css?v=20261010-19">
+<link rel="modulepreload" href="assets/live/live-view.js?v=20261010-19">
 <link rel="modulepreload" href="assets/live/format.js">
 <!-- Langue (Paramètres → Langue, voir assets/i18n/i18n.js) : traduit la page
      à l'affichage quand l'anglais est choisi ; defer pour la même raison
@@ -20223,7 +20223,10 @@ function updateLiveClockTick() {
     // affichée) — deux arrondis indépendants (round pour l'un, ceil pour
     // l'autre) pouvaient différer d'une seconde et donner l'impression que
     // les deux chronos étaient décalés l'un par rapport à l'autre.
-    const interpSecRounded = Math.max(0, Math.round(interpSec));
+    // Arrondi SUPÉRIEUR (mission live 2026-10-10, « buzzer en retard ») :
+    // 00:00 ne s'affiche qu'au moment où le temps est réellement écoulé
+    // (Math.round l'affichait 0,5 s trop tôt) — le buzzer part sur ce zéro.
+    const interpSecRounded = Math.max(0, Math.ceil(interpSec - 1e-6));
     clockEl.textContent = secondsToClockStr(interpSecRounded);
     liveState.clock = interpSecRounded;
     // Chrono des 24 s : SOURCE UNIQUE (le bandeau et le terrain 2D lisent
@@ -21298,6 +21301,7 @@ function showPage(id) {
   // `body:has(#liveSection:not(.hidden))`, qui faisait réévaluer les styles
   // de TOUTE la page à chaque modification du DOM).
   document.body.classList.toggle("page-live", id === "liveSection");
+  hmLiveSyncAudible();
   Object.entries(PAGE_DISCARD_ON_LEAVE).forEach(([pid, holders]) => {
     if (pid === id) return;
     holders.forEach(h => { const el = document.getElementById(h); if (el && el.firstChild) el.innerHTML = ""; });
@@ -35692,7 +35696,7 @@ function applyLiveBoxScoreEvent(ev) {
       } else {
         const defTeamKey = oppOfLiveTeam(ev.team);
         if (ev.blocked && ev.blocker) liveBoxScoreRow(defTeamKey, ev.blocker, ev.blockerId).blk++;
-        if (ev.defender) liveBoxScoreRow(defTeamKey, ev.defender, ev.defenderId).pf++;
+        if (ev.defender && !ev.blocked) liveBoxScoreRow(defTeamKey, ev.defender, ev.defenderId).pf++;
       }
       break;
     }
@@ -35921,7 +35925,7 @@ function computeSpectateBoxScore(airedEvents, teamA, teamB) {
         } else {
           const defKey = opp(ev.team);
           if (ev.blocked && ev.blocker) row(defKey, ev.blocker, ev.blockerId).blk++;
-          if (ev.defender) row(defKey, ev.defender, ev.defenderId).pf++;
+          if (ev.defender && !ev.blocked) row(defKey, ev.defender, ev.defenderId).pf++;
         }
         break;
       }
@@ -36027,6 +36031,22 @@ function closeSpectateMatch() {
   if (spectateState && spectateState.timer) clearInterval(spectateState.timer);
   if (spectateState && spectateState.rich) { try { spectateState.rich.view.destroy(); } catch (e) { /* rien */ } }
   spectateState = null;
+  hmLiveSyncAudible();
+}
+
+// Un seul direct audible à la fois (mission live 2026-10-10 : « le son
+// continue quand on quitte la page », « deux publics en même temps ») :
+// le direct du club seulement sur sa page et sans direct suivi ouvert par-
+// dessus ; le direct suivi (fenêtre) quand il est ouvert. Hors de la page :
+// ambiance, bruitages et commentaire coupés (le direct continue en silence).
+function hmLiveSyncAudible() {
+  const liveEl = document.getElementById("liveSection");
+  const liveShown = !!liveEl && !liveEl.classList.contains("hidden");
+  const spect = !!(spectateState && document.getElementById("spectateOverlay"));
+  const clubView = typeof hmLive !== "undefined" && hmLive && hmLive.view;
+  if (clubView && typeof clubView.setAudible === "function") { try { clubView.setAudible(liveShown && !spect); } catch (e) { /* rien */ } }
+  const sv = spectateState && spectateState.rich && spectateState.rich.view;
+  if (sv && typeof sv.setAudible === "function") { try { sv.setAudible(spect); } catch (e) { /* rien */ } }
 }
 
 // Rafraîchit manuellement le direct suivi (voir le grand commentaire plus
@@ -36103,7 +36123,10 @@ async function showSpectateMatch(teamIdx, pre) {
     document.getElementById("spectateSeekHolder").appendChild(makeReplaySeekBar(st.live, t => {
       shiftReplayTimeline(st.live, t);
       st.lastAired = -1;
-      if (st.rich) { st.rich.adapter.reset(); st.rich.applied = 0; spectateSyncRich(st); }
+      // (mission live 2026-10-10) la file `items` garde les heures de
+      // diffusion d'AVANT le décalage : reconstruite, sinon les statistiques
+      // et le fil sautaient au mauvais moment après un déplacement.
+      if (st.rich) { st.rich.adapter.reset(); st.rich.applied = 0; st.rich.items = null; spectateSyncRich(st); }
       renderSpectateMatch();
     }));
   }
@@ -36177,6 +36200,7 @@ async function spectateMountLiveView(state) {
     view = mod.createLiveView(root, { quarterLength: QUARTER_SECONDS, halftimeShowSeen: true, staging: spectStaging, court2d: hmLive2dOn() });
   } catch (e) { return false; }
   state.rich = { adapter, view, applied: 0 };
+  hmLiveSyncAudible();
   const box = root.closest(".spectate-box");
   if (box) box.classList.add("rich");
   spectateSyncRich(state);
@@ -36385,7 +36409,7 @@ let hmLiveModulePromise = null;
 // Version des fichiers de la vue live, ajoutée à leur URL : les anciennes
 // copies gardées 24 h par les navigateurs (avant le passage en no-cache,
 // voir serveAsset côté serveur) ne peuvent plus masquer une mise à jour.
-const HM_LIVE_ASSET_VERSION = "20261010-18";
+const HM_LIVE_ASSET_VERSION = "20261010-19";
 
 function hmLiveLoadModule() {
   if (!hmLiveModulePromise) {
@@ -36530,6 +36554,7 @@ function hmLiveReset(liveMatch) {
           // ouvert à tous (2026-10-07, POST /api/admin/beta-feature live2d).
           court2d: hmLive2dOn(), trophyFor: hmLiveTrophy,
         });
+        hmLiveSyncAudible();
         hmLiveRender();
       } catch (e) {
         console.warn("Vue live : échec de création", e);
@@ -36586,7 +36611,7 @@ function hmLiveOnEvent(ev) {
 
     // Fautes d'équipe du quart en cours (faute sur tir manqué comprise).
     if (hasTeam && (ev.type === "foul" || ev.type === "unsportsmanlikeFoul")) hmLive.fouls.push({ team: t, quarter });
-    if (hasTeam && ev.type === "shot" && !ev.made && ev.defender) hmLive.fouls.push({ team: 1 - t, quarter });
+    if (hasTeam && ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) hmLive.fouls.push({ team: 1 - t, quarter });
 
     // Tirs : un tir manqué "simple" n'est journalisé QUE par l'événement
     // "rebound" (team = équipe qui prend le rebond), un contre par "shot"
@@ -36599,7 +36624,7 @@ function hmLiveOnEvent(ev) {
       else if (ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) shooterIdx = t;
       else if (ev.type === "rebound") shooterIdx = ev.offensive ? t : 1 - t;
       if (shooterIdx !== null) {
-        const p = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt || hmLive.seq), ev.spot);
+        const p = hmLiveShotSpot(zone, shooterIdx, hmLiveEventSeed(ev), ev.spot);
         // Tireur (survol de la carte des tirs, retour utilisateur 2026-10-03).
         hmLive.shots.push({ id: hmLive.seq, team: shooterIdx, quarter, clock, made, zone, x: p.x, y: p.y, shooter: ev.shooter || null });
         out.shot = { x: p.x, y: p.y };   // même endroit pour le terrain 2D
@@ -36675,7 +36700,7 @@ function hmLiveNextAction() {
     if (ev.type === "shot" && ev.made) shooterIdx = t;
     else if (ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) shooterIdx = t;
     else if (ev.type === "rebound") shooterIdx = ev.offensive ? t : 1 - t;
-    if (shooterIdx !== null) shot = hmLiveShotSpot(zone, shooterIdx, Math.round(ev.airAt), ev.spot);
+    if (shooterIdx !== null) shot = hmLiveShotSpot(zone, shooterIdx, hmLiveEventSeed(ev), ev.spot);
   }
   return {
     kind: ev.type, team: t, zone, offensive: ev.offensive, airAt: ev.airAt, shot,
@@ -36690,11 +36715,19 @@ function hmLiveNextAction() {
 // phrases aux moments clés — coup d'envoi, fin de quart, série de points,
 // money time, fin de match. Déterministe (graine = airAt) : même fil à
 // chaque reconnexion. Jamais avant l'événement, jamais de spoiler.
+// Graine STABLE d'un événement — copie exacte de assets/live/adapter.js:
+// eventSeed (mission live 2026-10-10) : jamais l'heure de diffusion.
+function hmLiveEventSeed(ev) {
+  const k = [ev.quarter, ev.clock, ev.type, ev.shooterId != null ? ev.shooterId : ev.playerId, ev.zone, ev.spot, ev.score ? ev.score.A + "-" + ev.score.B : ""].join("|");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0) % 2147483647 || 1;
+}
 function hmLivePresenter(ev, out) {
   const m = hmLive.match;
   const names = [0, 1].map(t => { const team = (t === 0) === !!m.isHome ? teamA : teamB; return team ? team.name : (t ? "les visiteurs" : "les locaux"); });
   const sc = hmLiveScoreArr(ev.score);
-  const pick = arr => arr[Math.floor(seededRandom(Math.round(ev.airAt || hmLive.seq))() * arr.length)];
+  const pick = arr => arr[Math.floor(seededRandom(hmLiveEventSeed(ev))() * arr.length)];
   const say = text => {
     hmLive.events.push({ id: ++hmLive.seq, type: "quote", kind: "quote", team: null, quarter: out.quarter, clock: out.clock, text, score: null, highlight: false, speaker: HOOP_SHOW_PRESENTER_NAME, avatar: hmLivePresenterAvatar() });
   };

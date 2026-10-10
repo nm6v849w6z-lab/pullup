@@ -47,6 +47,13 @@ export const MOMENTS = {
 const GAP_MS = [4500, 2600, 900, 0];
 const STORE = "hm-commentary";
 
+// Générateur déterministe à partir d'une clé (mission live 2026-10-10).
+function keyedRandom(key) {
+  let h = 0x811c9dc5; const k = String(key);
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  let a = h | 0;
+  return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
 export function createCommentary(opts = {}) {
   // Dossier audio à côté du module (assets/live → assets/audio/commentary),
   // quelle que soit la page qui charge le direct.
@@ -141,7 +148,9 @@ export function createCommentary(opts = {}) {
     const def = MOMENTS[moment];
     if (!def || !prefs.on) return false;
     if (typeof document !== "undefined" && document.hidden) return false;
-    if (!info.force && rand() > def.chance) return false;
+    // Tirage reproductible : graine = action du match (court2d, info.key).
+    const r = info.key ? keyedRandom(info.key) : rand;
+    if (!info.force && r() > def.chance) return false;
     const t = nowMs();
     const busy = current && !current.done;
     if (busy) {
@@ -149,7 +158,7 @@ export function createCommentary(opts = {}) {
       stop();
     } else if (t - lastAt < GAP_MS[def.p]) return false;
     const n = Math.max(1, Math.min(def.lines.length, Number(manifest.files[moment]) || def.lines.length));
-    let i = Math.floor(rand() * n);
+    let i = Math.floor(r() * n);
     if (n > 1 && i === lastVariant[moment]) i = (i + 1) % n;
     lastVariant[moment] = i;
     const file = Number(manifest.files[moment]) > 0;

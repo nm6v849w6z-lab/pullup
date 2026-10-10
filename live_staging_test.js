@@ -112,6 +112,14 @@ const mkTeam = (key, color) => ({ name: key, short: key.slice(0, 3).toUpperCase(
   if (dbg().phase === "intro") fail("l'entrée ne commence pas plus de 30 s avant le coup d'envoi.");
   NOW = S.kickoffAt - 29500; await go(200);
   if (dbg().phase !== "intro") fail("entrée des joueurs attendue 30 s avant le coup d'envoi.");
+  // Mission live 2026-10-10 (test 27) : chacun sort du tunnel de SON côté
+  // (coins du bas, hors du terrain) — plus personne n'apparaît à la table de
+  // marque (x ≈ 47, y ≈ 53).
+  {
+    const waiting = [0, 1].map(t => pos(S.teams[t].players[4].id));
+    if (!(waiting[0] && waiting[0].sx < 10 && waiting[0].sy > 50) || !(waiting[1] && waiting[1].sx > 84 && waiting[1].sy > 50)) fail(`entrée : tunnels dans les coins attendus (${JSON.stringify(waiting)}).`);
+    console.log("✅ Entrée des joueurs : chaque équipe sort de son tunnel (coins du bas), jamais de la table de marque.");
+  }
   // Présentation : extérieur d'abord (vers 5-13 s), puis domicile (13-21 s).
   NOW = S.kickoffAt - 30000 + 5800; await go(200);
   const card1 = host.querySelector(".stg-card-name");

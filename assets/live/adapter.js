@@ -120,6 +120,17 @@ export function clockSeconds(str) {
 const DELTA_FIELDS = ["pts", "reb", "oreb", "dreb", "ast", "stl", "blk", "tov", "pf", "fgm2", "fga2", "fgm3", "fga3", "ftm", "fta", "plusMinus"];
 const emptyRow = () => ({ pts: 0, reb: 0, oreb: 0, dreb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, fgm2: 0, fga2: 0, fgm3: 0, fga3: 0, ftm: 0, fta: 0, plusMinus: 0, seconds: 0, openSince: null });
 
+// Graine STABLE d'un événement (mission live 2026-10-10, « un seul live par
+// match ») : son identité dans la chronologie du moteur (quart, chrono,
+// type, acteurs, score) — jamais l'heure de diffusion, décalée en
+// rediffusion. Même action → même emplacement de tir, même phrase.
+export function eventSeed(ev) {
+  const k = [ev.quarter, ev.clock, ev.type, ev.shooterId != null ? ev.shooterId : ev.playerId, ev.zone, ev.spot, ev.score ? ev.score.A + "-" + ev.score.B : ""].join("|");
+  let h = 0x811c9dc5;
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0) % 2147483647 || 1;
+}
+
 export function createLiveAdapter(opts) {
   const live = opts.live;
   const QL = opts.quarterLength || 600, OL = opts.overtimeLength || 300;
@@ -184,7 +195,7 @@ export function createLiveAdapter(opts) {
     else if (ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) sIdx = t;
     else if (ev.type === "rebound") sIdx = ev.offensive ? t : 1 - t;
     if (sIdx === null) return null;
-    return { team: sIdx, zone, ...shotPoint(zone, sIdx, Math.round(ev.airAt || st.seq), ev.spot) };
+    return { team: sIdx, zone, ...shotPoint(zone, sIdx, eventSeed(ev), ev.spot) };
   }
   const TYPE = { shot: ev => (ev.made ? "made" : "miss"), rebound: () => "miss", freeThrow: () => "ft", foul: () => "foul", technicalFoul: () => "foul", unsportsmanlikeFoul: () => "foul", foulOut: () => "foul", technicalEjection: () => "foul", turnover: () => "turnover", outOfBounds: () => "turnover", substitution: () => "sub", shortHanded: () => "sub", injury: () => "injury", quarterStart: () => "period", quarterEnd: () => "period" };
 
@@ -197,7 +208,7 @@ export function createLiveAdapter(opts) {
     // Direct sans delta (ancien) : comptage minimal.
     const t = ev.team; if (t !== "A" && t !== "B") return;
     switch (ev.type) {
-      case "shot": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); const three = ev.zone === "three"; if (three) r.fga3++; else r.fga2++; if (ev.made) { r.pts += three ? 3 : 2; if (three) r.fgm3++; else r.fgm2++; if (ev.assisterId != null) rowOf(t, ev.assisterId, ev.assister).ast++; } else { if (ev.blockerId != null) rowOf(other(t), ev.blockerId, ev.blocker).blk++; if (ev.defenderId != null) rowOf(other(t), ev.defenderId, ev.defender).pf++; } break; }
+      case "shot": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); const three = ev.zone === "three"; if (three) r.fga3++; else r.fga2++; if (ev.made) { r.pts += three ? 3 : 2; if (three) r.fgm3++; else r.fgm2++; if (ev.assisterId != null) rowOf(t, ev.assisterId, ev.assister).ast++; } else { if (ev.blockerId != null) rowOf(other(t), ev.blockerId, ev.blocker).blk++; if (ev.defenderId != null && !ev.blocked) rowOf(other(t), ev.defenderId, ev.defender).pf++; } break; }
       case "rebound": { if (ev.rebounderId != null) { const r = rowOf(t, ev.rebounderId, ev.rebounder); r.reb++; if (ev.offensive) r.oreb++; else r.dreb++; } const sk = ev.offensive ? t : other(t); if (ev.shooterId != null && !ev.blocked) { const r = rowOf(sk, ev.shooterId, ev.shooter); if (ev.zone === "three") r.fga3++; else r.fga2++; } break; }
       case "freeThrow": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); r.fta += ev.attempts || 0; r.ftm += ev.made || 0; r.pts += ev.made || 0; break; }
       case "turnover": { if (ev.playerId != null) rowOf(t, ev.playerId, ev.player).tov++; if (ev.stealerId != null) rowOf(other(t), ev.stealerId, ev.stealer).stl++; break; }
@@ -214,7 +225,7 @@ export function createLiveAdapter(opts) {
     if (!presenter) return;
     const names = [0, 1].map(t => (teams[keyOf(t)] && teams[keyOf(t)].name) || (t ? "les visiteurs" : "les locaux"));
     const sc = [st.scoreAB[keyOf(0)], st.scoreAB[keyOf(1)]];
-    const pick = arr => arr[Math.floor(seededRandom(Math.round(ev.airAt || st.seq))() * arr.length)];
+    const pick = arr => arr[Math.floor(seededRandom(eventSeed(ev))() * arr.length)];
     const lead = sc[0] === sc[1] ? null : sc[0] > sc[1] ? 0 : 1, gap = Math.abs(sc[0] - sc[1]);
     if (out.score) {
       const gained = [sc[0] - st.prevScore[0], sc[1] - st.prevScore[1]];
@@ -257,7 +268,7 @@ export function createLiveAdapter(opts) {
     if (ev.type === "quarterStart" || ev.type === "quarterEnd") out.team = null;
     st.events.push(out);
     if (hasTeam && (ev.type === "foul" || ev.type === "unsportsmanlikeFoul")) st.fouls.push({ team: t, quarter });
-    if (hasTeam && ev.type === "shot" && !ev.made && ev.defender) st.fouls.push({ team: 1 - t, quarter });
+    if (hasTeam && ev.type === "shot" && !ev.made && !ev.blocked && ev.defender) st.fouls.push({ team: 1 - t, quarter });
     const shot = hasTeam ? shotOf(ev, t) : null;
     if (shot) { st.shots.push({ id: st.seq, quarter, clock, made: !!ev.made, shooter: ev.shooter || null, ...shot }); out.shot = { x: shot.x, y: shot.y }; }
     applyStats(ev);
@@ -315,7 +326,7 @@ export function createLiveAdapter(opts) {
     const start = stopEv ? Math.min(Math.max(t0, stopEv.airAt + deadBallHoldMs(stopEv)), t0 + (t1 - t0) * 0.6) : t0;
     const frac = Math.min(1, Math.max(0, (now - start) / Math.max(1, t1 - start)));
     const interp = prevSec - (prevSec - clockSeconds(nextDiff.clock)) * frac;
-    st.clock = Math.max(0, Math.round(interp));
+    st.clock = Math.max(0, Math.ceil(interp - 1e-6));   // 00:00 seulement à la fin réelle (buzzer)
     st.shotClock = Math.max(0, Math.min(24, shotClockBase(stopEv, prevSec) - Math.max(0, prevSec - interp)));
     const poss = possessionAt(evs, prevIdx);
     if (poss) st.possession = idx(poss);

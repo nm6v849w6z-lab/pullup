@@ -39,7 +39,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   };
   const { createSfx } = await import(pathToFileURL(path.join(__dirname, "assets/live/sfx.js")).href);
   let t = 9_000_000;
-  const sfx = createSfx({ now: () => t, base: "http://x/assets/audio/sfx" });
+  const sfx = createSfx({ now: () => t, base: "http://x/assets/audio/sfx", defenseConfirmMs: 0 });
   await sfx.ready;
   const base = { status: "live", quarter: 2, clock: 300, teams: [{ score: 40 }, { score: 38 }], events: [], possession: 0 };
   sfx.updateAmbience(base);

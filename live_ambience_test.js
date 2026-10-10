@@ -85,7 +85,7 @@ function fakeAudio() {
   global.window = { AudioContext: AC };
   global.localStorage = { _: {}, getItem(k) { return this._[k] || null; }, setItem(k, v) { this._[k] = v; } };
   let t = now;
-  const sfx = createSfx({ now: () => t, base: "file:///inexistant" });
+  const sfx = createSfx({ now: () => t, base: "file:///inexistant", defenseConfirmMs: 0 });
   await sfx.ready;
   const S = { ...base, possession: H };
   assert.strictEqual(sfx.updateAmbience(S), "offense");

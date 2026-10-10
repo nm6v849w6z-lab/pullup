@@ -36,10 +36,13 @@ const STALE_MS = 4000;            // événement diffusé il y a plus de 4 s : p
 export const SFX_RULES = [
   { key: "cash", when: (e, home) => e.kind === "freeThrow" && (e.made || 0) > 0 && e.team === home },
   { key: "siren", when: (e, home) => e.kind === "shot" && e.made === true && e.zone === "three" && e.team === home },
-  { key: "whistle", when: e => e.kind === "foul" || e.kind === "technicalFoul" || e.kind === "unsportsmanlikeFoul" || (e.kind === "shot" && !!e.foulType && !e.made) },
+  // Sifflet de l'arbitre (mission live 2026-10-10) : fautes (faute sur tir
+  // comprise), ballon sorti, violation / passe hors des limites, temps mort.
+  { key: "whistle", when: e => e.kind === "foul" || e.kind === "technicalFoul" || e.kind === "unsportsmanlikeFoul" || (e.kind === "shot" && !!e.foulType && !e.made && !e.blocked)
+    || e.kind === "outOfBounds" || (e.kind === "turnover" && e.tovType !== "steal" && e.deadBall === true) || e.kind === "timeout" || e.type === "timeout" },
   { key: "steal", when: (e, home) => e.kind === "turnover" && e.tovType === "steal" && e.possessionAfter === home },
-  // Buzzer de fin de quart-temps (et de fin de match).
-  { key: "buzzer", when: e => e.kind === "quarterEnd" },
+  // (Buzzer : plus une règle d'événement — il part quand le chrono atteint
+  // 0, à la fin d'un temps mort et d'une pause, voir buzzerCue / buzz.)
   // Lancer franc manqué de l'équipe à l'extérieur, et RIEN d'autre : un tir
   // classique manqué (événement « rebound » du fil) déclenche seulement une
   // réaction du public (CROWD_RULES), jamais ce bruitage.
@@ -60,6 +63,21 @@ export const SFX_RULES = [
 // (nextAction.kind === "freeThrow" à moins de 12 s) ou qu'une série est en
 // cours (dernier événement = lancer n° k < n).
 export const AMB_LEVELS = [0, 0.6, 1.1, 1.8];
+// Buzzer (mission live 2026-10-10, « une seule source de temps, buzzer
+// exactement à zéro, une seule fois ») : clé du buzzer dû entre deux états
+// successifs du direct, ou null. Pure : testable.
+//   « q<n> »  — le chrono du quart n vient d'atteindre 00:00 ;
+//   « s<début> » — un temps mort / une pause / la mi-temps vient de finir ;
+//   fin du match sans passage par 00:00 (arrivée tardive) : « q<n> ».
+// La clé rend chaque buzzer unique (voir buzz : jamais deux fois).
+export function buzzerCue(prev, S, now = Date.now()) {
+  if (!prev || !S) return null;
+  if (S.status === "live" && prev.status === "live" && S.quarter === prev.quarter && typeof prev.clock === "number" && typeof S.clock === "number" && prev.clock > 0 && prev.clock <= 5 && S.clock === 0) return "q" + S.quarter;
+  const ps = prev.stoppage;
+  if (ps && ps.endsAt && (!S.stoppage || S.stoppage.startAt !== ps.startAt) && now >= ps.endsAt - 1000 && now - ps.endsAt < 5000) return "s" + ps.startAt;
+  if (prev.status === "live" && S.status === "final") return "q" + (prev.quarter || S.quarter);
+  return null;
+}
 export function ambienceMode(S, now = Date.now(), home = 0) {
   if (!S) return "off";
   if (S.status === "final") return "final";
@@ -76,6 +94,16 @@ export function ambienceMode(S, now = Date.now(), home = 0) {
     break;
   }
   if (ft === 0 || ft === 1) return ft === home ? "ftHome" : "ftAway";
+  // Début / fin de période (aucune possession confirmée par le moteur
+  // depuis le marqueur) ou chrono à 00:00 : ni attaque ni défense — le
+  // chant ne part jamais avant l'entre-deux / la première action.
+  for (let i = evs.length - 1; i >= 0; i--) {
+    const e = evs[i];
+    if (!e || e.kind === "quote" || e.kind === "substitution" || e.kind === "timeout") continue;
+    if (e.kind === "quarterStart" || e.kind === "quarterEnd" || e.kind === "period") return "neutral";
+    break;
+  }
+  if (S.status === "live" && S.clock === 0) return "neutral";
   if (S.possession === home) return "offense";
   if (S.possession === 0 || S.possession === 1) return "defense";
   return "neutral";
@@ -149,6 +177,7 @@ export function createSfx(opts = {}) {
     : Promise.resolve({ files: {} })).then(m => { manifest = m && m.files ? m : { files: {} }; if (prefs.level > 0 || prefs.amb > 0) preload(); return manifest; });
 
   function audio() {
+    if (life.destroyed) return null;   // jamais de contexte recréé après destroy (manifeste arrivé en retard)
     if (ctx) return ctx;
     const AC = typeof window !== "undefined" ? (window.AudioContext || window.webkitAudioContext) : null;
     if (!AC) return null;
@@ -270,7 +299,7 @@ export function createSfx(opts = {}) {
 
   // Joue un bruitage (fichier sinon synthèse). Renvoie true s'il part.
   function play(key, why = "") {
-    if (!(prefs.level > 0)) return false;
+    if (!(prefs.level > 0) || !life.audible || life.destroyed || life.closed) return false;
     if (typeof document !== "undefined" && document.hidden) return false;
     const t = nowMs();
     if (t - (lastAt[key] || -1e9) < COOLDOWN_MS) return false;
@@ -305,6 +334,10 @@ export function createSfx(opts = {}) {
     final: { bed: 0.45, tone: 950, boo: 0, chant: false, claps: false },
     off: { bed: 0, tone: 900, boo: 0, chant: false, claps: false },
   };
+  // Cycle de vie (mission live 2026-10-10) : `audible` (page du direct
+  // affichée), `destroyed`, `closed` (fin de match : état terminal, plus
+  // aucun son ~10 s après le coup de sifflet final, ni après rechargement).
+  const life = { audible: true, destroyed: false, closed: false, finalTimer: null, buzzed: new Set(), pend: null };
   const amb = { mode: "off", hot: false, tension: false, bed: null, boo: null, chant: null, calm: null, heat: null, cheerLoop: null, chantTimer: null, clapTimer: null, whistleTimer: null, log: [], lastReact: {} };
   let noiseBuf = null;
   function crowdNoise() {
@@ -498,8 +531,19 @@ export function createSfx(opts = {}) {
   function updateAmbience(S, o = {}) {
     const hidden = typeof document !== "undefined" && document.hidden;
     const musicOn = typeof window !== "undefined" && window.HMMusic && window.HMMusic.current;
-    let mode = hidden ? "off" : ambienceMode(S, nowMs(), o.home != null ? o.home : 0);
+    let mode = hidden || !life.audible || life.closed ? "off" : ambienceMode(S, nowMs(), o.home != null ? o.home : 0);
+    // Match déjà terminé à l'arrivée (rechargement, rediffusion finie) :
+    // état terminal tout de suite, aucun son.
+    if (mode === "final" && (amb.mode === "off" || amb.mode === "pregame") && !life.finalTimer) { life.closed = true; mode = "off"; }
     if (musicOn && mode !== "off") mode = "show";   // spectacle en musique : public très discret
+    // Chant défensif : seulement après 1,2 s de possession adverse
+    // CONFIRMÉE (mission live 2026-10-10) — pas sur une possession qui
+    // bascule le temps d'un rebond disputé.
+    if (mode === "defense" && amb.mode !== "defense") {
+      const t = nowMs();
+      if (!life.pend || life.pend.mode !== mode) life.pend = { mode, since: t };
+      if (t - life.pend.since < (opts.defenseConfirmMs != null ? opts.defenseConfirmMs : 1200)) mode = amb.mode === "off" ? "neutral" : amb.mode;
+    } else if (mode !== "defense") life.pend = null;
     // Fin de match serrée (4e quart ou prolongation, ≤ 2 min, écart ≤ 6) :
     // la salle bout (couche `amb_bed_hot`), sans changer de mode.
     const big = isBigGame(S);
@@ -539,13 +583,17 @@ export function createSfx(opts = {}) {
         : { kind: "cheer", intensity: d <= 5 ? 1.8 : 1.4, also: { kind: "applause", intensity: 1.3, delay: 1800 } });
       else if (d < 0) react({ kind: "groan", intensity: d >= -5 ? 1.4 : 1, also: { kind: "applause", intensity: 0.6, delay: 2500 } });
       amb.log.push({ kind: "finalReaction", diff: d, at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+      // Fin du direct ~10 s après le coup de sifflet final : la salle se
+      // vide (fondu), le contexte audio est mis en pause, état terminal.
+      if (!life.finalTimer) life.finalTimer = setTimeout(close, opts.closeAfterMs != null ? opts.closeAfterMs : 10000);
     }
     const changed = setMode(mode);   // applique le mélange avec les états « bouillant » / « tension » à jour
     if ((hotChanged || tensionChanged) && !changed && prefs.amb > 0 && audio()) { ensureLayers(); applyMix(); }
     return changed ? mode : null;
   }
   function react(r) {
-    if (!r || !(prefs.amb > 0)) return false;
+    if (!r || !(prefs.amb > 0) || !life.audible || life.closed || life.destroyed) return false;
+    if (amb.mode === "off" || (typeof document !== "undefined" && document.hidden)) return false;
     // Pendant un spectacle : seules les réactions du spectacle (très basses).
     if (amb.mode === "show" && !r.cue) return false;
     const t0 = nowMs();
@@ -613,6 +661,8 @@ export function createSfx(opts = {}) {
       played.add(id); if (played.size > 800) played.delete(played.values().next().value);
       if (e.airAt && t - e.airAt > STALE_MS) continue;
       for (const key of sfxForEvent(e, home)) if (play(key, e.kind)) out.push(key);
+      // Fin de quart arrivée sans passage visible par 00:00 : buzzer (une fois).
+      if (e.kind === "quarterEnd" && buzz("q" + e.quarter)) out.push("buzzer");
       // Réaction du public (journal de l'ambiance, debug().ambLog).
       let r = crowdReactionFor(e, state, home);
       // Série en cours (points consécutifs d'une même équipe) : à 8-0 ou plus
@@ -652,15 +702,49 @@ export function createSfx(opts = {}) {
     if (!wasRunning && prefs.amb > 0 && amb.mode !== "off") { const m = amb.mode; amb.mode = "off"; setMode(m); }
   };
   if (typeof document !== "undefined") GESTURES.forEach(g => document.addEventListener(g, onGesture, true));
+  // Buzzer unique par clé (voir buzzerCue) : jamais deux fois le même.
+  function buzz(key) {
+    if (!key || life.buzzed.has(key)) return false;
+    life.buzzed.add(key);
+    return play("buzzer", key);
+  }
+  // Page du direct affichée ou non (live-view.setAudible) : hors de la
+  // page, plus aucun son (contexte en pause, boucles coupées) ; au retour,
+  // l'ambiance reprend sur l'état courant.
+  function suspendCtx() { if (ctx && ctx.state === "running") { try { const q = ctx.suspend(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* rien */ } } }
+  function setAudible(on) {
+    on = !!on;
+    if (on === life.audible) return;
+    life.audible = on;
+    if (!on) { clearAmbTimers(); setMode("off"); suspendCtx(); }
+    else if (!life.closed) unlock();
+  }
+  // Rediffusion ramenée avant la fin : le direct (et son ambiance) reprend.
+  function reopen() {
+    if (!life.closed) return;
+    life.closed = false; clearTimeout(life.finalTimer); life.finalTimer = null;
+    if (life.audible) unlock();
+  }
+  function close() {
+    life.closed = true;
+    clearAmbTimers();
+    setMode("off");
+    setTimeout(suspendCtx, 2500);   // après le fondu
+    amb.log.push({ kind: "closed", at: nowMs() }); if (amb.log.length > 80) amb.log.shift();
+  }
+  const onVis = () => { if (typeof document === "undefined") return; if (document.hidden) { clearAmbTimers(); suspendCtx(); } else if (life.audible && !life.closed) unlock(); };
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") document.addEventListener("visibilitychange", onVis);
   // Réactions des shows (staging.js) : volontairement très discrètes.
   const onCue = ev => { const d = ev && ev.detail; if (d && d.kind) react({ kind: d.kind, intensity: Math.min(0.5, d.intensity || 0.4), cue: true }); };
   if (typeof window !== "undefined" && typeof window.addEventListener === "function") window.addEventListener("hm-crowd-cue", onCue);
   return {
-    onEvents, play, setLevel, ready, updateAmbience, setAmbLevel,
+    onEvents, play, setLevel, ready, updateAmbience, setAmbLevel, buzz, setAudible, close, reopen,
+    get closed() { return life.closed; },
+    get audible() { return life.audible; },
     get level() { return prefs.level; },
     get ambLevel() { return prefs.amb; },
     get ambMode() { return amb.mode; },
     debug: () => ({ level: prefs.level, amb: prefs.amb, ambMode: amb.mode, ambLog: amb.log.slice(), files: manifest.files, log: log.slice(), played: played.size }),
-    destroy() { if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("hm-crowd-cue", onCue); clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
+    destroy() { life.destroyed = true; clearTimeout(life.finalTimer); if (typeof document !== "undefined" && typeof document.removeEventListener === "function") document.removeEventListener("visibilitychange", onVis); if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("hm-crowd-cue", onCue); clearAmbTimers(); (amb.alsoTimers || []).forEach(clearTimeout); offGesture(); if (ctx) { try { ctx.close(); } catch (e) { /* rien */ } } },
   };
 }

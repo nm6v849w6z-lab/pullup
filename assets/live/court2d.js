@@ -46,7 +46,26 @@ const SLOT = { M: 0, AS: 1, A: 2, AF: 3, P: 4 };
 const OFF = [{ d: 30, y: 25 }, { d: 24, y: 5 }, { d: 24, y: 45 }, { d: 14, y: 12 }, { d: 7, y: 40 }];
 const DEF = [{ d: 22, y: 21 }, { d: 17, y: 9 }, { d: 17, y: 41 }, { d: 9, y: 19 }, { d: 3, y: 32 }];
 
-const rnd = (a, b) => a + Math.random() * (b - a);
+// Hasard REPRODUCTIBLE (mission live 2026-10-10, « un seul live par
+// match, identique après rechargement ») : avant, chaque recharge tirait
+// d'autres points de rebond, d'autres coupes, d'autres sorties. Le
+// générateur est re-semé à chaque action jouée (playEvent / buildPlan) et à
+// chaque pas de mouvement sans ballon, à partir de l'identité de l'action
+// (jamais de l'heure de diffusion, décalée en rediffusion) : même action →
+// mêmes tirages, quel que soit le moment où on la regarde.
+let rngState = 0x2545f491;
+function rand01() {
+  rngState = (rngState + 0x6D2B79F5) | 0;
+  let t = Math.imul(rngState ^ (rngState >>> 15), 1 | rngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function reseed(key) {
+  let h = 0x811c9dc5; const k = String(key);
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  rngState = h | 0;
+}
+const rnd = (a, b) => a + rand01() * (b - a);
 const lerp = (a, b, t) => a + (b - a) * t;
 const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const el = (tag, attrs = {}, parent) => {
@@ -690,6 +709,7 @@ export function createCourt2D(host, opts = {}) {
   const sprites = new Map();
   const ball = { x: 47, y: 25, z: 0, holder: null, flight: null };
   let S = null, possession = 0, raf = 0, last = performance.now(), timers = new Set();
+  let halted = false;   // fin du direct : terrain figé (api.halt)
   let logoKey = null, clipSeq = 0, colors = opts.colors || ["#F26B1D", "#3B8FE0"];
   let plan = null;                 // possession en cours (voir buildPlan)
   let stopUntil = 0;               // arrêt de jeu (temps mort, fin de quart) : arbitres à la table
@@ -728,6 +748,10 @@ export function createCourt2D(host, opts = {}) {
     if (debugOn()) try { console.debug("[court2d]", kind, info || ""); } catch (e) { /* rien */ }
   }
   function setPhase(p, why = "") {
+    // Jeu en cours : plus de remiseur verrouillé (mission live 2026-10-10,
+    // « joueur bloqué hors du terrain avec le ballon ») — le verrou ne
+    // survit plus à une remise en jeu interrompue.
+    if (p === "LIVE" && inbounder) { diag("inbounder-released", { id: inbounder, why }); inbounder = null; }
     if (p === phase && why === phaseWhy) return;
     diag("phase", { from: phase, to: p, why, possession: S && S.possession });
     phase = p; phaseWhy = why; phaseAt = performance.now();
@@ -878,7 +902,12 @@ export function createCourt2D(host, opts = {}) {
     const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
     let best = null, bestD = Infinity;
     for (const pm of perms) { const d = pm.reduce((s, ti, ri) => s + Math.hypot(T[ti].x - refs[ri].x, T[ti].y - refs[ri].y), 0); if (d < bestD) { bestD = d; best = pm; } }
-    best.forEach((ti, ri) => { const r = refs[ri]; r.bl = T[ti].bl || 0; r.tx = T[ti].x + (r.bl ? 0 : rnd(-0.6, 0.6)); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
+    // Hors jeu (arrêt, fin de match) : places fixes, sans petit décalage
+    // aléatoire — les arbitres s'immobilisent (mission live 2026-10-10 :
+    // « des choses bougent encore après la fin du match »).
+    const playing = S && S.status === "live" && performance.now() >= stopUntil;
+    if (playing) reseed("r" + (S.quarter || 0) + "|" + Math.round(Number(S.clock) || 0));
+    best.forEach((ti, ri) => { const r = refs[ri]; r.bl = T[ti].bl || 0; r.tx = T[ti].x + (r.bl || !playing ? 0 : rnd(-0.6, 0.6)); r.ty = T[ti].y; r.speed = Math.hypot(r.tx - r.x, r.ty - r.y) > 20 ? 1.3 : 0.9; });
   }
 
   // Changements (2026-10-08, arène) : l'entrant se lève, passe par la
@@ -1037,7 +1066,20 @@ export function createCourt2D(host, opts = {}) {
   }
   // Commentaire audio (commentary.js) : le moment est annoncé à l'instant
   // où il est animé ; rien quand l'onglet est masqué (pas de rattrapage).
-  const moment = (k, info) => { if (suspended || !opts.onMoment) return; try { opts.onMoment(k, info || {}); } catch (err) { /* jamais bloquant */ } };
+  // Moments du commentateur (mission live 2026-10-10) : rattachés à
+  // l'action CONFIRMÉE en cours de jeu (`momentKey`, posée par playEvent),
+  // annoncés une seule fois par action (pas de doublon au recalage ni à
+  // l'arrivée sur la page), et la clé sert de graine au choix de la phrase
+  // (même rediffusion → mêmes phrases).
+  let momentKey = "";
+  const saidMoments = new Set();
+  const moment = (k, info) => {
+    if (suspended || !opts.onMoment) return;
+    const key = momentKey + "#" + k;
+    if (momentKey && saidMoments.has(key)) return;
+    if (momentKey) { saidMoments.add(key); if (saidMoments.size > 200) saidMoments.delete(saidMoments.values().next().value); }
+    try { opts.onMoment(k, { ...(info || {}), key }); } catch (err) { /* jamais bloquant */ }
+  };
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, Math.max(0, ms)); timers.add(id); return id; };
   // Joueur tenu par une chorégraphie pendant `ms`. Jeton : seule la DERNIÈRE
   // demande le libère (une minuterie plus ancienne — mise en place des
@@ -1090,7 +1132,7 @@ export function createCourt2D(host, opts = {}) {
     if (cls === "good" && /^\+\d$/.test(text)) { sp.stat.textContent = ""; floatPts(sp, text); return; }
     sp.stat.setAttribute("class", "c2d-stat " + cls);
     sp.stat.setAttribute("opacity", "1");
-    later(1600, () => sp.stat.setAttribute("opacity", "0"));
+    fxTimer(1600, () => sp.stat.setAttribute("opacity", "0"));
   }
   // Onde au cercle sur un PANIER seulement (un tir manqué n'a plus de
   // signal visuel propre, voir plus haut).
@@ -1102,7 +1144,7 @@ export function createCourt2D(host, opts = {}) {
     g.setAttribute("data-no-i18n", "1");
     el("text", { class: "c2d-banner-shadow", "text-anchor": "middle", y: "6", "data-no-i18n": "1" }, g).textContent = text;
     el("text", { class: "c2d-banner-text", "text-anchor": "middle", y: "0", "data-no-i18n": "1" }, g).textContent = text;
-    later(1500, () => g.remove());
+    fxTimer(1500, () => g.remove());
   }
   const blockLabel = () => { try { const t = typeof window !== "undefined" && window.hmI18n && window.hmI18n.t ? window.hmI18n.t("Contre") : "Contre"; return String(t || "Contre").toUpperCase(); } catch (e) { return "CONTRE"; } };
   // Trace du vol en cours : points échantillonnés à chaque image (position
@@ -1131,13 +1173,37 @@ export function createCourt2D(host, opts = {}) {
     path.classList.add("fade");
     setTimeout(() => path.remove(), 1000);
   }
+  // Effets passagers (onde du cercle, bannière, cercle de faute) : leur
+  // nettoyage ne dépend PAS des minuteries de chorégraphie, annulées à la
+  // suspension / au recalage (mission live 2026-10-10 : « cercle vert qui
+  // clignote au retour sur la page » — l'onde restait dans le DOM et son
+  // animation CSS rejouait à chaque réinsertion).
+  const fxTimers = new Set();
+  const fxTimer = (ms, fn) => { const id = setTimeout(() => { fxTimers.delete(id); fn(); }, ms); fxTimers.add(id); return id; };
+  function clearFx() {
+    fxTimers.forEach(clearTimeout); fxTimers.clear();
+    while (fxG.firstChild) fxG.firstChild.remove();
+    for (const sp of sprites.values()) { if (sp.stat) sp.stat.setAttribute("opacity", "0"); if (sp.ring) sp.ring.setAttribute("opacity", "0"); }
+  }
   function rimFx(team, made) {
     if (!made) return;
     const r = RIM[team];
     const c = el("circle", { cx: r.x * PX, cy: r.y * PX, r: "10", fill: "none", stroke: "#5fd6ae", "stroke-width": "3", class: "c2d-wave" }, fxG);
-    later(900, () => c.remove());
+    fxTimer(900, () => c.remove());
   }
   function startPossession(t) { possession = t; possStart = now(); crossed = false; }
+  // Identité offensive de l'équipe (tactique réelle du match, S.teams[t].tactics) :
+  // rythme Rapide → ballon qui circule plus vite, Lent → plus posé.
+  function teamPace(t) {
+    const tac = S && S.teams && S.teams[t] && S.teams[t].tactics;
+    const r = String((tac && tac.rhythm) || "");
+    return /rapide/i.test(r) ? 0.78 : /lent/i.test(r) ? 1.3 : 1;
+  }
+  // Drive : priorité offensive « pénétration » → le porteur attaque plus près du cercle.
+  function drivesInside(t) {
+    const tac = S && S.teams && S.teams[t] && S.teams[t].tactics;
+    return /p[ée]n[ée]tration|int[ée]rieur/i.test([tac && tac.offense, ...((tac && tac.offenses) || [])].join(" "));
+  }
   // Ligne médiane franchie dans le sens de l'attaque ?
   const inFront = (team, x) => (team === 0 ? x >= 47 : x <= 47);
   // Borne une abscisse à la zone avant quand le ballon y est déjà passé.
@@ -1200,6 +1266,10 @@ export function createCourt2D(host, opts = {}) {
       });
     };
     later(150, wait);
+    // Garde-fou : chaîne de remise en jeu interrompue (vol de ballon
+    // remplacé, minuterie perdue) → la remise est conclue, jamais un
+    // remiseur figé derrière la ligne.
+    later(7000, () => { if (!stopped() && inbounder && inb && inbounder === inb.id && deadBall()) { anomalies++; diag("anomaly", { what: "inbound-watchdog", id: inb.id }); completeInbound(nt, pg, inb, why, keepClock, 3); } });
   }
   function completeInbound(nt, pg, inb, why, keepClock, tries = 0) {
     if (inb && ball.holder === inb.id && pg && pg !== inb && tries < 3) {
@@ -1222,6 +1292,11 @@ export function createCourt2D(host, opts = {}) {
   }
   // Fin de période déjà connue (dans la file, ou action suivante du moteur) :
   // elle passe avant toute remise en jeu (panier ou sortie au buzzer).
+  // Lancers francs à venir : aucune remise en jeu (mission live 2026-10-10,
+  // « lancer franc tiré depuis la table de marque » — la reprise d'un temps
+  // mort entre deux lancers envoyait le tireur remettre en jeu côté table).
+  const ftPending = () => queue.some(q => q.kind === "freeThrow")
+    || !!(S && S.nextAction && S.nextAction.kind === "freeThrow" && S.nextAction.airAt - now() < 9000);
   const periodEndPending = () => queue.some(q => q.kind === "quarterEnd")
     || !!(S && (S.status === "final" || (S.nextAction && S.nextAction.kind === "quarterEnd" && S.nextAction.airAt - now() < 2500)));
   // Remise en jeu déjà jouée pour cet arrêt (même événement) : ignorée.
@@ -1283,6 +1358,7 @@ export function createCourt2D(host, opts = {}) {
   let sideInbounds = 0;
   function sidelineInbound(nt, at, opts = {}) {
     if (inLongStop()) return;
+    if (ftPending()) { diag("inbound-skipped", { why: "lancers francs à suivre", key: opts.key }); setPhase("DEAD_BALL", "lancers francs à suivre"); return; }
     if (periodEndPending()) { diag("inbound-skipped", { why: "fin de période", key: opts.key }); return; }
     if (!inboundOnce(opts.key)) return;
     if (nt !== 0 && nt !== 1) { diag("anomaly", { what: "sideline-team", nt }); anomalies++; setPhase("LIVE", "touche sans équipe"); return; }
@@ -1383,7 +1459,7 @@ export function createCourt2D(host, opts = {}) {
     } else {
       // Passe imprécise : trop courte et à côté de la ligne de passe.
       const dx = to0.x - from.x, dy = to0.y - from.y, d = Math.hypot(dx, dy) || 1;
-      const off = rnd(3.5, 6) * (Math.random() < 0.5 ? -1 : 1);
+      const off = rnd(3.5, 6) * (rand01() < 0.5 ? -1 : 1);
       land = inCourt({ x: from.x + dx * 0.7 - dy / d * off, y: from.y + dy * 0.7 + dx / d * off });
     }
     const picker = rec && rec.team === nt ? rec : handlerOf(nt);
@@ -1483,6 +1559,9 @@ export function createCourt2D(host, opts = {}) {
     return { line: { x: X(19), y: 25 }, spots: out };
   }
   function alignForFreeThrow(t, shooter, ms, speed) {
+    // Lancers francs : plus aucun remiseur verrouillé (le tireur pouvait
+    // être resté « remiseur » côté table et y tirer ses lancers).
+    if (inbounder) { diag("inbounder-released", { id: inbounder, why: "lancers francs" }); inbounder = null; }
     const al = ftAlignment(t, shooter);
     if (shooter) { busy(shooter, ms); moveTo(shooter, al.line.x, al.line.y, speed); }
     al.spots.forEach(({ sp, x, y }) => { busy(sp, ms); moveTo(sp, x, y, speed); });
@@ -1491,13 +1570,18 @@ export function createCourt2D(host, opts = {}) {
   }
 
   function buildPlan(na) {
+    reseed("p" + actionKey(na, S && S.events ? S.events.length : 0));
     // Une scène est en cours (remise en jeu, rebond…) : on attend sa fin
     // avant de lancer la possession, sans jamais couper la chorégraphie.
     // Ballon mort : la possession suivante ne part qu'après la remise en jeu
     // (état LIVE). Garde-fou : un arrêt qui s'éternise (> 9 s) est signalé
     // et levé plutôt que de figer le direct.
     if (deadBall() && performance.now() - phaseAt > 9000) { anomalies++; diag("anomaly", { what: "dead-ball-stuck", phase, why: phaseWhy }); setPhase("LIVE", "garde-fou"); }
-    const wait = Math.max(sceneUntil - performance.now(), deadBall() ? 250 : 0);
+    // (lancers francs : ils se préparent PENDANT l'arrêt de jeu — c'est un
+    // ballon mort par nature ; avant, le plan attendait la fin d'un ballon
+    // mort qui ne venait jamais et les lancers se jouaient en version courte,
+    // en retard sur le fil)
+    const wait = Math.max(sceneUntil - performance.now(), deadBall() && na.kind !== "freeThrow" ? 250 : 0);
     if (wait > 0) {
       plan = { airAt: na.airAt, fired: false, pending: true };
       later(wait + 50, () => { if (plan && plan.airAt === na.airAt && plan.pending) buildPlan(na); });
@@ -1570,9 +1654,23 @@ export function createCourt2D(host, opts = {}) {
       // reçoit jamais le ballon.
       const victim = (kind === "turnover" || kind === "foul") ? spriteOf(a.player) : null;
       const chain = [];
-      for (const sp of [handler, ...(na.passes || []).map(spriteOf), victim]) if (sp && sp.team === offT && chain[chain.length - 1] !== sp) chain.push(sp);
+      // (le coéquipier qui a le ballon après une remise en jeu / un rebond
+      // ouvre la chaîne : la perte n'est jamais jouée loin du ballon)
+      for (const sp of [starter, handler, ...(na.passes || []).map(spriteOf), victim]) if (sp && sp.team === offT && chain[chain.length - 1] !== sp) chain.push(sp);
       const n = chain.length - 1;
       for (let i = 0; i < n; i++) at(n === 1 ? 0.7 : 0.45 + 0.3 * (i / (n - 1)), () => pass(chain[i], chain[i + 1]));
+      // Faute (mission live 2026-10-10, « faute sifflée avant le contact ») :
+      // le fautif réel vient au contact du fauté AVANT l'heure de la faute ;
+      // le coup de sifflet (airAt) tombe sur un contact déjà visible.
+      const fouler = kind === "foul" ? spriteOf(a.defender) : null;
+      if (fouler && victim && fouler.team !== offT) {
+        // Il reste au contact jusqu'au coup de sifflet (le fauté, tenu, ne
+        // file plus) : re-visé toutes les 150 ms tant que ce plan vaut.
+        let until = 0;
+        const stick = () => { if (plan !== self) return; moveTo(fouler, victim.x + (fouler.x >= victim.x ? 1.4 : -1.4), victim.y + 0.4, 2.4); if (performance.now() < until) later(150, stick); };
+        at(0.74, () => { const hold = total * 0.26 + 900; until = performance.now() + hold; busy(fouler, hold); busy(victim, hold); stick(); });
+        self.contact = { d: fouler.id, v: victim.id };
+      }
       return;
     }
     // Tir (kind shot ou rebound = tir manqué + rebond). Mise en scène des
@@ -1609,6 +1707,31 @@ export function createCourt2D(host, opts = {}) {
     const tFirstPass = shortPlan ? 0 : Math.max(150, Math.min(total * 0.35, tLastPass - 600 * Math.max(1, nPass - 1)));
     const times = [];
     for (let i = 0; i < nPass; i++) times.push(nPass === 1 ? tLastPass : tFirstPass + (tLastPass - tFirstPass) * (i / (nPass - 1)));
+    // Circulation de balle (mission live 2026-10-10, « plus de passes
+    // utiles, moins de dribble sur place ») : quand l'action laisse du temps
+    // avant la chaîne réelle du moteur, le ballon tourne d'abord (renversements
+    // vers des coéquipiers démarqués), puis revient au porteur qui lance la
+    // chaîne réelle — la passe décisive reste celle du moteur. Cadence selon
+    // l'identité de l'équipe (rythme Rapide / Lent).
+    const swingEnd = (nPass ? times[0] : tShot - 700) - 450;
+    const room = swingEnd - 1400;
+    const startHolder = chain[0];
+    if (startHolder && room > 1800) {
+      const pace = teamPace(offT);
+      const k = Math.min(3, Math.floor(room / (2100 * pace)));
+      const pool = onCourt(offT).filter(sp => sp !== startHolder && sp !== shooter && !sp.leaving);
+      let from = startHolder, tt = 1400;
+      for (let i = 0; i < k - 1 && pool.length; i++) {
+        const open = pool.map(sp => ({ sp, gap: Math.min(...onCourt(1 - offT).map(d => Math.hypot(d.tx - sp.tx, d.ty - sp.ty)), 99) }))
+          .filter(o => o.sp !== from).sort((a, b) => b.gap - a.gap);
+        const to = open.length ? open[Math.floor(rand01() * Math.min(2, open.length))].sp : null;
+        if (!to) break;
+        const f = from;
+        atMs(tt, () => { if (ball.holder === f.id && !ball.flight) pass(f, to); });
+        from = to; tt += room / k;
+      }
+      if (from !== startHolder) { const f = from; atMs(swingEnd, () => { if (ball.holder === f.id && !ball.flight) pass(f, startHolder); }); }
+    }
     for (let i = 0; i < nPass; i++) {
       const from = chain[i], to = chain[i + 1], t = times[i];
       const lob = type === "post" && i === nPass - 1;   // entrée de balle au poste : lobée
@@ -1645,7 +1768,7 @@ export function createCourt2D(host, opts = {}) {
     if (defender && defender.team !== offT) {
       const q = na.quality || "contesté";
       const lateMs = q === "ouvert" ? 250 : q === "très contesté" ? -650 : -350;   // ouvert : il arrive après le tir
-      const gap = q === "très contesté" ? 1.2 : 2.2;
+      const gap = na.foulType === "shooting" || na.fouled ? 0.9 : q === "très contesté" ? 1.2 : 2.2;
       atMs(Math.max(tMove, tShot + lateMs), () => { busy(defender, 1400); moveTo(defender, lerp(spot.x, rim.x, 0.08) + (rim.x > 47 ? gap : -gap), spot.y + 0.6, q === "ouvert" ? 1.8 : 2.6); });
     }
     later(Math.max(0, tShot), () => {
@@ -1703,9 +1826,24 @@ export function createCourt2D(host, opts = {}) {
     if (queue.length) drain();
   }
 
+  // Perte de balle sans voleur (passe dehors, passe ratée, ballon mal
+  // contrôlé) : jouée une fois que le joueur désigné a le ballon.
+  function playLostTurnover(e, kind, nt, pl, a) {
+    if (pl) flash(pl, "PERTE", "bad");
+    moment("perte", { team: 1 - nt });
+    if (kind === "passOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "passe trop longue", lastTouch: "attack", kind, exit: overthrowExit(pl, spriteOf(a.receiver)), flightMs: 620 }); return; }
+    if (kind === "legacyOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "sortie", lastTouch: "attack" }); return; }
+    looseTurnover(kind, nt, pl, spriteOf(a.receiver), spriteOf(a.recoverer));
+  }
+
   // ---------- résultat d'une action (événement arrivé) ----------
+  // Identité stable d'une action (voir reseed) : rang dans le fil, type,
+  // acteurs, chrono — jamais l'heure de diffusion.
+  const actionKey = (e, n) => [n, e.kind, e.quarter, e.clock, (e.actors && (e.actors.shooter || e.actors.player || e.actors.rebounder)) || "", e.made ? 1 : 0].join("|");
   function playEvent(e) {
     if (e.kind === "quote") return;   // commentaire du présentateur : fil seulement
+    reseed("e" + actionKey(e, e.id));
+    momentKey = actionKey(e, e.id);
     const a = e.actors || {};
     const shooter = spriteOf(a.shooter), assister = spriteOf(a.assister), t = e.team;
     const prePlayed = firedAt === e.airAt || !!(plan && plan.airAt === e.airAt && plan.fired && !plan.skipped);
@@ -1753,7 +1891,7 @@ export function createCourt2D(host, opts = {}) {
         // Tir manqué SANS rebond derrière (contre : le rebond suit ; faute
         // sur le tir : les lancers suivent).
         const blockedShot = !isReb && !e.made && (e.blocked || !!a.blocker);
-        const fouledShot = !isReb && !e.made && !blockedShot;
+        const fouledShot = !isReb && !e.made && !blockedShot && (e.foulType === "shooting" || !!e.fouled || !!a.defender);
         const spot = e.shot ? { x: e.shot.x, y: e.shot.y } : slotPos(offT, shooter ? shooter.slot : 0, true);
         const rim = RIM[offT];
         const finish = () => {
@@ -1788,7 +1926,13 @@ export function createCourt2D(host, opts = {}) {
             fly({ x: spot.x + dir * 4, y: spot.y + rnd(-4, 4) }, 260, 2.5, null, "", true);
           } else if (fouledShot) {
             // Faute sur le tir : pas de rebond, le tireur va aux lancers.
+            // Faute VISIBLE (mission live 2026-10-10) : le défenseur du tir
+            // est marqué, le tireur encaisse le contact.
             setPhase("DEAD_BALL", "faute sur tir");
+            const df = spriteOf(a.defender);
+            if (df) { flash(df, "FAUTE", "bad"); df.ring.setAttribute("opacity", "1"); fxTimer(1500, () => df.ring.setAttribute("opacity", "0")); }
+            if (shooter) jump(shooter, 0.5);
+            moment("faute", { team: 1 - offT });
             fly({ x: rim.x + (rim.x > 47 ? -2 : 2), y: rim.y + 1.5 }, 300, 1.5, () => { if (shooter && shooter.team === nextT) flyTo(shooter, 380, 2, () => giveBall(shooter)); });
           } else {
             // Rebond : le ballon rebondit sur le cercle (ou part du contre)
@@ -1796,7 +1940,10 @@ export function createCourt2D(host, opts = {}) {
             // s'approchent (lutte), et il saute pour le capter.
             const dir = rim.x > 47 ? -1 : 1;
             if (!isReb || !afterBlock) crowdReact("miss", offT);   // tir raté : déception
-            if (isReb && e.offensive) moment("rebond_offensif", { team: nextT }); else if (!isReb) moment("rate", { team: offT });
+            // (rebond offensif : annoncé quand le rebondeur TIENT le ballon,
+            // jamais pendant que le ballon est encore en l'air)
+            if (!isReb) moment("rate", { team: offT });
+            const mk = momentKey;
             const drop = { x: rim.x + dir * rnd(3, 9), y: rim.y + rnd(-7, 7) };
             const hop = afterBlock ? { x: ball.x, y: ball.y } : { x: rim.x + dir * rnd(0.5, 2), y: rim.y + rnd(-1.5, 1.5) };
             scene(1700);
@@ -1812,7 +1959,7 @@ export function createCourt2D(host, opts = {}) {
               if (rb) { busy(rb, 1000); moveTo(rb, catchAt.x + rnd(-0.6, 0.6), catchAt.y + rnd(-0.6, 0.6), 2.4); }
               fly(drop, 420, 3.5, () => {
                 if (rb) jump(rb, 1);
-                later(700, () => { startPossession(nextT); giveBall(rb); if (rb && isReb) flash(rb, "REB"); setPhase("LIVE", "rebond"); formation(); });
+                later(700, () => { startPossession(nextT); giveBall(rb); if (rb && isReb) flash(rb, "REB"); if (isReb && e.offensive && ball.holder === (rb && rb.id)) { const cur = momentKey; momentKey = mk; moment("rebond_offensif", { team: nextT }); momentKey = cur; } setPhase("LIVE", "rebond"); formation(); });
               }, "", true);
             }, "", true);
           }
@@ -1921,11 +2068,16 @@ export function createCourt2D(host, opts = {}) {
           later(900, () => formation());
           break;
         }
-        if (pl) flash(pl, "PERTE", "bad");
-        moment("perte", { team: 1 - nt });
-        if (kind === "passOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "passe trop longue", lastTouch: "attack", kind, exit: overthrowExit(pl, spriteOf(a.receiver)), flightMs: 620 }); break; }
-        if (kind === "legacyOut") { ballOut(nt, pl ? { x: pl.x, y: pl.y } : null, { key: "e" + e.id, why: "sortie", lastTouch: "attack" }); break; }
-        looseTurnover(kind, nt, pl, spriteOf(a.receiver), spriteOf(a.recoverer));
+        // Le joueur que le moteur désigne a le ballon AVANT de le perdre
+        // (mission live 2026-10-10 : « perte attribuée à un joueur qui n'a
+        // jamais touché le ballon ») : passe rapide du porteur du moment.
+        const holder = ball.holder ? spriteOf(ball.holder) : null;
+        if (pl && holder && holder !== pl && holder.team === pl.team && !ball.flight) {
+          pass(holder, pl, false, 260);
+          later(340, () => playLostTurnover(e, kind, nt, pl, a));
+          break;
+        }
+        playLostTurnover(e, kind, nt, pl, a);
         break;
       }
       case "outOfBounds": {
@@ -1942,12 +2094,29 @@ export function createCourt2D(host, opts = {}) {
       case "foul": case "unsportsmanlikeFoul": case "technicalFoul": {
         // Fautif (réel) et victime (réelle, `player` sur une faute simple) :
         // contact joué — le fautif vient au contact, la victime encaisse.
-        const d = spriteOf(a.defender) || (e.kind !== "foul" ? spriteOf(a.player) : null) || onCourt(t)[0];
+        // Fautif : le défenseur réel ; sur une faute technique/antisportive,
+        // `player` est le fautif. Plus de repli sur un joueur quelconque.
+        const d = spriteOf(a.defender) || (e.kind !== "foul" ? spriteOf(a.player) : null);
         const v = e.kind === "foul" ? spriteOf(a.player) : null;
-        if (d && v && d !== v) { busy(d, 900); busy(v, 900); moveTo(d, v.x + (d.x >= v.x ? 1.6 : -1.6), v.y + 0.4, 2.6); later(350, () => jump(v, 0.5)); }
-        flash(d, e.kind === "technicalFoul" ? "TECHNIQUE" : e.kind === "unsportsmanlikeFoul" ? "ANTISPORTIVE" : "FAUTE", "bad");
-        moment(e.kind === "technicalFoul" ? "faute_technique" : e.kind === "unsportsmanlikeFoul" ? "antisportive" : "faute", { team: t });
-        if (d) { d.ring.setAttribute("opacity", "1"); later(1500, () => d.ring.setAttribute("opacity", "0")); }
+        const andOne = e.foulType === "andOne";
+        // Signal (FAUTE, cercle, commentaire) SEULEMENT une fois le contact
+        // visible (mission live 2026-10-10) : le fautif est déjà au contact
+        // (possession planifiée) ou y court ; au plus 700 ms d'attente.
+        const signal = () => {
+          flash(d, e.kind === "technicalFoul" ? "TECHNIQUE" : e.kind === "unsportsmanlikeFoul" ? "ANTISPORTIVE" : "FAUTE", "bad");
+          if (andOne) banner("AND ONE", "andone");
+          moment(e.kind === "technicalFoul" ? "faute_technique" : e.kind === "unsportsmanlikeFoul" ? "antisportive" : "faute", { team: t });
+          if (d) { d.ring.setAttribute("opacity", "1"); fxTimer(1500, () => d.ring.setAttribute("opacity", "0")); }
+        };
+        if (d && v && d !== v && !andOne) {
+          busy(d, 900); busy(v, 900); moveTo(d, v.x + (d.x >= v.x ? 1.6 : -1.6), v.y + 0.4, 2.6);
+          const t0 = performance.now();
+          const waitContact = () => {
+            if (Math.hypot(d.x - v.x, d.y - v.y) < 2.6 || performance.now() - t0 > 700) { jump(v, 0.5); signal(); return; }
+            later(60, waitContact);
+          };
+          waitContact();
+        } else { if (andOne && v) jump(v, 0.4); signal(); }
         // Faute simple sans lancers francs : arrêt, puis remise en jeu en
         // touche par l'équipe fautée (jamais de jeu qui continue sous la
         // faute). Lancers à suivre (bonus, faute sur tir) : rien ici.
@@ -2019,19 +2188,54 @@ export function createCourt2D(host, opts = {}) {
         // Chacun rejoint le regroupement autour du coach, devant SON banc, d'un pas rapide.
         for (const t of [0, 1]) onCourt(t).sort((a, b) => a.slot - b.slot).forEach((sp, i) => { const p = huddlePos(t, i, 5, 0); moveTo(sp, p.x, p.y, 1.5); busy(sp, hold - 600); });
         ball.holder = null; ball.flight = null;
-        // Reprise : remise en jeu en touche (côté table, zone arrière) de
-        // l'équipe qui a le ballon — plus de ballon « posé » chez le meneur.
-        later(hold - 500, () => {
-          stopUntil = 0; for (const sp of sprites.values()) sp.busy = false;
-          const own = ownerTeam(); if (own !== null) possession = own;
-          setPhase("DEAD_BALL", "reprise après temps mort");
-          sidelineInbound(possession, { x: 47 + (RIM[possession].x > 47 ? -10 : 10), y: 50 }, { key: "to" + (e.id != null ? e.id : e.airAt), why: "reprise après temps mort", keepClock: true });
-        });
+        // Reprise : remise en jeu en touche (zone arrière) de l'équipe qui a
+        // le ballon. Déclenchée par la FIN RÉELLE du temps mort (état du
+        // direct, voir checkResume), plus par une minuterie que la
+        // suspension / le recalage pouvaient effacer (mission live
+        // 2026-10-10 : « pas de remise en jeu après un temps mort »).
+        armResume(S && S.stoppage && S.stoppage.kind === "timeout" ? S.stoppage.startAt : e.airAt, now() + hold);
         break;
       }
       default: break;
     }
     if (e.text) say(e.text);
+  }
+
+  // Reprise après un temps mort : une seule fois par temps mort (clé = son
+  // début), à 0,6 s de sa fin, même après un recalage ou un retour sur
+  // l'onglet. Lancers francs à suivre : pas de remise en jeu (les lancers
+  // reprennent). Arrivé longtemps après la fin : le recalage a déjà
+  // replacé le jeu, rien à rejouer.
+  let resume = null;
+  function armResume(startAt, endsAt) {
+    if (!Number.isFinite(endsAt)) return;
+    const key = "to" + (Number.isFinite(startAt) ? startAt : endsAt);
+    if (resume && resume.key === key) return;
+    resume = { key, endsAt, done: false };
+  }
+  function checkResume() {
+    if (!resume || resume.done || suspended || !S || S.status !== "live") return;
+    const t = now();
+    if (t < resume.endsAt - 600) return;
+    resume.done = true;
+    if (t - resume.endsAt > 5000) return;
+    stopUntil = 0; sceneUntil = 0;
+    for (const sp of sprites.values()) sp.busy = false;
+    const own = ownerTeam(); if (own !== null) possession = own;
+    setPhase("DEAD_BALL", "reprise après temps mort");
+    if (ftPending()) {
+      // Lancers à reprendre : tout le monde se réaligne, le tireur reçoit le ballon.
+      diag("resume", { key: resume.key, then: "lancers francs" });
+      const na = S.nextAction && S.nextAction.kind === "freeThrow" ? S.nextAction : queue.find(q => q.kind === "freeThrow");
+      const ft = na && (na.team === 0 || na.team === 1) ? na.team : possession;
+      const shSp = spriteOf(na && na.actors && na.actors.shooter);
+      possession = ft;
+      alignForFreeThrow(ft, shSp, 3200, 1.9);
+      if (shSp) later(900, () => { if (ball.holder !== shSp.id) flyTo(shSp, 400, 2, () => giveBall(shSp)); });
+      return;
+    }
+    diag("resume", { key: resume.key, then: "remise en jeu" });
+    sidelineInbound(possession, { x: 47 + (RIM[possession].x > 47 ? -10 : 10), y: 50 }, { key: resume.key, why: "reprise après temps mort", keepClock: true });
   }
 
   // Médaillons des cinq en jeu : avatar, points / rebonds / passes.
@@ -2071,12 +2275,12 @@ export function createCourt2D(host, opts = {}) {
   const evSig = e => (e ? `${e.id}@${e.airAt || 0}:${e.kind}` : "");
   function clearChoreo() {
     timers.forEach(clearTimeout); timers.clear();
-    drainTimer = 0; queue.length = 0; plan = null; heldInbound = null;
+    drainTimer = 0; queue.length = 0; plan = null; heldInbound = null; inbounder = null;
   }
   function suspend() {
     if (suspended) return;
     suspended = true;
-    clearChoreo();
+    clearChoreo(); clearFx();
   }
   // Recalage sur l'état du moteur. `soft` (terrain visible et à jour) : les
   // joueurs REJOIGNENT leurs places en courant, le ballon est passé au
@@ -2091,7 +2295,7 @@ export function createCourt2D(host, opts = {}) {
     suspended = false;
     resyncCount++;
     diag("resync", { reason, soft, possession: S && S.possession });
-    clearChoreo();
+    clearChoreo(); clearFx();
     busyUntil = 0; sceneUntil = 0; firedAt = 0;
     ball.flight = null; ball.z = 0; endTrail();
     for (const [id, sp] of sprites) {
@@ -2474,6 +2678,7 @@ export function createCourt2D(host, opts = {}) {
 
   // ---------- boucle d'animation ----------
   function tick(nowP) {
+    if (halted) return;
     raf = requestAnimationFrame(tick);
     const t0 = performance.now();
     frame(nowP);
@@ -2508,12 +2713,13 @@ export function createCourt2D(host, opts = {}) {
       const rim = RIM[possession];
       for (const sp of sprites.values()) {
         if (sp.leaving || sp.busy || sp.stage || nowP < (sp.nextDrift || 0)) continue;
-        sp.nextDrift = nowP + 1000 + Math.random() * 500;
+        reseed("d" + sp.id + "|" + (S.quarter || 0) + "|" + Math.round(Number(S.clock) || 0) + "|" + possession);
+        sp.nextDrift = nowP + 1000 + rand01() * 500;
         if (sp.team === possession) {
           const p = slotPos(sp.team, sp.slot, true);
           if (ball.holder === sp.id) continue;   // le porteur erre en continu (voir plus bas)
           if (sp.cut) { sp.cut = false; sp.tx = p.x + rnd(-3, 3); sp.ty = p.y + rnd(-3, 3); sp.speed = Math.max(0.3, Math.min(1.1, Math.hypot(sp.tx - sp.x, sp.ty - sp.y) / 15)); }
-          else if (Math.random() < 0.33) { sp.cut = true; sp.tx = lerp(p.x, rim.x, rnd(0.45, 0.75)); sp.ty = lerp(p.y, rim.y, rnd(0.3, 0.6)) + rnd(-3, 3); sp.speed = 1.5; }
+          else if (rand01() < 0.33) { sp.cut = true; sp.tx = lerp(p.x, rim.x, rnd(0.45, 0.75)); sp.ty = lerp(p.y, rim.y, rnd(0.3, 0.6)) + rnd(-3, 3); sp.speed = 1.5; }
           else { sp.tx = p.x + rnd(-5, 5); sp.ty = p.y + rnd(-5, 5); sp.speed = Math.max(0.18, Math.min(0.9, Math.hypot(sp.tx - sp.x, sp.ty - sp.y) / 16)); }
           sp.ty = Math.max(1.5, Math.min(48.5, sp.ty)); sp.tx = Math.max(1.5, Math.min(92.5, sp.tx));
         } else {
@@ -2538,7 +2744,18 @@ export function createCourt2D(host, opts = {}) {
         if (!h.busy && !h.stage && nowP > sceneUntil && !deadBall()) {
           const d = Math.hypot(h.tx - h.x, h.ty - h.y);
           if (!crossed && age > 5.5 && !inFront(h.team, h.tx)) { moveTo(h, h.team === 0 ? 52 : 42, Math.max(8, Math.min(42, h.y)), 1.8); }
-          else if (d < 0.6) { const p = slotPos(h.team, h.slot, true); moveTo(h, frontX(h.team, Math.max(2, Math.min(92, lerp(h.x, p.x, 0.3) + rnd(-4, 4)))), Math.max(3, Math.min(47, lerp(h.y, p.y, 0.3) + rnd(-3, 3))), rnd(0.55, 0.8)); }
+          else if (d < 0.6) {
+            // Porteur : il ATTAQUE un espace (têtes de raquette, ailes, haut
+            // de la clé) au lieu de dribbler sur place ; une équipe qui joue
+            // la pénétration attaque plus près du cercle.
+            reseed("h" + h.id + "|" + (S.quarter || 0) + "|" + Math.round(Number(S.clock) || 0));
+            const rim = RIM[h.team];   // panier attaqué
+            const dirx = rim.x > 47 ? -1 : 1, deep = drivesInside(h.team) ? 0.72 : 1;
+            const SPOTS = [{ d: 30, y: 25 }, { d: 24, y: 12 }, { d: 24, y: 38 }, { d: 20, y: 18 }, { d: 20, y: 32 }];
+            let pi = Math.floor(rand01() * SPOTS.length); if (pi === h.lastSpot) pi = (pi + 1) % SPOTS.length; h.lastSpot = pi;
+            const sp0 = SPOTS[pi];
+            moveTo(h, frontX(h.team, Math.max(2, Math.min(92, rim.x + dirx * sp0.d * deep))), Math.max(3, Math.min(47, sp0.y + rnd(-1.5, 1.5))), rnd(0.7, 0.95));
+          }
           else if (crossed && !inFront(h.team, h.tx)) { h.tx = frontX(h.team, h.tx); }
         }
       }
@@ -2684,7 +2901,7 @@ export function createCourt2D(host, opts = {}) {
       const zy = sp => (sp.id === ball.holder ? 1e4 : sp.y + (sp.oy || 0));
       const ordered = [...sprites.values(), ...refs].sort((a, b) => zy(a) - zy(b));
       const key = ordered.map(sp => sp.id).join("|");
-      if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.appendChild(sp.g)); layer.appendChild(trailG); layer.appendChild(ballG); layer.appendChild(fxG); }
+      if (key !== sortKey) { sortKey = key; ordered.forEach(sp => layer.insertBefore(sp.g, trailG)); }
     }
   }
   // ---------- mise en scène (staging.js) ----------
@@ -2721,14 +2938,37 @@ export function createCourt2D(host, opts = {}) {
     },
     dropOverlay() { if (showCv) { showCv.remove(); showCv = null; } },
   }, opts.staging) : null);
-  if (opts.stagingModule && typeof opts.stagingModule.then === "function") opts.stagingModule.then(mod => { if (!destroyed && !stage) { stage = makeStage(mod); if (stage && S) stage.update(S, []); } }).catch(() => {});
-  else if (opts.stagingModule) stage = makeStage(opts.stagingModule);
+  let stagingModuleRef = null;   // module de mise en scène chargé (recréé à la reprise après halt)
+  if (opts.stagingModule && typeof opts.stagingModule.then === "function") opts.stagingModule.then(mod => { stagingModuleRef = mod; if (!destroyed && !stage && !halted) { stage = makeStage(mod); if (stage && S) stage.update(S, []); } }).catch(() => {});
+  else if (opts.stagingModule) { stagingModuleRef = opts.stagingModule; stage = makeStage(opts.stagingModule); }
 
   raf = requestAnimationFrame(tick);
 
   // ---------- API ----------
+  // Fin du direct (mission live 2026-10-10) : terrain figé pour de bon —
+  // plus de boucle de rendu, de minuterie ni de spectacle ; les mises à jour
+  // suivantes sont ignorées (fin définitive, même après rechargement).
   const api = {
+    halt() {
+      if (halted) return;
+      halted = true;
+      cancelAnimationFrame(raf); raf = 0;
+      clearChoreo(); clearFx();
+      if (stage) { try { stage.destroy(); } catch (e) { /* rien */ } stage = null; }
+      diag("halt", {});
+    },
+    get halted() { return halted; },
+    // Rediffusion ramenée avant la fin : le terrain repart, recalé.
+    resume() {
+      if (!halted || destroyed) return;
+      halted = false;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+      if (stagingModuleRef) { try { stage = makeStage(stagingModuleRef); } catch (e) { stage = null; } }
+      if (S) resync("reprise du direct");
+    },
     update(state, newEvents = []) {
+      if (halted) return;
       // Statut précédent gardé à part (la vue peut muter le même objet état).
       if (lastStatus && lastStatus !== "final" && state.status === "final") moment("fin_match");
       lastStatus = state.status;
@@ -2767,6 +3007,8 @@ export function createCourt2D(host, opts = {}) {
       syncTokenStats();
       if (tipId && !pdata.has(tipId)) hideTip();
       syncBoard();
+      if (state.status === "live" && state.stoppage && state.stoppage.kind === "timeout") armResume(state.stoppage.startAt, state.stoppage.endsAt);
+      checkResume();
       const quiet = !suspended && performance.now() > sceneUntil && performance.now() > busyUntil && !queue.length && !ball.flight && phase === "LIVE";
       // Ballon volontairement libre après un tir manqué (contre, faute sur le
       // tir) : c'est l'événement suivant du moteur (rebond, lancers) qui
@@ -2784,7 +3026,7 @@ export function createCourt2D(host, opts = {}) {
       // événements sont déjà là) : on joue ceux des 6 dernières secondes.
       if (firstUpdate && !fresh.length && state.status === "live") {
         const t = now();
-        fresh = state.events.filter(e => e.airAt && e.airAt >= t - 6000).slice(-3).map(e => e.id);
+        fresh = state.events.filter(e => e.airAt && e.airAt >= t - ((e.kind === "shot" || e.kind === "freeThrow") && e.made ? 1500 : 6000)).slice(-3).map(e => e.id);
       }
       firstUpdate = false;
       // Onglet masqué : le moteur reste la source de vérité, mais rien n'est
@@ -2857,7 +3099,7 @@ export function createCourt2D(host, opts = {}) {
       ball() { const m = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(ballG.getAttribute("transform") || ""); return { x: ball.x, y: ball.y, z: ball.z, shown: m ? { x: +m[1] / PX, y: +m[2] / PX } : null, holder: ball.holder, flight: !!ball.flight, loose: !!ball.loose }; },
       advance(ms) { const t = last + ms; frame(t); return t; },
     },
-    destroy() { destroyed = true; if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility); clearTimeout(reactTimer); clearTimeout(flagTimer); host.innerHTML = ""; host.classList.remove("c2d"); },
+    destroy() { destroyed = true; halted = true; clearFx(); if (ro) try { ro.disconnect(); } catch (e) { /* rien */ } if (stage) stage.destroy(); cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers.clear(); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility); clearTimeout(reactTimer); clearTimeout(flagTimer); host.innerHTML = ""; host.classList.remove("c2d"); },
   };
   // Diagnostic activé : accès depuis la console (window.__hmCourt2d.debug().perf).
   if (perfBox && typeof window !== "undefined") window.__hmCourt2d = api;
