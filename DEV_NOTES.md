@@ -20,6 +20,38 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-10) — Moteur : rebonds, violations, possessions,
+  une seule implémentation**. Tests : `engine_rules_test.js` (20 contrôles),
+  `live_court2d_rules_test.js`.
+  - Règles partagées : `assets/game-rules.js` (pur, sans tirage interne),
+    `require` dans engine.js, `<script defer>` dans moteurbasket3.html
+    (`window.HM_RULES`), `import` dans assets/live/adapter.js
+    (`globalThis.HM_RULES`) : chronomètre 24/14 (`shotClockAfter`),
+    violations (`isEightSecondViolation`, `isShotClockViolation`,
+    `isBackcourtViolation`, `rollViolations`), possession alternée
+    (`arrowAfterTipoff`, `alternatingPossession`).
+  - Rebond : `MatchEngine.resolveRebound` = SEULE résolution (tir manqué
+    ET dernier lancer franc manqué d'une faute personnelle) ; le rebondeur
+    tiré une fois porte l'événement, la statistique et la possession.
+    Lancers de faute technique / antisportive : `reboundable: false`, tirés
+    AVANT ceux de la faute personnelle (ordre FIBA).
+  - Violations décidées dans `simulate()` avant la possession (temps
+    consommé, perte au porteur, ballon à l'adversaire, `logViolation`) ;
+    tir forcé à la sirène (`_buzzerShot`) ; airball repris par l'attaque =
+    violation des 24 s. Possession suivant un rebond offensif : 14 s.
+    Événements : `shotClock`, `crossAt`, `buzzerShot`, `arrow`,
+    `alternating`, `cause` (technicalEjection).
+  - Flèche FIBA : `this.arrow` (équipe perdante de l'entre-deux), consommée
+    au début de chaque période 2+ (prolongations comprises).
+  - moteurbasket3.html : la copie du moteur (`class MatchEngine`,
+    `simulateOrForfeit`, simulateCpuMatchesForRound / runPlayoffsInstantly /
+    runRelegationBarrage) est SUPPRIMÉE — tous les matchs passent par
+    engine.js côté serveur ; le navigateur n'invente plus de résultat de
+    barrage. `engine_rules_test.js` (point 17) empêche une nouvelle copie.
+  - Calibrage mesuré (60 matchs) : par équipe et par match ≈ 0,6 violation
+    des 24 s, 0,2 des 8 s, 0,1 retour en zone ; ≈ 12 % de rebonds offensifs
+    sur lancer franc.
+
 - **🟢 LIVRÉ (2026-10-10) — Mission live : correction et fiabilisation du
   direct** (moteur, chronologie, terrain 2D, commentateur, sons, shows,
   fin de match). Tests : `live_engine_fouls_test.js`,

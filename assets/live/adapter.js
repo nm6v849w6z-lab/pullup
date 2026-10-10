@@ -24,6 +24,11 @@
 // pour l'instant l'adaptateur historique de moteurbasket3.html (hmLive*),
 // qui produit le même contrat.
 
+// Règles de jeu partagées avec le moteur (24/14 s, violations…) : le même
+// fichier que engine.js et moteurbasket3.html (expose globalThis.HM_RULES).
+import "../game-rules.js?v=20261010-20";
+const Rules = globalThis.HM_RULES;
+
 const SPOT_GEOM = {
   ra: { d: [0.5, 4], a: [-80, 80] }, paint: { d: [4.5, 9.5], a: [-60, 60] },
   mbl: { d: [10, 18], a: [-88, -62] }, mwl: { d: [12, 20], a: [-58, -22] }, mtop: { d: [14, 21], a: [-20, 20] }, mwr: { d: [12, 20], a: [22, 58] }, mbr: { d: [10, 18], a: [62, 88] },
@@ -107,10 +112,14 @@ export function deadBallHoldMs(ev) {
 // ballon ou commet une faute simple, l'attaque garde le ballon — le chrono
 // des 24 s CONTINUE (ramené à 14 s s'il en restait moins), il n'est pas
 // remis à 24 (règle FIBA). Sinon : 24.
+// Règles partagées (assets/game-rules.js, 2026-10-10) : rebond offensif → 14 s ;
+// faute défensive → au moins 14 s ; sortie provoquée par la défense → le restant.
 export function shotClockBase(ev, sec) {
+  if (ev && ev.type === "rebound" && ev.offensive) return Rules.shotClockAfter("offensiveRebound");
   const keep = ev && ((ev.type === "outOfBounds" && ev.lastTouch === "defense") || (ev.type === "foul" && ev.inbound));
-  if (!keep || typeof ev.possStart !== "number") return 24;
-  return Math.max(14, Math.min(24, 24 - Math.max(0, ev.possStart - sec)));
+  if (!keep || typeof ev.possStart !== "number") return Rules.SHOT_CLOCK;
+  const remaining = Rules.SHOT_CLOCK - Math.max(0, ev.possStart - sec);
+  return Rules.shotClockAfter(ev.type === "foul" ? "defensiveFoul" : "defenseOutOfBounds", remaining);
 }
 export function clockSeconds(str) {
   if (typeof str === "number") return str;
@@ -185,7 +194,9 @@ export function createLiveAdapter(opts) {
     for (const id of [pid(offKey, ev.handler, ev.handlerId), pid(offKey, ev.creator, ev.creatorId), pid(offKey, ev.shooter, ev.shooterId)]) if (id && passes[passes.length - 1] !== id) passes.push(id);
     return { passes: passes.length ? passes : undefined, shotType: ev.shotType || undefined, quality: ev.quality || undefined, situation: ev.situation || undefined,
       possLen: typeof ev.possLen === "number" ? ev.possLen : undefined, spot: ev.spot || undefined, tovType: ev.tovType || undefined, foulType: ev.foulType || undefined,
-      lastTouch: ev.lastTouch || undefined, inbound: ev.inbound || undefined, tovKind: ev.tovKind || undefined, deadBall: typeof ev.deadBall === "boolean" ? ev.deadBall : undefined };
+      lastTouch: ev.lastTouch || undefined, inbound: ev.inbound || undefined, tovKind: ev.tovKind || undefined, deadBall: typeof ev.deadBall === "boolean" ? ev.deadBall : undefined,
+      // Lancers francs (série, rebond à suivre) et rebond de lancer (2026-10-10).
+      of: ev.of || undefined, attempt: ev.attempt || undefined, rebound: ev.rebound || undefined, freeThrow: ev.freeThrow || undefined, airball: ev.airball || undefined };
   }
   function shotOf(ev, t) {
     const zone = ev.zone === "inside" ? "paint" : ev.zone;
@@ -209,7 +220,7 @@ export function createLiveAdapter(opts) {
     const t = ev.team; if (t !== "A" && t !== "B") return;
     switch (ev.type) {
       case "shot": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); const three = ev.zone === "three"; if (three) r.fga3++; else r.fga2++; if (ev.made) { r.pts += three ? 3 : 2; if (three) r.fgm3++; else r.fgm2++; if (ev.assisterId != null) rowOf(t, ev.assisterId, ev.assister).ast++; } else { if (ev.blockerId != null) rowOf(other(t), ev.blockerId, ev.blocker).blk++; if (ev.defenderId != null && !ev.blocked) rowOf(other(t), ev.defenderId, ev.defender).pf++; } break; }
-      case "rebound": { if (ev.rebounderId != null) { const r = rowOf(t, ev.rebounderId, ev.rebounder); r.reb++; if (ev.offensive) r.oreb++; else r.dreb++; } const sk = ev.offensive ? t : other(t); if (ev.shooterId != null && !ev.blocked) { const r = rowOf(sk, ev.shooterId, ev.shooter); if (ev.zone === "three") r.fga3++; else r.fga2++; } break; }
+      case "rebound": { if (ev.rebounderId != null) { const r = rowOf(t, ev.rebounderId, ev.rebounder); r.reb++; if (ev.offensive) r.oreb++; else r.dreb++; } const sk = ev.offensive ? t : other(t); if (ev.shooterId != null && !ev.blocked && !ev.freeThrow) { const r = rowOf(sk, ev.shooterId, ev.shooter); if (ev.zone === "three") r.fga3++; else r.fga2++; } break; }
       case "freeThrow": { if (ev.shooterId == null) break; const r = rowOf(t, ev.shooterId, ev.shooter); r.fta += ev.attempts || 0; r.ftm += ev.made || 0; r.pts += ev.made || 0; break; }
       case "turnover": { if (ev.playerId != null) rowOf(t, ev.playerId, ev.player).tov++; if (ev.stealerId != null) rowOf(other(t), ev.stealerId, ev.stealer).stl++; break; }
       case "foul": { if (ev.defenderId != null) rowOf(t, ev.defenderId, ev.defender).pf++; break; }

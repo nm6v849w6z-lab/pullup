@@ -13,8 +13,8 @@
 // Sous-drapeaux (cfg) : coach, playerIntro, shows — voir
 // server/featureFlags.js et hmLiveStagingCfg (moteurbasket3.html).
 
-import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-19";
-import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-19";
+import { pompomGirl, mascot as mascotSvg, defaultMascot, launcher, tshirt, trampoline, smoke } from "./characters.js?v=20261010-20";
+import { createShowFx, showColors, SHOW_CYCLE, DESIGN } from "./showfx.js?v=20261010-20";
 
 // Moment → show. « gala » (2026-10-10) : pompom girls ET mascotte dans la
 // même scène, chacun à sa place habituelle — à la mi-temps, et un temps

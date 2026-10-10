@@ -28,7 +28,8 @@ for (let i = 0; i < N; i++) {
   for (let k = 0; k < ev.length; k++) {
     const e = ev[k];
     if (e.type === "freeThrow") { ftEv++; if (e.made === 0) ft0++; }
-    if (e.type === "shot" || e.type === "rebound") { const z = e.zone === "inside" ? "paint" : e.zone; zone[z][1]++; if (e.made) zone[z][0]++; }
+    // (rebond sur lancer franc manqué, 2026-10-10 : pas une tentative de tir)
+    if ((e.type === "shot" || e.type === "rebound") && !e.freeThrow) { const z = e.zone === "inside" ? "paint" : e.zone; zone[z][1]++; if (e.made) zone[z][0]++; }
     // Faute hors tir (texte de commonFoul, sans tir ni and-one au même
     // instant) immédiatement suivie de 2 lancers francs = bonus (un
     // événement par lancer depuis le 2026-10-09 : `of` = taille de la série).

@@ -12,6 +12,21 @@ const assert = require("assert");
 const E = require("./engine.js");
 const ok = m => console.log("✅ " + m);
 
+// Événements intercalés entre la faute et SES lancers (même arrêt de jeu) :
+// faute antisportive / technique (et le lancer de la technique, tiré en
+// premier — ordre FIBA), exclusions, changements.
+const TECH = ["technicalFoul", "technicalEjection"];
+const INTER = ["unsportsmanlikeFoul", ...TECH, "substitution", "foulOut", "shortHanded"];
+function skipInterleaved(ev, j) {
+  let seenTech = false;
+  for (;;) {
+    const x = ev[j];
+    if (!x) return j;
+    if (INTER.includes(x.type)) { if (x.type === "technicalFoul" || (x.type === "technicalEjection" && x.cause === "technical")) seenTech = true; j++; continue; }
+    if (seenTech && x.type === "freeThrow" && x.of === 1 && !x.rebound) { seenTech = false; j++; continue; }
+    return j;
+  }
+}
 const a = E.generateStartingRoster("Fautes A"), b = E.generateStartingRoster("Fautes B");
 // Discipline basse chez B : provoque des fautes antisportives sur and-one.
 b.players.forEach(p => { p.attrs.discipline = 5; });
@@ -27,20 +42,18 @@ for (let g = 0; g < 60; g++) {
       const prev = ev.slice(0, i).reverse().find(x => x.type === "shot");
       assert.ok(prev && prev.made && prev.shooterId === e.playerId, "and-one : suit le panier du joueur fauté");
       let j = i + 1;
-      if (ev[j] && (ev[j].type === "unsportsmanlikeFoul" || (ev[j].type === "technicalEjection" && ev[j].playerId === e.defenderId))) { unsOnContact++; j++; }
-      while (ev[j] && (ev[j].type === "substitution" || ev[j].type === "foulOut" || ev[j].type === "shortHanded")) j++;
+      if (ev[j] && (ev[j].type === "unsportsmanlikeFoul" || (ev[j].type === "technicalEjection" && ev[j].playerId === e.defenderId))) unsOnContact++;
+      j = skipInterleaved(ev, j);
       assert.ok(ev[j] && ev[j].type === "freeThrow" && ev[j].shooterId === e.playerId && ev[j].of === 1 && ev[j].attempt === 1,
-        `and-one : un seul lancer (1/1) pour ${e.player}, vu ${ev[j] && ev[j].text}`);
+        `and-one : un seul lancer (1/1) pour ${e.player} — ${ev.slice(i, j + 2).map(x => x.type + (x.of ? "(" + x.attempt + "/" + x.of + ")" : "")).join(" > ")}`);
       assert.ok(!(ev[j + 1] && ev[j + 1].type === "freeThrow" && ev[j + 1].attempt === 2), "and-one : jamais de 2e lancer dans la même série");
     }
     if (e.type === "shot" && !e.made && e.foulType === "shooting" && !e.blocked) {
       shootingFouls++;
       assert.ok(e.fouled && e.defenderId != null, "faute sur tir : défenseur identifié");
-      let j = i + 1;
-      if (ev[j] && (ev[j].type === "unsportsmanlikeFoul" || ev[j].type === "technicalEjection")) j++;
-      while (ev[j] && (ev[j].type === "substitution" || ev[j].type === "foulOut" || ev[j].type === "shortHanded")) j++;
+      let j = skipInterleaved(ev, i + 1);
       const n = e.zone === "three" ? 3 : 2;
-      assert.ok(ev[j] && ev[j].type === "freeThrow" && ev[j].of === n && ev[j].shooterId === e.shooterId, `faute sur tir : ${n} lancers pour le tireur`);
+      assert.ok(ev[j] && ev[j].type === "freeThrow" && ev[j].of === n && ev[j].shooterId === e.shooterId, `faute sur tir : ${n} lancers pour le tireur — ${ev.slice(i, j + 2).map(x => x.type + (x.of ? "(" + x.attempt + "/" + x.of + ")" : "")).join(" > ")}`);
       ftSeries++;
     }
     if (e.type === "shot" && e.blocked) {

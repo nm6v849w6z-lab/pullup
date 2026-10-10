@@ -62,7 +62,8 @@ console.log("✅ Les types d'événements structurés essentiels (shot/rebound/q
 const VALID_ZONES = ["inside", "mid", "three"];
 for (const ev of [...byType.shot, ...byType.rebound]) {
   if (ev.team !== "A" && ev.team !== "B") throw new Error("❌ ev.team invalide pour un tir/rebond : " + JSON.stringify(ev));
-  if (!VALID_ZONES.includes(ev.zone)) throw new Error("❌ ev.zone invalide pour un tir/rebond : " + JSON.stringify(ev));
+  // (rebond sur lancer franc manqué, 2026-10-10 : `freeThrow`, pas de zone de tir)
+  if (ev.freeThrow ? ev.zone != null : !VALID_ZONES.includes(ev.zone)) throw new Error("❌ ev.zone invalide pour un tir/rebond : " + JSON.stringify(ev));
   if (typeof ev.made !== "boolean") throw new Error("❌ ev.made devrait être un booléen pour un tir/rebond : " + JSON.stringify(ev));
 }
 console.log("✅ Chaque événement de tir/rebond porte team (A/B) et zone (inside/mid/three) valides.");

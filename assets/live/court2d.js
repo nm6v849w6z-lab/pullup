@@ -1594,7 +1594,7 @@ export function createCourt2D(host, opts = {}) {
     // téléporté au cercle comme si le tir était déjà parti).
     if (!(total > 1200)) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     const kind = na.kind;
-    if (!PLANNED_KINDS.has(kind)) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
+    if (!PLANNED_KINDS.has(kind) || (kind === "rebound" && na.freeThrow)) { plan = { airAt: na.airAt, fired: true, skipped: true }; return; }
     const a = na.actors || {};
     // Équipe en attaque : celle que le moteur donne pour l'action
     // (possessionTeam = possession PENDANT l'action) ; repli pour un direct
@@ -1632,9 +1632,11 @@ export function createCourt2D(host, opts = {}) {
     // porteur, le ballon rejoint le porteur réel.
     const starter = current && current.team === offT ? current : null;
     if (!starter && ball.holder !== handler.id && !ball.flight) giveBall(handler);
-    // Remontée : le porteur dribble jusqu'à la tête de raquette.
+    // Remontée : le porteur dribble jusqu'à la tête de raquette — sauf
+    // violation des 8 s à venir (moteur) : il reste bloqué en zone arrière.
     const top = slotPos(offT, 0, true);
-    moveTo(handler, top.x, top.y, 1.6);
+    if (kind === "turnover" && na.tovKind === "eightSeconds") { const own = RIM[1 - offT]; moveTo(handler, lerp(own.x, 47, 0.55), 18 + rand01() * 14, 1.2); }
+    else moveTo(handler, top.x, top.y, 1.6);
     formation();
     if (kind === "freeThrow") {
       // Alignement pour les lancers francs, tir calé sur airAt.
@@ -1965,6 +1967,9 @@ export function createCourt2D(host, opts = {}) {
           }
         };
         if (afterBlock) { finish(); break; }
+        // Rebond d'un dernier lancer franc manqué (moteur, 2026-10-10) : le
+        // ballon est au cercle, le rebondeur est celui de l'événement.
+        if (isReb && e.freeThrow) { ball.flight = null; if (Math.hypot(ball.x - rim.x, ball.y - rim.y) > 3) { ball.x = rim.x; ball.y = rim.y; } finish(); break; }
         if (prePlayed) { ball.flight = null; if (!blockedShot) { ball.x = rim.x; ball.y = rim.y; } finish(); break; }
         // Pas de plan (première action, reconnexion) : version courte.
         const cur = spriteOf(ball.holder);
@@ -2026,8 +2031,10 @@ export function createCourt2D(host, opts = {}) {
             if (nextT === t) { sidelineInbound(t, { x: 47 + (RIM[t].x > 47 ? 1 : -1) * 4, y: 50 }, { key: "e" + e.id, why: "après lancers" }); return; }
             // Dernier lancer réussi : remise en jeu adverse, ligne de fond.
             if (made) { inbound(nextT, rim, "e" + e.id, "lancer réussi"); return; }
-            // Lancer manqué : le moteur rend le ballon à `nextT` sans désigner
-            // de rebondeur ; on prend son joueur le plus grand (créneau 4).
+            // Lancer manqué suivi d'un rebond (moteur, `rebound`) : le ballon
+            // reste au cercle, l'événement « rebond » désigne le rebondeur.
+            if (e.rebound) { setPhase("DEAD_BALL", "rebond de lancer"); fly({ x: rim.x - dir * 1.2, y: rim.y }, 200, 2, null, "", true); return; }
+            // Direct plus ancien (sans rebond dans le fil) : son joueur le plus grand.
             const rb = onCourt(nextT).sort((a, b) => b.slot - a.slot)[0];
             const drop = { x: rim.x - dir * rnd(2, 5), y: rim.y + rnd(-5, 5) };
             const ftFrom = { x: ball.x, y: ball.y }, ftCatch = looseAt(ftFrom, drop, 380, 3, 750);
@@ -2055,6 +2062,18 @@ export function createCourt2D(host, opts = {}) {
         const pl = spriteOf(a.player) || spriteOf(ball.holder);
         const kind = e.tovKind || (st ? "strip" : e.deadBall === false ? "passLoose" : "legacyOut");
         plan = null;
+        // Violation (moteur, 2026-10-10 : 8 s, 24 s, retour en zone arrière) :
+        // coup de sifflet, jeu arrêté, remise en jeu adverse en touche.
+        if (e.tovType === "violation") {
+          setPhase("DEAD_BALL", "violation " + kind);
+          freezePlayers(900);
+          if (pl) flash(pl, kind === "eightSeconds" ? "8 S" : kind === "shotClock" ? "24 S" : "RETOUR", "bad");
+          moment("perte", { team: 1 - nt });
+          scene(3200);
+          const at = kind === "shotClock" ? { x: ball.x, y: ball.y < 25 ? 0 : 50 } : { x: RIM[nt].x > 47 ? 40 : 54, y: 50 };
+          later(900, () => sidelineInbound(nt, at, { key: "e" + e.id, why: "violation " + kind }));
+          break;
+        }
         diag("turnover", { tov: kind, team: nt, passer: a.player || null, receiver: a.receiver || null, recoverer: a.recoverer || a.stealer || null });
         if (kind === "intercept" && st) { interceptPass(nt, pl, spriteOf(a.receiver), st); break; }
         if (st) {

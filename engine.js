@@ -21,6 +21,9 @@
   const History = require("./assets/history.js");
   // Rôles de jeu et compatibilité (2026-10-06) : voir assets/roles.js.
   const Roles = require("./assets/roles.js");
+  // Règles de jeu partagées (24/14 s, violations, possession alternée,
+  // choix du rebondeur) : même fichier pour moteurbasket3.html et le direct.
+  const Rules = require("./assets/game-rules.js");
 
 const POSITIONS = ["Meneur", "Arrière", "Ailier shooteur", "Ailier fort", "Pivot"];
 
@@ -778,6 +781,14 @@ const PHRASES = {
     "{shooter} manque son tir, il reprend son propre rebond.",
     "Tir manqué de {shooter}, qui récupère lui-même le rebond offensif.",
   ],
+  // Rebond après un DERNIER lancer franc manqué (2026-10-10).
+  ftReboundOff: ["Lancer manqué de {shooter}, rebond offensif de {rebounder} !", "{rebounder} reprend le lancer manqué de {shooter}."],
+  ftReboundDef: ["Lancer manqué de {shooter}, rebond défensif de {rebounder}.", "{rebounder} sécurise le rebond sur le lancer manqué de {shooter}."],
+  // Violations (2026-10-10) : 8 s, 24 s, retour en zone arrière.
+  eightSeconds: ["Violation des 8 secondes : {team} n'a pas franchi le milieu de terrain à temps.", "{ballHandler} reste bloqué en zone arrière : 8 secondes, ballon perdu pour {team}."],
+  shotClockViolation: ["Violation des 24 secondes pour {team}.", "{team} ne trouve pas de tir : 24 secondes, ballon rendu."],
+  shotClockAirball: ["Le tir de {shooter} à la sirène ne touche pas le cercle : violation des 24 secondes pour {team}."],
+  backcourtViolation: ["Retour en zone : {ballHandler} ramène le ballon dans son camp, violation pour {team}.", "{ballHandler} recule en zone arrière : retour en zone sifflé contre {team}."],
   reboundDef: [
     "Tir manqué de {shooter}. Rebond défensif de {rebounder}.",
     "{shooter} manque, {rebounder} capte le rebond défensif.",
@@ -20163,7 +20174,12 @@ class MatchEngine {
     }
   }
 
-  freeThrows(shooter, n, events, quarter, clock, team) {
+  // `opts.reboundable` (2026-10-10, « rebonds ») : série issue d'une faute
+  // personnelle — un DERNIER lancer manqué est un ballon vivant, résolu par
+  // resolveRebound (un seul rebondeur, le même pour l'événement, les
+  // statistiques et la possession). Faute technique / antisportive : pas de
+  // rebond (ballon rendu à l'équipe fautée). Renvoie { made, offensiveRebound }.
+  freeThrows(shooter, n, events, quarter, clock, team, opts = {}) {
     // Utilise désormais l'attribut dédié "freeThrow" (voir le grand
     // commentaire au-dessus d'ATTRS) au lieu de l'ancien proxy sur midRange :
     // un lanceur médiocre (freeThrow bas) et un bon shooteur mi-distance
@@ -20197,9 +20213,15 @@ class MatchEngine {
         if (this._possSituation) shooter.stats[this._possSituation] = (shooter.stats[this._possSituation] || 0) + 1;
         this.applyPlusMinusForPoints(team, 1);
       }
-      this.log(events, quarter, clock, say(ok ? PHRASES.freeThrowMade : PHRASES.freeThrowMissed, { shooter: shooter.name, i: i + 1, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made: ok ? 1 : 0, attempts: 1, attempt: i + 1, of: n, lastMade: ok, possession: this.teamKey(team) });
+      const last = i === n - 1, rebound = last && !ok && opts.reboundable !== false;
+      this.log(events, quarter, clock, say(ok ? PHRASES.freeThrowMade : PHRASES.freeThrowMissed, { shooter: shooter.name, i: i + 1, n }), { type: "freeThrow", team: this.teamKey(team), shooter: shooter.name, shooterId: shooter.id, made: ok ? 1 : 0, attempts: 1, attempt: i + 1, of: n, lastMade: ok, ...(rebound ? { rebound: true } : null), possession: this.teamKey(team) });
+      if (rebound) {
+        const defTeam = team === this.teamA ? this.teamB : this.teamA;
+        const r = this.resolveRebound({ offTeam: team, defTeam, onCourtOff: team.onCourtPlayers(), onCourtDef: defTeam.onCourtPlayers(), shooter, quarter, clock, events, freeThrow: true });
+        return { made, offensiveRebound: !!(r && r.offensiveRebound) };
+      }
     }
-    return made;
+    return { made, offensiveRebound: false };
   }
 
   // Seuil d'exclusion disciplinaire (retour utilisateur, 2026-09 : "les
@@ -20243,11 +20265,11 @@ class MatchEngine {
     defender.technicalFouls = (defender.technicalFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
+      this.log(events, quarter, clock, say(PHRASES.technicalEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", cause: "technical", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
       this.log(events, quarter, clock, say(PHRASES.technicalFoul, { player: defender.name, team: defTeam.name }), { type: "technicalFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
-    this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam);
+    this.freeThrows(ftShooter, 1, events, quarter, clock, offTeam, { reboundable: false });
   }
 
   // Faute antisportive (retour utilisateur, 2026-09, voir shouldEjectForFouls
@@ -20277,11 +20299,11 @@ class MatchEngine {
     defender.unsportsmanlikeFouls = (defender.unsportsmanlikeFouls || 0) + 1;
     if (this.shouldEjectForFouls(defender)) {
       defender.disqualified = true;
-      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
+      this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeEjection, { player: defender.name, team: defTeam.name }), { type: "technicalEjection", cause: "unsportsmanlike", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     } else {
       this.log(events, quarter, clock, say(PHRASES.unsportsmanlikeFoul, { player: defender.name, team: defTeam.name }), { type: "unsportsmanlikeFoul", team: this.teamKey(defTeam), player: defender.name, playerId: defender.id });
     }
-    if (ftCount > 0) this.freeThrows(ftShooter, ftCount, events, quarter, clock, offTeam);
+    if (ftCount > 0) this.freeThrows(ftShooter, ftCount, events, quarter, clock, offTeam, { reboundable: false });
   }
 
   // scoreDiff = score(offTeam) - score(defTeam) au moment présent : sert aux
@@ -20395,8 +20417,8 @@ class MatchEngine {
       const defender = weightedPick(onCourtDef, p => Math.max(6 - p.fouls, 0.5));
       defender.stats.pf++; defender.fouls++;
       this.log(events, quarter, foulClock, say(PHRASES.intentionalFoul, { defender: defender.name, shooter: ballHandler.name, team: defTeam.name }), { type: "foul", foulType: "intentional", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, player: ballHandler.name, playerId: ballHandler.id, possession: this.teamKey(offTeam) });
-      this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
-      return { possessionOffense: false, scored: true, intentionalFoul: true, clockUsed };
+      const ft = this.freeThrows(ballHandler, 2, events, quarter, foulClock, offTeam);
+      return { possessionOffense: ft.offensiveRebound, offensiveRebound: ft.offensiveRebound, scored: true, intentionalFoul: true, clockUsed };
     }
 
     // --- Perte de balle ---
@@ -20654,8 +20676,8 @@ class MatchEngine {
       // (c'est l'équivalent d'un tir, comme la faute intentionnelle plus
       // haut) ; avant, l'action continue simplement (remise en jeu).
       if (inBonus) {
-        this.freeThrows(foulTarget, 2, events, quarter, clock, offTeam);
-        return { possessionOffense: false, scored: true, bonusFreeThrows: true };
+        const ft = this.freeThrows(foulTarget, 2, events, quarter, clock, offTeam);
+        return { possessionOffense: ft.offensiveRebound, offensiveRebound: ft.offensiveRebound, scored: true, bonusFreeThrows: true };
       }
       // Sinon pas de `return` ici — voir le grand commentaire ci-dessus :
       // l'action continue directement vers le tir, dans cette même itération.
@@ -21137,6 +21159,8 @@ class MatchEngine {
     // l'urgence, rarement réussi — avant l'audit 2026-09-29, une possession
     // d'une seconde valait une attaque complète.
     if (this._buzzerHeave) prob = Math.min(prob, 0.18);
+    // Tir forcé à la sirène des 24 s (voir simulate, Rules.rollViolations).
+    if (this._buzzerShot) prob *= 0.82;
     // Box and one (audit 2026-09-29) : la star marquée de près tire moins
     // bien, même quand son tir reste « ouvert » — un tir de star est souvent
     // déjà au plus haut niveau d'ouverture, où un simple bonus défensif ne
@@ -21261,8 +21285,11 @@ class MatchEngine {
         // pour que le fil reste dans l'ordre du jeu.
         this.log(events, quarter, clock, say(PHRASES.andOne, { defender: defender.name, shooter: shooter.name }), { type: "foul", foulType: "andOne", team: this.teamKey(defTeam), defender: defender.name, defenderId: defender.id, player: shooter.name, playerId: shooter.id, possession: this.teamKey(offTeam) });
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events, 0);
-        this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
+        // (lancer de la faute technique AVANT celui de la faute personnelle :
+        // le dernier lancer de la séquence est celui qui peut être rebondi)
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
+        const ft = this.freeThrows(shooter, 1, events, quarter, clock, offTeam);
+        return { possessionOffense: ft.offensiveRebound, offensiveRebound: ft.offensiveRebound, scored: true };
       }
       return { possessionOffense: false, scored: true };
     } else {
@@ -21284,11 +21311,45 @@ class MatchEngine {
         if (this._possCtx) this._possCtx.foulType = "shooting";
         this.log(events, quarter, clock, say(PHRASES.missedFoul, { defender: defender.name, shooter: shooter.name }), { type: "shot", team: this.teamKey(offTeam), zone, spot, made: false, foulType: "shooting", fouled: true, shooter: shooter.name, shooterId: shooter.id, defender: defender.name, defenderId: defender.id, possession: this.teamKey(offTeam) });
         this.maybeCommitUnsportsmanlikeFoul(defender, defTeam, offTeam, shooter, quarter, clock, events, 0);
-        this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
         this.maybeEjectForComposure(defender, defTeam, offTeam, shooter, quarter, clock, events);
-        return { possessionOffense: false, scored: true };
+        const ft = this.freeThrows(shooter, zone === "three" ? 3 : 2, events, quarter, clock, offTeam);
+        return { possessionOffense: ft.offensiveRebound, offensiveRebound: ft.offensiveRebound, scored: true };
       }
 
+      // Résolution UNIQUE du rebond (2026-10-10) : voir resolveRebound.
+      const reb = this.resolveRebound({ offTeam, defTeam, onCourtOff, onCourtDef, shooter, zone, spot, quarter, clock, events });
+      return { possessionOffense: reb.offensiveRebound, offensiveRebound: reb.offensiveRebound, shotClockViolation: !!reb.shotClockViolation };
+    }
+  }
+
+  // Rebond d'un tir manqué ou d'un DERNIER lancer franc manqué (2026-10-10,
+  // « rebonds ») : SEULE source de vérité. Le rebondeur est tiré UNE fois ;
+  // ce même joueur reçoit la statistique (reb/oreb/dreb), figure dans
+  // l'événement « rebound » (rebounderId) et détermine la possession
+  // (possessionAfter, valeur renvoyée). Rien n'est recalculé ailleurs.
+  // `freeThrow` : la défense tient les premiers emplacements de la raquette
+  // (part de rebonds offensifs réduite, Rules.FT_OFFENSIVE_REBOUND_FACTOR).
+  // Tir forcé à la sirène des 24 s (this._buzzerShot) qui ne touche pas
+  // l'anneau (≈20 %) et que l'attaque récupère : violation des 24 s (règle
+  // FIBA), pas de rebond ; si la défense le récupère, rebond défensif normal.
+  // Violation (8 s, 24 s, retour en zone arrière) décidée par simulate :
+  // perte de balle du porteur, ballon mort, possession à l'adversaire. Le
+  // changement de possession est fait UNE fois, par simulate (valeur
+  // renvoyée), comme pour toute autre perte.
+  logViolation(kind, offTeam, defTeam, quarter, clock, events) {
+    const five = offTeam.onCourtPlayers();
+    if (!five.length) return { possessionOffense: false };
+    const handler = weightedPick(five, p => p.eff("dribble") + p.eff("pass"));
+    handler.stats.tov++;
+    handler.consecutiveMisses++;
+    if (this._possCtx) { this._possCtx.handler = handler.name; this._possCtx.handlerId = handler.id; }
+    const phr = kind === "eightSeconds" ? PHRASES.eightSeconds : kind === "backcourt" ? PHRASES.backcourtViolation : PHRASES.shotClockViolation;
+    this.log(events, quarter, clock, say(phr, { team: offTeam.name, ballHandler: handler.name }), { type: "turnover", tovType: "violation", tovKind: kind, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
+    return { possessionOffense: false, violation: kind };
+  }
+
+  resolveRebound({ offTeam, defTeam, onCourtOff, onCourtDef, shooter, zone = null, spot = null, quarter, clock, events, freeThrow = false }) {
+    if (!onCourtOff.length || !onCourtDef.length) return { offensiveRebound: false, rebounder: null };
       // --- Rebond offensif (Prudent/Normal/Agressif) : "Normal" = delta
       // zéro, comportement actuel inchangé. ---
       // Force/Détente (retour utilisateur, 2026-09 : "Force/Détente →
@@ -21324,8 +21385,17 @@ class MatchEngine {
       // styles Prudent/Normal/Agressif et Force/Détente gardent leur écart
       // relatif (multiplicateur commun).
       offReb *= OFF_REBOUND_BASE_WEIGHT;
+      if (freeThrow) offReb *= Rules.FT_OFFENSIVE_REBOUND_FACTOR;
       offReb = Math.max(offReb, 1);
       const offensiveRebound = rand01() < offReb / (offReb + defReb);
+      // Tir à la sirène des 24 s qui n'a pas touché l'anneau, repris par
+      // l'attaque : violation (la défense, elle, garde un rebond normal).
+      if (this._buzzerShot && !freeThrow && offensiveRebound && rand01() < 0.2 && !Rules.isShotClockViolation({ shotReleased: true, releasedBeforeExpiry: true, touchedRim: true })) {
+        const handler = shooter;
+        handler.stats.tov++;
+        this.log(events, quarter, clock, say(PHRASES.shotClockAirball, { shooter: shooter.name, team: offTeam.name }), { type: "turnover", tovType: "violation", tovKind: "shotClock", afterShot: true, airball: true, team: this.teamKey(offTeam), player: handler.name, playerId: handler.id, shooter: shooter.name, shooterId: shooter.id, zone, spot, made: false, stealer: null, stealerId: null, deadBall: true, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(defTeam) });
+        return { offensiveRebound: false, rebounder: null, shotClockViolation: true };
+      }
 
       // --- Contrepartie du style "Agressif" (retour utilisateur, "risque
       // de prendre des contre-attaques") : si le rebond offensif est
@@ -21356,13 +21426,12 @@ class MatchEngine {
       if (offensiveRebound) rebounder.stats.oreb++; else rebounder.stats.dreb++;
 
       this.log(events, quarter, clock, say(
-        offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
+        freeThrow ? (offensiveRebound ? PHRASES.ftReboundOff : PHRASES.ftReboundDef) : offensiveRebound ? (rebounder === shooter ? PHRASES.reboundOwn : PHRASES.reboundOff) : PHRASES.reboundDef,
         { shooter: shooter.name, rebounder: rebounder.name }
-      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), zone, spot, made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(offensiveRebound ? offTeam : defTeam) });
+      ), { type: "rebound", team: this.teamKey(offensiveRebound ? offTeam : defTeam), ...(freeThrow ? { freeThrow: true, quality: undefined, shotType: undefined, defender: undefined, defenderId: undefined, foulType: undefined } : { zone, spot }), made: false, shooter: shooter.name, shooterId: shooter.id, rebounder: rebounder.name, rebounderId: rebounder.id, offensive: offensiveRebound, possession: this.teamKey(offTeam), possessionAfter: this.teamKey(offensiveRebound ? offTeam : defTeam) });
 
       if (offensiveRebound) offTeam._secondChance = true;
-      return { possessionOffense: offensiveRebound };
-    }
+      return { offensiveRebound, rebounder };
   }
 
   // `rhythmKey` : rythme de CE club ; `paceMult` (optionnel) : multiplicateur
@@ -21617,7 +21686,12 @@ class MatchEngine {
     // utilisateur : "on ne sait pas qui a la balle" — voir
     // updateLiveClockTick côté client).
     const tipOffWinner = possessionTeam === "A" ? this.teamA : this.teamB;
-    this.log(events, 1, QUARTER_SECONDS, `L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner), possessionAfter: this.teamKey(tipOffWinner) });
+    // Possession alternée (FIBA, 2026-10-10) : la flèche désigne l'équipe
+    // qui n'a PAS gagné l'entre-deux ; elle donnera le ballon au début de
+    // chaque période suivante (prolongations comprises) puis changera de
+    // sens. Stockée dans l'état du match (this.arrow) et dans les événements.
+    this.arrow = Rules.arrowAfterTipoff(this.teamKey(tipOffWinner));
+    this.log(events, 1, QUARTER_SECONDS, `L'entre-deux est remporté par ${tipOffWinner.name}.`, { type: "tipoff", team: this.teamKey(tipOffWinner), possession: this.teamKey(tipOffWinner), possessionAfter: this.teamKey(tipOffWinner), arrow: this.arrow });
 
     // Un match de basket ne peut pas finir sur une égalité : au-delà du 4e
     // quart-temps, on enchaîne des prolongations de 5 minutes (règle
@@ -21633,8 +21707,16 @@ class MatchEngine {
       const label = isOvertime ? `Prolongation ${q - 4}` : `${q}${q === 1 ? "er" : "e"} quart-temps`;
       // Le marqueur du 1er quart-temps est déjà loggué plus haut, AVANT
       // l'entre-deux (voir commentaire ci-dessus) — ne pas le dupliquer ici.
+      // État de la possession (2026-10-10) : chronomètre des tirs au départ
+      // de la prochaine possession (24, ou 14 après un rebond offensif) et
+      // remontée de balle depuis la zone arrière (8 s, retour en zone).
+      let nextShotClock = Rules.SHOT_CLOCK, backcourtStart = true;
       if (q > 1) {
-        this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart", possession: possessionTeam, possessionAfter: possessionTeam });
+        // Début de période : ballon à l'équipe désignée par la flèche (jamais
+        // déduit du dernier panier ni de la possession précédente).
+        const alt = Rules.alternatingPossession(this.arrow);
+        possessionTeam = alt.possession; this.arrow = alt.arrow;
+        this.log(events, q, clock, `Début ${isOvertime ? "de la" : "du"} ${label}`, { type: "quarterStart", possession: possessionTeam, possessionAfter: possessionTeam, alternating: true, arrow: this.arrow });
         // Pause entre les quarts-temps : arrêt de jeu, les changements en
         // attente se font avant la reprise.
         this.substituteIfNeeded(this.teamA, q, clock, events);
@@ -21702,9 +21784,40 @@ class MatchEngine {
         if (offTeam._advanceBall) {
           delete offTeam._advanceBall;
           possessionLength = Math.max(3, possessionLength - rand(4, 7));
+          backcourtStart = false;
         }
 
+        // Chronomètre des tirs (2026-10-10) : une possession ne dure jamais
+        // plus que le chronomètre (24 s, 14 s après un rebond offensif), sauf
+        // quand il est éteint (moins de temps de jeu que de chronomètre).
+        const shotClockStart = nextShotClock;
+        if (Rules.shotClockOn(clock, shotClockStart)) possessionLength = Math.min(possessionLength, shotClockStart);
         possessionLength = Math.min(possessionLength, clock);
+
+        // Violations RÉELLES (2026-10-10) : 8 secondes, retour en zone
+        // arrière, 24 secondes — décidées ici, avant que la possession ne se
+        // joue : elles consomment le temps réglementaire et rendent le ballon
+        // à l'adversaire (un seul changement de possession, plus bas).
+        // Exclu : dernier tir / tir de la dernière chance (pas d'attaque placée).
+        this._buzzerShot = false;
+        let violation = null, crossedAt = null;
+        if (!lastShot && !this._buzzerHeave) {
+          const offFive = offTeam.onCourtPlayers(), defFive = defTeam.onCourtPlayers();
+          if (offFive.length && defFive.length) {
+            const avg = (arr, f) => arr.reduce((s0, p) => s0 + f(p), 0) / arr.length;
+            const handling = Math.max(...offFive.map(p => p.eff("dribble")));
+            const chances = Rules.violationChances({
+              pressure: avg(defFive, p => p.eff("defOutside") * 0.7 + p.eff("steal") * 0.3) - handling,
+              press: (DEFENSES[defTeam.defense] && DEFENSES[defTeam.defense].pressure) || 0,
+              creation: avg(offFive, p => p.eff("shotCreation")) - 50,
+              defenseQuality: avg(defFive, p => p.eff("defOutside")) - 50,
+            });
+            const v = Rules.rollViolations(rand01, { backcourtStart, gameClock: clock, shotClock: shotClockStart, budget: possessionLength, chances });
+            crossedAt = backcourtStart ? v.crossedAt : null;
+            if (v.kind) { violation = v.kind; possessionLength = Math.min(v.clockUsed, clock); }
+            else if (v.buzzerShot) { this._buzzerShot = true; possessionLength = Math.min(v.clockUsed, clock); }
+          }
+        }
 
         // Retour utilisateur : "on ne peut pas avoir un tir marqué à 10:00,
         // ce n'est pas possible en vrai". Le chrono décrémentait AVANT ce
@@ -21728,9 +21841,16 @@ class MatchEngine {
         this.currentPossessionLength = possessionLength;
         // Contexte de possession pour les événements (voir log) : chrono de
         // début et durée réelle. Complété dans playPossession.
-        this._possCtx = { possStart: Math.round((clock + possessionLength) * 10) / 10, possLen: Math.round(possessionLength * 10) / 10 };
+        this._possCtx = { possStart: Math.round((clock + possessionLength) * 10) / 10, possLen: Math.round(possessionLength * 10) / 10, shotClock: shotClockStart, ...(crossedAt != null ? { crossAt: Math.round(crossedAt * 10) / 10 } : null), ...(this._buzzerShot ? { buzzerShot: true } : null) };
         const possFirstEvent = events.length;
-        const result = this.playPossession(offTeam, defTeam, q, clock, events, scoreDiff);
+        const result = violation ? this.logViolation(violation, offTeam, defTeam, q, clock, events) : this.playPossession(offTeam, defTeam, q, clock, events, scoreDiff);
+        this._buzzerShot = false;
+        // Possession suivante : rebond offensif → 14 s, même équipe, déjà en
+        // zone avant ; sinon nouvelle possession (24 s) depuis la zone
+        // arrière — sauf remise en jeu avancée après un temps mort de fin de
+        // match (voir _advanceBall).
+        nextShotClock = result.offensiveRebound ? Rules.shotClockAfter("offensiveRebound") : Rules.shotClockAfter("newPossession");
+        backcourtStart = !result.possessionOffense;
         if (typeof result.clockUsed === "number" && result.clockUsed < possessionLength) {
           // Possession écourtée : les événements déjà journalisés gardent la
           // durée réellement consommée.

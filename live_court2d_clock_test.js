@@ -81,8 +81,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const els = { shotClockDisplay: { classList: { add() {}, remove() {}, toggle() {} }, textContent: "" }, clockDisplay: { textContent: "10:00" } };
     let fakeNow = K;
     const liveState = { clock: 600, shotClock: null, possession: null, reset() {} };
-    const f = new Function("document", "Date", "liveState", "syncTopbarLiveStrip", "hmLiveOnTick", "setPossessionDot", `let liveTickEvents = [], liveTickPauses = []; ${src}`);
-    const api = f({ getElementById: id => els[id] }, { now: () => fakeNow }, liveState, () => {}, () => {}, () => {});
+    // (règles partagées : window.HM_RULES, assets/game-rules.js)
+    const f = new Function("document", "Date", "liveState", "syncTopbarLiveStrip", "hmLiveOnTick", "setPossessionDot", "window", `let liveTickEvents = [], liveTickPauses = []; ${src}`);
+    const api = f({ getElementById: id => els[id] }, { now: () => fakeNow }, liveState, () => {}, () => {}, () => {}, { HM_RULES: require("./assets/game-rules.js") });
     const clockSec = c => { const m = /^(\d+):(\d+)$/.exec(c); return m ? +m[1] * 60 + +m[2] : 0; };
     api.setTick(sched.events.map(ev => ({ airAt: ev.airAt, quarter: ev.quarter, clockSec: clockSec(ev.clock), possession: ev.possession || null, possessionAfter: ev.possessionAfter || null, type: ev.type, team: ev.team })),
       sched.pauses.map(p => ({ airAt: p.airAt, endAt: p.airAt + p.durationMs })));
