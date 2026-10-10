@@ -96,7 +96,8 @@ const S = {
   if (!p0 || !p1) fail("le sprite du tireur doit être positionné par un transform translate(x y).");
   if (!(d(p1) < d(p0) - 20)) fail(`le tireur doit se déplacer vers l'endroit du tir (≈780,180) : ${p0} → ${p1}.`);
   await sleep(1200);
-  const ptsf = moro.querySelectorAll(".c2d-ptsf");
+  // (2026-10-10) « +2 » dans le calque des points (jamais réordonné), relié au tireur par data-for.
+  const ptsf = host.querySelectorAll(`.c2d-ptsf[data-for="${moro.dataset.id}"]`);
   if (ptsf.length !== 1 || ptsf[0].textContent !== "+2") fail(`un seul « +2 » attendu au-dessus du tireur après le panier, obtenu ${ptsf.length} (« ${ptsf[0] && ptsf[0].textContent} »).`);
   console.log("✅ Panier : le tireur va à l'endroit du tir et le +2 s'affiche.");
   if (!/\bt0\b/.test(ptsf[0].getAttribute("class"))) fail(`le « +2 » doit être aux couleurs de l'équipe (t0), obtenu « ${ptsf[0].getAttribute("class")} ».`);
@@ -121,7 +122,7 @@ const S = {
   if (!holder2 || !holder2.dataset.id.startsWith("Rennes:")) fail(`après un panier encaissé, Rennes doit remettre en jeu et avoir le ballon, obtenu ${holder2 && holder2.dataset.id}.`);
   console.log("✅ Remise en jeu : le ballon passe à l'équipe qui a encaissé.");
   trailObs.disconnect();
-  if (moro.querySelector(".c2d-ptsf")) fail("le « +2 » doit avoir disparu (supprimé) après ~2 s.");
+  if (host.querySelector(`.c2d-ptsf[data-for="${moro.dataset.id}"]`)) fail("le « +2 » doit avoir disparu (supprimé) après ~2 s.");
   console.log("✅ « +2 » : visible ~2 s puis supprimé, aucun résidu.");
   if (host.querySelector(".c2d-trail.shot")) fail("l'arc du tir doit s'effacer après l'arrivée du ballon.");
 
@@ -161,7 +162,7 @@ const S = {
   await sleep(250);
   court.update(S, [2]);
   await sleep(120);
-  const wright = host.querySelector('.c2d-p[data-id="Rennes:Jo Wright"] .c2d-ptsf');
+  const wright = host.querySelector('.c2d-ptsf[data-for="Rennes:Jo Wright"]');
   if (!wright || wright.textContent !== "+3") fail(`tir joué à l'avance : « +3 » attendu dès l'arrivée de l'événement, obtenu « ${wright && wright.textContent} ».`);
   console.log("✅ Possession jouée à l'avance : tir parti avant l'événement, résultat révélé à son arrivée.");
 

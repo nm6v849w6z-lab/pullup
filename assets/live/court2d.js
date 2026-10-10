@@ -700,6 +700,14 @@ export function createCourt2D(host, opts = {}) {
   el("circle", { r: "9.5", fill: `url(#${uid}-bl)`, stroke: "#4a2308", "stroke-width": "1.4" }, ballBody);
   el("path", { d: "M-9.5 0h19M0 -9.5v19M-6.1 -7.2c3.5 3.3 3.5 11.1 0 14.4M6.1 -7.2c-3.5 3.3-3.5 11.1 0 14.4", fill: "none", stroke: "#4a2308", "stroke-width": "1.2" }, ballBody);
   const fxG = el("g", { class: "c2d-fx" }, layer);
+  // Points marqués (« +1 / +2 / +3 ») : calque À PART, jamais réordonné
+  // (mission live 2026-10-10, « le +2 clignote ») — attachés au jeton, ils
+  // étaient réinsérés dans le DOM à chaque tri de profondeur des joueurs
+  // (4 fois par seconde, et juste après le panier quand le ballon change de
+  // main), ce qui RELANÇAIT leur animation CSS depuis 0 (opacité 0) :
+  // clignotement. Ici, l'élément reste en place ; seule sa position suit le
+  // tireur (render, chaque image).
+  const ptsG = el("g", { class: "c2d-ptsfx" }, layer);
   const frontLayer = el("g", { transform: `translate(${OX} ${OY})`, class: "stg-front" }, svg);
   const caption = document.createElement("div");
   caption.className = "c2d-caption";
@@ -1115,21 +1123,29 @@ export function createCourt2D(host, opts = {}) {
   // au jeton, qui apparaît vite, reste ~2 s puis s'efface et est SUPPRIMÉ ;
   // même timing pour les trois ; un même panier rejoué (plan + événement,
   // resynchronisation) ne le relance pas.
-  const ptsSeen = new Map();
-  function floatPts(sp, text) {
-    const key = sp.id + "|" + text, t = performance.now();
-    if (t - (ptsSeen.get(key) || -1e9) < 2600) return;
-    ptsSeen.set(key, t);
-    const g = el("g", { class: `c2d-ptsf t${sp.team}`, transform: "translate(0 -38)" }, sp.g);
+  // UNE fois par panier confirmé : clé = identifiant de l'événement du
+  // moteur (jamais relancé par un rejeu, un recalage ou un nouveau rendu).
+  const ptsSeen = new Map();       // clé → instant (repli sans id : fenêtre de 2,6 s)
+  const floats = new Set();        // { g, sp } affichés
+  function floatPts(sp, text, evKey) {
+    const t = performance.now();
+    const key = evKey != null ? "ev:" + evKey : sp.id + "|" + text;
+    const seen = ptsSeen.get(key);
+    if (seen !== undefined && (evKey != null || t - seen < 2600)) return;
+    ptsSeen.set(key, t); if (ptsSeen.size > 400) ptsSeen.delete(ptsSeen.keys().next().value);
+    const g = el("g", { class: `c2d-ptsf t${sp.team}`, "data-for": sp.id }, ptsG);
     el("text", { "text-anchor": "middle", "data-no-i18n": "1" }, g).textContent = text;
-    setTimeout(() => g.remove(), 2050);
+    const f = { g, sp };
+    floats.add(f); placeFloat(f);
+    fxTimer(2050, () => { g.remove(); floats.delete(f); });
   }
-  function flash(sp, text, cls = "") {
+  function placeFloat(f) { const sp = f.sp; f.g.setAttribute("transform", `translate(${((sp.x + (sp.ox || 0)) * PX).toFixed(1)} ${((sp.y + (sp.oy || 0)) * PX - 38).toFixed(1)})`); }
+  function flash(sp, text, cls = "", evKey = null) {
     if (!sp) return;
     sp.stat.textContent = text;
     // Points marqués (« +2 », « +3 », « +1 ») : plus gros, couleur de
     // l'équipe, montent en flottant puis s'effacent (priorité 3).
-    if (cls === "good" && /^\+\d$/.test(text)) { sp.stat.textContent = ""; floatPts(sp, text); return; }
+    if (cls === "good" && /^\+\d$/.test(text)) { sp.stat.textContent = ""; floatPts(sp, text, evKey); return; }
     sp.stat.setAttribute("class", "c2d-stat " + cls);
     sp.stat.setAttribute("opacity", "1");
     fxTimer(1600, () => sp.stat.setAttribute("opacity", "0"));
@@ -1145,6 +1161,13 @@ export function createCourt2D(host, opts = {}) {
     el("text", { class: "c2d-banner-shadow", "text-anchor": "middle", y: "6", "data-no-i18n": "1" }, g).textContent = text;
     el("text", { class: "c2d-banner-text", "text-anchor": "middle", y: "0", "data-no-i18n": "1" }, g).textContent = text;
     fxTimer(1500, () => g.remove());
+  }
+  const andOneSeen = new Set();
+  function andOneBanner(evKey) {
+    const k = String(evKey);
+    if (andOneSeen.has(k)) return;
+    andOneSeen.add(k); if (andOneSeen.size > 200) andOneSeen.delete(andOneSeen.values().next().value);
+    banner("AND ONE", "andone");
   }
   const blockLabel = () => { try { const t = typeof window !== "undefined" && window.hmI18n && window.hmI18n.t ? window.hmI18n.t("Contre") : "Contre"; return String(t || "Contre").toUpperCase(); } catch (e) { return "CONTRE"; } };
   // Trace du vol en cours : points échantillonnés à chaque image (position
@@ -1183,6 +1206,7 @@ export function createCourt2D(host, opts = {}) {
   function clearFx() {
     fxTimers.forEach(clearTimeout); fxTimers.clear();
     while (fxG.firstChild) fxG.firstChild.remove();
+    floats.forEach(f => f.g.remove()); floats.clear();
     for (const sp of sprites.values()) { if (sp.stat) sp.stat.setAttribute("opacity", "0"); if (sp.ring) sp.ring.setAttribute("opacity", "0"); }
   }
   function rimFx(team, made) {
@@ -1899,7 +1923,7 @@ export function createCourt2D(host, opts = {}) {
         const finish = () => {
           rimFx(offT, !!e.made);
           if (e.made) {
-            flash(shooter, e.zone === "three" ? "+3" : "+2", "good");
+            flash(shooter, e.zone === "three" ? "+3" : "+2", "good", e.id);
             // Gros panier (3 points, dunk, buzzer) : flash de lumière et public debout.
             const big = e.zone === "three" || /dunk|smash/i.test(String(e.shotType || "")) || (typeof e.clock === "number" && e.clock <= 1);
             if (big) bigFlash();
@@ -2011,7 +2035,12 @@ export function createCourt2D(host, opts = {}) {
         const more = e.of > 1 && e.attempt < e.of;
         setPhase("DEAD_BALL", "lancers francs");
         const finish = () => {
-          rimFx(t, made); if (made) { flash(shooter, "+" + e.made, "good"); netDrop(rim); }
+          rimFx(t, made); if (made) { flash(shooter, "+" + e.made, "good", e.id); netDrop(rim); }
+          // « AND ONE » (mission 2026-10-10) : panier + faute, PUIS lancer
+          // additionnel RÉUSSI — affiché à la confirmation du lancer (cet
+          // événement du moteur), une seule fois par lancer ; jamais sur la
+          // faute, jamais sur un lancer raté.
+          if (made && e.foulType === "andOne") andOneBanner(e.id);
           crowdReact(made ? "score" : "miss", t);
           moment(made ? "lancer_reussi" : "lancer_rate", { team: t });
           scene(more ? 2400 : 1500);
@@ -2123,7 +2152,8 @@ export function createCourt2D(host, opts = {}) {
         // (possession planifiée) ou y court ; au plus 700 ms d'attente.
         const signal = () => {
           flash(d, e.kind === "technicalFoul" ? "TECHNIQUE" : e.kind === "unsportsmanlikeFoul" ? "ANTISPORTIVE" : "FAUTE", "bad");
-          if (andOne) banner("AND ONE", "andone");
+          // (« AND ONE » : plus ici — mission 2026-10-10 — seulement quand le
+          // lancer franc additionnel est RÉUSSI, voir case "freeThrow".)
           moment(e.kind === "technicalFoul" ? "faute_technique" : e.kind === "unsportsmanlikeFoul" ? "antisportive" : "faute", { team: t });
           if (d) { d.ring.setAttribute("opacity", "1"); fxTimer(1500, () => d.ring.setAttribute("opacity", "0")); }
         };
@@ -2818,6 +2848,7 @@ export function createCourt2D(host, opts = {}) {
       const has = ball.holder === id;
       if (has !== sp.hasBall) { sp.hasBall = has; sp.g.classList.toggle("has-ball", has); sp.carrier.setAttribute("opacity", has ? "1" : "0"); }
     }
+    for (const f of floats) placeFloat(f);
     if (trail && trail.flight !== ball.flight) endTrail();
     if (ball.flight) {
       const f = ball.flight; f.t = Math.min(1, f.t + (dt * 1000) / f.ms);
