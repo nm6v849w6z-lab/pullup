@@ -20,6 +20,15 @@ Ne jamais laisser ce fichier désynchro de l'état réel du code.
 
 ## À faire
 
+- **🟢 LIVRÉ (2026-10-11) — Robot à tort à côté d'un club humain (amical
+  entre championnats, Krautentruppen)**. Cause : adversaire projeté en
+  invité « léger » sans statut humain → `new Team()` → `isHuman = false` →
+  `robotBadgeHtml`. Correction à la source : `ref.human` / `ref.look` dans
+  les amicaux du monde (`worldRefOf`, `WorldFriendlies.refreshRefs` appelé
+  par `catchUp`, `projectForViewer` → `light.look.isHuman`). Anciens amicaux
+  corrigés au premier rattrapage du monde. Test :
+  `world_friendly_human_badge_test.js`.
+
 - **🟡 EN COURS DE LIVRAISON (2026-10-10) — Mission live + sélections
   (13 points)**. Branche `claude/kind-shannon-8nx9sq`.
   - Chrono 24 s éteint quand il reste < 24 s au quart (`HM_RULES.shotClockOn`,

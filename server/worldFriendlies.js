@@ -15,7 +15,13 @@
 //   { id, home: ref, away: ref, proposer: "home"|"away", at, day, time,
 //     status, createdAt, respondedAt, cancelReason,
 //     lineups: { home?, away? }, orders: { home?, away? }, result }
-//   ref = { leagueId, idx, name, country, label }
+//   ref = { leagueId, idx, name, country, label, human, look }
+//   `human` (géré par un manager ou par l'ordinateur) et `look` (logo,
+//   maillot, Premium : PrivateLeague.teamLook) : posés à la création,
+//   rafraîchis à chaque rattrapage du monde (refreshRefs, catchUp). Sans
+//   eux, l'adversaire projeté (invité « léger ») passait pour un club de
+//   l'ordinateur : petit robot à côté du nom d'un club humain (retour
+//   utilisateur 2026-10-11, Krautentruppen) et logo générique.
 //
 // Navigateur : projeté dans league.friendlies (id « w<id> », adversaire =
 // club invité léger 3000 + k), actions /api/friendly/* avec cet id.
@@ -207,7 +213,14 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
     const key = `${ref.leagueId}:${ref.idx}`;
     let g = byKey.get(key);
     if (!g) {
-      g = { localIdx: WORLD_FRIENDLY_GUEST_IDX + byKey.size, leagueId: ref.leagueId, idx: ref.idx, light: { name: ref.name, country: ref.country || null, players: [] } };
+      // Statut humain : celui du vrai club (ref.human) ; amical d'avant le
+      // 2026-10-11 pas encore rafraîchi : le club qui l'a proposé est
+      // forcément géré par un manager (propose l'exige), l'autre inconnu.
+      const f0 = (store.list || []).find(x => (x.home === ref || x.away === ref));
+      const human = typeof ref.human === "boolean" ? ref.human : (f0 && f0[f0.proposer] === ref ? true : null);
+      const look = { ...(ref.look || {}) };
+      if (human !== null) look.isHuman = human;
+      g = { localIdx: WORLD_FRIENDLY_GUEST_IDX + byKey.size, leagueId: ref.leagueId, idx: ref.idx, light: { name: ref.name, country: ref.country || null, label: ref.label || null, players: [], look } };
       byKey.set(key, g);
       guests.push(g);
     }
@@ -238,8 +251,28 @@ function projectForViewer(store, leagueId, idx, now = Date.now()) {
 
 // Rattrapage (server/world.js:catchUpWorld, toutes les ligues en main) :
 // invitations expirées, amicaux joués, purge. Renvoie true si modifié.
-function catchUp(Engine, store, leagues, now, events = []) {
+// Statut humain / ordinateur et apparence des deux clubs, relus sur les
+// vrais clubs (même règle que PrivateLeague.refreshRefs : seulement si le
+// club est toujours à cette place).
+function refreshRefs(store, leagues) {
+  const { teamLook } = require("./privateLeague.js");
   let changed = false;
+  ((store && store.list) || []).forEach(f => {
+    if (!isUpcoming(f) && f.status !== "played") return;
+    ["home", "away"].forEach(side => {
+      const ref = f[side];
+      const lg = ref && leagues.get(ref.leagueId);
+      const team = lg && lg.teams[ref.idx];
+      if (!team || team.name !== ref.name) return;
+      const human = !!team.isHuman, look = teamLook(team);
+      if (ref.human !== human || JSON.stringify(look) !== JSON.stringify(ref.look)) { ref.human = human; ref.look = look; changed = true; }
+    });
+  });
+  return changed;
+}
+
+function catchUp(Engine, store, leagues, now, events = []) {
+  let changed = refreshRefs(store, leagues);
   const teamOf = ref => { const lg = leagues.get(ref.leagueId); return lg ? lg.teams[ref.idx] : null; };
   store.list.slice().sort((a, b) => a.at - b.at).forEach(f => {
     const deadline = Math.min((f.createdAt || 0) + Friendlies.FRIENDLY_INVITE_TTL_MS, f.at - Friendlies.FRIENDLY_ACCEPT_DEADLINE_MS);

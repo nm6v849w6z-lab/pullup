@@ -689,7 +689,10 @@ function mergedFriendlies(ctx, fstore, now = Date.now()) {
 function worldRefOf(world, leagueId, league, idx) {
   const e = world.leagues.find(x => x.id === leagueId);
   const t = league.teams[idx];
-  return { leagueId, idx, name: t ? t.name : "?", country: league.country || (e && e.country) || "fr", label: e ? World.divisionLabel(e.level, e.group) : "" };
+  // `human` / `look` : statut humain et apparence du club (adversaire d'un
+  // amical entre championnats, voir server/worldFriendlies.js).
+  return { leagueId, idx, name: t ? t.name : "?", country: league.country || (e && e.country) || "fr", label: e ? World.divisionLabel(e.level, e.group) : "",
+    human: !!(t && t.isHuman), look: World.PrivateLeague.teamLook(t) };
 }
 
 // Pseudo du manager (voir /api/manager/set-pseudo et
